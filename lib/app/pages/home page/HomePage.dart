@@ -64,7 +64,6 @@ class _HomePageState extends State<HomePage> {
       userLocationPopUp(context);
       return;
     } else {
-      //log(" location ${userProvider.location!.country}");
       return;
     }
   }
