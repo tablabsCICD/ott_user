@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
-import 'package:ott/app/pages/downloads%20page/DownloadsPage.dart';
+import 'package:ott/app/pages/shorts%20page/ShortsPage.dart';
 import 'package:ott/app/pages/watchlist%20page/WatchlistPage.dart';
 import 'package:ott/app/pages/upcoming%20movies%20page/UpcomingPage.dart';
 import 'package:ott/app/pages/home%20page/HomePage.dart';
@@ -24,10 +24,10 @@ class _NavigationPageState extends State<NavigationPage> {
 
   final List<Widget> _pages = [
     HomePage(),
+    ShortsPage(),
     SearchPage(),
     WatchlistPage(),
-    DownloadsPage(),
-    UpcomingPage(),
+    //UpcomingPage(),
     ProfilePage(),
   ];
 
@@ -96,6 +96,10 @@ class _NavigationPageState extends State<NavigationPage> {
                   label: lang.home,
                 ),
                 BottomNavigationBarItem(
+                  icon: Icon(Icons.play_circle_outline),
+                  label: 'Shorts',
+                ),
+                BottomNavigationBarItem(
                   icon: Icon(Icons.search),
                   label: lang.search,
                 ),
@@ -103,14 +107,10 @@ class _NavigationPageState extends State<NavigationPage> {
                   icon: Icon(Icons.movie),
                   label: lang.watchlist,
                 ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.download_for_offline_outlined),
-                  label: lang.downloads,
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.upcoming_outlined),
-                  label: lang.upcoming,
-                ),
+                // BottomNavigationBarItem(
+                //   icon: Icon(Icons.upcoming_outlined),
+                //   label: lang.upcoming,
+                // ),
                 BottomNavigationBarItem(
                   icon: Icon(Icons.person_outline),
                   label: lang.profile,
@@ -131,27 +131,32 @@ class _NavigationPageState extends State<NavigationPage> {
         Provider.of<ThemeProvider>(context, listen: false).getTheme;
     final isSelected = index == _currentIndex;
 
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: isSelected
-            ? selectedThemeData.primaryColor
-            : selectedThemeData.canvasColor,
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8.0,
       ),
-      title: Text(
-        title,
-        style: TextStyle(
+      child: ListTile(
+        leading: Icon(
+          icon,
           color: isSelected
               ? selectedThemeData.primaryColor
               : selectedThemeData.canvasColor,
         ),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: isSelected
+                ? selectedThemeData.primaryColor
+                : selectedThemeData.canvasColor,
+          ),
+        ),
+        onTap: () {
+          if (title == "Profile") {
+            Provider.of<UserProvider>(context, listen: false).setValue();
+          }
+          _navigateTo(index);
+        },
       ),
-      onTap: () {
-        if (title == "Profile") {
-          Provider.of<UserProvider>(context, listen: false).setValue();
-        }
-        _navigateTo(index);
-      },
     );
   }
 
@@ -200,15 +205,15 @@ class _NavigationPageState extends State<NavigationPage> {
         ),
         _buildDrawerTile(context, index: 0, icon: Icons.home, title: lang.home),
         _buildDrawerTile(context,
-            index: 1, icon: Icons.search, title: lang.search),
+            index: 1, icon: Icons.play_circle_fill_sharp, title: 'Shorts'),
         _buildDrawerTile(context,
-            index: 2, icon: Icons.movie, title: lang.watchlist),
+            index: 2, icon: Icons.search, title: lang.search),
         _buildDrawerTile(context,
-            index: 3, icon: Icons.download_for_offline, title: lang.downloads),
+            index: 3, icon: Icons.movie, title: lang.watchlist),
+        // _buildDrawerTile(context,
+        //     index: 4, icon: Icons.upcoming, title: lang.upcoming),
         _buildDrawerTile(context,
-            index: 4, icon: Icons.upcoming, title: lang.upcoming),
-        _buildDrawerTile(context,
-            index: 5, icon: Icons.person, title: lang.profile),
+            index: 4, icon: Icons.person, title: lang.profile),
       ],
     );
   }

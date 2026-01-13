@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/watchlist%20page/playMoviePage.dart';
 import 'package:ott/app/pages/wallet%20page/BillingPage.dart';
+import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/data/models/response/saveUserContent.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:video_player/video_player.dart';
@@ -144,10 +145,17 @@ class _MovieCardState extends State<MovieCard> {
                                 fit: BoxFit.cover,
                                 width: double.infinity,
                                 height: double.infinity,
-                                errorBuilder: (_, __, ___) =>
-                                    const Icon(Icons.broken_image),
+                                errorBuilder: (_, __, ___) => Icon(
+                                  Icons.broken_image,
+                                  color: theme.canvasColor.withOpacity(0.2),
+                                  size: 40,
+                                ),
                               )
-                            : const Icon(Icons.broken_image)),
+                            : Icon(
+                                Icons.broken_image,
+                                color: theme.canvasColor.withOpacity(0.2),
+                                size: 40,
+                              )),
                   ),
                 ),
               ),
@@ -161,45 +169,52 @@ class _MovieCardState extends State<MovieCard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text.rich(
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            TextSpan(
-                                style: TextStyle(
-                                  color: theme.canvasColor.withOpacity(0.7),
-                                  fontSize: 12,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: '${widget.movie.ratings ?? '-'}',
-                                    style: TextStyle(
-                                        color: Colors.amberAccent,
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                                  TextSpan(
-                                    text:
-                                        ' (${widget.movie.ratingCount ?? '0'})',
-                                    style: TextStyle(
-                                      color: theme.canvasColor.withOpacity(0.7),
-                                      fontWeight: FontWeight.normal,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: ' | ',
-                                    style: TextStyle(
-                                      color: theme.canvasColor.withOpacity(0.7),
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: (widget.movie.genreList != null &&
-                                            widget.movie.genreList!.isNotEmpty)
-                                        ? widget.movie.genreList!.join(', ')
-                                        : 'N/A',
-                                  )
-                                ]),
+                          StarRatingWidget(
+                            rating: double.parse(
+                                    widget.movie.ratings!.toStringAsFixed(1)) ??
+                                0.0,
+                            starSize: 16,
+                            textSize: 16,
                           ),
+                          // Text.rich(
+                          //   maxLines: 1,
+                          //   overflow: TextOverflow.ellipsis,
+                          //   TextSpan(
+                          //       style: TextStyle(
+                          //         color: theme.canvasColor.withOpacity(0.7),
+                          //         fontSize: 12,
+                          //       ),
+                          //       children: [
+                          //         TextSpan(
+                          //           text: '${widget.movie.ratings ?? '-'}',
+                          //           style: TextStyle(
+                          //               color: Colors.amber,
+                          //               fontWeight: FontWeight.w600),
+                          //         ),
+                          //         TextSpan(
+                          //           text:
+                          //               ' (${widget.movie.ratingCount ?? '0'})',
+                          //           style: TextStyle(
+                          //             color: theme.canvasColor.withOpacity(0.7),
+                          //             fontWeight: FontWeight.normal,
+                          //             fontSize: 11,
+                          //           ),
+                          //         ),
+                          //         // TextSpan(
+                          //         //   text: ' | ',
+                          //         //   style: TextStyle(
+                          //         //     color: theme.canvasColor.withOpacity(0.7),
+                          //         //     fontSize: 14,
+                          //         //   ),
+                          //         // ),
+                          //         // TextSpan(
+                          //         //   text: (widget.movie.genreList != null &&
+                          //         //           widget.movie.genreList!.isNotEmpty)
+                          //         //       ? widget.movie.genreList!.join(', ')
+                          //         //       : 'N/A',
+                          //         // )
+                          //       ]),
+                          // ),
                           const SizedBox(height: 4),
                           Text(
                             widget.movie.title ?? 'No Title',
@@ -212,56 +227,64 @@ class _MovieCardState extends State<MovieCard> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 1),
-                          Text.rich(
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            TextSpan(
-                                style: TextStyle(
-                                  color: theme.canvasColor.withOpacity(0.7),
-                                  fontSize: 12,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: '${lang.director}: ',
-                                    style: TextStyle(
-                                      color: theme.primaryColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: (widget.movie.directorList != null &&
-                                            widget
-                                                .movie.directorList!.isNotEmpty)
-                                        ? widget.movie.directorList!.join(', ')
-                                        : 'N/A',
-                                  )
-                                ]),
+                          Text(
+                            (widget.movie.genreList != null &&
+                                    widget.movie.genreList!.isNotEmpty)
+                                ? widget.movie.genreList!.join(', ')
+                                : 'N/A',
                           ),
-                          const SizedBox(height: 1),
-                          Text.rich(
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            TextSpan(
-                                style: TextStyle(
-                                  color: theme.canvasColor.withOpacity(0.7),
-                                  fontSize: 12,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: '${lang.cast}: ',
-                                    style: TextStyle(
-                                      color: theme.primaryColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: (widget.movie.castList != null &&
-                                            widget.movie.castList!.isNotEmpty)
-                                        ? widget.movie.castList!.join(', ')
-                                        : 'N/A',
-                                  )
-                                ]),
-                          ),
+                          const SizedBox(height: 4),
+
+                          // Text.rich(
+                          //   maxLines: 1,
+                          //   overflow: TextOverflow.ellipsis,
+                          //   TextSpan(
+                          //       style: TextStyle(
+                          //         color: theme.canvasColor.withOpacity(0.7),
+                          //         fontSize: 12,
+                          //       ),
+                          //       children: [
+                          //         TextSpan(
+                          //           text: '${lang.director}: ',
+                          //           style: TextStyle(
+                          //             color: theme.primaryColor,
+                          //             fontWeight: FontWeight.w600,
+                          //           ),
+                          //         ),
+                          //         TextSpan(
+                          //           text: (widget.movie.directorList != null &&
+                          //                   widget
+                          //                       .movie.directorList!.isNotEmpty)
+                          //               ? widget.movie.directorList!.join(', ')
+                          //               : 'N/A',
+                          //         )
+                          //       ]),
+                          // ),
+                          // const SizedBox(height: 1),
+                          // Text.rich(
+                          //   maxLines: 1,
+                          //   overflow: TextOverflow.ellipsis,
+                          //   TextSpan(
+                          //       style: TextStyle(
+                          //         color: theme.canvasColor.withOpacity(0.7),
+                          //         fontSize: 12,
+                          //       ),
+                          //       children: [
+                          //         TextSpan(
+                          //           text: '${lang.cast}: ',
+                          //           style: TextStyle(
+                          //             color: theme.primaryColor,
+                          //             fontWeight: FontWeight.w600,
+                          //           ),
+                          //         ),
+                          //         TextSpan(
+                          //           text: (widget.movie.castList != null &&
+                          //                   widget.movie.castList!.isNotEmpty)
+                          //               ? widget.movie.castList!.join(', ')
+                          //               : 'N/A',
+                          //         )
+                          //       ]),
+                          // ),
                           // Text(
                           //   (widget.movie.directorList != null &&
                           //           widget.movie.directorList!.isNotEmpty)
@@ -289,7 +312,7 @@ class _MovieCardState extends State<MovieCard> {
                           // ),
                           const SizedBox(height: 1),
                           Text.rich(
-                            maxLines: 2,
+                            maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                             TextSpan(
                                 style: TextStyle(

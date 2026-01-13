@@ -9,6 +9,7 @@ import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/app/pages/profile%20page/component/EditProfilePage.dart';
 import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/pages/sign%20in%20page/SignInPage.dart';
+import 'package:ott/app/pages/upcoming%20movies%20page/UpcomingPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/pages/watchlist%20page/WatchlistPage.dart';
 import 'package:ott/app/provider/ThemeProvider.dart';
@@ -163,23 +164,22 @@ class _ProfilePageState extends State<ProfilePage> {
                               tag: "profile",
                               child: CircleAvatar(
                                 radius: 50,
-                                backgroundColor: theme.scaffoldBackgroundColor,
-                                foregroundImage: NetworkImage(
-                                    userProvider.userObj.profilePhoto ?? ""),
-                                child: Icon(
-                                  Icons.person,
-                                  size: ResponsiveWidget.isMobile(context)
-                                      ? 55
-                                      : 60,
-                                  color: theme.canvasColor.withOpacity(0.4),
-                                ),
+                                backgroundColor: selectedThemeData.cardColor,
+                                backgroundImage:
+                                    userProvider.userObj.profilePhoto == null
+                                        ? AssetImage(ImageConstant.profile)
+                                        : userProvider.userObj.profilePhoto!
+                                                .isNotEmpty
+                                            ? NetworkImage(
+                                                userProvider
+                                                    .userObj.profilePhoto!,
+                                              )
+                                            : AssetImage(ImageConstant.profile),
                               ),
                             ),
                             const SizedBox(height: 10),
                             Text(
-                              userProvider.userObj.firstName! +
-                                  " " +
-                                  userProvider.userObj.lastName!,
+                              "${userProvider.userObj.firstName ?? 'First Name'} ${userProvider.userObj.lastName ?? 'Last Name'}",
                               style: theme.textTheme.titleLarge?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -435,6 +435,15 @@ class _ProfilePageState extends State<ProfilePage> {
                           context,
                           MaterialPageRoute(
                               builder: (context) => const WatchlistPage()),
+                        ),
+                      ),
+                      ProfileOption(
+                        icon: Icons.upcoming,
+                        title: lang.upcoming,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => UpcomingPage()),
                         ),
                       ),
                       ProfileOption(

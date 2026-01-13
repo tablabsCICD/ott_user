@@ -1,6 +1,6 @@
 class ApiConstant {
   static const String baseUrl =
-      "http://ec2-13-200-229-164.ap-south-1.compute.amazonaws.com:8080/ott/";
+      "http://ec2-13-201-5-93.ap-south-1.compute.amazonaws.com:8080/ott/";
 
   static String login = "${baseUrl}user/email/login2";
   static String registration = '${baseUrl}user/RegisterUser';
@@ -91,4 +91,9 @@ class ApiConstant {
 
   static String useGiftByCoupon(userId, couponCode) =>
       "${baseUrl}api/useGiftByCoupon?couponCode=$couponCode&userId=$userId";
+
+  //shorts
+  static String shortsMaster = "${baseUrl}api/shortsMaster";
+  static String shortsDetails(id, userId) =>
+      "${baseUrl}api/shortsMaster/$id?userId=$userId";
 }

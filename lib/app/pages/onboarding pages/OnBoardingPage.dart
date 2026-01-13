@@ -163,7 +163,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           : lang.next,
                       style: TextStyle(
                         fontSize: 18,
-                        color: theme.canvasColor,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),

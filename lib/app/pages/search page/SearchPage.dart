@@ -75,19 +75,7 @@ class _SearchPageState extends State<SearchPage> {
                 ResponsiveWidget.isDesktop(context) ? true : false,
             title: Row(
               children: [
-                ResponsiveWidget.isMobile(context)
-                    ? Padding(
-                        padding: EdgeInsets.only(
-                            top: 1,
-                            bottom: 1,
-                            left: ResponsiveWidget.isTablet(context) ? 30 : 5),
-                        child: SizedBox(
-                          width: 40,
-                          child: Image.asset(ImageConstant.logo2),
-                        ),
-                      )
-                    : SizedBox(),
-                const Spacer(),
+                Spacer(),
                 SizedBox(
                   width: ResponsiveWidget.isDesktop(context)
                       ? 500

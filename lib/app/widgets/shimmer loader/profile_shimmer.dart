@@ -12,7 +12,7 @@ class ProfileShimmer extends StatelessWidget {
             // 🔵 Profile Header Shimmer
             Container(
               width: ResponsiveWidget.isMobile(context) ? double.infinity : 400,
-              padding: const EdgeInsets.all(20.0),
+              padding: const EdgeInsets.all(10.0),
               decoration: BoxDecoration(
                 color: Colors.grey.withOpacity(0.2),
                 borderRadius: const BorderRadius.only(
@@ -23,10 +23,13 @@ class ProfileShimmer extends StatelessWidget {
               child: Column(
                 children: [
                   // Profile Image Shimmer
-                  ShimmerLoader(
-                    height: 100,
-                    width: 100,
-                    borderRadius: 100,
+                  Hero(
+                    tag: 'profile',
+                    child: ShimmerLoader(
+                      height: 100,
+                      width: 100,
+                      borderRadius: 100,
+                    ),
                   ),
                   const SizedBox(height: 12),
 
@@ -45,16 +48,38 @@ class ProfileShimmer extends StatelessWidget {
             const SizedBox(height: 30),
 
             // 🔲 Profile Options List Shimmer
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 8; i++)
               Padding(
                 padding:
                     const EdgeInsets.symmetric(vertical: 5.0, horizontal: 16),
-                child: ShimmerLoader(
+                child: ListTile(
+                  leading: ShimmerLoader(
                     height: 50,
-                    width: ResponsiveWidget.isDesktop(context)
-                        ? 600
-                        : double.infinity,
-                    borderRadius: 10),
+                    width: 50,
+                    borderRadius: 50,
+                  ),
+                  title: ShimmerLoader(
+                    height: 10,
+                    width: 30,
+                    borderRadius: 10,
+                  ),
+                  subtitle: ShimmerLoader(
+                    height: 10,
+                    width: 20,
+                    borderRadius: 10,
+                  ),
+                  trailing: ShimmerLoader(
+                    height: 20,
+                    width: 20,
+                    borderRadius: 50,
+                  ),
+                ),
+                // ShimmerLoader(
+                //     height: 50,
+                //     width: ResponsiveWidget.isDesktop(context)
+                //         ? 600
+                //         : double.infinity,
+                //     borderRadius: 10),
               ),
 
             const SizedBox(height: 250),

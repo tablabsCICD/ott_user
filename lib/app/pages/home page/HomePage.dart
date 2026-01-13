@@ -1,12 +1,13 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/pages/NavigationPage.dart';
+import 'package:ott/app/pages/shorts%20page/component/shortsLibraryPage.dart';
 import 'package:ott/app/pages/profile%20page/ProfilePage.dart';
 import 'package:ott/app/pages/search%20page/SearchPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
-import 'package:ott/app/widgets/LanguageDropdown.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/shimmer%20loader/home_shimmer.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -19,7 +20,6 @@ import 'package:ott/app/widgets/movieCard.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/utils/sharepreferences.dart';
-import '../../provider/language_provider.dart';
 import '../../provider/userProvider.dart';
 
 class HomePage extends StatefulWidget {
@@ -33,10 +33,25 @@ class _HomePageState extends State<HomePage> {
   String selectedType = "MOVIE";
   bool isLoading = true;
 
+//// upcoming movie posters
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+  final List<String> posterImages = [
+    "https://images.moneycontrol.com/static-mcnews/2025/10/20251015110202_Ranveer-Singh-teases-his-next-film.png?impolicy=website&width=770&height=431",
+    "https://i.ytimg.com/vi/G2h0ySpSaDs/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLDDYeWkkhZBOvs4cTyuBQ8a4A6iBw",
+    "https://indiawest.com/wp-content/uploads/2025/12/BORDER-2-Official-Trailer.webp",
+    "https://m.media-amazon.com/images/M/MV5BZmE5MDk0ZjAtMzVjZS00M2JjLTliMWEtZWRkM2VhYmVhYWU0XkEyXkFqcGdeQWJpbndhYWtz._V1_.jpg",
+    "https://www.cinejosh.com/newsimg/newsmainimg/ranveer-singh-action-soaked-dhurandhar-trailer_b_1811250259.jpg",
+  ];
+
   @override
   void initState() {
     super.initState();
     _initializeData();
+    // Auto scroll
+    Future.delayed(const Duration(seconds: 2), () {
+      _startAutoScroll();
+    });
   }
 
   Future<void> _initializeData() async {
@@ -45,6 +60,21 @@ class _HomePageState extends State<HomePage> {
       isLoading = false;
     });
     confirmDetails(context);
+  }
+
+  void _startAutoScroll() {
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 3));
+      if (!mounted) return false;
+
+      _currentPage = (_currentPage + 1) % posterImages.length;
+      _pageController.animateToPage(
+        _currentPage,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOut,
+      );
+      return true;
+    });
   }
 
   void confirmDetails(BuildContext context) {
@@ -64,6 +94,7 @@ class _HomePageState extends State<HomePage> {
       userLocationPopUp(context);
       return;
     } else {
+      //log(" location ${userProvider.location!.country}");
       return;
     }
   }
@@ -98,123 +129,164 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     var themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     var selectedThemeData = themeProvider.getTheme;
-    var languageProvider = Provider.of<LanguageProvider>(context);
 
     return Scaffold(
-      appBar: _buildAppBar(selectedThemeData, context),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: isLoading
-            ? HomeShimmer()
-            : Consumer<DashboardProvider>(
-                builder: (context, dashboardProvider, child) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 10),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: _buildFilterButtons(context, dashboardProvider),
-                    ),
-                    SizedBox(height: 10),
-                    Expanded(
-                      child: ListView.builder(
-                        scrollDirection: Axis.vertical,
-                        itemCount: dashboardProvider.dashboardData.length,
-                        itemBuilder: (context, index) {
-                          DashboardData dashboardData =
-                              dashboardProvider.dashboardData[index];
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "${dashboardData.language} - ${dashboardData.category}",
-                                style: TextStyle(
-                                    overflow: TextOverflow.ellipsis,
-                                    fontSize: ResponsiveWidget.isMobile(context)
-                                        ? 18
-                                        : 20,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                              SizedBox(
-                                height: 10,
-                              ),
-                              (dashboardData.movies == null ||
-                                      dashboardData.movies!.isEmpty)
-                                  ? SizedBox.shrink()
-                                  : SizedBox(
-                                      height: 350,
-                                      child: ListView.builder(
-                                        scrollDirection: Axis.horizontal,
-                                        itemCount:
-                                            dashboardData.movies?.length ?? 0,
-                                        // Safely handle null case
-                                        itemBuilder: (context, index) {
-                                          final movie = dashboardData.movies?[
-                                              index]; // Null-safe access
-                                          if (movie == null) {
-                                            return SizedBox(); // Handle null movie gracefully
-                                          }
-                                          return MovieCard(movie: movie);
-                                        },
-                                      )),
-                              SizedBox(
-                                height: 20,
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                );
-              }),
-      ),
+      body: isLoading
+          ? HomeShimmer()
+          : CustomScrollView(
+              slivers: [
+                _buildSliverAppBar(context, selectedThemeData),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Consumer<DashboardProvider>(
+                        builder: (context, dashboardProvider, child) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: 10),
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child:
+                                _buildFilterButtons(context, dashboardProvider),
+                          ),
+                          SizedBox(height: 10),
+                          selectedType == 'SHORTS'
+                              ? SizedBox(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.7,
+                                  child: ShortsLibraryPage(),
+                                )
+                              : ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: NeverScrollableScrollPhysics(),
+                                  scrollDirection: Axis.vertical,
+                                  itemCount:
+                                      dashboardProvider.dashboardData.length,
+                                  itemBuilder: (context, index) {
+                                    DashboardData dashboardData =
+                                        dashboardProvider.dashboardData[index];
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "${dashboardData.language} - ${dashboardData.category}",
+                                          style: TextStyle(
+                                              overflow: TextOverflow.ellipsis,
+                                              fontSize:
+                                                  ResponsiveWidget.isMobile(
+                                                          context)
+                                                      ? 18
+                                                      : 20,
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        SizedBox(height: 10),
+                                        (dashboardData.movies == null ||
+                                                dashboardData.movies!.isEmpty)
+                                            ? SizedBox.shrink()
+                                            : SizedBox(
+                                                height: 350,
+                                                child: ListView.builder(
+                                                  scrollDirection:
+                                                      Axis.horizontal,
+                                                  itemCount: dashboardData
+                                                          .movies?.length ??
+                                                      0,
+                                                  itemBuilder:
+                                                      (context, index) {
+                                                    final movie = dashboardData
+                                                        .movies?[index];
+                                                    if (movie == null) {
+                                                      return SizedBox();
+                                                    }
+                                                    return MovieCard(
+                                                        movie: movie);
+                                                  },
+                                                ),
+                                              ),
+                                        SizedBox(height: 20),
+                                      ],
+                                    );
+                                  },
+                                ),
+                        ],
+                      );
+                    }),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 
-  AppBar _buildAppBar(ThemeData selectedThemeData, BuildContext context) {
+  SliverAppBar _buildSliverAppBar(
+      BuildContext context, ThemeData selectedThemeData) {
     final lang = AppLocalizations.of(context)!;
 
-    return AppBar(
-      centerTitle: false, // ResponsiveWidget.isDesktop(context) ? true : false,
+    return SliverAppBar(
       forceMaterialTransparency:
           ResponsiveWidget.isDesktop(context) ? true : false,
-      toolbarHeight: 60,
+      expandedHeight: ResponsiveWidget.isMobile(context)
+          ? 240
+          : ResponsiveWidget.isTablet(context)
+              ? 360
+              : 380,
+      floating: false,
+      pinned: true,
+      stretch: true,
+      surfaceTintColor: Colors.transparent,
+      backgroundColor: ResponsiveWidget.isDesktop(context)
+          ? selectedThemeData.scaffoldBackgroundColor
+          : selectedThemeData.primaryColor,
       title: ResponsiveWidget.isDesktop(context)
           ? Text(
-              "  ${lang.homeTitle}",
+              "",
               style: TextStyle(
-                  color: selectedThemeData.canvasColor,
-                  fontWeight: FontWeight.bold),
+                color: selectedThemeData.canvasColor,
+                fontWeight: FontWeight.bold,
+              ),
             )
-          : Padding(
-              padding: EdgeInsets.only(
-                  top: 1,
-                  bottom: 1,
-                  left: ResponsiveWidget.isTablet(context) ? 30 : 5),
-              child: SizedBox(
-                width: 40,
-                child: Hero(
-                  tag: "logo",
-                  child: Image.asset(ImageConstant.logo2),
-                ),
+          : SizedBox(
+              width: 40,
+              child: Hero(
+                tag: "logo",
+                child: InkWell(
+                    onTap: () {
+                      Navigator.pushReplacement(
+                        context,
+                        PageRouteBuilder(
+                          pageBuilder:
+                              (context, animation, secondaryAnimation) =>
+                                  NavigationPage(),
+                          transitionDuration: Duration.zero,
+                          reverseTransitionDuration: Duration.zero,
+                        ),
+                      );
+                    },
+                    child: Image.asset(ImageConstant.logo2)),
               ),
             ),
+      titleSpacing: ResponsiveWidget.isTablet(context) ? 50 : 10,
       actions: [
-        LanguageDropdown(),
+        //LanguageDropdown(),
         IconButton(
           icon: Icon(Icons.search,
               color: ResponsiveWidget.isDesktop(context)
                   ? selectedThemeData.canvasColor
                   : Colors.white),
           tooltip: lang.search,
+          style: IconButton.styleFrom(
+              backgroundColor: ResponsiveWidget.isDesktop(context)
+                  ? Colors.white.withOpacity(0.3)
+                  : Colors.black.withOpacity(0.2)),
           onPressed: () => Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => SearchPage(),
-            ),
+            MaterialPageRoute(builder: (context) => SearchPage()),
           ),
+        ),
+        SizedBox(
+          width: 4,
         ),
         IconButton(
           icon: Icon(Icons.notifications_active,
@@ -222,12 +294,17 @@ class _HomePageState extends State<HomePage> {
                   ? selectedThemeData.canvasColor
                   : Colors.white),
           tooltip: lang.notification,
+          style: IconButton.styleFrom(
+              backgroundColor: ResponsiveWidget.isDesktop(context)
+                  ? Colors.white.withOpacity(0.3)
+                  : Colors.black.withOpacity(0.2)),
           onPressed: () => Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => NotificationPage(),
-            ),
+            MaterialPageRoute(builder: (context) => NotificationPage()),
           ),
+        ),
+        SizedBox(
+          width: 4,
         ),
         IconButton(
           icon: Icon(Icons.language_sharp,
@@ -235,12 +312,17 @@ class _HomePageState extends State<HomePage> {
                   ? selectedThemeData.canvasColor
                   : Colors.white),
           tooltip: lang.selectPreferredLanguage,
+          style: IconButton.styleFrom(
+              backgroundColor: ResponsiveWidget.isDesktop(context)
+                  ? Colors.white.withOpacity(0.3)
+                  : Colors.black.withOpacity(0.2)),
           onPressed: () => Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => ChangeLanguage(),
-            ),
+            MaterialPageRoute(builder: (context) => ChangeLanguage()),
           ),
+        ),
+        SizedBox(
+          width: 4,
         ),
         Consumer<UserProvider>(builder: (context, userProvider, child) {
           final walletProvider =
@@ -252,24 +334,23 @@ class _HomePageState extends State<HomePage> {
           }
           return Row(
             children: [
-              InkWell(
-                onTap: () {},
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.account_balance_wallet,
-                          color: ResponsiveWidget.isDesktop(context)
-                              ? selectedThemeData.canvasColor
-                              : Colors.white),
-                      tooltip: "₹${walletProvider.walletBalance}",
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => WalletPage()),
-                      ),
-                    ),
-                  ],
+              IconButton(
+                icon: Icon(Icons.account_balance_wallet,
+                    color: ResponsiveWidget.isDesktop(context)
+                        ? selectedThemeData.canvasColor
+                        : Colors.white),
+                tooltip: "₹${walletProvider.walletBalance}",
+                style: IconButton.styleFrom(
+                    backgroundColor: ResponsiveWidget.isDesktop(context)
+                        ? Colors.white.withOpacity(0.3)
+                        : Colors.black.withOpacity(0.2)),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => WalletPage()),
                 ),
+              ),
+              SizedBox(
+                width: 4,
               ),
               Tooltip(
                 textStyle: TextStyle(
@@ -286,9 +367,15 @@ class _HomePageState extends State<HomePage> {
                   child: Hero(
                     tag: "profile",
                     child: CircleAvatar(
-                      radius: 15,
-                      backgroundImage:
-                          NetworkImage(userProvider.userObj.profilePhoto ?? ""),
+                      radius: 18,
+                      backgroundColor: selectedThemeData.canvasColor,
+                      backgroundImage: userProvider.userObj.profilePhoto == null
+                          ? AssetImage(ImageConstant.profile)
+                          : userProvider.userObj.profilePhoto!.isNotEmpty
+                              ? NetworkImage(
+                                  userProvider.userObj.profilePhoto!,
+                                )
+                              : AssetImage(ImageConstant.profile),
                     ),
                   ),
                 ),
@@ -296,13 +383,62 @@ class _HomePageState extends State<HomePage> {
             ],
           );
         }),
-        SizedBox(
-          width: 16,
-        )
+        const SizedBox(width: 16),
       ],
-      backgroundColor: ResponsiveWidget.isDesktop(context)
-          ? selectedThemeData.scaffoldBackgroundColor
-          : selectedThemeData.primaryColor,
+      flexibleSpace: FlexibleSpaceBar(
+        //titlePadding: const EdgeInsetsDirectional.only(start: 16, bottom: 16),
+
+        stretchModes: const [
+          StretchMode.zoomBackground,
+          StretchMode.fadeTitle,
+        ],
+        background: Stack(
+          children: [
+            Positioned.fill(
+              child: Container(
+                color: selectedThemeData.scaffoldBackgroundColor,
+                child: Icon(
+                  Icons.broken_image,
+                  color: selectedThemeData.canvasColor.withOpacity(0.2),
+                  size: 60,
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: posterImages.length,
+                itemBuilder: (context, index) {
+                  return Image.network(
+                    posterImages[index],
+                    fit: BoxFit.cover,
+                  );
+                },
+              ),
+            ),
+            // Dark shadow overlay (top area)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.center,
+                      colors: [
+                        selectedThemeData.scaffoldBackgroundColor
+                            .withOpacity(0.3),
+                        selectedThemeData.scaffoldBackgroundColor
+                            .withOpacity(0.2),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -316,6 +452,7 @@ class _HomePageState extends State<HomePage> {
       children: [
         "MOVIE",
         "SERIES",
+        "SHORTS",
       ].map((type) {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -331,6 +468,15 @@ class _HomePageState extends State<HomePage> {
                       []; // Ensure it doesn't throw null
 
               print(selectedLanguages);
+              if (selectedType == 'SHORTS') {
+                // Navigator.push(
+                //   context,
+                //   MaterialPageRoute(
+                //     builder: (context) => ShortsScreen(),
+                //   ),
+                // );
+                return;
+              }
               if (selectedLanguages.isEmpty ||
                   selectedLanguages == [] ||
                   selectedLanguages == null) {
@@ -356,7 +502,11 @@ class _HomePageState extends State<HomePage> {
                 padding:
                     const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
                 child: Text(
-                  type == 'MOVIE' ? lang.movie : lang.series,
+                  type == 'MOVIE'
+                      ? lang.movie
+                      : type == 'SERIES'
+                          ? lang.series
+                          : 'Shorts',
                   style: TextStyle(
                     color: selectedType == type
                         ? selectedThemeData.primaryColor

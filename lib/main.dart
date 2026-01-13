@@ -6,6 +6,7 @@ import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/provider/language_provider.dart';
 import 'package:ott/app/provider/localeLanguageProvider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
+import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/provider/ticketProvider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
@@ -64,6 +65,9 @@ Future<void> main() async {
         ),
         ChangeNotifierProvider(
           create: (context) => GiftProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => ShortProvider(),
         ),
       ],
       child: MyApp(

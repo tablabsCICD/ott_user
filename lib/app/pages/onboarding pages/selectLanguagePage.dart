@@ -49,7 +49,7 @@ class SelectLocaleLanguagePage extends StatelessWidget {
                       horizontal: 10,
                     ),
                     decoration: BoxDecoration(
-                      color: theme.cardColor,
+                      color: theme.primaryColor,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const LanguageDropdown(isTitle: false),
@@ -74,7 +74,11 @@ class SelectLocaleLanguagePage extends StatelessWidget {
                     ),
                     child: Text(
                       lang.next,
-                      style: TextStyle(fontSize: 16, color: Colors.white),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   )
                 ],

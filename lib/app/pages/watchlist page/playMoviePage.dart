@@ -1,232 +1,212 @@
+// play_movie_page.dart
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:video_player/video_player.dart';
+import 'package:chewie/chewie.dart';
 import 'package:intl/intl.dart';
-import 'package:ott/app/core/constant/image_constant.dart';
-import 'package:ott/app/pages/movie%20details%20page/component/AutoScrollingPosters.dart';
-import 'package:ott/app/pages/DisplayTrailer.dart';
-import 'package:ott/app/pages/wallet%20page/BillingPage.dart';
-import 'package:ott/app/pages/movie%20details%20page/component/actionButtonWidget.dart';
+import 'package:provider/provider.dart';
+
 import 'package:ott/app/provider/ThemeProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
+import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/content.dart';
-import 'package:ott/data/models/response/getContentResponse.dart';
-import 'package:ott/data/repositories/demo.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
-import 'package:provider/provider.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
-
-import '../../widgets/show_toast.dart';
-import '../movie details page/component/displayStar.dart';
-import '../movie details page/component/starRating.dart';
 
 class PlayMoviePage extends StatefulWidget {
   final int movieId;
-
-  const PlayMoviePage({super.key, required this.movieId});
+  const PlayMoviePage({Key? key, required this.movieId}) : super(key: key);
 
   @override
   State<PlayMoviePage> createState() => _PlayMoviePageState();
 }
 
 class _PlayMoviePageState extends State<PlayMoviePage> {
-  bool isLoading = true;
+  bool _isLoading = true;
+
+  VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
 
   @override
   void initState() {
     super.initState();
     _fetchData();
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() {
-        isLoading = false;
-      });
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) setState(() => _isLoading = false);
     });
   }
 
   Future<void> _fetchData() async {
     await Provider.of<DashboardProvider>(context, listen: false)
         .getContentById(widget.movieId);
+
     await Provider.of<VideoProvider>(context, listen: false)
         .getRatingReview(widget.movieId);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    var selectedThemeData =
-        Provider.of<ThemeProvider>(context, listen: true).getTheme;
+  void _setupPlayer(String url) {
+    if (url.isEmpty) return;
 
-    Content? movieContent =
-        Provider.of<DashboardProvider>(context, listen: true).content;
+    _videoController?.dispose();
+    _chewieController?.dispose();
 
-    if (movieContent == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Movie Details'),
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-        ),
-        body: const Center(
-          child: Text('Movie not found.'),
-        ),
-      );
-    }
+    _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
 
-    final controller = YoutubePlayerController(
-      initialVideoId:
-          YoutubePlayer.convertUrlToId(movieContent.contentUrl ?? '') ?? '',
-      flags: const YoutubePlayerFlags(
-        autoPlay: true,
-        mute: false,
-        loop: true,
+    _chewieController = ChewieController(
+      videoPlayerController: _videoController!,
+      autoInitialize: true,
+      autoPlay: true,
+      looping: false,
+      allowMuting: true,
+      allowPlaybackSpeedChanging: true,
+      zoomAndPan: true,
+
+      // IMPORTANT FIXES:
+      deviceOrientationsAfterFullScreen: [
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ],
+      deviceOrientationsOnEnterFullScreen: [
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ],
+      allowFullScreen: true,
+
+      materialProgressColors: ChewieProgressColors(
+        playedColor: Colors.redAccent,
+        handleColor: Colors.white,
+        backgroundColor: Colors.white12,
+        bufferedColor: Colors.white24,
       ),
     );
 
-    return isLoading
-        ? const Scaffold(body: Center(child: CircularProgressIndicator()))
-        : Scaffold(
-            backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-            extendBodyBehindAppBar: true,
-            appBar: AppBar(
-              title: ResponsiveWidget.isDesktop(context)
-                  ? const Text('')
-                  : Text(
-                      /* movieContent.title ?? */
-                      'Movie Details',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-              backgroundColor: Colors.transparent,
-              centerTitle: true,
-              elevation: 0,
-            ),
-            body: Consumer<DashboardProvider>(
-              builder: (context, provider, child) {
-                final content = provider.content;
-
-                if (content == null) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                return ResponsiveWidget.isDesktop(context)
-                    ? _buildDesktopView(content, selectedThemeData, controller)
-                    : _buildMobileView(content, selectedThemeData, controller);
-              },
-            ),
-          );
+    // CRITICAL: add this to rebuild gestures layer
+    setState(() {});
   }
 
-  Widget _buildDesktopView(Content content, ThemeData selectedThemeData,
-      YoutubePlayerController controller) {
-    return SingleChildScrollView(
-      child: Column(
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    _chewieController?.dispose();
+    super.dispose();
+  }
+
+  String _formatEpoch(int? ms) {
+    if (ms == null) return '';
+    try {
+      return DateFormat('yyyy-MM-dd')
+          .format(DateTime.fromMillisecondsSinceEpoch(ms));
+    } catch (_) {
+      return '';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context).getTheme;
+    final content = Provider.of<DashboardProvider>(context).content;
+
+    if (content == null) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          title: const Text('Movie Details'),
+          backgroundColor: Colors.transparent,
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // keep your original URL logic EXACTLY
+    final videoUrl = content.contentUrl ?? "";
+
+    // Setup chewie/video_player
+    if (_chewieController == null) {
+      _setupPlayer(videoUrl);
+    }
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      extendBodyBehindAppBar: false,
+      appBar: AppBar(
+        title: ResponsiveWidget.isDesktop(context)
+            ? const Text('')
+            : Text(
+                content.title ?? "",
+                style: TextStyle(color: theme.canvasColor),
+              ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                if (ResponsiveWidget.isMobile(context)) {
+                  return _mobileUI(context, content);
+                }
+                return _desktopUI(context, content);
+              },
+            ),
+    );
+  }
+
+  // ----------------- MOBILE UI -----------------
+
+  Widget _mobileUI(BuildContext context, Content content) {
+    return Column(
+      children: [
+        AspectRatio(
+          aspectRatio: 16 / 9,
+          child: _chewieController != null
+              ? Chewie(controller: _chewieController!)
+              : _posterFallback(content),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: _movieDetails(context, content),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ----------------- DESKTOP/TABLET UI -----------------
+
+  Widget _desktopUI(BuildContext context, Content content) {
+    final isDesktop = ResponsiveWidget.isDesktop(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
         children: [
-          SizedBox(
-              height: 750,
-              child: TrailerPage(
-                trailerUrl: content.contentUrl ?? '',
-                isTrailerUrl: false,
-                content: content,
-              )),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        width: 1,
-                        color: Colors.white.withOpacity(0.5),
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                        left: 10,
-                        right: 10,
-                        top: 6,
-                        bottom: 6,
-                      ),
-                      child: Text(
-                        content.title ?? "",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 22,
-                          color: selectedThemeData.primaryColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  StarRatingWidget(
-                    rating: content.ratings ?? 0.0,
-                    starSize: 20,
-                    textSize: 16,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '(${content.ratingCount ?? '0'} reviews)',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.white70,
-                    ),
-                  ),
-                  const Spacer(),
-                  _ageRating(content.ageRating ?? ""),
-                ],
-              ),
-              const SizedBox(height: 10),
-              (content.posterUrlList != null &&
-                      content.posterUrlList!.isNotEmpty)
-                  ? Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            width: 300,
-                            child: AutoScrollingPosters(
-                              imageUrls: [
-                                if (content.posterUrlList != null &&
-                                    content.posterUrlList!.isNotEmpty)
-                                  content.posterUrlList!.length > 0
-                                      ? content.posterUrlList![0]
-                                      : "",
-                                if (content.posterUrlList!.length > 1)
-                                  content.posterUrlList![1],
-                                if (content.posterUrlList!.length > 2)
-                                  content.posterUrlList![2],
-                              ],
-                              height: 300,
-                              aspectRatio: 2 / 3,
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : SizedBox.shrink(),
-              const SizedBox(height: 16),
-              Text(
-                content.description ?? 'N/A',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+          Expanded(
+            flex: 10,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                AspectRatio(
+                  aspectRatio: isDesktop ? 16 / 9 : 4 / 3,
+                  child: _chewieController != null
+                      ? Chewie(controller: _chewieController!)
+                      : _posterFallback(content),
                 ),
-              ),
-              const SizedBox(height: 16),
-              // _buildButtons(context, content),
-              //   const SizedBox(height: 16),
-              const SizedBox(height: 16),
-              _buildDetailsSection(context, content),
-              const SizedBox(height: 16),
-              _buildRatingReviewSection(context, content),
-            ],
+                _ratingReviewSection(content),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 20,
+          ),
+          Expanded(
+            flex: 9,
+            child: SingleChildScrollView(
+              child: _movieDetails(context, content),
+            ),
           ),
           const SizedBox(width: 20),
         ],
@@ -234,454 +214,337 @@ class _PlayMoviePageState extends State<PlayMoviePage> {
     );
   }
 
-  Widget _buildMobileView(Content content, ThemeData selectedThemeData,
-      YoutubePlayerController controller) {
-    return Column(
-      children: [
-        SizedBox(
-            height: 450,
-            child: TrailerPage(
-              trailerUrl: content.contentUrl ?? '',
-              isTrailerUrl: false,
-              content: content,
-            )),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    StarRatingWidget(
-                      rating: content.ratings ?? 0.0,
-                      starSize: 20,
-                      textSize: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '(${content.ratingCount ?? '0'} reviews)',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    Spacer(),
-                    _ageRating(content.ageRating ?? ""),
-                  ],
-                ),
-                SizedBox(height: 10),
-                (content.posterUrlList != null &&
-                        content.posterUrlList!.isNotEmpty)
-                    ? Row(
-                        children: [
-                          Expanded(
-                            child: SizedBox(
-                              width: 300,
-                              child: AutoScrollingPosters(
-                                imageUrls: [
-                                  if (content.posterUrlList != null &&
-                                      content.posterUrlList!.isNotEmpty)
-                                    content.posterUrlList!.length > 0
-                                        ? content.posterUrlList![0]
-                                        : "",
-                                  if (content.posterUrlList!.length > 1)
-                                    content.posterUrlList![1],
-                                  if (content.posterUrlList!.length > 2)
-                                    content.posterUrlList![2],
-                                ],
-                                height: 300,
-                                aspectRatio: 2 / 3,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    : SizedBox.shrink(),
-                const SizedBox(height: 16),
-                Text(
-                  content.description ?? 'N/A',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                //  _buildButtons(context, content),
-                const SizedBox(height: 16),
-                _buildDetailsSection(context, content),
-                const SizedBox(height: 16),
-                _buildRatingReviewSection(context, content),
-              ],
+  // ----------------- POSTER FALLBACK -----------------
+
+  Widget _posterFallback(Content content) {
+    final theme = Theme.of(context);
+    return Container(
+      color: theme.scaffoldBackgroundColor,
+      child: content.posterUrlList != null && content.posterUrlList!.isNotEmpty
+          ? Image.network(content.posterUrlList!.first, fit: BoxFit.cover)
+          : Center(
+              child: Icon(Icons.movie,
+                  color: theme.canvasColor.withOpacity(0.7), size: 40),
             ),
-          ),
-        ),
-      ],
     );
   }
 
-  Widget _buildBackground(String? imageUrl) {
-    return imageUrl != null && imageUrl.isNotEmpty
-        ? Image.network(
-            imageUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) =>
-                Container(color: Colors.grey),
-          )
-        : Container(color: Colors.black);
-  }
+  // ----------------- DETAILS SECTION -----------------
 
-  Widget _ageRating(String? ageRating) {
-    return ageRating != null && ageRating.isNotEmpty
-        ? Tooltip(
-            preferBelow: false,
-            showDuration: const Duration(seconds: 2),
-            waitDuration: const Duration(seconds: 1),
-            message: ageRating == 'U'
-                ? 'Universal Age'
-                : ageRating == 'U/A'
-                    ? 'Parental Guidance'
-                    : 'Adults Only',
-            child: Image.asset(
-              height: 40,
-              width: 60,
-              ageRating == 'U'
-                  ? ImageConstant.ageUniversal
-                  : ageRating == 'U/A'
-                      ? ImageConstant.ageParentalGuidance
-                      : ImageConstant.ageAdultsOnly,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) =>
-                  Container(color: Colors.grey),
-            ),
-          )
-        : Container(color: Colors.black);
-  }
-
-  Widget _buildButtons(BuildContext context, Content movie) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        ResponsiveWidget.isDesktop(context)
-            ? SizedBox()
-            : ActionButtonWidget(
-                label: 'Watch Trailer',
-                icon: Icons.play_circle_fill,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TrailerPage(
-                        trailerUrl: movie.trailerUrl ?? '',
-                        isTrailerUrl: true,
-                        content: movie,
-                      ),
-                    ),
-                  );
-                },
-              ),
-        const SizedBox(width: 20),
-        ActionButtonWidget(
-          label: 'Rent ₹${movie.price}',
-          icon: Icons.shopping_cart,
-          onTap: () {
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return _buildConfirmationBox(context, movie);
-              },
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildConfirmationBox(BuildContext context, Content movie) {
-    var selectedThemeData =
-        Provider.of<ThemeProvider>(context, listen: true).getTheme;
-    return AlertDialog(
-      backgroundColor: selectedThemeData.cardColor,
-      title: Center(
-        child: Text(
-          movie.title ?? "",
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color:
-                selectedThemeData.primaryColor, // Apply text color from theme
-          ),
-        ),
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
+  Widget _movieDetails(BuildContext context, Content content) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Title
           Text(
-            'Price: ₹${movie.price ?? 0.0}',
+            content.title ?? '',
+            maxLines: 2,
             style: TextStyle(
-              fontSize: 14,
-              color: selectedThemeData.secondaryHeaderColor, // Theme text color
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              overflow: TextOverflow.ellipsis,
+              color: theme.canvasColor,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Duration: ${movie.rentlDuration ?? ''}',
-            style: TextStyle(
-              fontSize: 14,
-              color: selectedThemeData.secondaryHeaderColor, // Theme text color
-            ),
-          ),
+
           const SizedBox(height: 10),
-          Text(
-            'Do you want to rent this movie?',
-            style: TextStyle(
-              fontSize: 14,
-              color: selectedThemeData.primaryColor, // Theme text color
-            ),
-            textAlign: TextAlign.center,
+
+          // Rating row
+          Row(
+            children: [
+              StarRatingWidget(
+                rating: double.parse(content.ratings!.toStringAsFixed(1)),
+                starSize: 20,
+                textSize: 14,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                "(${content.ratingCount ?? 0})",
+                style: TextStyle(color: theme.canvasColor),
+              ),
+            ],
           ),
+          const SizedBox(height: 16),
+
+          _ageBadge(content.ageRating),
+
+          const SizedBox(height: 16),
+          Text(
+            content.description ?? "No description available",
+            maxLines: 8,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: theme.canvasColor),
+          ),
+
+          const SizedBox(height: 20),
+          _quickInfo(context, content),
+
+          const SizedBox(height: 20),
+          _castSection(content),
+
+          const SizedBox(height: 20),
+          _detailsList(content),
+
+          const SizedBox(height: 20),
+          //_ratingReviewSection(content),
         ],
       ),
-      actions: [
-        TextButton(
-          style: TextButton.styleFrom(
-            backgroundColor: selectedThemeData.cardColor,
-            foregroundColor: selectedThemeData.canvasColor,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          onPressed: () {
-            Navigator.of(context).pop(); // Close the dialog
-          },
-          child: const Text("Cancel"),
-        ),
-        TextButton(
-          style: TextButton.styleFrom(
-            backgroundColor: selectedThemeData.primaryColor,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          onPressed: () {
-            Navigator.of(context).pop(); // Close the dialog
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => BillingPage(
-                  movie: movie,
-                ),
-              ),
-            );
-          },
-          child: const Text("Continue"),
-        ),
+    );
+  }
+
+  // ----------------- AGE BADGE -----------------
+
+  Widget _ageBadge(String? age) {
+    final theme = Theme.of(context);
+    if (age == null || age.isEmpty) return const SizedBox();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        age,
+        style: TextStyle(color: theme.canvasColor),
+      ),
+    );
+  }
+
+  // ----------------- ACTION BUTTONS -----------------
+
+  // ----------------- QUICK INFO -----------------
+
+  Widget _quickInfo(BuildContext context, Content content) {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        if (content.runtime != null) _pill("${content.runtime} min"),
+        if (content.releaseDate != null) _pill(content.releaseDate!),
       ],
     );
   }
 
-  Widget _buildDetailsSection(BuildContext context, Content movie) {
+  Widget _pill(String text) {
+    final theme = Provider.of<ThemeProvider>(context).getTheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Text(text, style: TextStyle(color: theme.canvasColor)),
+    );
+  }
+
+  // ----------------- CAST SECTION -----------------
+
+  Widget _castSection(Content content) {
+    final theme = Provider.of<ThemeProvider>(context).getTheme;
+
+    final cast = content.castList ?? [];
+    if (cast.isEmpty) return const SizedBox();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildDetailItem(
-            'Director',
-            (movie.directorList != null && movie.directorList!.isNotEmpty)
-                ? movie.directorList!.first
-                : 'Unknown'),
-        _buildDetailItem(
-            'Cast',
-            (movie.castList != null && movie.castList!.isNotEmpty)
-                ? movie.castList!.join(', ')
-                : 'N/A'),
-        _buildDetailItem(
-            'Genres',
-            (movie.genreList != null && movie.genreList!.isNotEmpty)
-                ? movie.genreList!.join(', ')
-                : 'N/A'),
-        _buildDetailItem('Runtime', movie.runtime!.toString()),
-        _buildDetailItem('Release Date', movie.releaseDate ?? 'N/A'),
-        _buildDetailItem('Languages', (movie.languageList ?? []).join(', ')),
-        _buildDetailItem('Rating', '${movie.ratings ?? 0.0} ⭐'),
-        _buildDetailItem(
-            'Audio Formats', (movie.audioFormatList ?? []).join(', ')),
-        _buildDetailItem(
-            'Subtitle', (movie.subtitleLanguageList ?? []).join(', ')),
-        _buildDetailItem('Age Rating', movie.ageRating ?? 'N/A'),
-        //is_downloadable
+        Text(
+          "Cast",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: theme.canvasColor,
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 110,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemBuilder: (_, i) {
+              return Column(
+                children: [
+                  CircleAvatar(
+                    radius: 26,
+                    backgroundColor: theme.cardColor,
+                    child: Icon(
+                      Icons.person,
+                      color: theme.canvasColor.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: 80,
+                    child: Text(
+                      cast[i],
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: theme.canvasColor),
+                    ),
+                  )
+                ],
+              );
+            },
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemCount: cast.length,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildDetailItem(String title, String content) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Text(
-        '$title:  $content',
-        style:
-            const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-      ),
+  // ----------------- DETAILS LIST -----------------
+
+  Widget _detailsList(Content content) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _detail("Director", content.directorList?.join(", ") ?? "Unknown"),
+        _detail("Genres", content.genreList?.join(", ") ?? "N/A"),
+        _detail("Languages", content.languageList?.join(", ") ?? "N/A"),
+        _detail("Age Rating", content.ageRating ?? "N/A"),
+      ],
     );
   }
 
-  _buildRatingReviewSection(BuildContext context, Content content) {
-    var selectedThemeData =
-        Provider.of<ThemeProvider>(context, listen: true).getTheme;
-    return Consumer<VideoProvider>(
-      builder: (context, provider, child) => Column(
+  Widget _detail(String title, String v) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Text.rich(
+        TextSpan(
+          style: const TextStyle(color: Colors.white70),
+          children: [
+            TextSpan(
+              text: '$title: ',
+              style: TextStyle(
+                color: theme.primaryColor,
+              ),
+            ),
+            TextSpan(
+              text: '$v',
+              style: TextStyle(
+                color: theme.canvasColor,
+              ),
+            ),
+          ],
+        ),
+      ), //Text("$title: $v", style: const TextStyle(color: Colors.white70)),
+    );
+  }
+
+  // ----------------- RATING / REVIEW SECTION -----------------
+
+  Widget _ratingReviewSection(Content content) {
+    final theme = Theme.of(context);
+    return Consumer<VideoProvider>(builder: (context, provider, child) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Rate your experience with ",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            "Rate your experience",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: theme.canvasColor,
+            ),
           ),
-          StarRating(
-            rating: provider.rating,
-            onRatingChanged: (rating) =>
-                setState(() => provider.rating = rating),
-          ),
-          SizedBox(
-            height: 7,
-          ),
-          Container(
-            height: 90,
-            margin: EdgeInsets.all(10.0),
-            padding: EdgeInsets.only(bottom: 16.0),
-            child: TextField(
-              maxLines: 9,
-              controller: provider.reviewController,
-              decoration: InputDecoration(
-                hintText: "Your Feedback!",
-                border: OutlineInputBorder(),
+          const SizedBox(height: 8),
+          StarRatingWidget(rating: provider.rating, starSize: 22, textSize: 14),
+          const SizedBox(height: 8),
+          TextField(
+            controller: provider.reviewController,
+            maxLines: 3,
+            style: TextStyle(color: theme.canvasColor),
+            decoration: InputDecoration(
+              hintText: "Write your feedback...",
+              filled: true,
+              fillColor: theme.cardColor,
+              hintStyle: TextStyle(color: theme.canvasColor),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
           ),
-          SizedBox(
-            height: 7,
-          ),
+          const SizedBox(height: 12),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: selectedThemeData.primaryColor,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
-              ),
+              backgroundColor: theme.primaryColor,
+              foregroundColor: Colors.white, // Text/Icon color
             ),
             onPressed: () async {
-              if (provider.reviewController.text.isNotEmpty) {
-                if (provider.rating == 0) {
-                  CustomToast.show(context, "Please select rating",
-                      isSuccess: false);
-                } else {
-                  var result = await provider.saveRatingReview(content.id!);
-                  if (result['success'] == false) {
-                    CustomToast.show(
-                        context, "something went wrong to submit review",
-                        isSuccess: false);
-                  } else {
-                    CustomToast.show(context, "'review submitted successfully'",
-                        isSuccess: true);
-                    await provider.getRatingReview(content.id!);
-                  }
-                }
+              if (provider.reviewController.text.trim().isEmpty) {
+                CustomToast.show(context, "Write a comment", isSuccess: false);
+                return;
+              }
+
+              final result = await provider.saveRatingReview(content.id!);
+              if (result['success'] == true) {
+                provider.reviewController.clear();
+                CustomToast.show(context, "Review submitted", isSuccess: true);
+                await provider.getRatingReview(content.id!);
               } else {
-                CustomToast.show(context, 'Please give some comments',
-                    isSuccess: false);
+                CustomToast.show(context, "Failed to submit", isSuccess: false);
               }
             },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Text("Submit Review"),
-            ),
+            child: const Text("Submit Review"),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              getChatList(),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  getChatList() {
-    return Consumer<VideoProvider>(
-      builder: (context, provider, child) => Expanded(
-        child: ListView.builder(
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            itemCount: provider.reviewList.length,
-            itemBuilder: (BuildContext context, int index) {
-              DateTime date = DateTime.fromMillisecondsSinceEpoch(
-                  provider.reviewList[index].createdAt!);
-              String formattedDate =
-                  DateFormat('yyyy-MM-dd HH:mm:ss').format(date);
-
-              return Container(
-                margin: EdgeInsets.symmetric(vertical: 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        SizedBox(
-                          height: 40,
-                          width: 40,
-                          child: CircleAvatar(
-                            backgroundImage:
-                                provider.reviewList[index].userProfile != null
-                                    ? NetworkImage(
-                                        provider.reviewList[index].userProfile!)
-                                    : null,
-                            radius: 50,
-                            child:
-                                provider.reviewList[index].userProfile == null
-                                    ? Icon(Icons.person, size: 25)
-                                    : null,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 15,
-                        ),
-                        Text(provider.reviewList[index].username ?? 'NA',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 15))
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        StarDisplay(
-                            value: provider.reviewList[index].rating ?? 5),
-                        SizedBox(
-                          width: 10,
-                        ),
-                        Text(formattedDate,
-                            style: TextStyle(
-                                fontWeight: FontWeight.normal, fontSize: 12))
-                      ],
-                    ),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    Text(provider.reviewList[index].title.toString(),
+          const SizedBox(height: 16),
+          ...provider.reviewList.map((r) {
+            return Container(
+              margin: const EdgeInsets.symmetric(vertical: 6),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundImage: r.userProfile != null
+                            ? NetworkImage(r.userProfile!)
+                            : null,
+                        child: r.userProfile == null
+                            ? const Icon(Icons.person)
+                            : null,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        r.username ?? "User",
                         style: TextStyle(
-                            fontWeight: FontWeight.normal, fontSize: 12)),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    Divider(
-                      thickness: 2,
-                    )
-                  ],
-                ),
-              );
-            }),
-      ),
-    );
+                            fontWeight: FontWeight.bold,
+                            color: theme.canvasColor),
+                      ),
+                      const Spacer(),
+                      Text(
+                        _formatEpoch(r.createdAt),
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  StarRatingWidget(
+                      rating: (r.rating ?? 0).toDouble(),
+                      starSize: 16,
+                      textSize: 12),
+                  const SizedBox(height: 8),
+                  Text(r.title ?? "",
+                      style: TextStyle(color: theme.canvasColor)),
+                ],
+              ),
+            );
+          })
+        ],
+      );
+    });
   }
 }

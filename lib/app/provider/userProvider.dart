@@ -743,86 +743,73 @@ class UserProvider extends BaseProvider {
 
   // Pick Image
   Future<void> pickImage() async {
-    if (kIsWeb) {
-      // Web file picker
-      final html.FileUploadInputElement uploadInput =
-          html.FileUploadInputElement();
-      uploadInput.accept = 'image/*';
-      uploadInput.click();
+    try {
+      if (kIsWeb) {
+        log('Web file picker');
+        final uploadInput = html.FileUploadInputElement();
+        uploadInput.accept = 'image/*';
+        uploadInput.click();
 
-      uploadInput.onChange.listen((event) async {
-        if (uploadInput.files != null && uploadInput.files!.isNotEmpty) {
-          _webFile = uploadInput.files!.first;
+        uploadInput.onChange.listen((event) async {
+          if (uploadInput.files != null && uploadInput.files!.isNotEmpty) {
+            _webFile = uploadInput.files!.first;
+            await uploadImage();
+            notifyListeners();
+          }
+        });
+      } else {
+        log('Mobile/desktop file picker');
+        final picker = ImagePicker();
+        final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+        if (pickedFile != null) {
+          _imageFile = io.File(pickedFile.path);
           await uploadImage();
           notifyListeners();
         }
-      });
-    } else {
-      // Mobile/desktop file picker
-      final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-      if (pickedFile != null) {
-        _imageFile = io.File(pickedFile.path);
-        if (kIsWeb && _webFile != null) {
-          await uploadImage();
-        }
-        notifyListeners();
       }
+    } catch (e) {
+      log('Error picking image: $e');
     }
   }
 
   // Upload Image
   Future<void> uploadImage() async {
-    if ((!kIsWeb && _imageFile == null) || (kIsWeb && _webFile == null)) {
-      return; // No file selected
-    }
-
+    log('Uploading image...');
     final url = Uri.parse(ApiConstant.uploadImg);
     _isUploading = true;
     notifyListeners();
 
     try {
+      http.MultipartRequest request = http.MultipartRequest('POST', url);
+
       if (kIsWeb && _webFile != null) {
-        // Web upload logic
-        final request = http.MultipartRequest('POST', url);
         final reader = html.FileReader();
         reader.readAsArrayBuffer(_webFile!);
         await reader.onLoad.first;
-
         final byteData = reader.result as List<int>;
         final multipartFile = http.MultipartFile.fromBytes(
           'profilePicture',
           byteData,
           filename: _webFile!.name,
         );
-
         request.files.add(multipartFile);
-        final response = await request.send();
+      } else if (_imageFile != null) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'profilePicture',
+          _imageFile!.path,
+        ));
+      }
 
-        if (response.statusCode == 200) {
-          final responseBody = await response.stream.bytesToString();
-          _uploadedImageUrl = jsonDecode(responseBody);
-          profileController.text = _uploadedImageUrl!;
-        } else if (!kIsWeb && _imageFile != null) {
-          // Mobile/desktop upload logic
-          final request = http.MultipartRequest('POST', url);
-          request.files.add(await http.MultipartFile.fromPath(
-            'profilePicture',
-            _imageFile!.path,
-            //  contentType: MediaType('image', 'jpeg'),
-          ));
-          final response = await request.send();
-
-          if (response.statusCode == 200) {
-            final responseBody = await response.stream.bytesToString();
-            _uploadedImageUrl = jsonDecode(responseBody);
-            profileController.text = _uploadedImageUrl!;
-          }
-          notifyListeners();
-        }
+      final response = await request.send();
+      if (response.statusCode == 200) {
+        final responseBody = await response.stream.bytesToString();
+        _uploadedImageUrl = jsonDecode(responseBody);
+        profileController.text = _uploadedImageUrl!;
+      } else {
+        log('Upload failed with status: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error uploading image: $e');
+      log('Error uploading image: $e');
     } finally {
       _isUploading = false;
       notifyListeners();
