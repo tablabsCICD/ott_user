@@ -90,13 +90,17 @@ class _GiftDetailsPageState extends State<GiftDetailsPage> {
                         children: [
                           if (giftMaster.movie?.posterUrlList != null &&
                               giftMaster.movie!.posterUrlList!.isNotEmpty)
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                giftMaster.movie!.posterUrlList!.first,
-                                width: 80,
-                                height: 120,
-                                fit: BoxFit.cover,
+                            SizedBox(
+                              width: 80,
+                              height: 120,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  giftMaster.movie!.posterUrlList!.first,
+                                  width: 80,
+                                  height: 120,
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
                           const SizedBox(width: 12),
@@ -142,6 +146,7 @@ class _GiftDetailsPageState extends State<GiftDetailsPage> {
 
                 /// 🎁 Gift Information
                 Card(
+                  color: theme.cardColor,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                   child: Padding(
@@ -245,15 +250,20 @@ class _GiftDetailsPageState extends State<GiftDetailsPage> {
                     itemBuilder: (context, index) {
                       final user = giftMaster.user![index];
                       return Card(
+                        color: theme.cardColor,
                         margin: const EdgeInsets.symmetric(vertical: 6),
                         child: ListTile(
                           leading: CircleAvatar(
+                            backgroundColor: theme.canvasColor.withOpacity(0.3),
                             backgroundImage:
                                 (user.image != null && user.image!.isNotEmpty)
                                     ? NetworkImage(user.image!)
                                     : null,
                             child: (user.image == null || user.image!.isEmpty)
-                                ? const Icon(Icons.person)
+                                ? Icon(
+                                    Icons.person,
+                                    color: theme.canvasColor.withOpacity(0.7),
+                                  )
                                 : null,
                           ),
                           title: Text(user.name ?? "Unknown"),

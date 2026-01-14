@@ -73,27 +73,29 @@ class _SearchPageState extends State<SearchPage> {
                 : selectedThemeData.primaryColor,
             forceMaterialTransparency:
                 ResponsiveWidget.isDesktop(context) ? true : false,
-            title: Row(
-              children: [
-                Spacer(),
-                SizedBox(
-                  width: ResponsiveWidget.isDesktop(context)
-                      ? 500
-                      : ResponsiveWidget.isTablet(context)
-                          ? 400
-                          : 250,
-                  child: CustomTextField(
-                    controller: provider.searchContentController,
-                    hintText: lang.searchContent,
-                    prefixIcon: const Icon(Icons.search),
-                    textInputType: TextInputType.text,
-                  ),
-                ),
-                const Spacer(),
-                Container(
+            title: SizedBox(
+              width: ResponsiveWidget.isDesktop(context)
+                  ? 500
+                  : ResponsiveWidget.isTablet(context)
+                      ? 400
+                      : double.infinity,
+              child: CustomTextField(
+                controller: provider.searchContentController,
+                hintText: lang.searchContent,
+                prefixIcon: const Icon(Icons.search),
+                textInputType: TextInputType.text,
+              ),
+            ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: Container(
                   decoration: BoxDecoration(
-                      color: selectedThemeData.cardColor.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(22)),
+                    color: selectedThemeData.cardColor.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(
+                      22,
+                    ),
+                  ),
                   child: Row(
                     children: [
                       ResponsiveWidget.isMobile(context)
@@ -232,8 +234,8 @@ class _SearchPageState extends State<SearchPage> {
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
           // Inside _SearchPageState's build method where `body:` is assigned:
           body: isLoading
@@ -323,30 +325,33 @@ class SearchMovieCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: movie.posterUrlList != null &&
-                            movie.posterUrlList!.isNotEmpty
-                        ? Image.network(
-                            movie.posterUrlList![0],
-                            width: 100,
-                            height: 140,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Icon(
-                                Icons.broken_image,
-                                size: 100,
-                                color: Colors.grey),
-                          )
-                        : Container(
-                            width: 100,
-                            height: 140,
-                            color: Colors.grey[300],
-                            child: Icon(
-                              Icons.movie,
-                              size: 60,
-                              color: Colors.grey[600],
+                  SizedBox(
+                    width: 100,
+                    height: 140,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: movie.posterUrlList != null &&
+                              movie.posterUrlList!.isNotEmpty
+                          ? Image.network(
+                              movie.posterUrlList![0],
+                              width: 100,
+                              height: 140,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Icon(Icons.broken_image,
+                                      size: 30, color: Colors.grey),
+                            )
+                          : Container(
+                              width: 100,
+                              height: 140,
+                              color: Colors.grey[300],
+                              child: Icon(
+                                Icons.movie,
+                                size: 60,
+                                color: Colors.grey[600],
+                              ),
                             ),
-                          ),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

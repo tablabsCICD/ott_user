@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/shorts%20page/ShortsPage.dart';
+import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/pages/watchlist%20page/WatchlistPage.dart';
 import 'package:ott/app/pages/upcoming%20movies%20page/UpcomingPage.dart';
 import 'package:ott/app/pages/home%20page/HomePage.dart';
@@ -27,8 +28,9 @@ class _NavigationPageState extends State<NavigationPage> {
     ShortsPage(),
     SearchPage(),
     WatchlistPage(),
-    //UpcomingPage(),
     ProfilePage(),
+    UpcomingPage(),
+    WalletPage(),
   ];
 
   @override
@@ -39,6 +41,7 @@ class _NavigationPageState extends State<NavigationPage> {
     final isDesktop = ResponsiveWidget.isDesktop(context);
     final isDark = selectedThemeData.brightness == Brightness.dark;
     final lang = AppLocalizations.of(context)!;
+    final userProvider = Provider.of<UserProvider>(context);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -92,11 +95,11 @@ class _NavigationPageState extends State<NavigationPage> {
               showUnselectedLabels: false,
               items: [
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.home_outlined),
+                  icon: Icon(Icons.home),
                   label: lang.home,
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.play_circle_outline),
+                  icon: Icon(Icons.play_circle),
                   label: 'Shorts',
                 ),
                 BottomNavigationBarItem(
@@ -112,7 +115,32 @@ class _NavigationPageState extends State<NavigationPage> {
                 //   label: lang.upcoming,
                 // ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.person_outline),
+                  icon: Icon(Icons.person),
+                  activeIcon: Hero(
+                    tag: 'profile',
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: selectedThemeData.primaryColor,
+                          width: 1,
+                        ),
+                      ),
+                      child: CircleAvatar(
+                        radius: 12,
+                        backgroundColor:
+                            selectedThemeData.primaryColor.withOpacity(0.5),
+                        foregroundImage:
+                            userProvider.userObj.profilePhoto == null
+                                ? AssetImage(ImageConstant.profile)
+                                : userProvider.userObj.profilePhoto!.isNotEmpty
+                                    ? NetworkImage(
+                                        userProvider.userObj.profilePhoto!,
+                                      )
+                                    : AssetImage(ImageConstant.profile),
+                      ),
+                    ),
+                  ),
                   label: lang.profile,
                 ),
               ],
@@ -210,8 +238,10 @@ class _NavigationPageState extends State<NavigationPage> {
             index: 2, icon: Icons.search, title: lang.search),
         _buildDrawerTile(context,
             index: 3, icon: Icons.movie, title: lang.watchlist),
-        // _buildDrawerTile(context,
-        //     index: 4, icon: Icons.upcoming, title: lang.upcoming),
+        _buildDrawerTile(context,
+            index: 5, icon: Icons.upcoming, title: lang.upcoming),
+        _buildDrawerTile(context,
+            index: 6, icon: Icons.account_balance_wallet, title: lang.wallet),
         _buildDrawerTile(context,
             index: 4, icon: Icons.person, title: lang.profile),
       ],

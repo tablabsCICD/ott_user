@@ -773,8 +773,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               contentStyle),
           _buildTableRow(lang.releaseDate, movie.releaseDate ?? 'N/A',
               titleStyle, contentStyle),
-          _buildTableRow(lang.languages, (movie.languageList ?? []).join(', '),
-              titleStyle, contentStyle),
+          _buildTableRow(
+              lang.languages,
+              (movie.languageList!.map((e) => e.language) ?? []).join(', '),
+              titleStyle,
+              contentStyle),
           _buildTableRow(lang.rating, '${movie.ratings ?? 0.0} ⭐', titleStyle,
               contentStyle),
           _buildTableRow(

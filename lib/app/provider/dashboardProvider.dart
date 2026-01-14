@@ -1,7 +1,4 @@
-import 'dart:developer';
-
 import 'package:flutter/cupertino.dart';
-import 'package:http/http.dart' as http;
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/response/getContentResponse.dart';

@@ -2,15 +2,19 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
+import 'package:ott/app/pages/movie%20details%20page/component/starRating.dart';
 import 'package:ott/app/pages/shorts%20page/component/shortsLibraryPage.dart';
 import 'package:ott/app/pages/profile%20page/ProfilePage.dart';
 import 'package:ott/app/pages/search%20page/SearchPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
+import 'package:ott/app/pages/watchlist%20page/playMoviePage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
+import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/shimmer%20loader/home_shimmer.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/response/get_dashboard_data.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -36,12 +40,165 @@ class _HomePageState extends State<HomePage> {
 //// upcoming movie posters
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  final List<String> posterImages = [
-    "https://images.moneycontrol.com/static-mcnews/2025/10/20251015110202_Ranveer-Singh-teases-his-next-film.png?impolicy=website&width=770&height=431",
-    "https://i.ytimg.com/vi/G2h0ySpSaDs/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLDDYeWkkhZBOvs4cTyuBQ8a4A6iBw",
-    "https://indiawest.com/wp-content/uploads/2025/12/BORDER-2-Official-Trailer.webp",
-    "https://m.media-amazon.com/images/M/MV5BZmE5MDk0ZjAtMzVjZS00M2JjLTliMWEtZWRkM2VhYmVhYWU0XkEyXkFqcGdeQWJpbndhYWtz._V1_.jpg",
-    "https://www.cinejosh.com/newsimg/newsmainimg/ranveer-singh-action-soaked-dhurandhar-trailer_b_1811250259.jpg",
+  final List<Content> trendingMovieList = [
+    Content(
+      id: 1,
+      title: "Rolex - The Venom",
+      description:
+          "A ruthless gangster rises from the shadows to rule the underworld.",
+      runtime: 150,
+      releaseDate: "2025-01-10",
+      ratings: 4.7,
+      price: 249.0,
+      languageList: [
+        LanguageList(
+            language: "Tamil", fileUrl: "https://example.com/rolex-ta.mp4"),
+        LanguageList(
+            language: "Hindi", fileUrl: "https://example.com/rolex-hi.mp4"),
+      ],
+      castList: ["Suriya", "Actor X"],
+      genreList: ["Action", "Crime"],
+      directorList: ["Lokesh Kanagaraj"],
+      views: 320000,
+      totalRevenue: 9800000.0,
+      ageRating: "16+",
+      posterUrlList: [
+        "https://i.ytimg.com/vi/G2h0ySpSaDs/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLDDYeWkkhZBOvs4cTyuBQ8a4A6iBw",
+      ],
+      trailerUrl: "https://example.com/rolex-trailer.mp4",
+      contentUrl: "https://example.com/rolex.mp4",
+      approvalStatus: "APPROVED",
+      type: "MOVIE",
+      sensorCertificate: "A",
+      isFeatured: true,
+      availability: Availability(
+        regions: ["IN", "US"],
+        platforms: ["Mobile", "Web", "TV"],
+      ),
+      audioFormatList: ["Dolby Atmos"],
+      subtitleLanguageList: ["English", "Hindi"],
+      isDownloadable: true,
+      ratingCount: 5400,
+      rentlDuration: "48h",
+      isRental: true,
+    ),
+    Content(
+      id: 2,
+      title: "The Silent Warrior",
+      description: "An epic tale of courage and sacrifice.",
+      runtime: 142,
+      releaseDate: "2024-06-15",
+      ratings: 4.5,
+      price: 199.0,
+      languageList: [
+        LanguageList(
+            language: "English", fileUrl: "https://example.com/en.mp4"),
+        LanguageList(language: "Hindi", fileUrl: "https://example.com/hi.mp4"),
+      ],
+      castList: ["Actor A", "Actor B"],
+      genreList: ["Action", "Drama"],
+      directorList: ["Director One"],
+      views: 120000,
+      totalRevenue: 5600000.0,
+      ageRating: "13+",
+      posterUrlList: [
+        "https://pic4.iqiyipic.com/image/20251021/00/64/v_188468354_m_601_en_m1_720_405.jpg",
+      ],
+      trailerUrl: "https://example.com/trailer1.mp4",
+      contentUrl: "https://example.com/movie1.mp4",
+      approvalStatus: "APPROVED",
+      type: "MOVIE",
+      sensorCertificate: "U/A",
+      isFeatured: true,
+      availability: Availability(
+        regions: ["IN", "US"],
+        platforms: ["Mobile", "Web", "TV"],
+      ),
+      audioFormatList: ["Dolby", "Stereo"],
+      subtitleLanguageList: ["English", "Hindi"],
+      isDownloadable: true,
+      ratingCount: 3400,
+      rentlDuration: "48h",
+      isRental: true,
+    ),
+    Content(
+      id: 3,
+      title: "Dhurandhar",
+      description:
+          "The film is a gritty espionage thriller that follows a mysterious operative who infiltrates the underworld in Karachi to dismantle a nexus between the ISI and organized crime. It is inspired by real-life events such as the 1999 Kandahar hijacking, the 2001 Parliament attack, and the 26/11 Mumbai attacks.",
+      runtime: 134,
+      releaseDate: "2024-12-05",
+      ratings: 4.3,
+      price: 179.0,
+      languageList: [
+        LanguageList(
+            language: "Hindi",
+            fileUrl: "https://example.com/dhurandhar-hi.mp4"),
+      ],
+      castList: ["Actor Y", "Actor Z"],
+      genreList: ["Thriller", "Drama"],
+      directorList: ["Director Alpha"],
+      views: 76000,
+      totalRevenue: 2800000.0,
+      ageRating: "13+",
+      posterUrlList: [
+        "https://www.cinejosh.com/newsimg/newsmainimg/ranveer-singh-action-soaked-dhurandhar-trailer_b_1811250259.jpg",
+      ],
+      trailerUrl: "https://example.com/dhurandhar-trailer.mp4",
+      contentUrl: "https://example.com/dhurandhar.mp4",
+      approvalStatus: "APPROVED",
+      type: "MOVIE",
+      sensorCertificate: "U/A",
+      isFeatured: false,
+      availability: Availability(
+        regions: ["IN"],
+        platforms: ["Mobile", "Web"],
+      ),
+      audioFormatList: ["Stereo"],
+      subtitleLanguageList: ["Hindi", "English"],
+      isDownloadable: true,
+      ratingCount: 1800,
+      rentlDuration: "24h",
+      isRental: true,
+    ),
+    Content(
+      id: 4,
+      title: "Border 2",
+      description: "A patriotic saga of bravery on the frontlines.",
+      runtime: 158,
+      releaseDate: "2025-08-15",
+      ratings: 4.6,
+      price: 229.0,
+      languageList: [
+        LanguageList(
+            language: "Hindi", fileUrl: "https://example.com/border2-hi.mp4"),
+      ],
+      castList: ["Actor M", "Actor N"],
+      genreList: ["War", "Drama"],
+      directorList: ["Director Bravo"],
+      views: 210000,
+      totalRevenue: 7200000.0,
+      ageRating: "7+",
+      posterUrlList: [
+        "https://indiawest.com/wp-content/uploads/2025/12/BORDER-2-Official-Trailer.webp",
+      ],
+      trailerUrl: "https://example.com/border2-trailer.mp4",
+      contentUrl: "https://example.com/border2.mp4",
+      approvalStatus: "APPROVED",
+      type: "MOVIE",
+      sensorCertificate: "U",
+      isFeatured: true,
+      availability: Availability(
+        regions: ["IN"],
+        platforms: ["Mobile", "Web", "TV"],
+      ),
+      audioFormatList: ["Dolby"],
+      subtitleLanguageList: ["Hindi", "English"],
+      isDownloadable: true,
+      ratingCount: 4100,
+      rentlDuration: "48h",
+      isRental: true,
+    ),
   ];
 
   @override
@@ -64,10 +221,10 @@ class _HomePageState extends State<HomePage> {
 
   void _startAutoScroll() {
     Future.doWhile(() async {
-      await Future.delayed(const Duration(seconds: 3));
+      await Future.delayed(const Duration(seconds: 6));
       if (!mounted) return false;
 
-      _currentPage = (_currentPage + 1) % posterImages.length;
+      _currentPage = (_currentPage + 1) % trendingMovieList.length;
       _pageController.animateToPage(
         _currentPage,
         duration: const Duration(milliseconds: 600),
@@ -113,7 +270,7 @@ class _HomePageState extends State<HomePage> {
             .selectedLanguages ??
         []; // Ensure it doesn't throw null
 
-    log('selecetd languages===== $selectedLanguages');
+    //log('selecetd languages===== $selectedLanguages');
 
 // Check if the list is empty
     if (selectedLanguages.isEmpty ||
@@ -228,10 +385,10 @@ class _HomePageState extends State<HomePage> {
       forceMaterialTransparency:
           ResponsiveWidget.isDesktop(context) ? true : false,
       expandedHeight: ResponsiveWidget.isMobile(context)
-          ? 240
+          ? 250
           : ResponsiveWidget.isTablet(context)
-              ? 360
-              : 380,
+              ? 500
+              : 500,
       floating: false,
       pinned: true,
       stretch: true,
@@ -366,16 +523,26 @@ class _HomePageState extends State<HomePage> {
                   },
                   child: Hero(
                     tag: "profile",
-                    child: CircleAvatar(
-                      radius: 18,
-                      backgroundColor: selectedThemeData.canvasColor,
-                      backgroundImage: userProvider.userObj.profilePhoto == null
-                          ? AssetImage(ImageConstant.profile)
-                          : userProvider.userObj.profilePhoto!.isNotEmpty
-                              ? NetworkImage(
-                                  userProvider.userObj.profilePhoto!,
-                                )
-                              : AssetImage(ImageConstant.profile),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white,
+                          width: 1,
+                        ),
+                      ),
+                      child: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: selectedThemeData.canvasColor,
+                        backgroundImage:
+                            userProvider.userObj.profilePhoto == null
+                                ? AssetImage(ImageConstant.profile)
+                                : userProvider.userObj.profilePhoto!.isNotEmpty
+                                    ? NetworkImage(
+                                        userProvider.userObj.profilePhoto!,
+                                      )
+                                    : AssetImage(ImageConstant.profile),
+                      ),
                     ),
                   ),
                 ),
@@ -386,14 +553,13 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(width: 16),
       ],
       flexibleSpace: FlexibleSpaceBar(
-        //titlePadding: const EdgeInsetsDirectional.only(start: 16, bottom: 16),
-
         stretchModes: const [
           StretchMode.zoomBackground,
           StretchMode.fadeTitle,
         ],
         background: Stack(
           children: [
+            // Fallback background
             Positioned.fill(
               child: Container(
                 color: selectedThemeData.scaffoldBackgroundColor,
@@ -404,33 +570,175 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
+
+            // Main PageView
             Positioned.fill(
               child: PageView.builder(
                 controller: _pageController,
-                itemCount: posterImages.length,
+                itemCount: trendingMovieList.length,
+                onPageChanged: (i) {
+                  setState(() => _currentPage = i);
+                },
                 itemBuilder: (context, index) {
                   return Image.network(
-                    posterImages[index],
+                    trendingMovieList[index].posterUrlList!.first,
                     fit: BoxFit.cover,
                   );
                 },
               ),
             ),
-            // Dark shadow overlay (top area)
+
+            // Dark gradient on top
             Positioned.fill(
               child: IgnorePointer(
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
-                      end: Alignment.center,
+                      end: Alignment.bottomCenter,
                       colors: [
-                        selectedThemeData.scaffoldBackgroundColor
-                            .withOpacity(0.3),
-                        selectedThemeData.scaffoldBackgroundColor
-                            .withOpacity(0.2),
+                        Colors.black.withOpacity(0.45),
+                        Colors.black.withOpacity(0.25),
                         Colors.transparent,
                       ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // Title
+            Positioned(
+              left: 16,
+              bottom: 20,
+              child: SizedBox(
+                width: ResponsiveWidget.isMobile(context)
+                    ? MediaQuery.widthOf(context) / 1.5
+                    : MediaQuery.widthOf(context) / 2,
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                  decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(12)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        trendingMovieList[_currentPage].title ?? '',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(
+                        height: 3,
+                      ),
+                      StarRatingWidget(
+                        rating: trendingMovieList[_currentPage].ratings!,
+                      ),
+                      SizedBox(
+                        height: 3,
+                      ),
+                      Text.rich(
+                        TextSpan(
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          children: [
+                            TextSpan(
+                              text:
+                                  (trendingMovieList[_currentPage].genreList !=
+                                              null &&
+                                          trendingMovieList[_currentPage]
+                                              .genreList!
+                                              .isNotEmpty)
+                                      ? trendingMovieList[_currentPage]
+                                          .genreList!
+                                          .join(', ')
+                                      : 'N/A',
+                            ),
+                            TextSpan(
+                                text: ' | ',
+                                style: TextStyle(
+                                  color: selectedThemeData.primaryColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                )),
+                            TextSpan(
+                              text: (trendingMovieList[_currentPage]
+                                              .languageList !=
+                                          null &&
+                                      trendingMovieList[_currentPage]
+                                          .languageList!
+                                          .isNotEmpty)
+                                  ? trendingMovieList[_currentPage]
+                                      .languageList!
+                                      .map((e) =>
+                                          e.language) // extract language string
+                                      .join(', ')
+                                  : 'N/A',
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(
+                        height: 3,
+                      ),
+                      Text(
+                        trendingMovieList[_currentPage].description ?? '',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.normal,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Watch button
+            Positioned(
+              right: 20,
+              bottom: 25,
+              child: GestureDetector(
+                onTap: () {
+                  // this button is taken from movie card widget
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(
+                      10,
+                    ),
+                    color: selectedThemeData.primaryColor.withOpacity(0.9),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      vertical: 6.0,
+                      horizontal: 10,
+                    ),
+                    child: Text(
+                      trendingMovieList[_currentPage].isRental!
+                          ? trendingMovieList[_currentPage]
+                                      .type!
+                                      .toLowerCase() ==
+                                  "movie"
+                              ? lang.watchMovie
+                              : lang.watchSeries
+                          : "₹${trendingMovieList[_currentPage].price}",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),

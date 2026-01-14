@@ -48,7 +48,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
       backgroundColor: selectedThemeData.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: selectedThemeData.primaryColor,
-        title: const Text("Edit Profile"),
+        title: const Text(
+          "Edit Profile",
+          style: TextStyle(color: Colors.white),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_sharp, color: Colors.white),
           onPressed: () async {

@@ -14,27 +14,13 @@ class ApiConstant {
 
   static String getDashboardData =
       "${baseUrl}api/forUser/filter/content-list/type3?";
-  static String getAllUser = "${baseUrl}user/getAllActiveUsers";
+
   //update user
   static String editUserById = "${baseUrl}userNew/updateUserBy/%7Bid%7D";
   static String getUserById(id) => "${baseUrl}user/getUser/$id";
   static String deleteUserById(id) => "${baseUrl}user/deleteUserBy/$id";
-  static String searchUser(char) => "${baseUrl}user/search?search=$char";
 
-  static String saveMediaHouse = '${baseUrl}api/saveMediaHouse';
-  static String editMediaHouseById = "${baseUrl}user/updateUserBy/%7Bid%7D";
-  static String getAllMediaHouse = "${baseUrl}api/MediaHouse/getAll";
-  static String getMediaHouseById(id) => "${baseUrl}user/getUser/$id";
-  static String deleteMediaHouseById(id) =>
-      "${baseUrl}api/deleteMediaHouseBy/$id";
-  static String searchMediaHouse(char) =>
-      "${baseUrl}api/searchByanyKey%20?search=$char";
-  static String getMediaHouseByStatus(status) =>
-      "${baseUrl}api/content/filter/status?approvalStatus=$status";
-
-  static String saveVideo = '${baseUrl}api/contentList/save';
-  static String editVideoById(id) => "${baseUrl}api/contentList/update/$id";
-  static String getAllVideo = "${baseUrl}api/ContentList/getAll";
+  // content
   static String getVideoById(id, userId) =>
       "${baseUrl}api/ContentList/getContentByIdAndUserId?id=$id&userId=$userId";
   static String getUpcomingVideo =
@@ -46,13 +32,6 @@ class ApiConstant {
 
   static String uploadImg = "${baseUrl}api/saveImage/new";
   static String fetchLang = "${baseUrl}api/Languages/getAll";
-
-  static String resetPassword(mobile, password) =>
-      "${baseUrl}user/resetPassword?mobileNumber=$mobile&password=$password";
-  static String forgotPassword(mobile) =>
-      "${baseUrl}user/forgotPassword/findUserAndSendOTP?mobileNumber=$mobile";
-  static String verifyOtp(mobile, otp) =>
-      "${baseUrl}user/verifyOTP?mobileNumber=$mobile&otp=$otp";
 
   static String addMoneyToWallet = "${baseUrl}add-amount";
   static String withdrawMoneyFromWallet(userId, amount, contentId) =>
@@ -75,7 +54,6 @@ class ApiConstant {
       "${baseUrl}api/TicketRaised/user/$userId";
 
   static String saveUserContent = "${baseUrl}api/save";
-//  static String getUserContent(id) => "${baseUrl}api/filter/%7BuserId%7D?userId=$id";
   static String getUserContent(id) => "${baseUrl}api/filter/remainingDays/$id";
 
   static String saveViewHistory = "${baseUrl}api/saveOrUpdate";

@@ -46,7 +46,7 @@ class _WalletPageState extends State<WalletPage> {
           return Padding(
               padding: EdgeInsets.symmetric(
                   vertical: 16.0,
-                  horizontal: ResponsiveWidget.isDesktop(context) ? 300 : 16),
+                  horizontal: ResponsiveWidget.isDesktop(context) ? 200 : 16),
               child:
                   // isMobile
                   //     ?

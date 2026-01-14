@@ -11,17 +11,21 @@ class ProfileShimmer extends StatelessWidget {
           children: [
             // 🔵 Profile Header Shimmer
             Container(
-              width: ResponsiveWidget.isMobile(context) ? double.infinity : 400,
+              height: 280,
+              width: ResponsiveWidget.isMobile(context) ? double.infinity : 500,
               padding: const EdgeInsets.all(10.0),
               decoration: BoxDecoration(
                 color: Colors.grey.withOpacity(0.2),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(70),
-                  bottomRight: Radius.circular(70),
-                ),
+                borderRadius: ResponsiveWidget.isDesktop(context)
+                    ? BorderRadius.circular(60)
+                    : const BorderRadius.only(
+                        bottomLeft: Radius.circular(70),
+                        bottomRight: Radius.circular(70),
+                      ),
               ),
               child: Column(
                 children: [
+                  Spacer(),
                   // Profile Image Shimmer
                   Hero(
                     tag: 'profile',

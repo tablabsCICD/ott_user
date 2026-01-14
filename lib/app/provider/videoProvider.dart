@@ -56,39 +56,6 @@ class VideoProvider extends BaseProvider {
   String? selectedLanguage;
   double? selectedRating;
 
-  // Fetch all content
-  Future<void> fetchContent() async {
-    String apiUrl = ApiConstant.getAllVideo;
-    ApiHelper apiHelper = ApiHelper();
-    try {
-      var response = await apiHelper.getApi(apiUrl);
-      if (response.statusCode == 200) {
-        Map<String, dynamic> responseBody = json.decode(response.body);
-        GetAllVideoResponse getAllContentResponse =
-            GetAllVideoResponse.fromJson(responseBody);
-        if (getAllContentResponse.success == true) {
-          if (getAllContentResponse.data!.contentList != null) {
-            _contentList.clear();
-            _filteredContentList.clear();
-            _contentList = getAllContentResponse.data!.contentList!;
-            _filteredContentList.addAll(_contentList);
-            notifyListeners();
-          } else {
-            debugPrint("empty list: ${getAllContentResponse.message}");
-          }
-        } else {
-          debugPrint("Error: ${getAllContentResponse.message}");
-        }
-      } else {
-        throw Exception(
-            'Failed to fetch content. Status code: ${response.statusCode}');
-      }
-    } catch (error) {
-      debugPrint("Error: $error");
-      throw Exception('An error occurred while fetching content.');
-    }
-  }
-
   // Search all content
   Future<void> searchContent() async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();

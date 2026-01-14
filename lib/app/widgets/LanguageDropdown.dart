@@ -41,16 +41,16 @@ class LanguageDropdown extends StatelessWidget {
         children: [
           if (isTitle)
             Text(
-              (lang?.translate ?? 'Select Language') + '  ',
+              '${lang?.translate ?? 'Select Language'}  ',
               style: TextStyle(
                 color: theme.canvasColor,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
             ),
-          const Icon(
+          Icon(
             Icons.translate,
-            color: Colors.white,
+            color: theme.canvasColor,
           ),
         ],
       ),

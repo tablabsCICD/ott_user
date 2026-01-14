@@ -177,10 +177,10 @@ class UserProvider extends BaseProvider {
       "emailId": emailController.text,
       "firstName": firstNameController.text,
       "lastName": lastNameController.text,
-      "dob": dobController.text,
+      //"dob": dobController.text,
       "mobileNumber": user.mobileNumber, // mobileController.text,
       "profilePhoto": profileController.text,
-      "refferedBy": refferedByController.text,
+      //"refferedBy": refferedByController.text,
     };
     //log("data=====$data");
 

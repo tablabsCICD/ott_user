@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ott/app/widgets/movieCard.dart';
 
 class CategoryMoviesPage extends StatelessWidget {
   final String categoryTitle;
@@ -27,13 +26,6 @@ class CategoryMoviesPage extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       vertical: 8.0, horizontal: 16.0),
                   child: Text('${movie['title']}'),
-                  // child: MovieCard(
-                  //   movieId: movie['id'],
-                  //   movieName: movie['title'] ?? 'Unknown Movie',
-                  //   poster_url: movie['poster_url'][0] ?? '',
-                  //   rating: movie['rating'] ?? 0.0,
-                  //   rating_count: movie['rating_count'] ?? 0,
-                  // ),
                 );
               },
             )

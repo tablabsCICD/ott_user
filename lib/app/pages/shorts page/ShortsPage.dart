@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/shorts%20page/component/shortsLibraryPage.dart';
-import 'package:ott/app/pages/shorts%20page/component/shortsSeriesPlayerPage.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
+import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 
@@ -23,31 +23,24 @@ class _ShortsPageState extends State<ShortsPage> {
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
-    final crossAxisCount = ResponsiveWidget.isDesktop(context)
-        ? 5
-        : ResponsiveWidget.isTablet(context)
-            ? 4
-            : 2;
-
-    final mainAxisExtent = ResponsiveWidget.isDesktop(context) ||
-            ResponsiveWidget.isTablet(context)
-        ? 300.0
-        : 250.0;
 
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 60,
+        toolbarHeight: 80,
+        backgroundColor: ResponsiveWidget.isDesktop(context)
+            ? theme.scaffoldBackgroundColor
+            : theme.primaryColor,
         forceMaterialTransparency:
             ResponsiveWidget.isDesktop(context) ? true : false,
-        centerTitle: true,
-        title: Text(
-          "Shorts",
-          style:
-              TextStyle(color: theme.canvasColor, fontWeight: FontWeight.bold),
+        title: CustomTextField(
+          controller: TextEditingController(),
+          hintText: 'Search',
+          prefixIcon: const Icon(Icons.search),
+          textInputType: TextInputType.text,
         ),
-        backgroundColor: theme.primaryColor,
         actions: [
           Container(
+            margin: EdgeInsets.only(right: 8.0),
             padding: EdgeInsets.symmetric(
               vertical: 3,
               horizontal: 6,
@@ -83,9 +76,6 @@ class _ShortsPageState extends State<ShortsPage> {
                 ),
               ],
             ),
-          ),
-          SizedBox(
-            width: 5,
           ),
         ],
       ),

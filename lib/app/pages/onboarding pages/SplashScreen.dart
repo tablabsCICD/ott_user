@@ -92,10 +92,10 @@ class _SplashScreenState extends State<SplashScreen>
             Padding(
               padding: const EdgeInsets.all(12.0),
               child: Text(
-                'Discover, Watch & Collect the Latest Movies & TV',
+                'Discover, Watch & Collect the Latest Movies',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: ResponsiveWidget.isMobile(context) ? 15 : 20,
+                  fontSize: ResponsiveWidget.isMobile(context) ? 14 : 18,
                   color: theme.primaryColor,
                   fontWeight: FontWeight.w600,
                 ),
