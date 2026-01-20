@@ -40,7 +40,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   void initState() {
     super.initState();
     _fetchData();
-    Future.delayed(const Duration(seconds: 1), () {
+    Future.delayed(const Duration(seconds: 2), () {
       setState(() {
         isLoading = false;
       });
@@ -98,7 +98,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                       Provider.of<DashboardProvider>(context).content.title ??
                           "",
                       overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
+                      maxLines: 2,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 22,
@@ -192,7 +192,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         StarRatingWidget(
-                          rating: content.ratings ?? 0.0,
+                          rating: double.parse(
+                            (content.ratings ?? 0.0).toStringAsFixed(1),
+                          ),
                           starSize: 20,
                           textSize: 16,
                         ),
@@ -215,7 +217,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                             children: [
                               Expanded(
                                 child: SizedBox(
-                                  width: 300,
+                                  width: double.infinity,
                                   child: AutoScrollingPosters(
                                     imageUrls: [
                                       if (content.posterUrlList != null &&
@@ -265,22 +267,23 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
             ),
             const SizedBox(width: 20),
             Expanded(
-                flex: 2,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Container(
-                        height: 400,
-                        child: TrailerPage(
-                          trailerUrl: content.trailerUrl,
-                          isTrailerUrl: true,
-                          content: content,
-                        ),
+              flex: 2,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 400,
+                      child: TrailerPage(
+                        trailerUrl: content.trailerUrl,
+                        isTrailerUrl: true,
+                        content: content,
                       ),
-                    ],
-                  ),
-                ))
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ],
@@ -315,7 +318,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   StarRatingWidget(
-                    rating: content.ratings ?? 0.0,
+                    rating: double.parse(
+                      (content.ratings ?? 0.0).toStringAsFixed(1),
+                    ),
                     starSize: 20,
                     textSize: 16,
                   ),
@@ -612,8 +617,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => PlayMoviePage(
-                        movieId: movie.id!,
+                      builder: (_) => PlayMediaPage(
+                        title: movie.title!,
+                        mediaId: movie.id!,
+                        videoUrl: movie.contentUrl!,
+                        content: movie,
                       ),
                     ),
                   );
@@ -778,7 +786,12 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               (movie.languageList!.map((e) => e.language) ?? []).join(', '),
               titleStyle,
               contentStyle),
-          _buildTableRow(lang.rating, '${movie.ratings ?? 0.0} ⭐', titleStyle,
+          _buildTableRow(
+              lang.rating,
+              '${double.parse(
+                (movie.ratings ?? 0.0).toStringAsFixed(1),
+              )} ⭐',
+              titleStyle,
               contentStyle),
           _buildTableRow(
               lang.audioFormat,

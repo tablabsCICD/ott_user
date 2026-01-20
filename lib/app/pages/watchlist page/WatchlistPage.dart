@@ -135,8 +135,11 @@ class _WatchlistPageState extends State<WatchlistPage> {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => PlayMoviePage(
-                                              movieId: item.id!,
+                                            builder: (_) => PlayMediaPage(
+                                              title: item.title!,
+                                              mediaId: item.id!,
+                                              videoUrl: item.contentUrl!,
+                                              content: item,
                                             ),
                                           ),
                                         );

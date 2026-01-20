@@ -29,6 +29,8 @@ class ApiConstant {
       "${baseUrl}api/forUser/user/Content/getByAnyKey?userId=$id&keyword=$char";
   static String filterAndSortContent(id, lang, genre, rating) =>
       "${baseUrl}api/forUser/foruser/search/lag/gen/rating?userId=$id&language=$lang&genre=$genre&minRating=$rating";
+  static String getTopTrendingContentLast7Days(userId) =>
+      "${baseUrl}api/forUser/Content/TopTen?userId=$userId";
 
   static String uploadImg = "${baseUrl}api/saveImage/new";
   static String fetchLang = "${baseUrl}api/Languages/getAll";
@@ -74,4 +76,7 @@ class ApiConstant {
   static String shortsMaster = "${baseUrl}api/shortsMaster";
   static String shortsDetails(id, userId) =>
       "${baseUrl}api/shortsMaster/$id?userId=$userId";
+
+  //series
+  static String seriesDetails(seriesId) => "${baseUrl}series/$seriesId/details";
 }

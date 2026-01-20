@@ -1,7 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
+import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/watchlist%20page/playMoviePage.dart';
 import 'package:ott/app/pages/wallet%20page/BillingPage.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
@@ -85,9 +87,14 @@ class _MovieCardState extends State<MovieCard> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => MovieDetailsPage(
-                movieId: widget.movie.id!,
-              ),
+              builder: (context) => widget.movie.type!.toLowerCase() == 'movie'
+                  ? MovieDetailsPage(
+                      movieId: widget.movie.id!,
+                    )
+                  : SeriesDetailsPage(
+                      seriesId: widget.movie.id!,
+                      content: widget.movie,
+                    ),
             ),
           );
         },
@@ -355,8 +362,11 @@ class _MovieCardState extends State<MovieCard> {
                             ? Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => PlayMoviePage(
-                                    movieId: widget.movie.id!,
+                                  builder: (_) => PlayMediaPage(
+                                    title: widget.movie.title!,
+                                    mediaId: widget.movie.id!,
+                                    videoUrl: widget.movie.contentUrl!,
+                                    content: widget.movie,
                                   ),
                                 ),
                               )
@@ -373,17 +383,34 @@ class _MovieCardState extends State<MovieCard> {
                               vertical: 6.0,
                               horizontal: 10,
                             ),
-                            child: Text(
-                              widget.movie.isRental!
-                                  ? widget.movie.type!.toLowerCase() == "movie"
-                                      ? lang.watchMovie
-                                      : lang.watchSeries
-                                  : "₹${widget.movie.price}",
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+                            child: Row(
+                              children: [
+                                widget.movie.isRental!
+                                    ? SizedBox()
+                                    : SizedBox(
+                                        height: 15,
+                                        width: 15,
+                                        child: Image.asset(
+                                          ImageConstant.coin,
+                                        ),
+                                      ),
+                                SizedBox(
+                                  width: 2,
+                                ),
+                                Text(
+                                  widget.movie.isRental!
+                                      ? widget.movie.type!.toLowerCase() ==
+                                              "movie"
+                                          ? lang.watchMovie
+                                          : lang.watchSeries
+                                      : "${widget.movie.price ?? 0}",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -405,7 +432,22 @@ class _MovieCardState extends State<MovieCard> {
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
-        title: Text('₹${movie.price}'),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              height: 15,
+              width: 15,
+              child: Image.asset(
+                ImageConstant.coin,
+              ),
+            ),
+            SizedBox(
+              width: 2,
+            ),
+            Text('${movie.price}'),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

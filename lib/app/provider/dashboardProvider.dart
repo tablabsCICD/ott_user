@@ -14,7 +14,6 @@ class DashboardProvider extends BaseProvider {
   DashboardProvider() : super('Ideal') {}
 
   List<DashboardData> _dashboardData = [];
-
   get dashboardData => _dashboardData;
 
   Content _content = Content();
@@ -24,7 +23,7 @@ class DashboardProvider extends BaseProvider {
   TextEditingController searchContentController = TextEditingController();
 
   getDashboardData(String type, List<String> languages, int userId) async {
-    print(languages);
+    //print(languages);
     // Construct the query parameter for languages dynamically
     String languagesParam = languages.map((lang) => "langList=$lang").join('&');
 
@@ -49,11 +48,11 @@ class DashboardProvider extends BaseProvider {
         notifyListeners();
       } else {
         throw Exception(
-            'Failed to delete user. Status code: ${response.statusCode}');
+            'Failed to get data. Status code: ${response.statusCode}');
       }
     } catch (error) {
       //log("Error: $error");
-      throw Exception('An error occurred while deleting the user.');
+      throw Exception('An error occurred while fetching the data.');
     }
   }
 
@@ -67,7 +66,7 @@ class DashboardProvider extends BaseProvider {
         Map<String, dynamic> responseBody = json.decode(response.body);
         GetContentResponse addUserResponse =
             GetContentResponse.fromJson(responseBody);
-        print("\ncontent by id response " + responseBody.toString());
+        //print("\ncontent by id response " + responseBody.toString());
         if (addUserResponse.success == true) {
           if (addUserResponse.data != null &&
               addUserResponse.data!.contentList != null) {
@@ -81,11 +80,38 @@ class DashboardProvider extends BaseProvider {
         }
       } else {
         throw Exception(
-            'Failed to delete user. Status code: ${response.statusCode}');
+            'Failed to load data. Status code: ${response.statusCode}');
       }
     } catch (error) {
       debugPrint("Error: $error");
-      throw Exception('An error occurred while delete user.');
+      throw Exception('An error occurred while fetching data.');
+    }
+  }
+
+  List<Content> _trendingContentList = [];
+  List<Content> get trendingContentList => _trendingContentList;
+
+  Future<void> getTopTrendingContent() async {
+    User? user = await LocalSharePreferences.localSharePreferences.getUser();
+    String apiUrl = ApiConstant.getTopTrendingContentLast7Days(user!.id);
+    ApiHelper apiHelper = ApiHelper();
+
+    try {
+      var response = await apiHelper.getApi(apiUrl);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseBody = json.decode(response.body);
+
+        final List<dynamic> list = responseBody['data']?['TopTenContent'] ?? [];
+
+        _trendingContentList = list.map((e) => Content.fromJson(e)).toList();
+        notifyListeners();
+      } else {
+        throw Exception(
+            'Failed to get data. Status code: ${response.statusCode}');
+      }
+    } catch (error) {
+      throw Exception('An error occurred while fetching the data.');
     }
   }
 }

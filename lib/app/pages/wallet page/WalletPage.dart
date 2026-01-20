@@ -91,7 +91,7 @@ class _WalletPageState extends State<WalletPage> {
 
     final formattedBalance = NumberFormat.currency(
       locale: 'en_IN',
-      symbol: '₹',
+      symbol: '',
       decimalDigits: 1,
     ).format(balance);
 

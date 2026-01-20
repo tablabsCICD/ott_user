@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
+import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/provider/ThemeProvider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
@@ -310,7 +311,14 @@ class SearchMovieCard extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => MovieDetailsPage(movieId: movie.id!),
+                builder: (context) => movie.type!.toLowerCase() == 'movie'
+                    ? MovieDetailsPage(
+                        movieId: movie.id!,
+                      )
+                    : SeriesDetailsPage(
+                        seriesId: movie.id!,
+                        content: movie,
+                      ),
               ),
             );
           },
