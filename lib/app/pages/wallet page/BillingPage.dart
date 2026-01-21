@@ -1,8 +1,7 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/gifted%20movies%20page/GiftedMoviesPage.dart';
 import 'package:ott/app/pages/wallet%20page/PaymentPage.dart';
 import 'package:ott/app/provider/giftProvider.dart';
@@ -32,368 +31,246 @@ class BillingPage extends StatefulWidget {
 
 class _BillingPageState extends State<BillingPage> {
   double moviePrice = 0.0;
+  DateTime? _startDate;
+  DateTime? _endDate;
 
   @override
   void initState() {
     super.initState();
-    getData();
-  }
-
-  Future<void> getData() async {
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    await walletProvider.getBalance();
-    await walletProvider.getTransactionHistory();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
+    Future.microtask(() async {
+      final walletProvider =
+          Provider.of<WalletProvider>(context, listen: false);
+      await walletProvider.getBalance();
+      await walletProvider.getTransactionHistory();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context).getTheme;
+    final horizontal = ResponsiveWidget.isDesktop(context) ? 200.0 : 16.0;
+
     moviePrice = double.tryParse(widget.movie.price.toString()) ?? 0.0;
+    final totalCoins =
+        moviePrice * (widget.giftCount == 0 ? 1 : widget.giftCount);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Payment'),
-        centerTitle: true,
-      ),
-      body: Consumer<WalletProvider>(
-        builder: (context, provider, child) {
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ResponsiveWidget.isDesktop(context)
-                ? _buildDesktopLayout(context, provider)
-                : _buildMobileLayout(context, provider),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildDesktopLayout(BuildContext context, WalletProvider provider) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Flexible(flex: 4, child: _buildPaymentWidget(provider)),
-        const SizedBox(width: 20),
-        Flexible(flex: 6, child: _buildTransactionSection()),
-      ],
-    );
-  }
-
-  Widget _buildMobileLayout(BuildContext context, WalletProvider provider) {
-    return Column(
-      children: [
-        _buildPaymentWidget(provider),
-        const SizedBox(height: 20),
-        Expanded(child: _buildTransactionSection()),
-      ],
-    );
-  }
-
-  Widget _buildPaymentWidget(WalletProvider provider) {
-    double totalPrice =
-        moviePrice * (widget.giftCount == 0 ? 1 : widget.giftCount);
-    final theme = Theme.of(context);
-    TextEditingController couponCodeController = TextEditingController();
-    return Card(
-      color: theme.cardColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 5,
-      margin: const EdgeInsets.only(bottom: 20),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(widget.movie.title ?? "",
-                style:
-                    const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            widget.giftCount == 0
-                ? Text("Movie Price: ₹${moviePrice.toStringAsFixed(2)}",
-                    style: const TextStyle(fontSize: 18))
-                : Text(
-                    "₹${moviePrice.toStringAsFixed(2)} × ${widget.giftCount} Gifts",
-                    style: const TextStyle(fontSize: 16, color: Colors.grey)),
-            const SizedBox(height: 8),
-            Text(
-              "Total: ₹${totalPrice.toStringAsFixed(2)}",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: theme.primaryColor,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Card(
-              color: provider.walletBalance >= totalPrice
-                  ? Colors.green.shade50
-                  : Colors.red.shade50,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    Icon(Icons.account_balance_wallet,
-                        color: provider.walletBalance >= totalPrice
-                            ? Colors.green
-                            : theme.primaryColor),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        "Wallet Balance: ₹${provider.walletBalance.toStringAsFixed(2)}",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: provider.walletBalance >= totalPrice
-                              ? Colors.green
-                              : theme.primaryColor,
-                        ),
-                      ),
-                    ),
-                  ],
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: CustomScrollView(
+        slivers: [
+          /// -------- Extended Curved Header --------
+          SliverAppBar(
+            pinned: true,
+            expandedHeight: 230,
+            elevation: 0,
+            backgroundColor: theme.scaffoldBackgroundColor,
+            flexibleSpace: FlexibleSpaceBar(
+              stretchModes: const [
+                StretchMode.zoomBackground,
+                StretchMode.fadeTitle,
+              ],
+              background: Center(
+                child: Container(
+                  width: ResponsiveWidget.isMobile(context)
+                      ? double.infinity
+                      : 500,
+                  padding: const EdgeInsets.all(20.0),
+                  decoration: BoxDecoration(
+                    color: theme.primaryColor,
+                    borderRadius: ResponsiveWidget.isDesktop(context)
+                        ? BorderRadius.circular(60)
+                        : const BorderRadius.only(
+                            bottomLeft: Radius.circular(70),
+                            bottomRight: Radius.circular(70),
+                          ),
+                  ),
+                  child: Consumer<WalletProvider>(
+                    builder: (_, walletProvider, __) {
+                      return Column(
+                        children: [
+                          const Spacer(),
+                          Image.asset(ImageConstant.coin, width: 70),
+                          const SizedBox(height: 10),
+                          Text(
+                            walletProvider.walletBalance.toStringAsFixed(0),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Text(
+                            "Coins Available",
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-            provider.walletBalance >= totalPrice
-                ? ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryColor,
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12))),
-                    icon: Icon(
-                      Icons.payment,
-                      color: Colors.white,
-                    ),
-                    label: const Text(
-                      "Pay Now",
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    onPressed: () {
-                      _showConfirmationDialog(
-                        provider,
-                        totalPrice,
-                        widget.movie.id!,
-                        widget.giftCount,
-                      );
-                    })
-                : ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryColor,
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12))),
-                    icon: Icon(Icons.add_circle, color: Colors.white),
-                    label: Text(
-                      "Recharge Wallet",
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    onPressed: () => _showRechargeDialog(
-                      context,
-                      provider,
-                    ),
-                  ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                InkWell(
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) {
-                        return Dialog(
-                          backgroundColor: theme.cardColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+          ),
+
+          /// -------- Payment Card --------
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(horizontal, 16, horizontal, 8),
+            sliver: SliverToBoxAdapter(
+              child: Consumer<WalletProvider>(
+                builder: (_, provider, __) {
+                  return Card(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    elevation: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(widget.movie.title ?? "",
+                              style: const TextStyle(
+                                  fontSize: 22, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 12),
+                          widget.giftCount == 0
+                              ? Text(
+                                  "Price: ${moviePrice.toStringAsFixed(0)} Coins",
+                                  style: const TextStyle(fontSize: 16),
+                                )
+                              : Text(
+                                  "${moviePrice.toStringAsFixed(0)} × ${widget.giftCount} Gifts",
+                                  style: const TextStyle(
+                                      fontSize: 14, color: Colors.grey),
+                                ),
+                          const SizedBox(height: 6),
+                          Text(
+                            "Total: ${totalCoins.toStringAsFixed(0)} Coins",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: theme.primaryColor,
+                            ),
                           ),
-                          insetPadding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 24),
-                          child: Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: SizedBox(
-                              width: ResponsiveWidget.isMobile(context)
-                                  ? double.infinity
-                                  : 400,
-                              child: Stack(
+                          const SizedBox(height: 16),
+
+                          /// Wallet Status
+                          Card(
+                            color: provider.walletBalance >= totalCoins
+                                ? Colors.green.shade50
+                                : Colors.red.shade50,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
                                 children: [
-                                  Positioned(
-                                    top: 1,
-                                    left: 1,
-                                    right: 1,
-                                    bottom: 1,
-                                    child: Icon(
-                                      LucideIcons.gift,
-                                      size: 200,
-                                      color: theme.canvasColor.withOpacity(0.1),
+                                  Image.asset(ImageConstant.coin, width: 22),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      "Wallet: ${provider.walletBalance.toStringAsFixed(0)} Coins",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            provider.walletBalance >= totalCoins
+                                                ? Colors.green
+                                                : theme.primaryColor,
+                                      ),
                                     ),
-                                  ),
-                                  Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Description
-                                      Text(
-                                        "Enter Gift Card Number",
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                          color: theme.canvasColor,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-
-                                      // Input field
-                                      CustomTextField(
-                                        backgroundColor:
-                                            theme.scaffoldBackgroundColor,
-                                        isDigits: true,
-                                        controller: couponCodeController,
-                                        hintText: "Enter 16 Digit Number",
-                                        textInputType: TextInputType.text,
-                                      ),
-                                      const SizedBox(height: 24),
-
-                                      // Action buttons
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(context),
-                                            child: Text(
-                                              "Cancel",
-                                              style: TextStyle(
-                                                  color: Colors.grey[300]),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          ElevatedButton(
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor:
-                                                  theme.primaryColor,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 24,
-                                                vertical: 12,
-                                              ),
-                                            ),
-                                            onPressed: () async {
-                                              final provider =
-                                                  Provider.of<GiftProvider>(
-                                                      context,
-                                                      listen: false);
-
-                                              if (couponCodeController.text
-                                                  .trim()
-                                                  .isEmpty) {
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
-                                                  const SnackBar(
-                                                      content: Text(
-                                                          "Please enter a coupon code")),
-                                                );
-                                                return;
-                                              }
-
-                                              try {
-                                                final result = await provider
-                                                    .useGiftByCoupon(
-                                                        couponCodeController
-                                                            .text
-                                                            .trim());
-                                                if (couponCodeController
-                                                            .text.length >
-                                                        16 ||
-                                                    couponCodeController
-                                                            .text.length <
-                                                        16) {
-                                                  CustomToast.show(
-                                                    context,
-                                                    "Coupon code is invalid, try again.",
-                                                    isSuccess: false,
-                                                  );
-                                                  return;
-                                                }
-                                                if (result["success"] == true) {
-                                                  CustomToast.show(
-                                                    context,
-                                                    "Coupon applied successfully",
-                                                    isSuccess: true,
-                                                  );
-
-                                                  Navigator.pop(context, true);
-                                                } else {
-                                                  CustomToast.show(
-                                                    context,
-                                                    "Failed to apply coupon",
-                                                    isSuccess: false,
-                                                  );
-                                                }
-                                              } catch (e) {
-                                                CustomToast.show(
-                                                  context,
-                                                  "Something went wrong",
-                                                  isSuccess: false,
-                                                );
-                                              }
-                                            },
-                                            child: const Text(
-                                              "Redeem",
-                                              style: TextStyle(
-                                                  color: Colors.white),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
                                   ),
                                 ],
                               ),
                             ),
                           ),
-                        );
-                      },
-                    );
-                  },
-                  child: Text.rich(
-                    TextSpan(
-                      style: TextStyle(
-                        color: theme.canvasColor,
-                      ),
-                      children: [
-                        TextSpan(text: 'Have a '),
-                        TextSpan(
-                          text: '${widget.movie.title}',
-                          style: TextStyle(
-                            color: theme.primaryColor,
+                          const SizedBox(height: 20),
+
+                          provider.walletBalance >= totalCoins
+                              ? ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: theme.primaryColor,
+                                    minimumSize:
+                                        const Size(double.infinity, 50),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
+                                  ),
+                                  icon: const Icon(Icons.check,
+                                      color: Colors.white),
+                                  label: const Text(
+                                    "Pay Using Coins",
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  onPressed: () {
+                                    _showConfirmationDialog(
+                                      provider,
+                                      totalCoins,
+                                      widget.movie.id!,
+                                      widget.giftCount,
+                                    );
+                                  },
+                                )
+                              : ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: theme.primaryColor,
+                                    minimumSize:
+                                        const Size(double.infinity, 50),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
+                                  ),
+                                  icon: const Icon(Icons.add_circle,
+                                      color: Colors.white),
+                                  label: const Text(
+                                    "Buy Coins",
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  onPressed: () =>
+                                      _showRechargeDialog(context, provider),
+                                ),
+
+                          const SizedBox(height: 10),
+
+                          /// Gift Card Link
+                          Center(
+                            child: InkWell(
+                              onTap: _showGiftDialog,
+                              child: Text.rich(
+                                TextSpan(
+                                  style: TextStyle(color: theme.canvasColor),
+                                  children: [
+                                    const TextSpan(text: 'Have a '),
+                                    TextSpan(
+                                      text: widget.movie.title ?? "",
+                                      style:
+                                          TextStyle(color: theme.primaryColor),
+                                    ),
+                                    const TextSpan(text: ' Gift Card?')
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                        TextSpan(text: ' Gift Card?')
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ),
-              ],
+                  );
+                },
+              ),
             ),
-          ],
-        ),
+          ),
+
+          /// -------- History --------
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(horizontal, 0, horizontal, 24),
+            sliver: SliverToBoxAdapter(child: _buildTransactionSection()),
+          ),
+        ],
       ),
     );
   }
 
+  // ---------------- History ----------------
   Widget _buildTransactionSection() {
     return Consumer2<WalletProvider, ThemeProvider>(
       builder: (context, walletProvider, themeProvider, _) {
@@ -407,71 +284,55 @@ class _BillingPageState extends State<BillingPage> {
           elevation: 4,
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("Transaction History",
-                    style:
-                        TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                const Divider(),
-                Expanded(
-                  child: transactions.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(Icons.receipt_long,
-                                  size: 60, color: Colors.grey),
-                              SizedBox(height: 12),
-                              Text("No transactions yet",
-                                  style: TextStyle(color: Colors.grey)),
-                            ],
-                          ),
-                        )
-                      : ListView.separated(
-                          itemCount: transactions.length,
-                          separatorBuilder: (_, __) =>
-                              Divider(color: theme.cardColor.withOpacity(0.2)),
-                          itemBuilder: (context, index) {
-                            final tx = transactions[index];
-                            final isCredit =
-                                tx.status?.toLowerCase() == "amount creadited";
-                            final date = DateTime.fromMillisecondsSinceEpoch(
-                                tx.date ?? 0);
+            child: SizedBox(
+              height: 320,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Transaction History",
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const Divider(),
+                  Expanded(
+                    child: transactions.isEmpty
+                        ? const Center(
+                            child: Text("No transactions yet",
+                                style: TextStyle(color: Colors.grey)),
+                          )
+                        : ListView.separated(
+                            itemCount: transactions.length,
+                            separatorBuilder: (_, __) => Divider(
+                                color: theme.cardColor.withOpacity(0.2)),
+                            itemBuilder: (context, index) {
+                              final tx = transactions[index];
+                              final isCredit = tx.status?.toLowerCase() ==
+                                  "amount creadited";
+                              final date = DateTime.fromMillisecondsSinceEpoch(
+                                  tx.date ?? 0);
 
-                            return ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: isCredit
-                                    ? Colors.green.shade100
-                                    : Colors.red.shade100,
-                                child: Icon(
-                                  isCredit
-                                      ? Icons.arrow_downward
-                                      : Icons.arrow_upward,
-                                  color: isCredit ? Colors.green : Colors.red,
+                              return ListTile(
+                                leading:
+                                    Image.asset(ImageConstant.coin, width: 22),
+                                title: Text(tx.status ?? "NA",
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600)),
+                                subtitle: Text(
+                                    "${tx.reason ?? ''}\n${DateFormat('dd MMM yyyy • hh:mm a').format(date)}"),
+                                isThreeLine: true,
+                                trailing: Text(
+                                  "${isCredit ? "+" : "-"}${tx.amount?.toStringAsFixed(0) ?? "--"}",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: isCredit ? Colors.green : Colors.red,
+                                  ),
                                 ),
-                              ),
-                              title: Text(
-                                tx.status ?? "NA",
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600),
-                              ),
-                              subtitle: Text(
-                                  "${tx.reason ?? ''}\n${DateFormat('dd MMM yyyy • hh:mm a').format(date)}"),
-                              isThreeLine: true,
-                              trailing: Text(
-                                '₹${tx.amount?.toStringAsFixed(2) ?? "--"}',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: isCredit ? Colors.green : Colors.red,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ],
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -479,9 +340,113 @@ class _BillingPageState extends State<BillingPage> {
     );
   }
 
+  // ---------------- Gift Dialog ----------------
+  void _showGiftDialog() {
+    final theme = Theme.of(context);
+    final couponCodeController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: theme.cardColor,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: SizedBox(
+              width: ResponsiveWidget.isMobile(context) ? double.infinity : 400,
+              child: Stack(
+                children: [
+                  Positioned(
+                    top: 1,
+                    left: 1,
+                    right: 1,
+                    bottom: 1,
+                    child: Icon(
+                      LucideIcons.gift,
+                      size: 200,
+                      color: theme.canvasColor.withOpacity(0.1),
+                    ),
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text("Enter Gift Card Number"),
+                      const SizedBox(height: 6),
+                      CustomTextField(
+                        backgroundColor: theme.scaffoldBackgroundColor,
+                        isDigits: true,
+                        controller: couponCodeController,
+                        hintText: "Enter 16 Digit Number",
+                        textInputType: TextInputType.text,
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text("Cancel"),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            onPressed: () async {
+                              final provider = Provider.of<GiftProvider>(
+                                  context,
+                                  listen: false);
+
+                              if (couponCodeController.text.trim().length !=
+                                  16) {
+                                CustomToast.show(
+                                  context,
+                                  "Coupon code is invalid",
+                                  isSuccess: false,
+                                );
+                                return;
+                              }
+
+                              final result = await provider.useGiftByCoupon(
+                                  couponCodeController.text.trim());
+
+                              if (result["success"] == true) {
+                                CustomToast.show(
+                                  context,
+                                  "Coupon applied successfully",
+                                  isSuccess: true,
+                                );
+                                Navigator.pop(context, true);
+                              } else {
+                                CustomToast.show(
+                                  context,
+                                  "Failed to apply coupon",
+                                  isSuccess: false,
+                                );
+                              }
+                            },
+                            child: const Text("Redeem"),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ---------------- Confirmation ----------------
   void _showConfirmationDialog(
     WalletProvider provider,
-    double moviePrice,
+    double coins,
     int movieID,
     int giftCount,
   ) {
@@ -493,53 +458,48 @@ class _BillingPageState extends State<BillingPage> {
           backgroundColor: theme.cardColor,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(
-            "Confirm Purchase",
-            style: TextStyle(color: theme.canvasColor),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text("Do you want to confirm the purchase?",
-                  style: TextStyle(color: theme.canvasColor)),
-              const SizedBox(height: 10),
-            ],
-          ),
+          title: const Text("Confirm Purchase"),
+          content: const Text("Do you want to confirm the purchase?"),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text("Cancel", style: TextStyle(color: theme.canvasColor)),
+              child: const Text("Cancel"),
             ),
             ElevatedButton(
               style:
                   ElevatedButton.styleFrom(backgroundColor: theme.primaryColor),
               onPressed: () async {
-                provider.deductBalance(moviePrice, movieID);
-                (giftCount > 0)
-                    ? await Provider.of<GiftProvider>(context, listen: false)
-                        .saveUserGift(widget.movie, giftCount)
-                    : await Provider.of<PurchaseContentProvider>(context,
-                            listen: false)
-                        .saveUserContent(widget.movie);
+                await provider.deductBalance(coins, movieID);
+
+                if (giftCount > 0) {
+                  await Provider.of<GiftProvider>(context, listen: false)
+                      .saveUserGift(widget.movie, giftCount);
+                } else {
+                  await Provider.of<PurchaseContentProvider>(context,
+                          listen: false)
+                      .saveUserContent(widget.movie);
+                }
+
                 CustomToast.show(
                   context,
                   "Payment successful! Enjoy your movie 🎬",
                   isSuccess: true,
                 );
+
                 await Provider.of<DashboardProvider>(context, listen: false)
                     .getContentById(widget.movie.id!);
+
                 Navigator.pop(context);
+
                 giftCount > 0
-                    ? (Navigator.pushReplacement(
+                    ? Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => GiftedMoviesPage())))
+                            builder: (context) => GiftedMoviesPage()))
                     : Navigator.pop(context);
               },
-              child: const Text(
-                "Confirm & Pay",
-                style: TextStyle(color: Colors.white),
-              ),
+              child: const Text("Confirm & Pay",
+                  style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -547,6 +507,7 @@ class _BillingPageState extends State<BillingPage> {
     );
   }
 
+  // ---------------- Recharge ----------------
   void _showRechargeDialog(
       BuildContext context, WalletProvider walletProvider) {
     final theme = Theme.of(context);
@@ -557,7 +518,7 @@ class _BillingPageState extends State<BillingPage> {
           backgroundColor: theme.cardColor,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text("Recharge Wallet"),
+          title: const Text("Buy Coins"),
           content: TextField(
             controller: walletProvider.amountController,
             keyboardType: TextInputType.number,
@@ -579,7 +540,7 @@ class _BillingPageState extends State<BillingPage> {
                     double.tryParse(walletProvider.amountController.text) ?? 0;
 
                 if (amount > 0) {
-                  Navigator.pop(context); // close dialog before navigation
+                  Navigator.pop(context);
 
                   final result = await Navigator.push(
                     context,
@@ -589,18 +550,16 @@ class _BillingPageState extends State<BillingPage> {
                   );
 
                   if (result == true) {
-                    // Razorpay payment success
-                    walletProvider.addBalance(amount);
+                    await walletProvider.addBalance(amount);
                     CustomToast.show(
                       context,
-                      "Wallet recharged with ₹${amount.toStringAsFixed(2)}",
+                      "Coins added successfully",
                       isSuccess: true,
                     );
-                  } else if (result == false) {
-                    // Payment failed
+                  } else {
                     CustomToast.show(
                       context,
-                      "Payment Failed ❌ Try again",
+                      "Payment Failed ❌",
                       isSuccess: false,
                     );
                   }

@@ -141,6 +141,7 @@ class WalletProvider extends ChangeNotifier {
       var response = await apiHelper.getApi(apiUrl);
       if (response.statusCode == 200) {
         _transactionHistory.clear();
+        _filteredTransactionHistory.clear();
         Map<String, dynamic> responseBody = json.decode(response.body);
         WalletHistory walletHistory = WalletHistory.fromJson(responseBody);
         if (walletHistory.success == true) {

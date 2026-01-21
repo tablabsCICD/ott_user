@@ -597,7 +597,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
         const SizedBox(width: 20),
         movie.isRental == false
             ? ActionButtonWidget(
-                label: '${lang.rent} ₹${movie.price}',
+                label: '${lang.rent} ${movie.price}',
                 icon: Icons.movie,
                 onTap: () {
                   showDialog(
@@ -652,7 +652,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '${lang.price}: ₹${movie.price ?? 0.0}',
+            '${lang.price}: ${movie.price ?? 0.0}',
             style: TextStyle(
               fontSize: 14,
               color: selectedThemeData.secondaryHeaderColor, // Theme text color

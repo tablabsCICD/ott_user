@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
+import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
 class ShortsPlayerPage extends StatefulWidget {
@@ -19,6 +22,8 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
   int _currentIndex = 0;
   bool _isInitialized = false;
+  bool _isMuted = false;
+  bool _isLoadingPart = false;
 
   List<ShortPart> get parts => widget.short.parts;
   int get totalParts => parts.length;
@@ -27,9 +32,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    if (totalParts > 0) {
-      _loadVideo(0);
-    }
+    if (totalParts > 0) _loadPart(0);
   }
 
   @override
@@ -48,41 +51,74 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     }
   }
 
-  Future<void> _loadVideo(int index) async {
-    final url = parts[index].videoUrl;
+  Future<void> _refreshFromBackend() async {
+    final provider = context.read<ShortProvider>();
+    final user = await LocalSharePreferences.localSharePreferences.getUser();
+
+    await provider.fetchShortDetail(widget.short.id, user!.id!);
+
+    setState(() {
+      widget.short.parts
+        ..clear()
+        ..addAll(provider.shortDetail!.parts);
+    });
+  }
+
+  Future<void> _loadPart(int index) async {
+    if (_isLoadingPart) return;
+    _isLoadingPart = true;
+
+    final part = parts[index];
 
     final old = _controller;
     _controller = null;
     _isInitialized = false;
+
     await old?.pause();
     await old?.dispose();
 
-    final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
+    // Purchase if required
+    if (!part.isFreePreview && !part.isPurchased) {
+      final data = await context.read<ShortProvider>().purchaseShortPart(
+            partId: int.parse(part.partId),
+          );
 
-    try {
-      await ctrl.initialize();
-      ctrl.setLooping(false);
-      await ctrl.play();
-    } catch (e) {
-      debugPrint("Video error: $e");
+      if (data == null) {
+        _isLoadingPart = false;
+        return;
+      }
+
+      await _refreshFromBackend();
     }
+
+    final ctrl = VideoPlayerController.network(part.videoUrl);
+    await ctrl.initialize();
+    await ctrl.play();
 
     if (!mounted) return;
 
+    final viewed = await context
+        .read<ShortProvider>()
+        .addShortView(partId: int.parse(part.partId));
+
+    if (viewed) {
+      await _refreshFromBackend();
+    }
+
     setState(() {
       _controller = ctrl;
-      _isInitialized = ctrl.value.isInitialized;
+      _isInitialized = true;
+      _isMuted = false;
+      ctrl.setVolume(1);
+      _currentIndex = index;
     });
+
+    _isLoadingPart = false;
   }
 
   Future<void> _changePage(int index) async {
-    _currentIndex = index;
-    await _loadVideo(index);
+    await _loadPart(index);
   }
-
-  // --------------------------------------------------------
-  // BUILD
-  // --------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -94,13 +130,22 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
           child: Stack(
             children: [
               _videoBackground(),
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () {
+                    if (_controller == null) return;
+                    _controller!.value.isPlaying
+                        ? _controller!.pause()
+                        : _controller!.play();
+                  },
+                ),
+              ),
               PageView.builder(
                 controller: _pageController,
                 scrollDirection: Axis.vertical,
-                physics: const BouncingScrollPhysics(),
                 itemCount: totalParts,
-                onPageChanged: (i) => _changePage(i),
-                itemBuilder: (c, i) => _overlay(i),
+                onPageChanged: _changePage,
+                itemBuilder: (_, i) => _overlay(i),
               ),
               _backButton(),
             ],
@@ -110,9 +155,6 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     );
   }
 
-  // --------------------------------------------------------
-  // VIDEO — fullscreen shorts style
-  // --------------------------------------------------------
   Widget _videoBackground() {
     if (!_isInitialized || _controller == null) {
       return const Center(
@@ -120,147 +162,121 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       );
     }
 
-    final size = _controller!.value.size;
-
     return Positioned.fill(
       child: FittedBox(
         fit: BoxFit.cover,
         child: SizedBox(
-          width: size.width,
-          height: size.height,
+          width: _controller!.value.size.width,
+          height: _controller!.value.size.height,
           child: VideoPlayer(_controller!),
         ),
       ),
     );
   }
 
-  // --------------------------------------------------------
-  // OVERLAY UI (per page)
-  // --------------------------------------------------------
   Widget _overlay(int index) {
     final part = parts[index];
-    return GestureDetector(
-      onTap: () {
-        if (_controller == null) return;
-        if (_controller!.value.isPlaying) {
-          _controller!.pause();
-        } else {
-          _controller!.play();
-        }
-        setState(() {});
-      },
-      child: Stack(
-        children: [
-          _leftInfo(part),
-          _rightButtons(part),
-          _bottomEpisodeBar(),
-        ],
-      ),
+    return Stack(
+      children: [
+        _leftInfo(part),
+        _rightButtons(index),
+        _bottomEpisodeBar(),
+      ],
     );
   }
 
-  // --------------------------------------------------------
-  // LEFT: creator + title
-  // --------------------------------------------------------
   Widget _leftInfo(ShortPart part) {
     return Positioned(
       left: 16,
-      bottom: 120,
+      bottom: 100,
       right: 130,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "@${widget.short.creatorName}",
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text("@${widget.short.creatorName}",
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
           Text(
             part.title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              height: 1.2,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 14),
           ),
         ],
       ),
     );
   }
 
-  // --------------------------------------------------------
-  // RIGHT ACTION BUTTONS
-  // --------------------------------------------------------
-  Widget _rightButtons(ShortPart part) {
-    bool isMuted = _controller?.value.volume == 0;
+  Widget _rightButtons(int index) {
+    final part = parts[index];
+    final provider = context.watch<ShortProvider>();
 
     return Positioned(
       right: 12,
       bottom: 120,
       child: Column(
         children: [
-          _iconBtn(Icons.thumb_up_alt_outlined, "0"),
-          const SizedBox(height: 20),
-          _iconBtn(Icons.visibility_outlined, "0"),
-          const SizedBox(height: 20),
-          _iconBtn(Icons.share, "Share"),
-          const SizedBox(height: 25),
+          _actionBtn(
+            part.isLiked ? Icons.favorite : Icons.favorite_border,
+            "${part.likes}",
+            provider.isLiking
+                ? null
+                : () async {
+                    final ok = part.isLiked
+                        ? await context
+                            .read<ShortProvider>()
+                            .unlikeShortPart(partId: int.parse(part.partId))
+                        : await context
+                            .read<ShortProvider>()
+                            .likeShortPart(partId: int.parse(part.partId));
 
-          // Mute/Unmute
-          InkWell(
-            onTap: () {
-              if (_controller == null) return;
-              _controller!.setVolume(isMuted ? 1 : 0);
-              setState(() {});
-            },
-            child: Icon(
-              isMuted ? Icons.volume_off : Icons.volume_up,
-              size: 32,
-              color: Colors.white,
-            ),
+                    if (ok) {
+                      await _refreshFromBackend();
+                    }
+                  },
+            isActive: part.isLiked,
           ),
-
-          const SizedBox(height: 35),
-
-          // Profile pic
-          CircleAvatar(
-            radius: 20,
-            backgroundImage: NetworkImage(widget.short.poster),
-          ),
+          const SizedBox(height: 18),
+          _actionBtn(Icons.visibility_outlined, "${part.views}", () {}),
         ],
       ),
     );
   }
 
-  Widget _iconBtn(IconData icon, String label) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white12,
+  Widget _actionBtn(
+    IconData icon,
+    String label,
+    VoidCallback? onTap, {
+    bool isActive = false,
+  }) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white12,
+            ),
+            child: Icon(
+              icon,
+              size: 26,
+              color: isActive ? theme.primaryColor : Colors.white,
+            ),
           ),
-          child: Icon(icon, size: 26, color: Colors.white),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white, fontSize: 11),
-        ),
-      ],
+          const SizedBox(height: 4),
+          Text(label,
+              style: const TextStyle(color: Colors.white, fontSize: 11)),
+        ],
+      ),
     );
   }
 
-  // --------------------------------------------------------
-  // BOTTOM EPISODE BAR
-  // --------------------------------------------------------
   Widget _bottomEpisodeBar() {
     return Positioned(
       left: 20,
@@ -290,41 +306,11 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     );
   }
 
-  // --------------------------------------------------------
-  // BACK BUTTON
-  // --------------------------------------------------------
-  Widget _backButton() {
-    return Positioned(
-      top: MediaQuery.of(context).padding.top + 12,
-      left: 12,
-      child: InkWell(
-        onTap: () {
-          _controller?.pause();
-          Navigator.pop(context);
-        },
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: const BoxDecoration(
-            color: Colors.black45,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.arrow_back_ios_new,
-            color: Colors.white,
-            size: 18,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // --------------------------------------------------------
-  // EPISODE SELECTOR SHEET
-  // --------------------------------------------------------
   void _openEpisodes() {
+    final theme = Theme.of(context);
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.black87,
+      backgroundColor: theme.scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -340,40 +326,66 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
               childAspectRatio: 1,
             ),
             itemBuilder: (_, i) {
+              final part = parts[i];
               final active = i == _currentIndex;
-              final locked = parts[i].locked;
 
               return GestureDetector(
-                onTap: locked
-                    ? null
-                    : () {
-                        Navigator.pop(context);
-                        _pageController.jumpToPage(i);
-                        _changePage(i);
-                      },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: active ? Colors.redAccent : Colors.grey[900],
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: locked ? Colors.white10 : Colors.white24,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      "EP ${parts[i].partNumber}",
-                      style: TextStyle(
-                        color: locked ? Colors.white38 : Colors.white,
-                        fontWeight: FontWeight.bold,
+                onTap: () async {
+                  Navigator.pop(context);
+                  _pageController.jumpToPage(i);
+                  await _loadPart(i);
+                },
+                child: Stack(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: active ? theme.primaryColor : theme.cardColor,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: theme.canvasColor.withOpacity(0.7),
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          "EP ${part.partNumber}",
+                          style: TextStyle(
+                            color: active ? Colors.white : theme.canvasColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    if (!part.isPurchased && !part.isFreePreview)
+                      const Positioned(
+                        right: 4,
+                        top: 4,
+                        child: Icon(Icons.lock, size: 14),
+                      ),
+                  ],
                 ),
               );
             },
           ),
         );
       },
+    );
+  }
+
+  Widget _backButton() {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 12,
+      left: 12,
+      child: InkWell(
+        onTap: () {
+          _controller?.pause();
+          Navigator.pop(context);
+        },
+        child: const CircleAvatar(
+          radius: 18,
+          backgroundColor: Colors.black45,
+          child: Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18),
+        ),
+      ),
     );
   }
 }

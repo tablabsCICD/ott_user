@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/shorts%20page/component/shortsLibraryPage.dart';
+import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
+import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
@@ -23,6 +25,9 @@ class _ShortsPageState extends State<ShortsPage> {
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
+    var balanceProvider = Provider.of<WalletProvider>(context);
+    balanceProvider.getBalance();
+    var coinsBalance = balanceProvider.walletBalance;
 
     return Scaffold(
       appBar: AppBar(
@@ -32,49 +37,70 @@ class _ShortsPageState extends State<ShortsPage> {
             : theme.primaryColor,
         forceMaterialTransparency:
             ResponsiveWidget.isDesktop(context) ? true : false,
-        title: CustomTextField(
-          controller: TextEditingController(),
-          hintText: 'Search',
-          prefixIcon: const Icon(Icons.search),
-          textInputType: TextInputType.text,
+        centerTitle: true,
+        title: SizedBox(
+          width: ResponsiveWidget.isDesktop(context)
+              ? 500
+              : ResponsiveWidget.isTablet(context)
+                  ? 400
+                  : double.infinity,
+          child: CustomTextField(
+            controller: TextEditingController(),
+            hintText: 'Search',
+            prefixIcon: const Icon(Icons.search),
+            textInputType: TextInputType.text,
+          ),
         ),
         actions: [
-          Container(
-            margin: EdgeInsets.only(right: 8.0),
-            padding: EdgeInsets.symmetric(
-              vertical: 3,
-              horizontal: 6,
-            ),
-            decoration: BoxDecoration(
-              color: theme.scaffoldBackgroundColor,
-              border: Border.all(
-                color: theme.canvasColor,
-                width: 1,
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => WalletPage(),
+                ),
+              );
+            },
+            child: Container(
+              margin: EdgeInsets.only(right: 8.0),
+              padding: EdgeInsets.symmetric(
+                vertical: 3,
+                horizontal: 6,
               ),
-              borderRadius: BorderRadius.circular(
-                12,
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                border: Border.all(
+                  color: theme.canvasColor,
+                  width: 1,
+                ),
+                borderRadius: BorderRadius.circular(
+                  12,
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                SizedBox(
-                  height: 20,
-                  child: Image.asset(
-                    ImageConstant.coin,
+              child: Row(
+                children: [
+                  Hero(
+                    tag: 'coin',
+                    child: SizedBox(
+                      height: 20,
+                      child: Image.asset(
+                        ImageConstant.coin,
+                      ),
+                    ),
                   ),
-                ),
-                SizedBox(
-                  width: 5,
-                ),
-                Text(
-                  '96.7',
-                  style: TextStyle(
-                    color: theme.canvasColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                  SizedBox(
+                    width: 5,
                   ),
-                ),
-              ],
+                  Text(
+                    coinsBalance.toString(),
+                    style: TextStyle(
+                      color: theme.canvasColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

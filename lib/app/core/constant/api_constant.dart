@@ -76,6 +76,14 @@ class ApiConstant {
   static String shortsMaster = "${baseUrl}api/shortsMaster";
   static String shortsDetails(id, userId) =>
       "${baseUrl}api/shortsMaster/$id?userId=$userId";
+  static String likeshort(partId, userId) =>
+      "${baseUrl}api/shortsMaster/part/$partId/like?userId=$userId";
+  static String unlikeshort(partId, userId) =>
+      "${baseUrl}api/shortsMaster/part/$partId/unlike?userId=$userId";
+  static String viewsShort(partId) =>
+      "${baseUrl}api/shortsMaster/part/$partId/view";
+  static String purchaseShort(partId, userId) =>
+      "${baseUrl}ott/api/shortsMaster/purchaseShort?partId=$partId&userId=$userId";
 
   //series
   static String seriesDetails(seriesId) => "${baseUrl}series/$seriesId/details";

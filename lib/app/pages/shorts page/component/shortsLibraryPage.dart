@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/shorts%20page/component/shortsSeriesPlayerPage.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -21,7 +20,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
+    final theme = Theme.of(context);
 
     return Consumer<ShortProvider>(
       builder: (context, provider, _) {
@@ -34,7 +33,8 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
             child: Text(
               "No short films available",
               style: TextStyle(
-                  color: theme.scaffoldBackgroundColor.withOpacity(0.7)),
+                color: theme.canvasColor.withOpacity(0.6),
+              ),
             ),
           );
         }
@@ -52,14 +52,11 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                   : ResponsiveWidget.isTablet(context)
                       ? 4
                       : 2,
-              mainAxisExtent: ResponsiveWidget.isDesktop(context) ||
-                      ResponsiveWidget.isTablet(context)
-                  ? 300.0
-                  : 250.0,
               crossAxisSpacing: 12,
               mainAxisSpacing: 14,
+              childAspectRatio: 9 / 16, // Enforced 9:16 ratio
             ),
-            itemBuilder: (_, index) {
+            itemBuilder: (context, index) {
               final short = shorts[index];
 
               return GestureDetector(
@@ -85,29 +82,30 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      // Poster Image
+                      // Poster
                       Image.network(
                         short.posterUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.broken_image, color: Colors.grey),
+                        errorBuilder: (_, __, ___) => const Center(
+                          child: Icon(Icons.broken_image, color: Colors.grey),
+                        ),
                       ),
 
-                      // Bottom Gradient for Text
+                      // Bottom gradient
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
+                              Colors.black.withOpacity(0.55),
                               Colors.transparent,
-                              Colors.black.withOpacity(0.2),
                             ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.center,
                           ),
                         ),
                       ),
 
-                      // Trending Badge (if any)
+                      // Trending badge
                       if (short.isTrending)
                         Positioned(
                           top: 8,
@@ -130,21 +128,32 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                           ),
                         ),
 
-                      // Title + Meta
+                      // Title & meta
                       Positioned(
                         left: 10,
                         right: 10,
-                        bottom: 10,
+                        bottom: 12,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               short.title,
-                              maxLines: 2,
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              "@${short.creatorName} · ${short.category}",
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.7),
+                                fontSize: 10,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -168,14 +177,6 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                             ),
                           ],
                         ),
-                      ),
-
-                      // Play Button Overlay
-                      const Positioned(
-                        bottom: 8,
-                        right: 8,
-                        child: Icon(Icons.play_circle_fill,
-                            color: Colors.white70, size: 28),
                       ),
                     ],
                   ),
