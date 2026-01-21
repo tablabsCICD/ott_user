@@ -132,7 +132,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                       Positioned(
                         left: 10,
                         right: 10,
-                        bottom: 12,
+                        bottom: 14,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -171,6 +171,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                                   style: const TextStyle(
                                     color: Colors.white70,
                                     fontSize: 11,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ],
@@ -178,6 +179,31 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                           ],
                         ),
                       ),
+                      Positioned(
+                          right: 8,
+                          bottom: 5,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Icon(
+                                Icons.remove_red_eye,
+                                color: Colors.white70,
+                                size: 13,
+                              ),
+                              SizedBox(
+                                width: 4,
+                              ),
+                              Text(
+                                short.likeCount.toString(),
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              )
+                            ],
+                          ))
                     ],
                   ),
                 ),

@@ -136,8 +136,11 @@ class ShortProvider extends ChangeNotifier {
     ApiHelper apiHelper = ApiHelper();
     try {
       var response = await apiHelper.putApi(url);
+      log('short purchase response statuscode======== ${response.statusCode}');
 
-      if (response.success == true) {
+      if (response.statusCode == 200) {
+        log('short purchase response ========1234 ');
+
         final body = json.decode(response.body);
         log('short purchase response======== $body');
 

@@ -83,7 +83,7 @@ class ApiConstant {
   static String viewsShort(partId) =>
       "${baseUrl}api/shortsMaster/part/$partId/view";
   static String purchaseShort(partId, userId) =>
-      "${baseUrl}ott/api/shortsMaster/purchaseShort?partId=$partId&userId=$userId";
+      "${baseUrl}api/shortsMaster/purchaseShort?partId=$partId&userId=$userId";
 
   //series
   static String seriesDetails(seriesId) => "${baseUrl}series/$seriesId/details";
