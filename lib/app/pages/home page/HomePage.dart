@@ -268,7 +268,7 @@ class _HomePageState extends State<HomePage> {
               ),
             )
           : SizedBox(
-              width: 40,
+              width: 35,
               child: Hero(
                 tag: "logo",
                 child: InkWell(
@@ -284,7 +284,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       );
                     },
-                    child: Image.asset(ImageConstant.logo2)),
+                    child: Image.asset(ImageConstant.logo3)),
               ),
             ),
       titleSpacing: ResponsiveWidget.isTablet(context) ? 50 : 10,

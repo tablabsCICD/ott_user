@@ -47,34 +47,12 @@ class _UpcomingPageState extends State<UpcomingPage> {
         toolbarHeight: 60,
         forceMaterialTransparency:
             ResponsiveWidget.isDesktop(context) ? true : false,
-        centerTitle: ResponsiveWidget.isDesktop(context) ? true : false,
-        title: ResponsiveWidget.isDesktop(context)
-            ? Text(
-                lang.upcoming,
-                style: TextStyle(
-                    color: theme.canvasColor, fontWeight: FontWeight.bold),
-              )
-            : Row(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.only(
-                        top: 1,
-                        bottom: 1,
-                        left: ResponsiveWidget.isTablet(context) ? 30 : 5),
-                    child: SizedBox(
-                      width: 40,
-                      child: Image.asset(ImageConstant.logo2),
-                    ),
-                  ),
-                  Spacer(),
-                  Text(
-                    lang.upcoming,
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                  Spacer(),
-                ],
-              ),
+        centerTitle: true,
+        title: Text(
+          lang.upcoming,
+          style:
+              TextStyle(color: theme.canvasColor, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: theme.primaryColor,
       ),
       body: isLoading

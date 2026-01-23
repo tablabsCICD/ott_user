@@ -47,34 +47,12 @@ class _WatchlistPageState extends State<WatchlistPage> {
         toolbarHeight: 60,
         forceMaterialTransparency:
             ResponsiveWidget.isDesktop(context) ? true : false,
-        centerTitle: ResponsiveWidget.isDesktop(context) ? true : false,
-        title: ResponsiveWidget.isDesktop(context)
-            ? Text(
-                lang.watchlist,
-                style: TextStyle(
-                    color: theme.canvasColor, fontWeight: FontWeight.bold),
-              )
-            : Row(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.only(
-                        top: 1,
-                        bottom: 1,
-                        left: ResponsiveWidget.isTablet(context) ? 30 : 5),
-                    child: SizedBox(
-                      width: 40,
-                      child: Image.asset(ImageConstant.logo2),
-                    ),
-                  ),
-                  Spacer(),
-                  Text(
-                    lang.watchlist,
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                  Spacer(),
-                ],
-              ), //const Text("Content Purchase History"),
+        centerTitle: true,
+        title: Text(
+          lang.watchlist,
+          style:
+              TextStyle(color: theme.canvasColor, fontWeight: FontWeight.bold),
+        ), //const Text("Content Purchase History"),
         backgroundColor: theme.primaryColor,
       ),
       body: isLoading
