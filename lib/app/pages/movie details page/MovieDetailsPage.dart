@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
@@ -13,11 +15,10 @@ import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/data/models/content.dart';
-import 'package:ott/data/models/response/getContentResponse.dart';
-import 'package:ott/data/repositories/demo.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../widgets/show_toast.dart';
 import '../watchlist page/playMoviePage.dart';
@@ -26,6 +27,7 @@ import 'component/starRating.dart';
 
 class MovieDetailsPage extends StatefulWidget {
   final int movieId;
+
   const MovieDetailsPage({super.key, required this.movieId});
 
   @override
@@ -116,9 +118,30 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                return ResponsiveWidget.isDesktop(context)
-                    ? _buildDesktopView(content, selectedThemeData, controller)
-                    : _buildMobileView(content, selectedThemeData, controller);
+                return Stack(
+                  children: [
+                    ResponsiveWidget.isDesktop(context)
+                        ? _buildDesktopView(
+                            content, selectedThemeData, controller)
+                        : _buildMobileView(
+                            content, selectedThemeData, controller),
+                    Positioned(
+                      top: 100,
+                      right: 5,
+                      child: IconButton(
+                        tooltip: 'Share Movie',
+                        style: IconButton.styleFrom(
+                          backgroundColor: selectedThemeData.primaryColor,
+                        ),
+                        icon: Icon(
+                          Icons.share,
+                          color: Colors.white,
+                        ),
+                        onPressed: () => _shareMovie(context, content),
+                      ),
+                    )
+                  ],
+                );
               },
             ),
           );
@@ -210,39 +233,40 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                       ],
                     ),
                     const SizedBox(height: 10),
-                    (content.posterUrlList != null &&
-                            content.posterUrlList!.isNotEmpty)
-                        ? Row(
-                            children: [
-                              Expanded(
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  child: AutoScrollingPosters(
-                                    imageUrls: [
-                                      if (content.posterUrlList != null &&
-                                          content.posterUrlList!.isNotEmpty)
-                                        content.posterUrlList!.length > 0
-                                            ? content.posterUrlList![0]
-                                            : "",
-                                      if (content.posterUrlList!.length > 1)
-                                        content.posterUrlList![1],
-                                      if (content.posterUrlList!.length > 2)
-                                        content.posterUrlList![2],
-                                    ],
-                                    height: 200,
-                                    aspectRatio: 16 / 8,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        : SizedBox.shrink(),
+                    // (content.posterUrlList != null &&
+                    //         content.posterUrlList!.isNotEmpty)
+                    //     ? Row(
+                    //         children: [
+                    //           Expanded(
+                    //             child: SizedBox(
+                    //               width: double.infinity,
+                    //               child: AutoScrollingPosters(
+                    //                 imageUrls: [
+                    //                   if (content.posterUrlList != null &&
+                    //                       content.posterUrlList!.isNotEmpty)
+                    //                     content.posterUrlList!.length > 0
+                    //                         ? content.posterUrlList![0]
+                    //                         : "",
+                    //                   if (content.posterUrlList!.length > 1)
+                    //                     content.posterUrlList![1],
+                    //                   if (content.posterUrlList!.length > 2)
+                    //                     content.posterUrlList![2],
+                    //                 ],
+                    //                 height: 200,
+                    //                 aspectRatio: 16 / 8,
+                    //               ),
+                    //             ),
+                    //           ),
+                    //         ],
+                    //       )
+                    //     : SizedBox.shrink(),
                     const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         _buildButtons(context, content),
-                        _buildGifting(context, content),
+                        //_buildShareButton(context, content),
+                        //_buildGifting(context, content),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -260,6 +284,38 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                     content.isRental == true
                         ? _buildRatingReviewSection(context, content)
                         : SizedBox.shrink(),
+                    const SizedBox(height: 24),
+                    if (content.posterUrlList != null &&
+                        content.posterUrlList!.isNotEmpty) ...[
+                      Text(
+                        "Gallery",
+                        style: TextStyle(
+                          color: selectedThemeData.primaryColor,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 160,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: content.posterUrlList!.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(width: 12),
+                          itemBuilder: (context, index) {
+                            return ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                content.posterUrlList![index],
+                                width: 120,
+                                fit: BoxFit.cover,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -271,13 +327,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    Container(
-                      height: 400,
-                      child: TrailerPage(
-                        trailerUrl: content.trailerUrl,
-                        isTrailerUrl: true,
-                        content: content,
-                      ),
+                    TrailerPreview(
+                      trailerUrl: content.trailerUrl,
+                      content: content,
                     ),
                   ],
                 ),
@@ -312,61 +364,93 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: 100),
+              SizedBox(height: 120),
+              // Row(
+              //   mainAxisAlignment: MainAxisAlignment.center,
+              //   children: [
+              //     StarRatingWidget(
+              //       rating: double.parse(
+              //         (content.ratings ?? 0.0).toStringAsFixed(1),
+              //       ),
+              //       starSize: 20,
+              //       textSize: 16,
+              //     ),
+              //     const SizedBox(width: 4),
+              //     Text(
+              //       '(${content.ratingCount ?? '0'} reviews)',
+              //       style: const TextStyle(
+              //         fontSize: 14,
+              //         color: Colors.white70,
+              //       ),
+              //     ),
+              //     Spacer(),
+              //     _ageRating(content.ageRating ?? ""),
+              //   ],
+              // ),
+              TrailerPreview(
+                trailerUrl: content.trailerUrl,
+                content: content,
+              ),
+              SizedBox(height: 30),
+              Text(
+                content.title ?? "",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: selectedThemeData.primaryColor,
+                ),
+              ),
+              const SizedBox(height: 6),
               Row(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   StarRatingWidget(
                     rating: double.parse(
                       (content.ratings ?? 0.0).toStringAsFixed(1),
                     ),
-                    starSize: 20,
-                    textSize: 16,
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '(${content.ratingCount ?? '0'} reviews)',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.white70,
-                    ),
-                  ),
-                  Spacer(),
-                  _ageRating(content.ageRating ?? ""),
+                  const SizedBox(width: 8),
+                  _ageRating(content.ageRating),
                 ],
               ),
-              SizedBox(height: 10),
-              (content.posterUrlList != null &&
-                      content.posterUrlList!.isNotEmpty)
-                  ? Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            width: 300,
-                            child: AutoScrollingPosters(
-                              imageUrls: [
-                                if (content.posterUrlList != null &&
-                                    content.posterUrlList!.isNotEmpty)
-                                  content.posterUrlList!.length > 0
-                                      ? content.posterUrlList![0]
-                                      : "",
-                                if (content.posterUrlList!.length > 1)
-                                  content.posterUrlList![1],
-                                if (content.posterUrlList!.length > 2)
-                                  content.posterUrlList![2],
-                              ],
-                              height: 300,
-                              aspectRatio: 16 / 8,
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : SizedBox.shrink(),
-              const SizedBox(height: 16),
+
+              // (content.posterUrlList != null &&
+              //         content.posterUrlList!.isNotEmpty)
+              //     ? Row(
+              //         children: [
+              //           Expanded(
+              //             child: SizedBox(
+              //               width: 300,
+              //               child: AutoScrollingPosters(
+              //                 imageUrls: [
+              //                   if (content.posterUrlList != null &&
+              //                       content.posterUrlList!.isNotEmpty)
+              //                     content.posterUrlList!.length > 0
+              //                         ? content.posterUrlList![0]
+              //                         : "",
+              //                   if (content.posterUrlList!.length > 1)
+              //                     content.posterUrlList![1],
+              //                   if (content.posterUrlList!.length > 2)
+              //                     content.posterUrlList![2],
+              //                 ],
+              //                 height: 300,
+              //                 aspectRatio: 16 / 8,
+              //               ),
+              //             ),
+              //           ),
+              //         ],
+              //       )
+              //     : SizedBox.shrink(),
+              const SizedBox(height: 20),
               _buildButtons(context, content),
               const SizedBox(height: 8),
-              _buildGifting(context, content),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  //_buildShareButton(context, content),
+                  const SizedBox(width: 8),
+                  //_buildGifting(context, content),
+                ],
+              ),
               const SizedBox(height: 16),
               Text(
                 "  ${content.description ?? 'N/A'}",
@@ -382,6 +466,37 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               content.isRental == true
                   ? _buildRatingReviewSection(context, content)
                   : SizedBox.shrink(),
+              const SizedBox(height: 24),
+              if (content.posterUrlList != null &&
+                  content.posterUrlList!.isNotEmpty) ...[
+                Text(
+                  "Gallery",
+                  style: TextStyle(
+                    color: selectedThemeData.primaryColor,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 160,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: content.posterUrlList!.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (context, index) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          content.posterUrlList![index],
+                          width: 320,
+                          fit: BoxFit.cover,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -575,24 +690,24 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        ResponsiveWidget.isDesktop(context)
-            ? SizedBox()
-            : ActionButtonWidget(
-                label: lang.watchTrailer,
-                icon: Icons.play_circle_fill,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TrailerPage(
-                        trailerUrl: movie.trailerUrl ?? '',
-                        isTrailerUrl: true,
-                        content: movie,
-                      ),
-                    ),
-                  );
-                },
-              ),
+        // ResponsiveWidget.isDesktop(context)
+        //     ? SizedBox()
+        //     : ActionButtonWidget(
+        //         label: lang.watchTrailer,
+        //         icon: Icons.play_circle_fill,
+        //         onTap: () {
+        //           Navigator.push(
+        //             context,
+        //             MaterialPageRoute(
+        //               builder: (context) => TrailerPreview(
+        //                 trailerUrl: movie.trailerUrl,
+        //                 content: movie,
+        //               ),
+        //             ),
+        //           );
+        //         },
+        //       ),
+        _buildGifting(context, movie),
         const SizedBox(width: 20),
         movie.isRental == false
             ? ActionButtonWidget(
@@ -628,6 +743,45 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               ),
       ],
     );
+  }
+
+  // Widget _buildShareButton(BuildContext context, Content movie) {
+  //   return ActionButtonWidget(
+  //     label: "Share",
+  //     icon: Icons.share,
+  //     onTap: () => _shareMovie(context, movie),
+  //   );
+  // }
+
+  void _shareMovie(BuildContext context, Content movie) async {
+    final String shareText = '''
+🎬 ${movie.title ?? ''}
+
+${movie.description ?? ''}
+
+▶️ Watch here:
+${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? ''}
+
+📲 Download OTT Media House App now!
+'''
+        .trim();
+
+    if (kIsWeb) {
+      // Flutter Web fallback → Copy to Clipboard
+      await Clipboard.setData(ClipboardData(text: shareText));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Share text copied to clipboard"),
+        ),
+      );
+    } else {
+      // Android / iOS / Desktop
+      await Share.share(
+        shareText,
+        subject: movie.title ?? "Movie",
+      );
+    }
   }
 
   Widget _buildConfirmationBox(BuildContext context, Content movie) {

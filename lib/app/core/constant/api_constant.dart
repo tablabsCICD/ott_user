@@ -14,6 +14,13 @@ class ApiConstant {
 
   static String getDashboardData =
       "${baseUrl}api/forUser/filter/content-list/type3?";
+  static String getNewDashboardData = "${baseUrl}api/user/dashboard/filter/";
+
+// increase views api
+  static String addViewForMovie(movieId, userId) =>
+      "${baseUrl}api/forUser/movie/$movieId/view?userId=$userId";
+  static String addViewForEpisode(episodeId, userId) =>
+      "${baseUrl}api/forUser/episode/$episodeId/view?userId=$userId";
 
   //update user
   static String editUserById = "${baseUrl}userNew/updateUserBy/%7Bid%7D";

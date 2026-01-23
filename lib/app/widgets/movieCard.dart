@@ -44,16 +44,24 @@ class _MovieCardState extends State<MovieCard> {
     });
   }
 
-  void _initializeVideo() async {
+  Future<void> _initializeVideo() async {
     final trailerUrl = widget.movie.trailerUrl;
-    if (trailerUrl != null && trailerUrl.isNotEmpty) {
+    if (trailerUrl?.isNotEmpty == true) {
       _videoController =
-          VideoPlayerController.networkUrl(Uri.parse(trailerUrl));
-      await _videoController!.initialize();
-      _videoController!
-        ..setLooping(true)
-        ..setVolume(1.0); //(1.0);
-      setState(() => _isVideoInitialized = true);
+          VideoPlayerController.networkUrl(Uri.parse(trailerUrl!));
+
+      try {
+        await _videoController!.initialize();
+        _videoController!
+          ..setLooping(true)
+          ..setVolume(1.0);
+
+        if (mounted) {
+          setState(() => _isVideoInitialized = true);
+        }
+      } catch (e) {
+        debugPrint("Video init failed: $e");
+      }
     }
   }
 
@@ -65,39 +73,27 @@ class _MovieCardState extends State<MovieCard> {
 
   void _handleHover(bool hovering) {
     setState(() => _isHovered = hovering);
-    if (hovering) {
-      _videoController?.play();
-    } else {
-      _videoController?.pause();
-      _videoController?.seekTo(Duration.zero);
-    }
+
+    final controller = _videoController;
+    if (controller == null || !_isVideoInitialized) return;
+
+    hovering ? controller.play() : controller.pause();
+    if (!hovering) controller.seekTo(Duration.zero);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
-    final posterUrl = widget.movie.posterUrlList?.firstOrNull;
+    final posterUrl = widget.movie.posterUrlList?.isNotEmpty == true
+        ? widget.movie.posterUrlList!.first
+        : null;
 
     return MouseRegion(
       onEnter: (_) => _handleHover(true),
       onExit: (_) => _handleHover(false),
       child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => widget.movie.type!.toLowerCase() == 'movie'
-                  ? MovieDetailsPage(
-                      movieId: widget.movie.id!,
-                    )
-                  : SeriesDetailsPage(
-                      seriesId: widget.movie.id!,
-                      content: widget.movie,
-                    ),
-            ),
-          );
-        },
+        onTap: _openDetails,
         child: Container(
           width: 300,
           margin: const EdgeInsets.all(8),
@@ -110,314 +106,15 @@ class _MovieCardState extends State<MovieCard> {
             children: [
               Expanded(
                 flex: 6,
-                child: SizedBox(
-                  height: double.infinity,
-                  width: double.infinity,
-                  child: ClipRRect(
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(12)),
-                    child: _isHovered && _isVideoInitialized
-                        ? AspectRatio(
-                            aspectRatio: _videoController!.value.aspectRatio,
-                            child: Stack(
-                              children: [
-                                VideoPlayer(_videoController!),
-                                Positioned(
-                                  bottom: 0,
-                                  left: 0,
-                                  right: 0,
-                                  child: VideoProgressIndicator(
-                                      _videoController!,
-                                      allowScrubbing: true),
-                                ),
-                                Positioned(
-                                  right: 1,
-                                  top: 1,
-                                  child: IconButton(
-                                    icon: Icon(
-                                      _isMuted
-                                          ? Icons.volume_off
-                                          : Icons.volume_up,
-                                      color: Colors.white.withOpacity(0.7),
-                                    ),
-                                    onPressed: _toggleMute,
-                                  ),
-                                )
-                              ],
-                            ),
-                          )
-                        : (posterUrl != null
-                            ? Image.network(
-                                posterUrl,
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                                errorBuilder: (_, __, ___) => Icon(
-                                  Icons.broken_image,
-                                  color: theme.canvasColor.withOpacity(0.2),
-                                  size: 40,
-                                ),
-                              )
-                            : Icon(
-                                Icons.broken_image,
-                                color: theme.canvasColor.withOpacity(0.2),
-                                size: 40,
-                              )),
-                  ),
+                child: ClipRRect(
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(12)),
+                  child: _buildMediaPreview(posterUrl, theme),
                 ),
               ),
               Expanded(
                 flex: 5,
-                child: Stack(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      width: double.infinity,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          StarRatingWidget(
-                            rating: double.parse(
-                                    widget.movie.ratings!.toStringAsFixed(1)) ??
-                                0.0,
-                            starSize: 16,
-                            textSize: 16,
-                          ),
-                          // Text.rich(
-                          //   maxLines: 1,
-                          //   overflow: TextOverflow.ellipsis,
-                          //   TextSpan(
-                          //       style: TextStyle(
-                          //         color: theme.canvasColor.withOpacity(0.7),
-                          //         fontSize: 12,
-                          //       ),
-                          //       children: [
-                          //         TextSpan(
-                          //           text: '${widget.movie.ratings ?? '-'}',
-                          //           style: TextStyle(
-                          //               color: Colors.amber,
-                          //               fontWeight: FontWeight.w600),
-                          //         ),
-                          //         TextSpan(
-                          //           text:
-                          //               ' (${widget.movie.ratingCount ?? '0'})',
-                          //           style: TextStyle(
-                          //             color: theme.canvasColor.withOpacity(0.7),
-                          //             fontWeight: FontWeight.normal,
-                          //             fontSize: 11,
-                          //           ),
-                          //         ),
-                          //         // TextSpan(
-                          //         //   text: ' | ',
-                          //         //   style: TextStyle(
-                          //         //     color: theme.canvasColor.withOpacity(0.7),
-                          //         //     fontSize: 14,
-                          //         //   ),
-                          //         // ),
-                          //         // TextSpan(
-                          //         //   text: (widget.movie.genreList != null &&
-                          //         //           widget.movie.genreList!.isNotEmpty)
-                          //         //       ? widget.movie.genreList!.join(', ')
-                          //         //       : 'N/A',
-                          //         // )
-                          //       ]),
-                          // ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.movie.title ?? 'No Title',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: theme.canvasColor,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 1),
-                          Text(
-                            (widget.movie.genreList != null &&
-                                    widget.movie.genreList!.isNotEmpty)
-                                ? widget.movie.genreList!.join(', ')
-                                : 'N/A',
-                          ),
-                          const SizedBox(height: 4),
-
-                          // Text.rich(
-                          //   maxLines: 1,
-                          //   overflow: TextOverflow.ellipsis,
-                          //   TextSpan(
-                          //       style: TextStyle(
-                          //         color: theme.canvasColor.withOpacity(0.7),
-                          //         fontSize: 12,
-                          //       ),
-                          //       children: [
-                          //         TextSpan(
-                          //           text: '${lang.director}: ',
-                          //           style: TextStyle(
-                          //             color: theme.primaryColor,
-                          //             fontWeight: FontWeight.w600,
-                          //           ),
-                          //         ),
-                          //         TextSpan(
-                          //           text: (widget.movie.directorList != null &&
-                          //                   widget
-                          //                       .movie.directorList!.isNotEmpty)
-                          //               ? widget.movie.directorList!.join(', ')
-                          //               : 'N/A',
-                          //         )
-                          //       ]),
-                          // ),
-                          // const SizedBox(height: 1),
-                          // Text.rich(
-                          //   maxLines: 1,
-                          //   overflow: TextOverflow.ellipsis,
-                          //   TextSpan(
-                          //       style: TextStyle(
-                          //         color: theme.canvasColor.withOpacity(0.7),
-                          //         fontSize: 12,
-                          //       ),
-                          //       children: [
-                          //         TextSpan(
-                          //           text: '${lang.cast}: ',
-                          //           style: TextStyle(
-                          //             color: theme.primaryColor,
-                          //             fontWeight: FontWeight.w600,
-                          //           ),
-                          //         ),
-                          //         TextSpan(
-                          //           text: (widget.movie.castList != null &&
-                          //                   widget.movie.castList!.isNotEmpty)
-                          //               ? widget.movie.castList!.join(', ')
-                          //               : 'N/A',
-                          //         )
-                          //       ]),
-                          // ),
-                          // Text(
-                          //   (widget.movie.directorList != null &&
-                          //           widget.movie.directorList!.isNotEmpty)
-                          //       ? "Director: ${widget.movie.directorList!.join(', ')}"
-                          //       : 'N/A',
-                          //   style: TextStyle(
-                          //     fontSize: 12,
-                          //     color: theme.canvasColor.withOpacity(0.7),
-                          //   ),
-                          //   maxLines: 1,
-                          //   overflow: TextOverflow.ellipsis,
-                          // ),
-                          // const SizedBox(height: 1),
-                          // Text(
-                          //   (widget.movie.castList != null &&
-                          //           widget.movie.castList!.isNotEmpty)
-                          //       ? "Cast: ${widget.movie.castList!.join(', ')}"
-                          //       : 'N/A',
-                          //   style: TextStyle(
-                          //     fontSize: 12,
-                          //     color: theme.canvasColor.withOpacity(0.7),
-                          //   ),
-                          //   maxLines: 1,
-                          //   overflow: TextOverflow.ellipsis,
-                          // ),
-                          const SizedBox(height: 1),
-                          Text.rich(
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                            TextSpan(
-                                style: TextStyle(
-                                  color: theme.canvasColor.withOpacity(0.7),
-                                  fontSize: 12,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: widget.movie.releaseDate ?? '',
-                                    style: TextStyle(
-                                      color: theme.canvasColor,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: ' | ',
-                                    style: TextStyle(
-                                      color: theme.canvasColor.withOpacity(0.7),
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: widget.movie.description ?? '',
-                                    style: TextStyle(
-                                      overflow: TextOverflow.ellipsis,
-                                      fontSize: 12,
-                                      color: theme.canvasColor.withOpacity(0.7),
-                                    ),
-                                  )
-                                ]),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      right: 5,
-                      top: 5,
-                      child: GestureDetector(
-                        onTap: () => widget.movie.isRental!
-                            ? Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => PlayMediaPage(
-                                    title: widget.movie.title!,
-                                    mediaId: widget.movie.id!,
-                                    videoUrl: widget.movie.contentUrl!,
-                                    content: widget.movie,
-                                  ),
-                                ),
-                              )
-                            : _showCupertinoDialog(context, widget.movie),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(
-                              10,
-                            ),
-                            color: theme.primaryColor.withOpacity(0.9),
-                          ),
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(
-                              vertical: 6.0,
-                              horizontal: 10,
-                            ),
-                            child: Row(
-                              children: [
-                                widget.movie.isRental!
-                                    ? SizedBox()
-                                    : SizedBox(
-                                        height: 15,
-                                        width: 15,
-                                        child: Image.asset(
-                                          ImageConstant.coin,
-                                        ),
-                                      ),
-                                SizedBox(
-                                  width: 2,
-                                ),
-                                Text(
-                                  widget.movie.isRental!
-                                      ? widget.movie.type!.toLowerCase() ==
-                                              "movie"
-                                          ? lang.watchMovie
-                                          : lang.watchSeries
-                                      : "${widget.movie.price ?? 0}",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                  ],
-                ),
+                child: _buildContentSection(theme, lang),
               ),
             ],
           ),
@@ -426,9 +123,197 @@ class _MovieCardState extends State<MovieCard> {
     );
   }
 
+  Widget _buildMediaPreview(String? posterUrl, ThemeData theme) {
+    if (_isHovered && _isVideoInitialized && _videoController != null) {
+      return AspectRatio(
+        aspectRatio: _videoController!.value.aspectRatio,
+        child: Stack(
+          children: [
+            VideoPlayer(_videoController!),
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: VideoProgressIndicator(
+                _videoController!,
+                allowScrubbing: true,
+              ),
+            ),
+            Positioned(
+              right: 5,
+              top: 5,
+              child: IconButton(
+                icon: Icon(
+                  _isMuted ? Icons.volume_off : Icons.volume_up,
+                  color: Colors.white.withOpacity(0.7),
+                ),
+                onPressed: _toggleMute,
+              ),
+            )
+          ],
+        ),
+      );
+    }
+
+    return posterUrl != null
+        ? Image.network(
+            posterUrl,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+            errorBuilder: (_, __, ___) => Icon(
+              Icons.broken_image,
+              color: theme.canvasColor.withOpacity(0.3),
+              size: 40,
+            ),
+          )
+        : Icon(
+            Icons.broken_image,
+            color: theme.canvasColor.withOpacity(0.3),
+            size: 40,
+          );
+  }
+
+  Widget _buildContentSection(ThemeData theme, AppLocalizations lang) {
+    final movie = widget.movie;
+
+    final rating = movie.ratings ?? 0.0;
+    final price = movie.price ?? 0;
+
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              StarRatingWidget(
+                rating: rating,
+                starSize: 16,
+                textSize: 16,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                movie.title ?? 'No Title',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: theme.canvasColor,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                movie.genreList?.join(', ') ?? 'N/A',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Text.rich(
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                TextSpan(
+                  style: TextStyle(
+                    color: theme.canvasColor.withOpacity(0.7),
+                    fontSize: 12,
+                  ),
+                  children: [
+                    TextSpan(text: movie.releaseDate ?? ''),
+                    const TextSpan(text: ' | '),
+                    TextSpan(text: movie.description ?? ''),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          right: 6,
+          top: 6,
+          child: _buildPriceButton(theme, lang, price),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPriceButton(
+      ThemeData theme, AppLocalizations lang, double price) {
+    final movie = widget.movie;
+    final isRental = movie.isRental ?? false;
+
+    return GestureDetector(
+      onTap: () =>
+          isRental ? _playMovie() : _showCupertinoDialog(context, movie),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: theme.primaryColor.withOpacity(0.9),
+        ),
+        child: Row(
+          children: [
+            if (!isRental)
+              SizedBox(
+                height: 14,
+                width: 14,
+                child: Image.asset(ImageConstant.coin),
+              ),
+            const SizedBox(width: 4),
+            Text(
+              isRental
+                  ? movie.type?.toLowerCase() == "movie"
+                      ? lang.watchMovie
+                      : lang.watchSeries
+                  : "$price",
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openDetails() {
+    final movie = widget.movie;
+
+    if (movie.id == null || movie.type == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => movie.type!.toLowerCase() == 'movie'
+            ? MovieDetailsPage(movieId: movie.id!)
+            : SeriesDetailsPage(seriesId: movie.id!, content: movie),
+      ),
+    );
+  }
+
+  void _playMovie() {
+    final movie = widget.movie;
+    if (movie.contentUrl == null || movie.id == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PlayMediaPage(
+          title: movie.title ?? '',
+          mediaId: movie.id!,
+          videoUrl: movie.contentUrl!,
+          content: movie,
+        ),
+      ),
+    );
+  }
+
   void _showCupertinoDialog(BuildContext context, Content movie) {
     final theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
+
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
@@ -436,41 +321,30 @@ class _MovieCardState extends State<MovieCard> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SizedBox(
-              height: 15,
-              width: 15,
-              child: Image.asset(
-                ImageConstant.coin,
-              ),
-            ),
-            SizedBox(
-              width: 2,
-            ),
-            Text('${movie.price}'),
+                height: 15, width: 15, child: Image.asset(ImageConstant.coin)),
+            const SizedBox(width: 4),
+            Text('${movie.price ?? 0}'),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
-              height: 10,
-            ),
+            const SizedBox(height: 10),
             Text(
               '${lang.rentDuration}: ${movie.rentlDuration ?? 'NA'}',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: theme.canvasColor, // Theme text color
+                color: theme.canvasColor,
               ),
             ),
-            SizedBox(
-              height: 10,
-            ),
+            const SizedBox(height: 10),
             Text(
               'Do you want to rent ${movie.title ?? ''}?',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: theme.primaryColor, // Theme text color
+                color: theme.primaryColor,
               ),
             ),
           ],
@@ -478,22 +352,18 @@ class _MovieCardState extends State<MovieCard> {
         actions: [
           CupertinoDialogAction(
             textStyle: TextStyle(color: theme.canvasColor),
-            child: Text('Cancel'),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(context),
           ),
           CupertinoDialogAction(
             textStyle: TextStyle(color: theme.primaryColor),
             child: const Text("Continue"),
             onPressed: () {
-              Navigator.of(context).pop(); // Close the dialog
+              Navigator.pop(context);
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => BillingPage(
-                    movie: movie,
-                  ),
+                  builder: (_) => BillingPage(movie: movie),
                 ),
               );
             },

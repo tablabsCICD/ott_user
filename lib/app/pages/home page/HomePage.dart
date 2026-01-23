@@ -47,20 +47,22 @@ class _HomePageState extends State<HomePage> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final dashboardProvider =
-          Provider.of<DashboardProvider>(context, listen: false);
+      // trending movies poster in sliver app bar
 
-      await dashboardProvider.getTopTrendingContent();
+      // final dashboardProvider =
+      //     Provider.of<DashboardProvider>(context, listen: false);
 
-      if (mounted) {
-        setState(() {
-          trendingMovieList = dashboardProvider.trendingContentList;
-        });
+      //await dashboardProvider.getTopTrendingContent();
 
-        if (trendingMovieList.isNotEmpty) {
-          _startAutoScroll();
-        }
-      }
+      // if (mounted) {
+      //   setState(() {
+      //     trendingMovieList = dashboardProvider.trendingContentList;
+      //   });
+
+      //   if (trendingMovieList.isNotEmpty) {
+      //     _startAutoScroll();
+      //   }
+      // }
 
       _initializeData();
     });
@@ -234,12 +236,12 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  double bannerHeight(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
+  // double bannerHeight(BuildContext context) {
+  //   final width = MediaQuery.of(context).size.width;
 
-    const posterRatio = 16 / 8;
-    return width / posterRatio;
-  }
+  //   const posterRatio = 16 / 8;
+  //   return width / posterRatio;
+  // }
 
   SliverAppBar _buildSliverAppBar(
       BuildContext context, ThemeData selectedThemeData) {
@@ -248,7 +250,7 @@ class _HomePageState extends State<HomePage> {
     return SliverAppBar(
       forceMaterialTransparency:
           ResponsiveWidget.isDesktop(context) ? true : false,
-      expandedHeight: bannerHeight(context),
+      // expandedHeight: bannerHeight(context),
       floating: false,
       pinned: true,
       stretch: true,
@@ -414,265 +416,265 @@ class _HomePageState extends State<HomePage> {
         }),
         const SizedBox(width: 16),
       ],
-      flexibleSpace: FlexibleSpaceBar(
-        stretchModes: const [
-          StretchMode.zoomBackground,
-          StretchMode.fadeTitle,
-        ],
-        background: Stack(
-          children: [
-            // Base fallback
-            Positioned.fill(
-              child: Container(
-                color: selectedThemeData.scaffoldBackgroundColor,
-              ),
-            ),
+      // flexibleSpace: FlexibleSpaceBar(
+      //   stretchModes: const [
+      //     StretchMode.zoomBackground,
+      //     StretchMode.fadeTitle,
+      //   ],
+      //   background: Stack(
+      //     children: [
+      //       // Base fallback
+      //       Positioned.fill(
+      //         child: Container(
+      //           color: selectedThemeData.scaffoldBackgroundColor,
+      //         ),
+      //       ),
 
-            // Banner carousel
-            Positioned.fill(
-              child: trendingMovieList.isEmpty
-                  ? const SizedBox.shrink()
-                  : PageView.builder(
-                      controller: _pageController,
-                      itemCount: trendingMovieList.length,
-                      onPageChanged: (i) {
-                        setState(() => _currentPage = i);
-                      },
-                      itemBuilder: (context, index) {
-                        final poster = trendingMovieList[index].posterUrlList;
-                        return poster != null && poster.isNotEmpty
-                            ? Image.network(
-                                poster.first,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  color: Colors.black12,
-                                  child: const Icon(Icons.broken_image),
-                                ),
-                              )
-                            : const SizedBox.shrink();
-                      },
-                    ),
-            ),
+      //       // Banner carousel
+      //       Positioned.fill(
+      //         child: trendingMovieList.isEmpty
+      //             ? const SizedBox.shrink()
+      //             : PageView.builder(
+      //                 controller: _pageController,
+      //                 itemCount: trendingMovieList.length,
+      //                 onPageChanged: (i) {
+      //                   setState(() => _currentPage = i);
+      //                 },
+      //                 itemBuilder: (context, index) {
+      //                   final poster = trendingMovieList[index].posterUrlList;
+      //                   return poster != null && poster.isNotEmpty
+      //                       ? Image.network(
+      //                           poster.first,
+      //                           fit: BoxFit.cover,
+      //                           errorBuilder: (_, __, ___) => Container(
+      //                             color: Colors.black12,
+      //                             child: const Icon(Icons.broken_image),
+      //                           ),
+      //                         )
+      //                       : const SizedBox.shrink();
+      //                 },
+      //               ),
+      //       ),
 
-            // Hotstar-style dark gradient
-            Positioned.fill(
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color.fromARGB(120, 0, 0, 0),
-                      Color.fromARGB(60, 0, 0, 0),
-                      Colors.transparent,
-                      Color.fromARGB(180, 0, 0, 0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+      //       // Hotstar-style dark gradient
+      //       Positioned.fill(
+      //         child: Container(
+      //           decoration: const BoxDecoration(
+      //             gradient: LinearGradient(
+      //               begin: Alignment.topCenter,
+      //               end: Alignment.bottomCenter,
+      //               colors: [
+      //                 Color.fromARGB(120, 0, 0, 0),
+      //                 Color.fromARGB(60, 0, 0, 0),
+      //                 Colors.transparent,
+      //                 Color.fromARGB(180, 0, 0, 0),
+      //               ],
+      //             ),
+      //           ),
+      //         ),
+      //       ),
 
-            if (trendingMovieList.isNotEmpty) ...[
-              // Bottom-left content
-              Positioned(
-                left: 16,
-                right: ResponsiveWidget.isMobile(context) ? 150 : 360,
-                bottom: 16,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      trendingMovieList[_currentPage].title ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: ResponsiveWidget.isMobile(context) ? 20 : 24,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        StarRatingWidget(
-                          rating: double.parse(
-                            (trendingMovieList[_currentPage].ratings ?? 0)
-                                .toStringAsFixed(1),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          (trendingMovieList[_currentPage]
-                                      .genreList
-                                      ?.isNotEmpty ??
-                                  false)
-                              ? trendingMovieList[_currentPage]
-                                  .genreList!
-                                  .join(', ')
-                              : 'N/A',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          (trendingMovieList[_currentPage]
-                                      .languageList
-                                      ?.isNotEmpty ??
-                                  false)
-                              ? trendingMovieList[_currentPage]
-                                  .languageList!
-                                  .map((e) => e.language)
-                                  .join(', ')
-                              : 'N/A',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          ' | ',
-                          style: TextStyle(
-                            color: selectedThemeData.primaryColor,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          "${trendingMovieList[_currentPage].runtime ?? 'xx min'} min",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          ' | ',
-                          style: TextStyle(
-                            color: selectedThemeData.primaryColor,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          "${trendingMovieList[_currentPage].releaseDate ?? 'NA'}",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      trendingMovieList[_currentPage].description ?? '',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+      //       if (trendingMovieList.isNotEmpty) ...[
+      //         // Bottom-left content
+      //         Positioned(
+      //           left: 16,
+      //           right: ResponsiveWidget.isMobile(context) ? 150 : 360,
+      //           bottom: 16,
+      //           child: Column(
+      //             crossAxisAlignment: CrossAxisAlignment.start,
+      //             children: [
+      //               Text(
+      //                 trendingMovieList[_currentPage].title ?? '',
+      //                 maxLines: 1,
+      //                 overflow: TextOverflow.ellipsis,
+      //                 style: TextStyle(
+      //                   color: Colors.white,
+      //                   fontSize: ResponsiveWidget.isMobile(context) ? 20 : 24,
+      //                   fontWeight: FontWeight.w700,
+      //                 ),
+      //               ),
+      //               const SizedBox(height: 4),
+      //               Row(
+      //                 children: [
+      //                   StarRatingWidget(
+      //                     rating: double.parse(
+      //                       (trendingMovieList[_currentPage].ratings ?? 0)
+      //                           .toStringAsFixed(1),
+      //                     ),
+      //                   ),
+      //                   const SizedBox(width: 8),
+      //                   Text(
+      //                     (trendingMovieList[_currentPage]
+      //                                 .genreList
+      //                                 ?.isNotEmpty ??
+      //                             false)
+      //                         ? trendingMovieList[_currentPage]
+      //                             .genreList!
+      //                             .join(', ')
+      //                         : 'N/A',
+      //                     style: const TextStyle(
+      //                       color: Colors.white70,
+      //                       fontWeight: FontWeight.bold,
+      //                       fontSize: 11,
+      //                     ),
+      //                     maxLines: 1,
+      //                     overflow: TextOverflow.ellipsis,
+      //                   ),
+      //                 ],
+      //               ),
+      //               const SizedBox(height: 4),
+      //               Row(
+      //                 crossAxisAlignment: CrossAxisAlignment.center,
+      //                 children: [
+      //                   Text(
+      //                     (trendingMovieList[_currentPage]
+      //                                 .languageList
+      //                                 ?.isNotEmpty ??
+      //                             false)
+      //                         ? trendingMovieList[_currentPage]
+      //                             .languageList!
+      //                             .map((e) => e.language)
+      //                             .join(', ')
+      //                         : 'N/A',
+      //                     style: const TextStyle(
+      //                       color: Colors.white,
+      //                       fontSize: 11,
+      //                       fontWeight: FontWeight.bold,
+      //                     ),
+      //                     maxLines: 1,
+      //                     overflow: TextOverflow.ellipsis,
+      //                   ),
+      //                   Text(
+      //                     ' | ',
+      //                     style: TextStyle(
+      //                       color: selectedThemeData.primaryColor,
+      //                       fontSize: 14,
+      //                       fontWeight: FontWeight.bold,
+      //                     ),
+      //                     maxLines: 1,
+      //                     overflow: TextOverflow.ellipsis,
+      //                   ),
+      //                   Text(
+      //                     "${trendingMovieList[_currentPage].runtime ?? 'xx min'} min",
+      //                     style: const TextStyle(
+      //                       color: Colors.white,
+      //                       fontSize: 11,
+      //                       fontWeight: FontWeight.bold,
+      //                     ),
+      //                     maxLines: 1,
+      //                     overflow: TextOverflow.ellipsis,
+      //                   ),
+      //                   Text(
+      //                     ' | ',
+      //                     style: TextStyle(
+      //                       color: selectedThemeData.primaryColor,
+      //                       fontSize: 14,
+      //                       fontWeight: FontWeight.bold,
+      //                     ),
+      //                     maxLines: 1,
+      //                     overflow: TextOverflow.ellipsis,
+      //                   ),
+      //                   Text(
+      //                     "${trendingMovieList[_currentPage].releaseDate ?? 'NA'}",
+      //                     style: const TextStyle(
+      //                       color: Colors.white,
+      //                       fontSize: 11,
+      //                       fontWeight: FontWeight.bold,
+      //                     ),
+      //                     maxLines: 1,
+      //                     overflow: TextOverflow.ellipsis,
+      //                   ),
+      //                 ],
+      //               ),
+      //               const SizedBox(height: 4),
+      //               Text(
+      //                 trendingMovieList[_currentPage].description ?? '',
+      //                 maxLines: 2,
+      //                 overflow: TextOverflow.ellipsis,
+      //                 style: const TextStyle(
+      //                   color: Colors.white70,
+      //                   fontSize: 11,
+      //                 ),
+      //               ),
+      //             ],
+      //           ),
+      //         ),
 
-              // Bottom-right button
-              Positioned(
-                right: 16,
-                bottom: 48,
-                child: GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => trendingMovieList[_currentPage]
-                                  .type!
-                                  .toLowerCase() ==
-                              'movie'
-                          ? MovieDetailsPage(
-                              movieId: trendingMovieList[_currentPage].id!,
-                            )
-                          : SeriesDetailsPage(
-                              seriesId: trendingMovieList[_currentPage].id ?? 0,
-                              content: trendingMovieList[_currentPage],
-                            ),
-                    ),
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(
-                        10,
-                      ),
-                      color: selectedThemeData.primaryColor.withOpacity(0.9),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: 8.0,
-                        horizontal: 16,
-                      ),
-                      child: Text(
-                        "Watch",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                // child: GestureDetector(
-                //   onTap: () {},
-                //   child: Container(
-                //     padding:
-                //         const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                //     decoration: BoxDecoration(
-                //       color: selectedThemeData.primaryColor,
-                //       borderRadius: BorderRadius.circular(6),
-                //     ),
-                //     child: Text(
-                //       trendingMovieList[_currentPage].isRental == true
-                //           ? (trendingMovieList[_currentPage]
-                //                       .type
-                //                       ?.toLowerCase() ==
-                //                   "movie"
-                //               ? lang.watchMovie
-                //               : lang.watchSeries)
-                //           : "₹${trendingMovieList[_currentPage].price}",
-                //       style: const TextStyle(
-                //         color: Colors.white,
-                //         fontSize: 14,
-                //         fontWeight: FontWeight.w600,
-                //       ),
-                //     ),
-                //   ),
-                // ),
-              ),
-            ],
-          ],
-        ),
-      ),
+      //         // Bottom-right button
+      //         Positioned(
+      //           right: 16,
+      //           bottom: 48,
+      //           child: GestureDetector(
+      //             onTap: () => Navigator.push(
+      //               context,
+      //               MaterialPageRoute(
+      //                 builder: (context) => trendingMovieList[_currentPage]
+      //                             .type!
+      //                             .toLowerCase() ==
+      //                         'movie'
+      //                     ? MovieDetailsPage(
+      //                         movieId: trendingMovieList[_currentPage].id!,
+      //                       )
+      //                     : SeriesDetailsPage(
+      //                         seriesId: trendingMovieList[_currentPage].id ?? 0,
+      //                         content: trendingMovieList[_currentPage],
+      //                       ),
+      //               ),
+      //             ),
+      //             child: Container(
+      //               decoration: BoxDecoration(
+      //                 borderRadius: BorderRadius.circular(
+      //                   10,
+      //                 ),
+      //                 color: selectedThemeData.primaryColor.withOpacity(0.9),
+      //               ),
+      //               child: Padding(
+      //                 padding: EdgeInsets.symmetric(
+      //                   vertical: 8.0,
+      //                   horizontal: 16,
+      //                 ),
+      //                 child: Text(
+      //                   "Watch",
+      //                   style: TextStyle(
+      //                     fontSize: 14,
+      //                     fontWeight: FontWeight.bold,
+      //                     color: Colors.white,
+      //                   ),
+      //                 ),
+      //               ),
+      //             ),
+      //           ),
+      //           // child: GestureDetector(
+      //           //   onTap: () {},
+      //           //   child: Container(
+      //           //     padding:
+      //           //         const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      //           //     decoration: BoxDecoration(
+      //           //       color: selectedThemeData.primaryColor,
+      //           //       borderRadius: BorderRadius.circular(6),
+      //           //     ),
+      //           //     child: Text(
+      //           //       trendingMovieList[_currentPage].isRental == true
+      //           //           ? (trendingMovieList[_currentPage]
+      //           //                       .type
+      //           //                       ?.toLowerCase() ==
+      //           //                   "movie"
+      //           //               ? lang.watchMovie
+      //           //               : lang.watchSeries)
+      //           //           : "₹${trendingMovieList[_currentPage].price}",
+      //           //       style: const TextStyle(
+      //           //         color: Colors.white,
+      //           //         fontSize: 14,
+      //           //         fontWeight: FontWeight.w600,
+      //           //       ),
+      //           //     ),
+      //           //   ),
+      //           // ),
+      //         ),
+      //       ],
+      //     ],
+      //   ),
+      // ),
     );
   }
 

@@ -25,36 +25,104 @@ class DashboardProvider extends BaseProvider {
   TextEditingController searchContentController = TextEditingController();
 
   getDashboardData(String type, List<String> languages, int userId) async {
-    //print(languages);
-    // Construct the query parameter for languages dynamically
+    List<DashboardData> finalDashboardData = [];
+
+    await Future.wait([
+      _safeApiCall(
+        () => getDashboardLatestData(type, languages, userId),
+        (data) => finalDashboardData.addAll(data),
+      ),
+      _safeApiCall(
+        () => getDashboardTrendingData(type, languages, userId),
+        (data) => finalDashboardData.addAll(data),
+      ),
+      _safeApiCall(
+        () => getDashboardUpcomingData(type, languages, userId),
+        (data) => finalDashboardData.addAll(data),
+      ),
+    ]);
+
+    if (finalDashboardData.isNotEmpty) {
+      _dashboardData = finalDashboardData;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _safeApiCall(
+    Future<List<DashboardData>> Function() apiCall,
+    Function(List<DashboardData>) onSuccess,
+  ) async {
+    try {
+      final result = await apiCall();
+      if (result.isNotEmpty) {
+        onSuccess(result);
+      }
+    } catch (e) {
+      debugPrint("API failed but continuing: $e");
+    }
+  }
+
+  Future<List<DashboardData>> getDashboardLatestData(
+      String type, List<String> languages, int userId) async {
     String languagesParam = languages.map((lang) => "langList=$lang").join('&');
 
-    // Construct the final API URL
     String apiUrl =
-        "${ApiConstant.getDashboardData}type=$type&$languagesParam&userId=$userId";
-    //log(' ==== dashboard api ====${apiUrl}');
+        "${ApiConstant.getNewDashboardData}latest?type=$type&$languagesParam&userId=$userId";
+
+    debugPrint(apiUrl);
     ApiHelper apiHelper = ApiHelper();
+    var response = await apiHelper.getApi(apiUrl);
 
-    try {
-      var response = await apiHelper.getApi(apiUrl);
-      //log(' ==== dashboard response ====${response.body}');
+    if (response.statusCode == 200) {
+      Map<String, dynamic> responseBody = json.decode(response.body);
+      DashboardResponse dashboardResponse =
+          DashboardResponse.fromJson(responseBody);
 
-      if (response.statusCode == 200) {
-        Map<String, dynamic> responseBody = json.decode(response.body);
-        DashboardResponse dashboardResponse =
-            DashboardResponse.fromJson(responseBody);
-        //log('dashboard response message${dashboardResponse.message}');
-        _dashboardData = dashboardResponse.data!;
-        //log('dashboard response data length ${dashboardResponse.data!.length}');
+      return dashboardResponse.data!;
+    } else {
+      throw Exception('Latest API Failed');
+    }
+  }
 
-        notifyListeners();
-      } else {
-        throw Exception(
-            'Failed to get data. Status code: ${response.statusCode}');
-      }
-    } catch (error) {
-      //log("Error: $error");
-      throw Exception('An error occurred while fetching the data.');
+  Future<List<DashboardData>> getDashboardTrendingData(
+      String type, List<String> languages, int userId) async {
+    String languagesParam = languages.map((lang) => "langList=$lang").join('&');
+
+    String apiUrl =
+        "${ApiConstant.getNewDashboardData}trending?type=$type&$languagesParam&userId=$userId";
+
+    ApiHelper apiHelper = ApiHelper();
+    var response = await apiHelper.getApi(apiUrl);
+
+    if (response.statusCode == 200) {
+      Map<String, dynamic> responseBody = json.decode(response.body);
+      DashboardResponse dashboardResponse =
+          DashboardResponse.fromJson(responseBody);
+
+      return dashboardResponse.data!;
+    } else {
+      throw Exception('Trending API Failed');
+    }
+  }
+
+  Future<List<DashboardData>> getDashboardUpcomingData(
+      String type, List<String> languages, int userId) async {
+    String languagesParam = languages.map((lang) => "langList=$lang").join('&');
+
+    String apiUrl =
+        "${ApiConstant.getNewDashboardData}upcoming?type=$type&$languagesParam&userId=$userId";
+
+    ApiHelper apiHelper = ApiHelper();
+    var response = await apiHelper.getApi(apiUrl);
+
+    if (response.statusCode == 200) {
+      Map<String, dynamic> responseBody = json.decode(response.body);
+      DashboardResponse dashboardResponse =
+          DashboardResponse.fromJson(responseBody);
+
+      return dashboardResponse.data!;
+    } else {
+      throw Exception('Upcoming API Failed');
     }
   }
 
@@ -90,36 +158,36 @@ class DashboardProvider extends BaseProvider {
     }
   }
 
-  List<Content> _trendingContentList = [];
-  List<Content> get trendingContentList => _trendingContentList;
+  // List<Content> _trendingContentList = [];
+  // List<Content> get trendingContentList => _trendingContentList;
 
-  Future<void> getTopTrendingContent() async {
-    //log('=======inside top 10 trending');
-    User? user = await LocalSharePreferences.localSharePreferences.getUser();
-    String apiUrl = ApiConstant.getTopTrendingContentLast7Days(user!.id);
-    ApiHelper apiHelper = ApiHelper();
+  // Future<void> getTopTrendingContent() async {
+  //   //log('=======inside top 10 trending');
+  //   User? user = await LocalSharePreferences.localSharePreferences.getUser();
+  //   String apiUrl = ApiConstant.getTopTrendingContentLast7Days(user!.id);
+  //   ApiHelper apiHelper = ApiHelper();
 
-    try {
-      var response = await apiHelper.getApi(apiUrl);
+  //   try {
+  //     var response = await apiHelper.getApi(apiUrl);
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseBody = json.decode(response.body);
+  //     if (response.statusCode == 200) {
+  //       final Map<String, dynamic> responseBody = json.decode(response.body);
 
-        final List<dynamic> list = responseBody['data']?['TopTenContent'] ?? [];
+  //       final List<dynamic> list = responseBody['data']?['TopTenContent'] ?? [];
 
-        _trendingContentList = list
-            .where((e) => e != null) // 👈 remove null items
-            .map((e) => Content.fromJson(e))
-            .toList();
+  //       _trendingContentList = list
+  //           .where((e) => e != null) // 👈 remove null items
+  //           .map((e) => Content.fromJson(e))
+  //           .toList();
 
-        notifyListeners();
-      } else {
-        throw Exception(
-            'Failed to get data. Status code: ${response.statusCode}');
-      }
-    } catch (error) {
-      log('Trending error: $error');
-      throw Exception('An error occurred while fetching the data.');
-    }
-  }
+  //       notifyListeners();
+  //     } else {
+  //       throw Exception(
+  //           'Failed to get data. Status code: ${response.statusCode}');
+  //     }
+  //   } catch (error) {
+  //     log('Trending error: $error');
+  //     throw Exception('An error occurred while fetching the data.');
+  //   }
+  // }
 }

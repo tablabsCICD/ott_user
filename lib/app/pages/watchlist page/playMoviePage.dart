@@ -1,11 +1,14 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/pages/movie%20details%20page/component/starRating.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-
+import 'package:http/http.dart' as http;
 import 'package:ott/app/provider/ThemeProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
@@ -13,6 +16,8 @@ import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+
+import '../../core/utils/sharepreferences.dart';
 
 class PlayMediaPage extends StatefulWidget {
   final String title;
@@ -42,10 +47,48 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
   void initState() {
     super.initState();
     _fetchData();
-
+    _addViewApi();
     Future.delayed(const Duration(milliseconds: 600), () {
       if (mounted) setState(() => _isLoading = false);
     });
+  }
+
+  Future<void> _addViewApi() async {
+    try {
+      final localSharePreferences = LocalSharePreferences();
+      final user = await localSharePreferences.getUser();
+
+      if (user == null || user.id == null) {
+        debugPrint("View API skipped → User not found");
+        return;
+      }
+
+      if (widget.mediaId == null || widget.mediaId <= 0) {
+        debugPrint("View API skipped → Invalid mediaId");
+        return;
+      }
+
+      final bool isSeries = widget.content?.type?.toLowerCase() == "series";
+
+      final String url = isSeries
+          ? ApiConstant.addViewForEpisode(widget.mediaId, user.id!)
+          : ApiConstant.addViewForMovie(widget.mediaId, user.id!);
+
+      debugPrint("View API URL → $url");
+
+      final response = await http.post(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final body = json.decode(response.body);
+        debugPrint("View API Success → ${body['message']}");
+      } else {
+        debugPrint(
+            "View API Failed → ${response.statusCode} → ${response.body}");
+      }
+    } catch (e, s) {
+      debugPrint("View API Error → $e");
+      debugPrint("Stack → $s");
+    }
   }
 
   Future<void> _fetchData() async {
