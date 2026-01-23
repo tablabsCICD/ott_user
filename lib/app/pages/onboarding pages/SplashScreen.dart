@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
-import 'package:ott/app/pages/onboarding%20pages/OnBoardingPage.dart';
 import 'package:ott/app/pages/onboarding%20pages/selectLanguagePage.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 

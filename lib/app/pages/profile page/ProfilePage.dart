@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/gifted%20movies%20page/GiftedMoviesPage.dart';
 import 'package:ott/app/pages/help%20support%20page/HelpSupportPage.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
@@ -443,12 +444,15 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ProfileOption(
                                   icon: Icons.language_sharp,
                                   title: lang.selectPreferredLanguage,
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
                                         builder: (context) =>
-                                            const ChangeLanguage()),
-                                  ),
+                                            const ChangeLanguage(),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ],
                             ),
@@ -855,8 +859,8 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
   }
 
   Future<void> _saveLanguages(UserProvider userProvider) async {
-    if (userProvider.selectedLanguages.length < 3) {
-      CustomToast.show(context, 'Please select at least 3 languages.',
+    if (userProvider.selectedLanguages.isEmpty) {
+      CustomToast.show(context, 'Please select at least one languages.',
           isSuccess: false);
 
       return;
@@ -865,12 +869,23 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
     var result =
         await userProvider.updateUserLang(userProvider.selectedLanguages);
     if (result['success'] == true) {
-      print(result['message']);
+      //print(result['message']);
       // CustomToast.show(result['message'].toString(),isSuccess: true);
       CustomToast.show(context, "Language has been updated successfully.",
           isSuccess: true);
+
+      // navigate to home page with refreshing data
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              NavigationPage(),
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+        ),
+      );
     } else {
-      print('Failure: ${result['message']}');
+      //print('Failure: ${result['message']}');
       CustomToast.show(context, result['message'].toString(), isSuccess: true);
     }
   }

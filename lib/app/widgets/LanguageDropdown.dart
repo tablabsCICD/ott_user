@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -39,6 +40,7 @@ class LanguageDropdown extends StatelessWidget {
       color: theme.cardColor,
       icon: Row(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (isTitle)
             Text(
@@ -49,10 +51,20 @@ class LanguageDropdown extends StatelessWidget {
                 fontSize: 16,
               ),
             ),
-          Icon(
-            Icons.translate,
-            color: theme.canvasColor,
-          ),
+          SvgPicture.asset(
+            'assets/icons/translate_swap.svg',
+            width: 30,
+            height: 30,
+            colorFilter: ColorFilter.mode(
+              Theme.of(context).canvasColor,
+              BlendMode.srcIn,
+            ),
+          )
+
+          // Icon(
+          //   FontAwesomeIcons.language,
+          //   color: theme.canvasColor,
+          // ),
         ],
       ),
       tooltip: lang?.translate ?? 'Select Language',

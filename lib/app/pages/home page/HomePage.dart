@@ -8,7 +8,6 @@ import 'package:ott/app/pages/shorts%20page/component/shortsLibraryPage.dart';
 import 'package:ott/app/pages/profile%20page/ProfilePage.dart';
 import 'package:ott/app/pages/search%20page/SearchPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
-import 'package:ott/app/pages/watchlist%20page/playMoviePage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
@@ -131,9 +130,7 @@ class _HomePageState extends State<HomePage> {
     //log('selecetd languages===== $selectedLanguages');
 
 // Check if the list is empty
-    if (selectedLanguages.isEmpty ||
-        selectedLanguages == [] ||
-        selectedLanguages == null) {
+    if (selectedLanguages.isEmpty || selectedLanguages == []) {
       await getMovieList(dashBoardProvider, selectedType, ["Hindi", "English"]);
     } else {
       await getMovieList(dashBoardProvider, selectedType, selectedLanguages);
@@ -338,7 +335,9 @@ class _HomePageState extends State<HomePage> {
                   : Colors.black.withOpacity(0.2)),
           onPressed: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => ChangeLanguage()),
+            MaterialPageRoute(
+              builder: (context) => ChangeLanguage(),
+            ),
           ),
         ),
         SizedBox(
