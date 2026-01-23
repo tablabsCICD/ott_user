@@ -27,10 +27,13 @@ class SelectLocaleLanguagePage extends StatelessWidget {
                 children: [
                   Hero(
                     tag: "logo",
-                    child: Image.asset(
-                      ImageConstant.logo,
-                      height: isMobile ? 120 : 150,
-                      fit: BoxFit.contain,
+                    child: ClipRRect(
+                      borderRadius: BorderRadiusGeometry.circular(25),
+                      child: Image.asset(
+                        ImageConstant.logo,
+                        width: ResponsiveWidget.isMobile(context) ? 100 : 150,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 80),
@@ -49,7 +52,7 @@ class SelectLocaleLanguagePage extends StatelessWidget {
                       horizontal: 10,
                     ),
                     decoration: BoxDecoration(
-                      color: theme.primaryColor,
+                      color: theme.cardColor,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const LanguageDropdown(isTitle: false),

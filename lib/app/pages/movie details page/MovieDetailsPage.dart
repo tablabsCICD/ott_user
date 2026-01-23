@@ -19,7 +19,6 @@ import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
-
 import '../../widgets/show_toast.dart';
 import '../watchlist page/playMoviePage.dart';
 import 'component/displayStar.dart';
@@ -230,8 +229,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                                       if (content.posterUrlList!.length > 2)
                                         content.posterUrlList![2],
                                     ],
-                                    height: 300,
-                                    aspectRatio: 2 / 3,
+                                    height: 200,
+                                    aspectRatio: 16 / 8,
                                   ),
                                 ),
                               ),
@@ -357,7 +356,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                                   content.posterUrlList![2],
                               ],
                               height: 300,
-                              aspectRatio: 2 / 3,
+                              aspectRatio: 16 / 8,
                             ),
                           ),
                         ),
@@ -844,7 +843,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
       builder: (context, provider, child) => Column(
         children: [
           Text(
-            "Rate your experience with ",
+            "Rate your experience",
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
           StarRating(

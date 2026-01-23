@@ -54,7 +54,7 @@ class _ProfilePageState extends State<ProfilePage> {
     if (user != null) {
       if (mounted) {
         await Provider.of<UserProvider>(context, listen: false)
-            .getUserById(user.id!);
+            .getUserById(user.id ?? 0);
       }
     }
     await Provider.of<WalletProvider>(context, listen: false).getBalance();
@@ -746,6 +746,13 @@ class _ProfilePageState extends State<ProfilePage> {
                     fontSize: 14,
                   ),
                 ),
+                Text(
+                  userProvider.userObj.id.toString() ?? '',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 8,
+                  ),
+                ),
                 const SizedBox(height: 10),
                 ElevatedButton(
                   onPressed: () {
@@ -896,6 +903,14 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
     return Scaffold(
       appBar: AppBar(
         foregroundColor: Colors.transparent,
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: selectedThemeData.canvasColor,
+          ),
+        ),
         centerTitle: true,
         backgroundColor: selectedThemeData.scaffoldBackgroundColor,
         title: Text(

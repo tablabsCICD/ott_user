@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ott/app/pages/movie%20details%20page/component/starRating.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:intl/intl.dart';
@@ -15,9 +16,9 @@ import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 class PlayMediaPage extends StatefulWidget {
   final String title;
-  final int mediaId; // movieId or episodeId
+  final int mediaId;
   final String videoUrl;
-  final Content? content; // optional (movie or parent series)
+  final Content? content;
 
   const PlayMediaPage({
     super.key,
@@ -41,6 +42,7 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
   void initState() {
     super.initState();
     _fetchData();
+
     Future.delayed(const Duration(milliseconds: 600), () {
       if (mounted) setState(() => _isLoading = false);
     });
@@ -72,6 +74,7 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
       allowMuting: true,
       allowPlaybackSpeedChanging: true,
       zoomAndPan: true,
+      allowFullScreen: true,
       deviceOrientationsAfterFullScreen: const [
         DeviceOrientation.portraitUp,
         DeviceOrientation.portraitDown,
@@ -80,7 +83,6 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
         DeviceOrientation.landscapeLeft,
         DeviceOrientation.landscapeRight,
       ],
-      allowFullScreen: true,
       materialProgressColors: ChewieProgressColors(
         playedColor: Colors.redAccent,
         handleColor: Colors.white,
@@ -134,12 +136,7 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
   Widget _mobileUI(BuildContext context) {
     return Column(
       children: [
-        AspectRatio(
-          aspectRatio: 16 / 9,
-          child: _chewieController != null
-              ? Chewie(controller: _chewieController!)
-              : const SizedBox(),
-        ),
+        _playerView(),
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -159,12 +156,7 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
             flex: 10,
             child: Column(
               children: [
-                AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: _chewieController != null
-                      ? Chewie(controller: _chewieController!)
-                      : const SizedBox(),
-                ),
+                _playerView(),
                 _ratingReviewSection(),
               ],
             ),
@@ -174,8 +166,84 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     );
   }
 
+  Widget _playerView() {
+    if (_chewieController == null || _videoController == null) {
+      return const SizedBox();
+    }
+
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Stack(
+        children: [
+          Chewie(controller: _chewieController!),
+
+          /// Gesture Layer
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onDoubleTapDown: (details) async {
+                final box = context.findRenderObject() as RenderBox;
+                final local = box.globalToLocal(details.globalPosition);
+
+                final isLeft = local.dx < box.size.width / 2;
+                final current = _videoController!.value.position;
+                final duration = _videoController!.value.duration;
+
+                final target = isLeft
+                    ? current - const Duration(seconds: 10)
+                    : current + const Duration(seconds: 10);
+
+                final safe = target < Duration.zero
+                    ? Duration.zero
+                    : (target > duration ? duration : target);
+
+                await _videoController!.seekTo(safe);
+              },
+              onLongPressStart: (_) {
+                _videoController!.setPlaybackSpeed(2.0);
+              },
+              onLongPressEnd: (_) {
+                _videoController!.setPlaybackSpeed(1.0);
+              },
+            ),
+          ),
+
+          /// Desktop Controls
+          if (ResponsiveWidget.isDesktop(context))
+            Positioned(
+              left: 16,
+              bottom: 16,
+              child: IconButton(
+                icon: const Icon(Icons.replay_10, color: Colors.white),
+                onPressed: () async {
+                  final p = _videoController!.value.position;
+                  await _videoController!
+                      .seekTo(p - const Duration(seconds: 10));
+                },
+              ),
+            ),
+
+          if (ResponsiveWidget.isDesktop(context))
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: IconButton(
+                icon: const Icon(Icons.forward_10, color: Colors.white),
+                onPressed: () async {
+                  final p = _videoController!.value.position;
+                  await _videoController!
+                      .seekTo(p + const Duration(seconds: 10));
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _ratingReviewSection() {
     final theme = Theme.of(context);
+
     return Consumer<VideoProvider>(builder: (context, provider, child) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,7 +258,11 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
             ),
           ),
           const SizedBox(height: 8),
-          StarRatingWidget(rating: provider.rating, starSize: 22, textSize: 14),
+          StarRating(
+            rating: provider.rating,
+            onRatingChanged: (rating) =>
+                setState(() => provider.rating = rating),
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: provider.reviewController,
@@ -255,8 +327,9 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
                       Text(
                         r.username ?? "User",
                         style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: theme.canvasColor),
+                          fontWeight: FontWeight.bold,
+                          color: theme.canvasColor,
+                        ),
                       ),
                       const Spacer(),
                       Text(_formatEpoch(r.createdAt),
@@ -265,9 +338,10 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
                   ),
                   const SizedBox(height: 8),
                   StarRatingWidget(
-                      rating: (r.rating ?? 0).toDouble(),
-                      starSize: 16,
-                      textSize: 12),
+                    rating: (r.rating ?? 0).toDouble(),
+                    starSize: 16,
+                    textSize: 12,
+                  ),
                   const SizedBox(height: 8),
                   Text(r.title ?? "",
                       style: TextStyle(color: theme.canvasColor)),

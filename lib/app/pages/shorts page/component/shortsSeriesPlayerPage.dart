@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
+import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
+import 'package:ott/app/provider/wallet_provider.dart';
+import 'package:ott/app/widgets/shimmer%20loader/shimmer_loader.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
@@ -17,13 +21,13 @@ class ShortsPlayerPage extends StatefulWidget {
 
 class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     with WidgetsBindingObserver {
-  VideoPlayerController? _controller;
-  final PageController _pageController = PageController();
+  VideoPlayerController? _controller; // video controller for current short
+  final PageController _pageController = PageController(); // vertical pager
 
-  int _currentIndex = 0;
-  bool _isInitialized = false;
-  bool _isMuted = false;
-  bool _isLoadingPart = false;
+  int _currentIndex = 0; // currently playing index
+  bool _isInitialized = false; // video ready flag
+  bool _isMuted = false; // mute state
+  bool _isLoadingPart = false; // prevent parallel loads
 
   List<ShortPart> get parts => widget.short.parts;
   int get totalParts => parts.length;
@@ -32,7 +36,12 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    if (totalParts > 0) _loadPart(0);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (totalParts > 0) {
+        _loadPart(0); // First reel goes through SAME logic as others
+      }
+    });
   }
 
   @override
@@ -43,6 +52,38 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     super.dispose();
   }
 
+  // Future<void> _prepareFirstPart() async {
+  //   final first = parts[0];
+
+  //   // If already free or purchased, play normally
+  //   if (first.isFreePreview || first.isPurchased) {
+  //     _loadPart(0);
+  //     return;
+  //   }
+
+  //   // Otherwise check wallet
+  //   final walletProvider = context.read<WalletProvider>();
+  //   await walletProvider.getBalance();
+
+  //   // If insufficient balance, do nothing now (no autoplay, no popup)
+  //   if (walletProvider.walletBalance < first.coins) {
+  //     return;
+  //   }
+
+  //   // Try to purchase silently
+  //   final data = await context.read<ShortProvider>().purchaseShortPart(
+  //         partId: int.parse(first.partId),
+  //       );
+
+  //   if (data != null) {
+  //     await _refreshFromBackend();
+
+  //     // Now it is purchased → load & play
+  //     _loadPart(0);
+  //   }
+  // }
+
+  // Pause video when app goes background
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused ||
@@ -51,6 +92,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     }
   }
 
+  // Re-fetch detail from backend (backend is source of truth)
   Future<void> _refreshFromBackend() async {
     final provider = context.read<ShortProvider>();
     final user = await LocalSharePreferences.localSharePreferences.getUser();
@@ -64,21 +106,93 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     });
   }
 
+  // Popup when wallet balance is insufficient
+  Future<void> _showInsufficientBalanceDialog() async {
+    final theme = Theme.of(context);
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        backgroundColor: theme.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          "Insufficient Balance",
+          style: TextStyle(
+            color: theme.primaryColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        content: Text(
+          "You don't have enough coins to purchase this short.",
+          style: TextStyle(
+            color: theme.canvasColor,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context);
+            },
+            child: Text(
+              "Cancel",
+              style: TextStyle(color: theme.canvasColor),
+            ),
+          ),
+          ElevatedButton(
+            style:
+                ElevatedButton.styleFrom(backgroundColor: theme.primaryColor),
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => WalletPage()),
+              );
+            },
+            child: const Text(
+              "Recharge",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Core logic to load & play a short
   Future<void> _loadPart(int index) async {
     if (_isLoadingPart) return;
     _isLoadingPart = true;
 
     final part = parts[index];
 
+    // Stop previous video
     final old = _controller;
     _controller = null;
     _isInitialized = false;
-
     await old?.pause();
     await old?.dispose();
 
-    // Purchase if required
+    // If not free & not purchased → try purchase
     if (!part.isFreePreview && !part.isPurchased) {
+      final walletProvider = context.read<WalletProvider>();
+      await walletProvider.getBalance();
+
+      final balance = walletProvider.walletBalance;
+      final requiredCoins = part.coins;
+
+      // Insufficient balance → block & show popup
+      if (balance < requiredCoins) {
+        _isLoadingPart = false;
+        await _showInsufficientBalanceDialog();
+        return;
+      }
+
+      // Try purchase
       final data = await context.read<ShortProvider>().purchaseShortPart(
             partId: int.parse(part.partId),
           );
@@ -88,18 +202,30 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         return;
       }
 
+      // Refresh backend state
       await _refreshFromBackend();
     }
 
-    final ctrl = VideoPlayerController.network(part.videoUrl);
+    // Re-read updated part
+    final updatedPart = parts[index];
+
+    // Still not allowed → never play
+    if (!updatedPart.isFreePreview && !updatedPart.isPurchased) {
+      _isLoadingPart = false;
+      return;
+    }
+
+    // Play video
+    final ctrl = VideoPlayerController.network(updatedPart.videoUrl);
     await ctrl.initialize();
     await ctrl.play();
 
     if (!mounted) return;
 
+    // Add view
     final viewed = await context
         .read<ShortProvider>()
-        .addShortView(partId: int.parse(part.partId));
+        .addShortView(partId: int.parse(updatedPart.partId));
 
     if (viewed) {
       await _refreshFromBackend();
@@ -122,6 +248,10 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
   @override
   Widget build(BuildContext context) {
+    final balanceProvider = Provider.of<WalletProvider>(context);
+    balanceProvider.getBalance(); // keep wallet in sync
+    final coinsBalance = balanceProvider.walletBalance;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
@@ -130,6 +260,8 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
           child: Stack(
             children: [
               _videoBackground(),
+
+              // Play / Pause on tap
               Positioned.fill(
                 child: GestureDetector(
                   onTap: () {
@@ -140,6 +272,8 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                   },
                 ),
               ),
+
+              // Vertical swipe shorts
               PageView.builder(
                 controller: _pageController,
                 scrollDirection: Axis.vertical,
@@ -147,7 +281,51 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                 onPageChanged: _changePage,
                 itemBuilder: (_, i) => _overlay(i),
               ),
+
               _backButton(),
+
+              // Wallet balance pill
+              Positioned(
+                right: 2,
+                top: 50,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => WalletPage()),
+                    );
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8.0),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 3, horizontal: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Hero(
+                          tag: 'coin',
+                          child: SizedBox(
+                            height: 20,
+                            child: Image.asset(ImageConstant.coin),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          coinsBalance.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
             ],
           ),
         ),
@@ -155,10 +333,12 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     );
   }
 
+  // Background video layer
   Widget _videoBackground() {
     if (!_isInitialized || _controller == null) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.white),
+      return ShimmerLoader(
+        height: double.infinity,
+        width: double.infinity,
       );
     }
 
@@ -174,6 +354,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     );
   }
 
+  // Overlay UI for each short
   Widget _overlay(int index) {
     final part = parts[index];
     return Stack(
@@ -185,6 +366,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     );
   }
 
+  // Creator & title
   Widget _leftInfo(ShortPart part) {
     return Positioned(
       left: 16,
@@ -210,6 +392,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     );
   }
 
+  // Like & View buttons
   Widget _rightButtons(int index) {
     final part = parts[index];
     final provider = context.watch<ShortProvider>();
@@ -246,6 +429,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     );
   }
 
+  // Common circular action button
   Widget _actionBtn(
     IconData icon,
     String label,
@@ -277,6 +461,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     );
   }
 
+  // Episode selector bar
   Widget _bottomEpisodeBar() {
     return Positioned(
       left: 20,
@@ -306,6 +491,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     );
   }
 
+  // Bottom sheet to jump between episodes
   void _openEpisodes() {
     final theme = Theme.of(context);
     showModalBottomSheet(
@@ -371,6 +557,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     );
   }
 
+  // Back button
   Widget _backButton() {
     return Positioned(
       top: MediaQuery.of(context).padding.top + 12,

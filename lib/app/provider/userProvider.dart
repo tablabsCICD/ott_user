@@ -730,12 +730,11 @@ class UserProvider extends BaseProvider {
     }
   }
 
-  io.File? _imageFile; // For mobile platforms
-  html.File? _webFile; // For web platform
+  io.File? _imageFile; // Mobile/Desktop
+  html.File? _webFile; // Web
   String? _uploadedImageUrl;
   bool _isUploading = false;
 
-  // Getters
   io.File? get imageFile => _imageFile;
   html.File? get webFile => _webFile;
   String? get uploadedImageUrl => _uploadedImageUrl;
@@ -745,7 +744,6 @@ class UserProvider extends BaseProvider {
   Future<void> pickImage() async {
     try {
       if (kIsWeb) {
-        log('Web file picker');
         final uploadInput = html.FileUploadInputElement();
         uploadInput.accept = 'image/*';
         uploadInput.click();
@@ -753,18 +751,18 @@ class UserProvider extends BaseProvider {
         uploadInput.onChange.listen((event) async {
           if (uploadInput.files != null && uploadInput.files!.isNotEmpty) {
             _webFile = uploadInput.files!.first;
-            await uploadImage();
             notifyListeners();
+            await uploadImage();
           }
         });
       } else {
-        log('Mobile/desktop file picker');
         final picker = ImagePicker();
         final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
         if (pickedFile != null) {
           _imageFile = io.File(pickedFile.path);
-          await uploadImage();
           notifyListeners();
+          await uploadImage();
         }
       }
     } catch (e) {
@@ -774,39 +772,55 @@ class UserProvider extends BaseProvider {
 
   // Upload Image
   Future<void> uploadImage() async {
-    log('Uploading image...');
-    final url = Uri.parse(ApiConstant.uploadImg);
     _isUploading = true;
     notifyListeners();
 
     try {
-      http.MultipartRequest request = http.MultipartRequest('POST', url);
+      final uri = Uri.parse(
+        ApiConstant.uploadImg,
+      );
 
+      final request = http.MultipartRequest('POST', uri);
       if (kIsWeb && _webFile != null) {
         final reader = html.FileReader();
         reader.readAsArrayBuffer(_webFile!);
         await reader.onLoad.first;
-        final byteData = reader.result as List<int>;
-        final multipartFile = http.MultipartFile.fromBytes(
-          'profilePicture',
-          byteData,
-          filename: _webFile!.name,
+
+        final bytes = reader.result as List<int>;
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            bytes,
+            filename: _webFile!.name,
+          ),
         );
-        request.files.add(multipartFile);
       } else if (_imageFile != null) {
-        request.files.add(await http.MultipartFile.fromPath(
-          'profilePicture',
-          _imageFile!.path,
-        ));
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'file',
+            _imageFile!.path,
+          ),
+        );
       }
 
-      final response = await request.send();
-      if (response.statusCode == 200) {
-        final responseBody = await response.stream.bytesToString();
-        _uploadedImageUrl = jsonDecode(responseBody);
-        profileController.text = _uploadedImageUrl!;
+      final streamedResponse = await request.send();
+      final responseBody = await streamedResponse.stream.bytesToString();
+
+      if (streamedResponse.statusCode == 200) {
+        final decoded = jsonDecode(responseBody);
+
+        final fileUrl = decoded['data']?['fileUrl'];
+        if (fileUrl != null && fileUrl is String) {
+          _uploadedImageUrl = fileUrl;
+          profileController.text = _uploadedImageUrl!;
+          log('Image uploaded: $_uploadedImageUrl');
+        } else {
+          log('Upload success but fileUrl missing');
+        }
       } else {
-        log('Upload failed with status: ${response.statusCode}');
+        log(
+          'Upload failed: ${streamedResponse.statusCode} -> $responseBody',
+        );
       }
     } catch (e) {
       log('Error uploading image: $e');
@@ -814,6 +828,13 @@ class UserProvider extends BaseProvider {
       _isUploading = false;
       notifyListeners();
     }
+  }
+
+  void clear() {
+    _imageFile = null;
+    _webFile = null;
+    _uploadedImageUrl = null;
+    notifyListeners();
   }
 
   void disposeData() {

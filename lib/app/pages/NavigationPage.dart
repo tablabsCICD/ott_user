@@ -208,10 +208,19 @@ class _NavigationPageState extends State<NavigationPage> {
       padding: EdgeInsets.zero,
       children: [
         DrawerHeader(
-            decoration: BoxDecoration(
-              color: selectedThemeData.primaryColor,
+          decoration: BoxDecoration(
+            color: selectedThemeData.primaryColor,
+          ),
+          child: Hero(
+            tag: "logo",
+            child: ClipRRect(
+              borderRadius: BorderRadiusGeometry.circular(25),
+              child: Image.asset(
+                ImageConstant.logo2,
+              ),
             ),
-            child: Hero(tag: "logo", child: Image.asset(ImageConstant.logo2))),
+          ),
+        ),
         Row(
           children: [
             Expanded(

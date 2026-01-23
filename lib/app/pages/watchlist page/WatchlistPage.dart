@@ -136,9 +136,9 @@ class _WatchlistPageState extends State<WatchlistPage> {
                                           context,
                                           MaterialPageRoute(
                                             builder: (_) => PlayMediaPage(
-                                              title: item.title!,
-                                              mediaId: item.id!,
-                                              videoUrl: item.contentUrl!,
+                                              title: item.title ?? '',
+                                              mediaId: item.id ?? 0,
+                                              videoUrl: item.contentUrl ?? '',
                                               content: item,
                                             ),
                                           ),

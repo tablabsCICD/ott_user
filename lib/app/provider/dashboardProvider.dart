@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/cupertino.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/content.dart';
@@ -92,6 +94,7 @@ class DashboardProvider extends BaseProvider {
   List<Content> get trendingContentList => _trendingContentList;
 
   Future<void> getTopTrendingContent() async {
+    //log('=======inside top 10 trending');
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
     String apiUrl = ApiConstant.getTopTrendingContentLast7Days(user!.id);
     ApiHelper apiHelper = ApiHelper();
@@ -104,13 +107,18 @@ class DashboardProvider extends BaseProvider {
 
         final List<dynamic> list = responseBody['data']?['TopTenContent'] ?? [];
 
-        _trendingContentList = list.map((e) => Content.fromJson(e)).toList();
+        _trendingContentList = list
+            .where((e) => e != null) // 👈 remove null items
+            .map((e) => Content.fromJson(e))
+            .toList();
+
         notifyListeners();
       } else {
         throw Exception(
             'Failed to get data. Status code: ${response.statusCode}');
       }
     } catch (error) {
+      log('Trending error: $error');
       throw Exception('An error occurred while fetching the data.');
     }
   }

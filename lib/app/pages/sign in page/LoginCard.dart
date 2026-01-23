@@ -87,10 +87,12 @@ class _LoginCardState extends State<LoginCard> {
                   height: ResponsiveWidget.isMobile(context) ? 90 : 150,
                   child: Hero(
                     tag: "logo",
-                    child: Image.asset(
-                      ImageConstant.logo,
-                      fit: BoxFit.contain,
-                      //width: 200,
+                    child: ClipRRect(
+                      borderRadius: BorderRadiusGeometry.circular(25),
+                      child: Image.asset(
+                        ImageConstant.logo,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                 ),

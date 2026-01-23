@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/onboarding%20pages/OnBoardingPage.dart';
+import 'package:ott/app/pages/onboarding%20pages/selectLanguagePage.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 import '../../core/constant/prefrense_constant.dart';
@@ -53,7 +54,8 @@ class _SplashScreenState extends State<SplashScreen>
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => isLoggedIn ? NavigationPage() : OnboardingPage(),
+          builder: (_) =>
+              isLoggedIn ? NavigationPage() : SelectLocaleLanguagePage(),
         ),
       );
     });
@@ -75,19 +77,19 @@ class _SplashScreenState extends State<SplashScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              height: 100,
-            ),
             Hero(
               tag: "logo",
-              child: Image.asset(
-                ImageConstant.logo,
-                width: ResponsiveWidget.isMobile(context) ? 250 : 400,
-                fit: BoxFit.contain,
+              child: ClipRRect(
+                borderRadius: BorderRadiusGeometry.circular(25),
+                child: Image.asset(
+                  ImageConstant.logo,
+                  width: ResponsiveWidget.isMobile(context) ? 150 : 200,
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
             SizedBox(
-              height: ResponsiveWidget.isMobile(context) ? 150 : 10,
+              height: ResponsiveWidget.isMobile(context) ? 80 : 70,
             ),
             Padding(
               padding: const EdgeInsets.all(12.0),
@@ -95,8 +97,8 @@ class _SplashScreenState extends State<SplashScreen>
                 'Discover, Watch & Collect the Latest Movies',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: ResponsiveWidget.isMobile(context) ? 14 : 18,
-                  color: theme.primaryColor,
+                  fontSize: ResponsiveWidget.isMobile(context) ? 13 : 18,
+                  color: theme.canvasColor,
                   fontWeight: FontWeight.w600,
                 ),
               ),

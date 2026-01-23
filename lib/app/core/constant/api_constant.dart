@@ -30,9 +30,9 @@ class ApiConstant {
   static String filterAndSortContent(id, lang, genre, rating) =>
       "${baseUrl}api/forUser/foruser/search/lag/gen/rating?userId=$id&language=$lang&genre=$genre&minRating=$rating";
   static String getTopTrendingContentLast7Days(userId) =>
-      "${baseUrl}api/forUser/Content/TopTen?userId=$userId";
+      "${baseUrl}api/forUser/user/Content/TopTen?userId=$userId";
 
-  static String uploadImg = "${baseUrl}api/saveImage/new";
+  static String uploadImg = "${baseUrl}api/other/upload-file";
   static String fetchLang = "${baseUrl}api/Languages/getAll";
 
   static String addMoneyToWallet = "${baseUrl}add-amount";
