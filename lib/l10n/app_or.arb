@@ -113,5 +113,17 @@
   "rentDuration": "ଭାଡା ସମୟସୀମା",
   "price": "ମୂଲ୍ୟ",
 
+
+  "myCredits": "ମୋର କ୍ରେଡିଟ୍ସ",
+  "gifts": "ଉପହାର",
+  "giftedMovies": "ଉପହାର ଭାବେ ପାଇଥିବା ଚଳଚ୍ଚିତ୍ର",
+  "claimGiftCard": "ଗିଫ୍ଟ କାର୍ଡ କ୍ଲେମ୍ କରନ୍ତୁ",
+  "features": "ବୈଶିଷ୍ଟ୍ୟଗୁଡ଼ିକ",
+  "feedbackAndInformation": "ମତାମତ ଏବଂ ସୂଚନା",
+  "termsPoliciesLiscenses": "ସର୍ତ୍ତ, ନୀତି ଏବଂ ଲାଇସେନ୍ସ",
+  "aboutFilmytell": "ଫିଲ୍ମିଟେଲ ବିଷୟରେ",
+  "rateUs": "ଆମକୁ ମୂଲ୍ୟାଙ୍କନ କରନ୍ତୁ",
+  
+
   "logout": "ଲଗଆଉଟ୍"
 }

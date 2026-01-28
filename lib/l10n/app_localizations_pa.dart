@@ -303,31 +303,31 @@ class AppLocalizationsPa extends AppLocalizations {
   String get price => 'ਕੀਮਤ';
 
   @override
-  String get myCredits => 'My Credits';
+  String get myCredits => 'ਮੇਰੇ ਕ੍ਰੈਡਿਟਸ';
 
   @override
-  String get gifts => 'Gifts';
+  String get gifts => 'ਤੋਹਫ਼ੇ';
 
   @override
-  String get giftedMovies => 'Gifted Movies';
+  String get giftedMovies => 'ਤੋਹਫ਼ੇ ਵਜੋਂ ਮਿਲੀਆਂ ਫ਼ਿਲਮਾਂ';
 
   @override
-  String get claimGiftCard => 'Claim Gift Card';
+  String get claimGiftCard => 'ਗਿਫ਼ਟ ਕਾਰਡ ਕਲੇਮ ਕਰੋ';
 
   @override
-  String get features => 'Features';
+  String get features => 'ਖਾਸੀਤਾਂ';
 
   @override
-  String get feedbackAndInformation => 'Feedback & Information';
+  String get feedbackAndInformation => 'ਫੀਡਬੈਕ ਅਤੇ ਜਾਣਕਾਰੀ';
 
   @override
-  String get termsPoliciesLiscenses => 'Terms, Policies and Liscenses';
+  String get termsPoliciesLiscenses => 'ਸ਼ਰਤਾਂ, ਨੀਤੀਆਂ ਅਤੇ ਲਾਇਸੈਂਸ';
 
   @override
-  String get aboutFilmytell => 'About Filmytell';
+  String get aboutFilmytell => 'ਫਿਲਮੀਟੈਲ ਬਾਰੇ';
 
   @override
-  String get rateUs => 'Rate Us';
+  String get rateUs => 'ਸਾਨੂੰ ਰੇਟ ਕਰੋ';
 
   @override
   String get logout => 'ਲੌਗਆਉਟ';

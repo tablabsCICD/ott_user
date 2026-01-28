@@ -6,6 +6,7 @@ import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
+import 'package:ott/app/provider/language_provider.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/route/routes/app_routes.dart';
@@ -355,6 +356,7 @@ class _LoginCardState extends State<LoginCard> {
 
     final mobile = _mobileController.text.trim();
     final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final langProvider = Provider.of<LanguageProvider>(context, listen: false);
 
     try {
       if (!otpSent) {
@@ -393,10 +395,16 @@ class _LoginCardState extends State<LoginCard> {
         if (success) {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('isLoggedIn', true);
+
           //print(result['message']);
           setState(() {
             // _initializePromoterLevel();
           });
+          // Sync user languages into LanguageProvider
+          final user = userProvider.userObj;
+          langProvider.setUserLanguages(user.selectedLanguages ?? []);
+          log(user.selectedLanguages.toString());
+
           CustomToast.show(context, lang.loginSuccessfully, isSuccess: true);
           Navigator.pushReplacement(
             context,

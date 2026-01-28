@@ -104,7 +104,7 @@ class _BillingPageState extends State<BillingPage> {
                             ),
                           ),
                           const Text(
-                            "Coins Available",
+                            "Available Balance",
                             style: TextStyle(color: Colors.white70),
                           ),
                           const SizedBox(height: 10),
@@ -138,7 +138,7 @@ class _BillingPageState extends State<BillingPage> {
                           const SizedBox(height: 12),
                           widget.giftCount == 0
                               ? Text(
-                                  "Price: ₹ ${moviePrice.toStringAsFixed(0)} Coins",
+                                  "Price: ₹ ${moviePrice.toStringAsFixed(0)}",
                                   style: const TextStyle(fontSize: 16),
                                 )
                               : Text(
@@ -148,7 +148,7 @@ class _BillingPageState extends State<BillingPage> {
                                 ),
                           const SizedBox(height: 6),
                           Text(
-                            "Total: ₹ ${totalCoins.toStringAsFixed(0)} Coins",
+                            "Total: ₹ ${totalCoins.toStringAsFixed(0)}",
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -172,7 +172,7 @@ class _BillingPageState extends State<BillingPage> {
                                   //const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
-                                      "Wallet: ₹ ${provider.walletBalance.toStringAsFixed(0)} Coins",
+                                      "Wallet: ₹ ${provider.walletBalance.toStringAsFixed(0)}",
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
@@ -202,8 +202,11 @@ class _BillingPageState extends State<BillingPage> {
                                   icon: const Icon(Icons.check,
                                       color: Colors.white),
                                   label: const Text(
-                                    "Pay Using Coins",
-                                    style: TextStyle(color: Colors.white),
+                                    "Proceed to Pay",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                   onPressed: () {
                                     _showConfirmationDialog(
@@ -226,8 +229,11 @@ class _BillingPageState extends State<BillingPage> {
                                   icon: const Icon(Icons.add_circle,
                                       color: Colors.white),
                                   label: const Text(
-                                    "Buy Coins",
-                                    style: TextStyle(color: Colors.white),
+                                    "Recharge Wallet",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                   onPressed: () =>
                                       _showRechargeDialog(context, provider),
@@ -522,7 +528,7 @@ class _BillingPageState extends State<BillingPage> {
           backgroundColor: theme.cardColor,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text("Buy Coins"),
+          title: const Text("Recharge Wallet"),
           content: TextField(
             controller: walletProvider.amountController,
             keyboardType: TextInputType.number,
@@ -557,7 +563,7 @@ class _BillingPageState extends State<BillingPage> {
                     await walletProvider.addBalance(amount);
                     CustomToast.show(
                       context,
-                      "Coins added successfully",
+                      "Wallet recharged successfully.",
                       isSuccess: true,
                     );
                   } else {

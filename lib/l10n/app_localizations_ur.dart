@@ -303,31 +303,31 @@ class AppLocalizationsUr extends AppLocalizations {
   String get price => 'قیمت';
 
   @override
-  String get myCredits => 'My Credits';
+  String get myCredits => 'میرے کریڈٹس';
 
   @override
-  String get gifts => 'Gifts';
+  String get gifts => 'تحائف';
 
   @override
-  String get giftedMovies => 'Gifted Movies';
+  String get giftedMovies => 'تحفے میں ملی فلمیں';
 
   @override
-  String get claimGiftCard => 'Claim Gift Card';
+  String get claimGiftCard => 'گفٹ کارڈ کلیم کریں';
 
   @override
-  String get features => 'Features';
+  String get features => 'خصوصیات';
 
   @override
-  String get feedbackAndInformation => 'Feedback & Information';
+  String get feedbackAndInformation => 'رائے اور معلومات';
 
   @override
-  String get termsPoliciesLiscenses => 'Terms, Policies and Liscenses';
+  String get termsPoliciesLiscenses => 'شرائط، پالیسیاں اور لائسنس';
 
   @override
-  String get aboutFilmytell => 'About Filmytell';
+  String get aboutFilmytell => 'فلمی ٹیل کے بارے میں';
 
   @override
-  String get rateUs => 'Rate Us';
+  String get rateUs => 'ہمیں ریٹ کریں';
 
   @override
   String get logout => 'لاگ آؤٹ';

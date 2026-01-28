@@ -305,31 +305,31 @@ class AppLocalizationsTa extends AppLocalizations {
   String get price => 'விலை';
 
   @override
-  String get myCredits => 'My Credits';
+  String get myCredits => 'என் கிரெடிட்கள்';
 
   @override
-  String get gifts => 'Gifts';
+  String get gifts => 'பரிசுகள்';
 
   @override
-  String get giftedMovies => 'Gifted Movies';
+  String get giftedMovies => 'பரிசாக பெற்ற திரைப்படங்கள்';
 
   @override
-  String get claimGiftCard => 'Claim Gift Card';
+  String get claimGiftCard => 'கிஃப்ட் கார்டை கோருங்கள்';
 
   @override
-  String get features => 'Features';
+  String get features => 'அம்சங்கள்';
 
   @override
-  String get feedbackAndInformation => 'Feedback & Information';
+  String get feedbackAndInformation => 'கருத்து & தகவல்';
 
   @override
-  String get termsPoliciesLiscenses => 'Terms, Policies and Liscenses';
+  String get termsPoliciesLiscenses => 'விதிமுறைகள், கொள்கைகள் & உரிமங்கள்';
 
   @override
-  String get aboutFilmytell => 'About Filmytell';
+  String get aboutFilmytell => 'பில்மிடெல் பற்றி';
 
   @override
-  String get rateUs => 'Rate Us';
+  String get rateUs => 'எங்களை மதிப்பிடுங்கள்';
 
   @override
   String get logout => 'வெளியேறு';

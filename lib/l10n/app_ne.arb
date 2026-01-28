@@ -113,5 +113,15 @@
   "rentDuration": "भाडाको अवधि",
   "price": "मूल्य",
 
+  "myCredits": "मेरो क्रेडिट्स",
+  "gifts": "उपहारहरू",
+  "giftedMovies": "उपहारमा प्राप्त चलचित्रहरू",
+  "claimGiftCard": "गिफ्ट कार्ड दाबी गर्नुहोस्",
+  "features": "विशेषताहरू",
+  "feedbackAndInformation": "प्रतिक्रिया र जानकारी",
+  "termsPoliciesLiscenses": "सर्तहरू, नीतिहरू र लाइसेन्सहरू",
+  "aboutFilmytell": "फिल्मिटेल बारे",
+  "rateUs": "हामीलाई रेट गर्नुहोस्",
+
   "logout": "लगआउट"
 }

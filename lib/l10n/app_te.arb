@@ -113,5 +113,17 @@
   "rentDuration": "అద్దె వ్యవధి",
   "price": "ధర",
 
+
+  "myCredits": "నా క్రెడిట్స్",
+  "gifts": "బహుమతులు",
+  "giftedMovies": "బహుమతిగా పొందిన సినిమాలు",
+  "claimGiftCard": "గిఫ్ట్ కార్డ్ క్లెయిమ్ చేయండి",
+  "features": "ఫీచర్లు",
+  "feedbackAndInformation": "ఫీడ్‌బ్యాక్ & సమాచారం",
+  "termsPoliciesLiscenses": "నియమాలు, విధానాలు & లైసెన్సులు",
+  "aboutFilmytell": "ఫిల్మిటెల్ గురించి",
+  "rateUs": "మాకు రేటింగ్ ఇవ్వండి",
+  
+
   "logout": "లాగ్ అవుట్"
 }

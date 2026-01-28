@@ -54,7 +54,7 @@ class _GiftedMoviesPageState extends State<GiftedMoviesPage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (provider.errorMessage != null) {
-            return const Center(child: Text("Something went wrong"));
+            return const Center(child: Text("No gift history available."));
           }
           if (provider.giftRecords.isEmpty) {
             return Center(
