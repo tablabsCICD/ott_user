@@ -30,26 +30,74 @@ class DashboardResponse {
 }
 
 class DashboardData {
-
-  List<Content?>? movies;
+  List<Content>? movies;
+  Pagination? pagination;
   String? language;
   String? category;
 
+  bool isRowLoading = false;
+
+  bool get hasMore => pagination?.hasNext ?? false;
+  int get currentPage => pagination?.page ?? 0;
+
   DashboardData({
-  this.movies,
-  this.language,
-  this.category,
+    this.movies,
+    this.pagination,
+    this.language,
+    this.category,
   });
 
   factory DashboardData.fromJson(Map<String, dynamic> json) => DashboardData(
-  movies: json["movies"] == null ? [] : List<Content?>.from(json["movies"]!.map((x) => x == null ? null : Content.fromJson(x))),
-  language: json["language"],
-  category: json["category"],
+    movies: json["movies"] == null
+        ? []
+        : List<Content>.from(
+        json["movies"]!.map((x) => Content.fromJson(x))),
+    pagination: json["pagination"] == null
+        ? null
+        : Pagination.fromJson(json["pagination"]),
+    language: json["language"],
+    category: json["category"],
   );
 
   Map<String, dynamic> toJson() => {
-  "movies": movies == null ? [] : List<dynamic>.from(movies!.map((x) => x?.toJson())),
-  "language": language,
-  "category": category,
+    "movies": movies == null
+        ? []
+        : List<dynamic>.from(movies!.map((x) => x.toJson())),
+    "pagination": pagination?.toJson(),
+    "language": language,
+    "category": category,
   };
-  }
+}
+
+
+class Pagination {
+  int? totalItems;
+  int? size;
+  int? totalPages;
+  bool? hasNext;
+  int? page;
+
+  Pagination({
+    this.totalItems,
+    this.size,
+    this.totalPages,
+    this.hasNext,
+    this.page,
+  });
+
+  factory Pagination.fromJson(Map<String, dynamic> json) => Pagination(
+    totalItems: json["totalItems"],
+    size: json["size"],
+    totalPages: json["totalPages"],
+    hasNext: json["hasNext"],
+    page: json["page"],
+  );
+
+  Map<String, dynamic> toJson() => {
+    "totalItems": totalItems,
+    "size": size,
+    "totalPages": totalPages,
+    "hasNext": hasNext,
+    "page": page,
+  };
+}

@@ -2,15 +2,12 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
-import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
-import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/shorts%20page/component/shortsLibraryPage.dart';
 import 'package:ott/app/pages/profile%20page/ProfilePage.dart';
 import 'package:ott/app/pages/search%20page/SearchPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
-import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/shimmer%20loader/home_shimmer.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -42,29 +39,21 @@ class _HomePageState extends State<HomePage> {
   int _currentPage = 0;
   List<Content> trendingMovieList = [];
 
+  bool _dataLoaded = false;
+  int? _userId;
+
+  /// 🔥 NEW: Scroll controllers for each horizontal row
+  final Map<int, ScrollController> _rowControllers = {};
+
   @override
   void initState() {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // trending movies poster in sliver app bar
-
-      // final dashboardProvider =
-      //     Provider.of<DashboardProvider>(context, listen: false);
-
-      //await dashboardProvider.getTopTrendingContent();
-
-      // if (mounted) {
-      //   setState(() {
-      //     trendingMovieList = dashboardProvider.trendingContentList;
-      //   });
-
-      //   if (trendingMovieList.isNotEmpty) {
-      //     _startAutoScroll();
-      //   }
-      // }
-
-      _initializeData();
+      if (!_dataLoaded) {
+        _dataLoaded = true;
+        await _initializeData();
+      }
     });
   }
 
@@ -110,32 +99,44 @@ class _HomePageState extends State<HomePage> {
       userLocationPopUp(context);
       return;
     } else {
-      //log(" location ${userProvider.location!.country}");
       return;
     }
   }
 
   Future<void> _fetchUserData() async {
     final localSharePreferences = LocalSharePreferences();
-    final user = await localSharePreferences.getUser();
+      final user = await localSharePreferences.getUser();
     if (user != null && mounted) {
+      _userId = user.id;
       await Provider.of<UserProvider>(context, listen: false)
           .getUserById(user.id!);
     }
     final dashBoardProvider =
-        Provider.of<DashboardProvider>(context, listen: false);
+    Provider.of<DashboardProvider>(context, listen: false);
     final selectedLanguages = Provider.of<UserProvider>(context, listen: false)
-            .userObject
-            .selectedLanguages ??
-        []; // Ensure it doesn't throw null
+        .userObject
+        .selectedLanguages ??
+        [];
 
-    //log('selecetd languages===== $selectedLanguages');
-
-// Check if the list is empty
     if (selectedLanguages.isEmpty || selectedLanguages == []) {
       await getMovieList(dashBoardProvider, selectedType, ["English"]);
     } else {
       await getMovieList(dashBoardProvider, selectedType, selectedLanguages);
+    }
+  }
+
+  /// 🔥 NEW: Horizontal pagination trigger
+  void _onRowScroll(
+      ScrollController controller,
+      DashboardProvider provider,
+      DashboardData row,
+      ) {
+    if (controller.position.pixels >=
+        controller.position.maxScrollExtent - 200) {
+      if (_userId != null) {
+        provider.loadMoreRowData(row, selectedType, _userId!);
+      }
+
     }
   }
 
@@ -148,95 +149,123 @@ class _HomePageState extends State<HomePage> {
       body: isLoading
           ? HomeShimmer()
           : CustomScrollView(
-              slivers: [
-                _buildSliverAppBar(context, selectedThemeData),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Consumer<DashboardProvider>(
-                        builder: (context, dashboardProvider, child) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(height: 10),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child:
-                                _buildFilterButtons(context, dashboardProvider),
-                          ),
-                          SizedBox(
-                            height: ResponsiveWidget.isMobile(context) ? 0 : 10,
-                          ),
-                          selectedType == 'SHORTS'
-                              ? SizedBox(
-                                  height:
-                                      MediaQuery.of(context).size.height * 0.7,
-                                  child: ShortsLibraryPage(),
-                                )
-                              : ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: NeverScrollableScrollPhysics(),
-                                  scrollDirection: Axis.vertical,
-                                  itemCount:
-                                      dashboardProvider.dashboardData.length,
-                                  itemBuilder: (context, index) {
-                                    DashboardData dashboardData =
-                                        dashboardProvider.dashboardData[index];
-                                    return Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "${dashboardData.language} - ${dashboardData.category}",
-                                          style: TextStyle(
-                                              overflow: TextOverflow.ellipsis,
-                                              fontSize:
-                                                  ResponsiveWidget.isMobile(
-                                                          context)
-                                                      ? 18
-                                                      : 20,
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        SizedBox(height: 10),
-                                        (dashboardData.movies == null ||
-                                                dashboardData.movies!.isEmpty)
-                                            ? SizedBox.shrink()
-                                            : SizedBox(
-                                                height: 300,
-                                                child: ListView.builder(
-                                                  scrollDirection:
-                                                      Axis.horizontal,
-                                                  itemCount: dashboardData
-                                                          .movies?.length ??
-                                                      0,
-                                                  itemBuilder:
-                                                      (context, index) {
-                                                    final movie = dashboardData
-                                                        .movies?[index];
-                                                    if (movie == null) {
-                                                      return SizedBox();
-                                                    }
-                                                    return MovieCard(
-                                                        movie: movie);
-                                                  },
-                                                ),
-                                              ),
-                                        SizedBox(height: 20),
-                                      ],
-                                    );
-                                  },
+        slivers: [
+          _buildSliverAppBar(context, selectedThemeData),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Consumer<DashboardProvider>(
+                  builder: (context, dashboardProvider, child) {
+                    if (dashboardProvider.isLoading) {
+                      return HomeShimmer();
+                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 10),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child:
+                          _buildFilterButtons(context, dashboardProvider),
+                        ),
+                        SizedBox(
+                          height: ResponsiveWidget.isMobile(context) ? 0 : 10,
+                        ),
+                        selectedType == 'SHORTS'
+                            ? SizedBox(
+                          height:
+                          MediaQuery.of(context).size.height * 0.7,
+                          child: ShortsLibraryPage(),
+                        )
+                            : ListView.builder(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          scrollDirection: Axis.vertical,
+                          itemCount: dashboardProvider.dashboardData.length,
+                          itemBuilder: (context, index) {
+                            DashboardData dashboardData =
+                            dashboardProvider.dashboardData[index];
+
+                            _rowControllers.putIfAbsent(
+                                index, () => ScrollController());
+
+                            final controller = _rowControllers[index]!;
+
+                            // 🔥 Attach listener ONLY once
+                            if (!controller.hasListeners) {
+                              controller.addListener(() {
+                                if (controller.position.pixels >=
+                                    controller.position.maxScrollExtent - 200) {
+                                  if (_userId != null) {
+                                    dashboardProvider.loadMoreRowData(
+                                        dashboardData, selectedType, _userId!);
+                                  }
+                                }
+                              });
+                            }
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "${dashboardData.language} - ${dashboardData.category}",
+                                  style: TextStyle(
+                                      overflow: TextOverflow.ellipsis,
+                                      fontSize:
+                                      ResponsiveWidget.isMobile(context) ? 18 : 20,
+                                      fontWeight: FontWeight.bold),
                                 ),
-                        ],
-                      );
-                    }),
-                  ),
-                ),
-              ],
+                                SizedBox(height: 10),
+                                (dashboardData.movies == null ||
+                                    dashboardData.movies!.isEmpty)
+                                    ? SizedBox.shrink()
+                                    : SizedBox(
+                                  height: 300,
+                                  child: ListView.builder(
+                                    controller: controller,
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount:
+                                    dashboardData.movies!.length +
+                                        (dashboardData.isRowLoading ? 1 : 0),
+
+                                    itemBuilder: (context, i) {
+                                      if (i < dashboardData.movies!.length) {
+                                        return MovieCard(
+                                            movie: dashboardData.movies![i]);
+                                      } else if (dashboardData.isRowLoading) {
+                                        return Padding(
+                                          padding: const EdgeInsets.all(12),
+                                          child: SizedBox(
+                                            width: 40,
+                                            height: 40,
+                                            child: CircularProgressIndicator(strokeWidth: 2),
+                                          ),
+                                        );
+                                      } else {
+                                        return const SizedBox.shrink();
+                                      }
+
+                                    },
+                                  ),
+                                ),
+                                SizedBox(height: 20),
+                              ],
+                            );
+                          },
+                        ),
+
+                      ],
+                    );
+                  }),
             ),
+          ),
+        ],
+      ),
     );
   }
 
-  // double bannerHeight(BuildContext context) {
+
+// double bannerHeight(BuildContext context) {
   //   final width = MediaQuery.of(context).size.width;
 
   //   const posterRatio = 16 / 8;
