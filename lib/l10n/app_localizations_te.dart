@@ -305,31 +305,31 @@ class AppLocalizationsTe extends AppLocalizations {
   String get price => 'ధర';
 
   @override
-  String get myCredits => 'My Credits';
+  String get myCredits => 'నా క్రెడిట్స్';
 
   @override
-  String get gifts => 'Gifts';
+  String get gifts => 'బహుమతులు';
 
   @override
-  String get giftedMovies => 'Gifted Movies';
+  String get giftedMovies => 'బహుమతిగా పొందిన సినిమాలు';
 
   @override
-  String get claimGiftCard => 'Claim Gift Card';
+  String get claimGiftCard => 'గిఫ్ట్ కార్డ్ క్లెయిమ్ చేయండి';
 
   @override
-  String get features => 'Features';
+  String get features => 'ఫీచర్లు';
 
   @override
-  String get feedbackAndInformation => 'Feedback & Information';
+  String get feedbackAndInformation => 'ఫీడ్‌బ్యాక్ & సమాచారం';
 
   @override
-  String get termsPoliciesLiscenses => 'Terms, Policies and Liscenses';
+  String get termsPoliciesLiscenses => 'నియమాలు, విధానాలు & లైసెన్సులు';
 
   @override
-  String get aboutFilmytell => 'About Filmytell';
+  String get aboutFilmytell => 'ఫిల్మిటెల్ గురించి';
 
   @override
-  String get rateUs => 'Rate Us';
+  String get rateUs => 'మాకు రేటింగ్ ఇవ్వండి';
 
   @override
   String get logout => 'లాగ్ అవుట్';

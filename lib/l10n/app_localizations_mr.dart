@@ -304,31 +304,31 @@ class AppLocalizationsMr extends AppLocalizations {
   String get price => 'किंमत';
 
   @override
-  String get myCredits => 'My Credits';
+  String get myCredits => 'माझे क्रेडिट्स';
 
   @override
-  String get gifts => 'Gifts';
+  String get gifts => 'भेटवस्तू';
 
   @override
-  String get giftedMovies => 'Gifted Movies';
+  String get giftedMovies => 'भेट म्हणून मिळालेल्या चित्रपट';
 
   @override
-  String get claimGiftCard => 'Claim Gift Card';
+  String get claimGiftCard => 'गिफ्ट कार्ड क्लेम करा';
 
   @override
-  String get features => 'Features';
+  String get features => 'वैशिष्ट्ये';
 
   @override
-  String get feedbackAndInformation => 'Feedback & Information';
+  String get feedbackAndInformation => 'अभिप्राय व माहिती';
 
   @override
-  String get termsPoliciesLiscenses => 'Terms, Policies and Liscenses';
+  String get termsPoliciesLiscenses => 'अटी, धोरणे आणि परवाने';
 
   @override
-  String get aboutFilmytell => 'About Filmytell';
+  String get aboutFilmytell => 'फिल्मिटेल बद्दल';
 
   @override
-  String get rateUs => 'Rate Us';
+  String get rateUs => 'आम्हाला रेट करा';
 
   @override
   String get logout => 'बाहेर पडा';

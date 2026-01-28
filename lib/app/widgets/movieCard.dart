@@ -272,30 +272,19 @@ class _MovieCardState extends State<MovieCard> {
           borderRadius: BorderRadius.circular(10),
           color: theme.primaryColor.withOpacity(0.9),
         ),
-        child: Row(
-          children: [
-            //if (!isRental)
-            // SizedBox(
-            //   height: 14,
-            //   width: 14,
-            //   child: Image.asset(ImageConstant.coin),
-            // ),
-            //const SizedBox(width: 4),
-            Text(
-              movie.type!.toLowerCase() == 'series'
-                  ? 'Watch Series'
-                  : isRental
-                      ? movie.type?.toLowerCase() == "movie"
-                          ? lang.watchMovie
-                          : lang.watchSeries
-                      : "₹ $price",
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ],
+        child: Text(
+          movie.type!.toLowerCase() == 'series'
+              ? 'Watch Series'
+              : isRental
+                  ? movie.type?.toLowerCase() == "movie"
+                      ? lang.watchMovie
+                      : lang.watchSeries
+                  : "₹ $price",
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
       ),
     );

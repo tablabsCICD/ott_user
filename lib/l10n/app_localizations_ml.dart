@@ -306,31 +306,31 @@ class AppLocalizationsMl extends AppLocalizations {
   String get price => 'വില';
 
   @override
-  String get myCredits => 'My Credits';
+  String get myCredits => 'എന്റെ ക്രെഡിറ്റുകൾ';
 
   @override
-  String get gifts => 'Gifts';
+  String get gifts => 'സമ്മാനങ്ങൾ';
 
   @override
-  String get giftedMovies => 'Gifted Movies';
+  String get giftedMovies => 'സമ്മാനമായി ലഭിച്ച സിനിമകൾ';
 
   @override
-  String get claimGiftCard => 'Claim Gift Card';
+  String get claimGiftCard => 'ഗിഫ്റ്റ് കാർഡ് ക്ലെയിം ചെയ്യുക';
 
   @override
-  String get features => 'Features';
+  String get features => 'സവിശേഷതകൾ';
 
   @override
-  String get feedbackAndInformation => 'Feedback & Information';
+  String get feedbackAndInformation => 'പ്രതികരണവും വിവരങ്ങളും';
 
   @override
-  String get termsPoliciesLiscenses => 'Terms, Policies and Liscenses';
+  String get termsPoliciesLiscenses => 'നിബന്ധനകൾ, നയങ്ങൾ & ലൈസൻസുകൾ';
 
   @override
-  String get aboutFilmytell => 'About Filmytell';
+  String get aboutFilmytell => 'ഫില്മിടെൽ കുറിച്ച്';
 
   @override
-  String get rateUs => 'Rate Us';
+  String get rateUs => 'ഞങ്ങളെ റേറ്റ് ചെയ്യുക';
 
   @override
   String get logout => 'ലോഗൗട്ട്';

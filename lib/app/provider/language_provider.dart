@@ -11,43 +11,48 @@ import '../core/utils/sharepreferences.dart';
 class LanguageProvider with ChangeNotifier {
   LanguageProvider() {
     fetchLanguages();
-    _fetchUserData();
   }
 
-  Future<void> _fetchUserData() async {
-    final localSharePreferences = LocalSharePreferences();
-    final user = await localSharePreferences.getUser();
-
-    _selectedLanguages = user!.selectedLanguages!;
-    //log('$_selectedLanguages');
-  }
-
-  List<String> _selectedLanguages = []; // Stores selected languages
+  List<String> _selectedLanguages = [];
+  List<String> _allLanguages = [];
 
   List<String> get selectedLanguages => _selectedLanguages;
-
-  List<String> _allLanguages = []; // Stores selected languages
-
   List<String> get allLanguages => _allLanguages;
 
+  /// Called by UI when user is loaded (login / splash / profile)
+  void setUserLanguages(List<String> langs) {
+    if (langs.isEmpty) {
+      _selectedLanguages = ['English'];
+    } else {
+      _selectedLanguages = List.from(langs);
+    }
+
+    log('setUserLanguages = ${_selectedLanguages}');
+    notifyListeners();
+  }
+
   void updateLanguages(List<String> newLanguages) {
-    _selectedLanguages = newLanguages;
-    notifyListeners(); // Notifies UI to update
-    //log('$_selectedLanguages');
+    _selectedLanguages = List.from(newLanguages);
+    log('updateLanguages = ${selectedLanguages.length}');
+
+    notifyListeners();
   }
 
   Future<void> fetchLanguages() async {
     String apiUrl = ApiConstant.fetchLang;
     ApiHelper apiHelper = ApiHelper();
+
     try {
       var response = await apiHelper.getApi(apiUrl);
       if (response.statusCode == 200) {
         Map<String, dynamic> responseBody = json.decode(response.body);
-        AllLangResponse addUserResponse =
-            AllLangResponse.fromJson(responseBody);
+        AllLangResponse res = AllLangResponse.fromJson(responseBody);
+
         _allLanguages.clear();
-        addUserResponse.data!.languages!
-            .forEach((elemnet) => {_allLanguages.add(elemnet.name.toString())});
+        res.data?.languages?.forEach((e) {
+          _allLanguages.add(e.name.toString());
+        });
+
         notifyListeners();
       } else {
         throw Exception('Failed to fetch languages');

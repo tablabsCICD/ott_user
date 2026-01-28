@@ -169,7 +169,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             // ),
                             const SizedBox(height: 10),
                             profileCard(
-                              'My Credits',
+                              lang.myCredits,
                               [
                                 ProfileOption(
                                   icon: Icons.account_balance_wallet,
@@ -184,11 +184,11 @@ class _ProfilePageState extends State<ProfilePage> {
                               ],
                             ),
                             profileCard(
-                              'Gifts',
+                              lang.gifts,
                               [
                                 ProfileOption(
                                   icon: Icons.history_sharp,
-                                  title: 'Gifted Movies',
+                                  title: lang.giftedMovies,
                                   onTap: () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -198,7 +198,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 ProfileOption(
                                   icon: LucideIcons.gift,
-                                  title: 'Claim Gift Card',
+                                  title: lang.claimGiftCard,
                                   onTap: () {
                                     showDialog(
                                       context: context,
@@ -410,7 +410,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               ],
                             ),
                             profileCard(
-                              'Features',
+                              lang.features,
                               [
                                 ProfileOption(
                                   icon: Icons.history,
@@ -457,7 +457,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               ],
                             ),
                             profileCard(
-                              'Feedback & Information',
+                              lang.feedbackAndInformation,
                               [
                                 ProfileOption(
                                   icon: Icons.support_agent_sharp,
@@ -471,17 +471,17 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 ProfileOption(
                                   icon: Icons.file_copy,
-                                  title: 'Terms, Policies and Licenses',
+                                  title: lang.termsPoliciesLiscenses,
                                   onTap: () {},
                                 ),
                                 ProfileOption(
                                   icon: Icons.info,
-                                  title: 'About Filmytell',
+                                  title: lang.aboutFilmytell,
                                   onTap: () {},
                                 ),
                                 ProfileOption(
                                   icon: Icons.star,
-                                  title: 'Rate Us',
+                                  title: lang.rateUs,
                                   onTap: () {},
                                 ),
                               ],
@@ -733,6 +733,13 @@ class _ProfilePageState extends State<ProfilePage> {
                     fontSize: 14,
                   ),
                 ),
+                Text(
+                  userProvider.userObj.id.toString(),
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
                 // Text(
                 //   userProvider.userObj.id.toString() ?? '',
                 //   style: TextStyle(
@@ -829,85 +836,68 @@ class ChangeLanguage extends StatefulWidget {
 
 class _ChangeLanguageState extends State<ChangeLanguage> {
   @override
-  void initState() {
-    super.initState();
-    // Move fetchLanguage to didChangeDependencies
-  }
-
-  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Fetch languages here
-    fetchLanguage();
+    final langProvider = Provider.of<LanguageProvider>(context, listen: false);
+    langProvider.fetchLanguages();
   }
 
-  Future<void> fetchLanguage() async {
-    LanguageProvider languageProvider =
-        Provider.of<LanguageProvider>(context, listen: false);
-    await languageProvider.fetchLanguages();
+  void _toggleSelection(String language, LanguageProvider languageProvider) {
+    final List<String> updated = List.from(languageProvider.selectedLanguages);
+
+    if (updated.contains(language)) {
+      updated.remove(language);
+    } else {
+      updated.add(language);
+    }
+
+    languageProvider.updateLanguages(updated);
   }
 
-  void _toggleSelection(String language, UserProvider userProvider) {
-    setState(() {
-      userProvider.selectedLanguages.contains(language)
-          ? userProvider.selectedLanguages.remove(language)
-          : userProvider.selectedLanguages.add(language);
-    });
-    // Update Provider
-    Provider.of<LanguageProvider>(context, listen: false)
-        .updateLanguages(userProvider.selectedLanguages);
-  }
-
-  Future<void> _saveLanguages(UserProvider userProvider) async {
-    if (userProvider.selectedLanguages.isEmpty) {
-      CustomToast.show(context, 'Please select at least one languages.',
+  Future<void> _saveLanguages(
+    UserProvider userProvider,
+    LanguageProvider languageProvider,
+  ) async {
+    if (languageProvider.selectedLanguages.isEmpty) {
+      CustomToast.show(context, 'Please select at least one language.',
           isSuccess: false);
-
       return;
     }
 
     var result =
-        await userProvider.updateUserLang(userProvider.selectedLanguages);
+        await userProvider.updateUserLang(languageProvider.selectedLanguages);
+
     if (result['success'] == true) {
-      //print(result['message']);
-      // CustomToast.show(result['message'].toString(),isSuccess: true);
-      CustomToast.show(context, "Language has been updated successfully.",
+      CustomToast.show(context, "Language updated successfully.",
           isSuccess: true);
 
-      // navigate to home page with refreshing data
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              NavigationPage(),
+          pageBuilder: (_, __, ___) => NavigationPage(),
           transitionDuration: Duration.zero,
           reverseTransitionDuration: Duration.zero,
         ),
       );
     } else {
-      //print('Failure: ${result['message']}');
-      CustomToast.show(context, result['message'].toString(), isSuccess: true);
+      CustomToast.show(context, result['message'].toString(), isSuccess: false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final lang = AppLocalizations.of(context)!;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final userProvider = Provider.of<UserProvider>(context);
+    final selectedThemeData = themeProvider.getTheme;
 
-    var themeProvider = Provider.of<ThemeProvider>(context);
-    UserProvider userProvider =
-        Provider.of<UserProvider>(context, listen: true);
-    var selectedThemeData = themeProvider.getTheme;
     return Scaffold(
       appBar: AppBar(
-        foregroundColor: Colors.transparent,
         automaticallyImplyLeading: false,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: Icon(
-            Icons.arrow_back_ios,
-            color: selectedThemeData.canvasColor,
-          ),
+          icon:
+              Icon(Icons.arrow_back_ios, color: selectedThemeData.canvasColor),
         ),
         centerTitle: true,
         backgroundColor: selectedThemeData.scaffoldBackgroundColor,
@@ -915,15 +905,15 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
           lang.selectPreferredLanguage,
           style: TextStyle(
             fontWeight: FontWeight.bold,
+            color: selectedThemeData.canvasColor,
           ),
         ),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Consumer<LanguageProvider>(
-          builder: (context, provider, child) {
+          builder: (context, provider, _) {
             return Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 Expanded(
                   child: GridView.builder(
@@ -937,18 +927,18 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
                     ),
                     itemBuilder: (context, index) {
                       final language = provider.allLanguages[index];
+                      final isSelected =
+                          provider.selectedLanguages.contains(language);
+
                       return ElevatedButton(
-                        onPressed: () =>
-                            _toggleSelection(language, userProvider),
+                        onPressed: () => _toggleSelection(language, provider),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              provider.selectedLanguages.contains(language)
-                                  ? selectedThemeData.primaryColor
-                                  : selectedThemeData.cardColor,
-                          foregroundColor:
-                              provider.selectedLanguages.contains(language)
-                                  ? Colors.white
-                                  : selectedThemeData.canvasColor,
+                          backgroundColor: isSelected
+                              ? selectedThemeData.primaryColor
+                              : selectedThemeData.cardColor,
+                          foregroundColor: isSelected
+                              ? Colors.white
+                              : selectedThemeData.canvasColor,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
@@ -958,32 +948,26 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
                     },
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: SizedBox(
-                    width: ResponsiveWidget.isMobile(context)
-                        ? double.infinity
-                        : 400,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: selectedThemeData.primaryColor,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: ResponsiveWidget.isMobile(context)
+                      ? double.infinity
+                      : 400,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: selectedThemeData.primaryColor,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
                       ),
-                      onPressed: () {
-                        _saveLanguages(userProvider);
-                      },
-                      child: Center(
-                        child: Text(
-                          lang.save,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
+                    ),
+                    onPressed: () => _saveLanguages(userProvider, provider),
+                    child: Text(
+                      lang.save,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                     ),
                   ),

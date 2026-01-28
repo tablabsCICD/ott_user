@@ -113,5 +113,16 @@
   "rentDuration": "வாடகை காலம்",
   "price": "விலை",
 
+  
+  "myCredits": "என் கிரெடிட்கள்",
+  "gifts": "பரிசுகள்",
+  "giftedMovies": "பரிசாக பெற்ற திரைப்படங்கள்",
+  "claimGiftCard": "கிஃப்ட் கார்டை கோருங்கள்",
+  "features": "அம்சங்கள்",
+  "feedbackAndInformation": "கருத்து & தகவல்",
+  "termsPoliciesLiscenses": "விதிமுறைகள், கொள்கைகள் & உரிமங்கள்",
+  "aboutFilmytell": "பில்மிடெல் பற்றி",
+  "rateUs": "எங்களை மதிப்பிடுங்கள்",
+
   "logout": "வெளியேறு"
 }

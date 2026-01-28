@@ -113,5 +113,17 @@
   "rentDuration": "भाडे कालावधी",
   "price": "किंमत",
 
+
+  "myCredits": "माझे क्रेडिट्स",
+  "gifts": "भेटवस्तू",
+  "giftedMovies": "भेट म्हणून मिळालेल्या चित्रपट",
+  "claimGiftCard": "गिफ्ट कार्ड क्लेम करा",
+  "features": "वैशिष्ट्ये",
+  "feedbackAndInformation": "अभिप्राय व माहिती",
+  "termsPoliciesLiscenses": "अटी, धोरणे आणि परवाने",
+  "aboutFilmytell": "फिल्मिटेल बद्दल",
+  "rateUs": "आम्हाला रेट करा",
+  
+
   "logout": "बाहेर पडा"
 }

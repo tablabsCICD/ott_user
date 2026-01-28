@@ -304,31 +304,31 @@ class AppLocalizationsOr extends AppLocalizations {
   String get price => 'ମୂଲ୍ୟ';
 
   @override
-  String get myCredits => 'My Credits';
+  String get myCredits => 'ମୋର କ୍ରେଡିଟ୍ସ';
 
   @override
-  String get gifts => 'Gifts';
+  String get gifts => 'ଉପହାର';
 
   @override
-  String get giftedMovies => 'Gifted Movies';
+  String get giftedMovies => 'ଉପହାର ଭାବେ ପାଇଥିବା ଚଳଚ୍ଚିତ୍ର';
 
   @override
-  String get claimGiftCard => 'Claim Gift Card';
+  String get claimGiftCard => 'ଗିଫ୍ଟ କାର୍ଡ କ୍ଲେମ୍ କରନ୍ତୁ';
 
   @override
-  String get features => 'Features';
+  String get features => 'ବୈଶିଷ୍ଟ୍ୟଗୁଡ଼ିକ';
 
   @override
-  String get feedbackAndInformation => 'Feedback & Information';
+  String get feedbackAndInformation => 'ମତାମତ ଏବଂ ସୂଚନା';
 
   @override
-  String get termsPoliciesLiscenses => 'Terms, Policies and Liscenses';
+  String get termsPoliciesLiscenses => 'ସର୍ତ୍ତ, ନୀତି ଏବଂ ଲାଇସେନ୍ସ';
 
   @override
-  String get aboutFilmytell => 'About Filmytell';
+  String get aboutFilmytell => 'ଫିଲ୍ମିଟେଲ ବିଷୟରେ';
 
   @override
-  String get rateUs => 'Rate Us';
+  String get rateUs => 'ଆମକୁ ମୂଲ୍ୟାଙ୍କନ କରନ୍ତୁ';
 
   @override
   String get logout => 'ଲଗଆଉଟ୍';

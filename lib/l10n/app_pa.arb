@@ -113,5 +113,17 @@
   "rentDuration": "ਕਿਰਾਏ ਦੀ ਮਿਆਦ",
   "price": "ਕੀਮਤ",
 
+
+  "myCredits": "ਮੇਰੇ ਕ੍ਰੈਡਿਟਸ",
+  "gifts": "ਤੋਹਫ਼ੇ",
+  "giftedMovies": "ਤੋਹਫ਼ੇ ਵਜੋਂ ਮਿਲੀਆਂ ਫ਼ਿਲਮਾਂ",
+  "claimGiftCard": "ਗਿਫ਼ਟ ਕਾਰਡ ਕਲੇਮ ਕਰੋ",
+  "features": "ਖਾਸੀਤਾਂ",
+  "feedbackAndInformation": "ਫੀਡਬੈਕ ਅਤੇ ਜਾਣਕਾਰੀ",
+  "termsPoliciesLiscenses": "ਸ਼ਰਤਾਂ, ਨੀਤੀਆਂ ਅਤੇ ਲਾਇਸੈਂਸ",
+  "aboutFilmytell": "ਫਿਲਮੀਟੈਲ ਬਾਰੇ",
+  "rateUs": "ਸਾਨੂੰ ਰੇਟ ਕਰੋ",
+  
+
   "logout": "ਲੌਗਆਉਟ"
 }

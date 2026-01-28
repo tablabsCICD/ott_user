@@ -113,5 +113,15 @@
   "rentDuration": "کرایہ کی مدت",
   "price": "قیمت",
 
+  "myCredits": "میرے کریڈٹس",
+  "gifts": "تحائف",
+  "giftedMovies": "تحفے میں ملی فلمیں",
+  "claimGiftCard": "گفٹ کارڈ کلیم کریں",
+  "features": "خصوصیات",
+  "feedbackAndInformation": "رائے اور معلومات",
+  "termsPoliciesLiscenses": "شرائط، پالیسیاں اور لائسنس",
+  "aboutFilmytell": "فلمی ٹیل کے بارے میں",
+  "rateUs": "ہمیں ریٹ کریں",
+
   "logout": "لاگ آؤٹ"
 }

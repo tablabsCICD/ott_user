@@ -113,5 +113,15 @@
   "rentDuration": "വാടക കാലാവധി",
   "price": "വില",
 
+  "myCredits": "എന്റെ ക്രെഡിറ്റുകൾ",
+  "gifts": "സമ്മാനങ്ങൾ",
+  "giftedMovies": "സമ്മാനമായി ലഭിച്ച സിനിമകൾ",
+  "claimGiftCard": "ഗിഫ്റ്റ് കാർഡ് ക്ലെയിം ചെയ്യുക",
+  "features": "സവിശേഷതകൾ",
+  "feedbackAndInformation": "പ്രതികരണവും വിവരങ്ങളും",
+  "termsPoliciesLiscenses": "നിബന്ധനകൾ, നയങ്ങൾ & ലൈസൻസുകൾ",
+  "aboutFilmytell": "ഫില്മിടെൽ കുറിച്ച്",
+  "rateUs": "ഞങ്ങളെ റേറ്റ് ചെയ്യുക",
+
   "logout": "ലോഗൗട്ട്"
 }

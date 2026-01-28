@@ -80,15 +80,6 @@ class _WalletPageState extends State<WalletPage> {
                             children: [
                               const Spacer(),
 
-                              /// Coin Icon
-                              // Hero(
-                              //   tag: 'coin',
-                              //   child: Image.asset(
-                              //     ImageConstant.coin,
-                              //     width: 70,
-                              //     height: 70,
-                              //   ),
-                              // ),
                               Icon(
                                 Icons.account_balance_wallet,
                                 size: 80,
@@ -110,7 +101,7 @@ class _WalletPageState extends State<WalletPage> {
                               const SizedBox(height: 4),
 
                               const Text(
-                                "Coins Available",
+                                "Available Balance",
                                 style: TextStyle(
                                   color: Colors.white70,
                                   fontSize: 14,
@@ -131,7 +122,7 @@ class _WalletPageState extends State<WalletPage> {
                                 onPressed: _showBuyDialog,
                                 icon: const Icon(Icons.add),
                                 label: const Text(
-                                  "Buy Coins",
+                                  "Recharge Wallet",
                                   style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
                               ),
@@ -330,11 +321,16 @@ class _WalletPageState extends State<WalletPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Buy Coins"),
+        backgroundColor: Theme.of(context).cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text("Recharge Wallet"),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: "Enter amount in ₹"),
+          decoration: const InputDecoration(
+            labelText: "Enter amount",
+            border: OutlineInputBorder(),
+          ),
         ),
         actions: [
           TextButton(
@@ -353,7 +349,7 @@ class _WalletPageState extends State<WalletPage> {
               await p.addBalance(amt);
               Navigator.pop(context);
             },
-            child: const Text("Buy"),
+            child: const Text("Proceed to pay"),
           )
         ],
       ),
