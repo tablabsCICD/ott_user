@@ -1,12 +1,10 @@
 import 'dart:developer';
-
+import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/response/getContentResponse.dart';
 import 'package:ott/data/models/user.dart';
-import 'dart:convert';
-
 import '../../data/models/response/get_dashboard_data.dart';
 import '../core/constant/api_constant.dart';
 import '../core/network/api_helper.dart';
@@ -16,178 +14,199 @@ class DashboardProvider extends BaseProvider {
   DashboardProvider() : super('Ideal') {}
 
   List<DashboardData> _dashboardData = [];
-  get dashboardData => _dashboardData;
+  List<DashboardData> get dashboardData => _dashboardData;
 
   Content _content = Content();
-
-  get content => _content;
+  Content get content => _content;
 
   TextEditingController searchContentController = TextEditingController();
 
-  getDashboardData(String type, List<String> languages, int userId) async {
+  bool _isLoadingDashboard = false;
+  bool get isLoading => _isLoadingDashboard;
+
+  // ==================== DASHBOARD LOAD ====================
+
+  Future<void> getDashboardData(
+      String type,
+      List<String> languages,
+      int userId,
+      ) async {
+    if (_isLoadingDashboard) return;
+
+    _isLoadingDashboard = true;
     List<DashboardData> finalDashboardData = [];
 
-    await Future.wait([
-      _safeApiCall(
-        () => getDashboardLatestData(type, languages, userId),
-        (data) => finalDashboardData.addAll(data),
-      ),
-      _safeApiCall(
-        () => getDashboardTrendingData(type, languages, userId),
-        (data) => finalDashboardData.addAll(data),
-      ),
-      _safeApiCall(
-        () => getDashboardUpcomingData(type, languages, userId),
-        (data) => finalDashboardData.addAll(data),
-      ),
-    ]);
+    debugPrint("Languages: $languages");
 
-    if (finalDashboardData.isNotEmpty) {
-      _dashboardData = finalDashboardData;
-      notifyListeners();
+    for (final lang in languages) {
+      debugPrint("➡ Loading dashboard for: $lang");
+
+      try {
+        final latest = await getDashboardLatestData(type, [lang], userId);
+        final trending = await getDashboardTrendingData(type, [lang], userId);
+        final upcoming = await getDashboardUpcomingData(type, [lang], userId);
+
+        _initRowLoadingState(latest);
+        _initRowLoadingState(trending);
+        _initRowLoadingState(upcoming);
+
+        finalDashboardData.addAll(latest);
+        finalDashboardData.addAll(trending);
+        finalDashboardData.addAll(upcoming);
+      } catch (e) {
+        debugPrint("❌ Dashboard error ($lang): $e");
+      }
+    }
+
+    _dashboardData = finalDashboardData;
+    notifyListeners();
+
+    _isLoadingDashboard = false;
+  }
+
+  /// Only reset UI loading state — pagination comes from backend
+  void _initRowLoadingState(List<DashboardData> rows) {
+    for (final row in rows) {
+      row.isRowLoading = false;
     }
   }
 
-  Future<void> _safeApiCall(
-    Future<List<DashboardData>> Function() apiCall,
-    Function(List<DashboardData>) onSuccess,
-  ) async {
+  // ==================== HORIZONTAL PAGINATION ====================
+
+  Future<void> loadMoreRowData(
+      DashboardData row,
+      String type,
+      int userId,
+      ) async {
+    if (row.isRowLoading || !row.hasMore) return;
+
+    row.isRowLoading = true;
+    notifyListeners();
+
+    final nextPage = row.currentPage + 1;
+
     try {
-      final result = await apiCall();
-      if (result.isNotEmpty) {
-        onSuccess(result);
+      List<DashboardData> newData = [];
+
+      final cat = row.category?.toLowerCase() ?? "";
+
+      if (cat.contains("latest")) {
+        newData = await getDashboardLatestPaged(
+            type, [row.language!], userId, nextPage);
+      } else if (cat.contains("trending")) {
+        newData = await getDashboardTrendingPaged(
+            type, [row.language!], userId, nextPage);
+      } else if (cat.contains("upcoming")) {
+        newData = await getDashboardUpcomingPaged(
+            type, [row.language!], userId, nextPage);
+      }
+
+
+      if (newData.isNotEmpty &&
+          newData.first.movies != null &&
+          newData.first.movies!.isNotEmpty) {
+        row.movies!.addAll(newData.first.movies!);
+        row.pagination = newData.first.pagination;
       }
     } catch (e) {
-      debugPrint("API failed but continuing: $e");
+      debugPrint("❌ Pagination error: $e");
     }
+
+    row.isRowLoading = false;
+    notifyListeners();
   }
 
-  Future<List<DashboardData>> getDashboardLatestData(
-      String type, List<String> languages, int userId) async {
-    String languagesParam = languages.map((lang) => "langList=$lang").join('&');
+  // ==================== PAGED APIs ====================
+
+  Future<List<DashboardData>> getDashboardLatestPaged(
+      String type,
+      List<String> languages,
+      int userId,
+      int page,
+      ) async {
+    return _getPagedApi("latest", type, languages, userId, page);
+  }
+
+  Future<List<DashboardData>> getDashboardTrendingPaged(
+      String type,
+      List<String> languages,
+      int userId,
+      int page,
+      ) async {
+    return _getPagedApi("trending", type, languages, userId, page);
+  }
+
+  Future<List<DashboardData>> getDashboardUpcomingPaged(
+      String type,
+      List<String> languages,
+      int userId,
+      int page,
+      ) async {
+    return _getPagedApi("upcoming", type, languages, userId, page);
+  }
+
+  Future<List<DashboardData>> _getPagedApi(
+      String endpoint,
+      String type,
+      List<String> languages,
+      int userId,
+      int page,
+      ) async {
+    String languagesParam = languages.map((lang) => "lang=$lang").join('&');
 
     String apiUrl =
-        "${ApiConstant.getNewDashboardData}latest?type=$type&$languagesParam&userId=$userId";
+        "${ApiConstant.getNewDashboardData}$endpoint?type=$type&$languagesParam&userId=$userId&page=$page&size=10";
 
-    debugPrint(apiUrl);
     ApiHelper apiHelper = ApiHelper();
     var response = await apiHelper.getApi(apiUrl);
 
     if (response.statusCode == 200) {
-      Map<String, dynamic> responseBody = json.decode(response.body);
-      DashboardResponse dashboardResponse =
-          DashboardResponse.fromJson(responseBody);
-
-      return dashboardResponse.data!;
+      final responseBody = json.decode(response.body);
+      return DashboardResponse.fromJson(responseBody).data ?? [];
     } else {
-      throw Exception('Latest API Failed');
+      throw Exception('$endpoint paged API Failed');
     }
+  }
+
+  // ==================== ORIGINAL APIs ====================
+
+  Future<List<DashboardData>> getDashboardLatestData(
+      String type, List<String> languages, int userId) async {
+    return getDashboardLatestPaged(type, languages, userId, 0);
   }
 
   Future<List<DashboardData>> getDashboardTrendingData(
       String type, List<String> languages, int userId) async {
-    String languagesParam = languages.map((lang) => "langList=$lang").join('&');
-
-    String apiUrl =
-        "${ApiConstant.getNewDashboardData}trending?type=$type&$languagesParam&userId=$userId";
-
-    ApiHelper apiHelper = ApiHelper();
-    var response = await apiHelper.getApi(apiUrl);
-
-    if (response.statusCode == 200) {
-      Map<String, dynamic> responseBody = json.decode(response.body);
-      DashboardResponse dashboardResponse =
-          DashboardResponse.fromJson(responseBody);
-
-      return dashboardResponse.data!;
-    } else {
-      throw Exception('Trending API Failed');
-    }
+    return getDashboardTrendingPaged(type, languages, userId, 0);
   }
 
   Future<List<DashboardData>> getDashboardUpcomingData(
       String type, List<String> languages, int userId) async {
-    String languagesParam = languages.map((lang) => "langList=$lang").join('&');
-
-    String apiUrl =
-        "${ApiConstant.getNewDashboardData}upcoming?type=$type&$languagesParam&userId=$userId";
-
-    ApiHelper apiHelper = ApiHelper();
-    var response = await apiHelper.getApi(apiUrl);
-
-    if (response.statusCode == 200) {
-      Map<String, dynamic> responseBody = json.decode(response.body);
-      DashboardResponse dashboardResponse =
-          DashboardResponse.fromJson(responseBody);
-
-      return dashboardResponse.data!;
-    } else {
-      throw Exception('Upcoming API Failed');
-    }
+    return getDashboardUpcomingPaged(type, languages, userId, 0);
   }
+
+  // ==================== CONTENT DETAILS ====================
 
   getContentById(int id) async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
     String apiUrl = ApiConstant.getVideoById(id, user!.id);
     ApiHelper apiHelper = ApiHelper();
+
     try {
       var response = await apiHelper.getApi(apiUrl);
       if (response.statusCode == 200) {
-        Map<String, dynamic> responseBody = json.decode(response.body);
+        final responseBody = json.decode(response.body);
         GetContentResponse addUserResponse =
-            GetContentResponse.fromJson(responseBody);
-        //print("\ncontent by id response " + responseBody.toString());
-        if (addUserResponse.success == true) {
-          if (addUserResponse.data != null &&
-              addUserResponse.data!.contentList != null) {
-            _content = addUserResponse.data!.contentList!;
-            notifyListeners();
-          } else {
-            debugPrint("empty data: ${addUserResponse.message}");
-          }
-        } else {
-          debugPrint("Error: ${addUserResponse.message}");
+        GetContentResponse.fromJson(responseBody);
+
+        if (addUserResponse.success == true &&
+            addUserResponse.data?.contentList != null) {
+          _content = addUserResponse.data!.contentList!;
+          notifyListeners();
         }
-      } else {
-        throw Exception(
-            'Failed to load data. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
-      throw Exception('An error occurred while fetching data.');
+      debugPrint("❌ getContentById error: $error");
     }
   }
-
-  // List<Content> _trendingContentList = [];
-  // List<Content> get trendingContentList => _trendingContentList;
-
-  // Future<void> getTopTrendingContent() async {
-  //   //log('=======inside top 10 trending');
-  //   User? user = await LocalSharePreferences.localSharePreferences.getUser();
-  //   String apiUrl = ApiConstant.getTopTrendingContentLast7Days(user!.id);
-  //   ApiHelper apiHelper = ApiHelper();
-
-  //   try {
-  //     var response = await apiHelper.getApi(apiUrl);
-
-  //     if (response.statusCode == 200) {
-  //       final Map<String, dynamic> responseBody = json.decode(response.body);
-
-  //       final List<dynamic> list = responseBody['data']?['TopTenContent'] ?? [];
-
-  //       _trendingContentList = list
-  //           .where((e) => e != null) // 👈 remove null items
-  //           .map((e) => Content.fromJson(e))
-  //           .toList();
-
-  //       notifyListeners();
-  //     } else {
-  //       throw Exception(
-  //           'Failed to get data. Status code: ${response.statusCode}');
-  //     }
-  //   } catch (error) {
-  //     log('Trending error: $error');
-  //     throw Exception('An error occurred while fetching the data.');
-  //   }
-  // }
 }

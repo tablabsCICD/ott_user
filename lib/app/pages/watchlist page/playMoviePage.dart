@@ -16,6 +16,8 @@ import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+
 
 import '../../core/utils/sharepreferences.dart';
 
@@ -108,6 +110,13 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     _chewieController?.dispose();
 
     _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
+    _videoController!.addListener(() {
+      if (_videoController!.value.isPlaying) {
+        WakelockPlus.enable();   // 🔓 keep screen ON
+      } else {
+        WakelockPlus.disable();  // 🔒 restore lock
+      }
+    });
 
     _chewieController = ChewieController(
       videoPlayerController: _videoController!,
@@ -134,6 +143,11 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
       ),
     );
 
+    _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
+
+
+
+
     setState(() {});
   }
 
@@ -142,6 +156,8 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     _videoController?.dispose();
     _chewieController?.dispose();
     super.dispose();
+    // 🔥 RESTORE AUTO SCREEN LOCK
+    WakelockPlus.disable();
   }
 
   String _formatEpoch(int? ms) {
