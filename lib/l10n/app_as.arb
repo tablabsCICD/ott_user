@@ -113,5 +113,17 @@
   "rentDuration": "ভাড়াৰ সময়সীমা",
   "price": "মূল্য",
 
+
+
+  "myCredits": "মোৰ ক্ৰেডিটসমূহ",
+  "gifts": "উপহাৰসমূহ",
+  "giftedMovies": "উপহাৰ হিচাপে পোৱা চলচ্চিত্ৰসমূহ",
+  "claimGiftCard": "গিফ্ট কাৰ্ড দাবী কৰক",
+  "features": "বৈশিষ্ট্যসমূহ",
+  "feedbackAndInformation": "প্ৰতিক্ৰিয়া আৰু তথ্য",
+  "termsPoliciesLiscenses": "চৰ্তসমূহ, নীতিসমূহ আৰু লাইচেন্সসমূহ",
+  "aboutFilmytell": "ফিল্মিটেলৰ বিষয়ে",
+  "rateUs": "আমাক মূল্যায়ন কৰক",
+
   "logout": "লগ আউট"
 }

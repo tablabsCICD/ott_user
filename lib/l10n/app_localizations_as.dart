@@ -304,5 +304,32 @@ class AppLocalizationsAs extends AppLocalizations {
   String get price => 'মূল্য';
 
   @override
+  String get myCredits => 'মোৰ ক্ৰেডিটসমূহ';
+
+  @override
+  String get gifts => 'উপহাৰসমূহ';
+
+  @override
+  String get giftedMovies => 'উপহাৰ হিচাপে পোৱা চলচ্চিত্ৰসমূহ';
+
+  @override
+  String get claimGiftCard => 'গিফ্ট কাৰ্ড দাবী কৰক';
+
+  @override
+  String get features => 'বৈশিষ্ট্যসমূহ';
+
+  @override
+  String get feedbackAndInformation => 'প্ৰতিক্ৰিয়া আৰু তথ্য';
+
+  @override
+  String get termsPoliciesLiscenses => 'চৰ্তসমূহ, নীতিসমূহ আৰু লাইচেন্সসমূহ';
+
+  @override
+  String get aboutFilmytell => 'ফিল্মিটেলৰ বিষয়ে';
+
+  @override
+  String get rateUs => 'আমাক মূল্যায়ন কৰক';
+
+  @override
   String get logout => 'লগ আউট';
 }

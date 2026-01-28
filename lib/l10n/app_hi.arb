@@ -113,5 +113,15 @@
   "rentDuration": "किराया अवधि",
   "price": "मूल्य",
 
+  "myCredits": "मेरे क्रेडिट्स",
+  "gifts": "उपहार",
+  "giftedMovies": "उपहार में मिली फ़िल्में",
+  "claimGiftCard": "गिफ्ट कार्ड क्लेम करें",
+  "features": "विशेषताएँ",
+  "feedbackAndInformation": "प्रतिक्रिया और जानकारी",
+  "termsPoliciesLiscenses": "नियम, नीतियाँ और लाइसेंस",
+  "aboutFilmytell": "फिल्मिटेल के बारे में",
+  "rateUs": "हमें रेट करें",
+
   "logout": "लॉगआउट"
 }

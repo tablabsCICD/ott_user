@@ -113,5 +113,17 @@
   "rentDuration": "Rent Duration",
   "price": "Price",
 
+
+
+  "myCredits":"My Credits",
+  "gifts":"Gifts",
+  "giftedMovies":"Gifted Movies",
+  "claimGiftCard":"Claim Gift Card",
+  "features":"Features",
+  "feedbackAndInformation":"Feedback & Information",
+  "termsPoliciesLiscenses":"Terms, Policies and Liscenses",
+  "aboutFilmytell":"About Filmytell",
+  "rateUs":"Rate Us",
+
   "logout": "Logout"
 }

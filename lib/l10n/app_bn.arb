@@ -113,5 +113,17 @@
   "rentDuration": "ভাড়ার সময়সীমা",
   "price": "মূল্য",
 
+
+
+  "myCredits": "আমার ক্রেডিট",
+  "gifts": "উপহার",
+  "giftedMovies": "উপহারপ্রাপ্ত সিনেমা",
+  "claimGiftCard": "গিফট কার্ড দাবি করুন",
+  "features": "বৈশিষ্ট্যসমূহ",
+  "feedbackAndInformation": "মতামত ও তথ্য",
+  "termsPoliciesLiscenses": "শর্তাবলী, নীতিমালা ও লাইসেন্স",
+  "aboutFilmytell": "ফিল্মিটেল সম্পর্কে",
+  "rateUs": "আমাদের রেট করুন",
+
   "logout": "লগআউট"
 }

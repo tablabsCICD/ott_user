@@ -304,5 +304,32 @@ class AppLocalizationsBn extends AppLocalizations {
   String get price => 'মূল্য';
 
   @override
+  String get myCredits => 'আমার ক্রেডিট';
+
+  @override
+  String get gifts => 'উপহার';
+
+  @override
+  String get giftedMovies => 'উপহারপ্রাপ্ত সিনেমা';
+
+  @override
+  String get claimGiftCard => 'গিফট কার্ড দাবি করুন';
+
+  @override
+  String get features => 'বৈশিষ্ট্যসমূহ';
+
+  @override
+  String get feedbackAndInformation => 'মতামত ও তথ্য';
+
+  @override
+  String get termsPoliciesLiscenses => 'শর্তাবলী, নীতিমালা ও লাইসেন্স';
+
+  @override
+  String get aboutFilmytell => 'ফিল্মিটেল সম্পর্কে';
+
+  @override
+  String get rateUs => 'আমাদের রেট করুন';
+
+  @override
   String get logout => 'লগআউট';
 }

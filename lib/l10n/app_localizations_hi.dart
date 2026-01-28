@@ -304,5 +304,32 @@ class AppLocalizationsHi extends AppLocalizations {
   String get price => 'मूल्य';
 
   @override
+  String get myCredits => 'मेरे क्रेडिट्स';
+
+  @override
+  String get gifts => 'उपहार';
+
+  @override
+  String get giftedMovies => 'उपहार में मिली फ़िल्में';
+
+  @override
+  String get claimGiftCard => 'गिफ्ट कार्ड क्लेम करें';
+
+  @override
+  String get features => 'विशेषताएँ';
+
+  @override
+  String get feedbackAndInformation => 'प्रतिक्रिया और जानकारी';
+
+  @override
+  String get termsPoliciesLiscenses => 'नियम, नीतियाँ और लाइसेंस';
+
+  @override
+  String get aboutFilmytell => 'फिल्मिटेल के बारे में';
+
+  @override
+  String get rateUs => 'हमें रेट करें';
+
+  @override
   String get logout => 'लॉगआउट';
 }

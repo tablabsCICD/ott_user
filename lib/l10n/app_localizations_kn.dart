@@ -304,5 +304,32 @@ class AppLocalizationsKn extends AppLocalizations {
   String get price => 'ಬೆಲೆ';
 
   @override
+  String get myCredits => 'ನನ್ನ ಕ್ರೆಡಿಟ್ಸ್';
+
+  @override
+  String get gifts => 'ಉಡುಗೊರೆಗಳು';
+
+  @override
+  String get giftedMovies => 'ಉಡುಗೊರೆಯಾಗಿ ಪಡೆದ ಚಿತ್ರಗಳು';
+
+  @override
+  String get claimGiftCard => 'ಗಿಫ್ಟ್ ಕಾರ್ಡ್ ಕ್ಲೇಮ್ ಮಾಡಿ';
+
+  @override
+  String get features => 'ವೈಶಿಷ್ಟ್ಯಗಳು';
+
+  @override
+  String get feedbackAndInformation => 'ಪ್ರತಿಕ್ರಿಯೆ ಮತ್ತು ಮಾಹಿತಿ';
+
+  @override
+  String get termsPoliciesLiscenses => 'ನಿಯಮಗಳು, ನೀತಿಗಳು ಮತ್ತು ಪರವಾನಗಿಗಳು';
+
+  @override
+  String get aboutFilmytell => 'ಫಿಲ್ಮಿಟೆಲ್ ಬಗ್ಗೆ';
+
+  @override
+  String get rateUs => 'ನಮಗೆ ಮೌಲ್ಯಮಾಪನ ನೀಡಿ';
+
+  @override
   String get logout => 'ಲಾಗ್ ಔಟ್';
 }

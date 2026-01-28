@@ -305,5 +305,32 @@ class AppLocalizationsGu extends AppLocalizations {
   String get price => 'કિંમત';
 
   @override
+  String get myCredits => 'મારા ક્રેડિટ્સ';
+
+  @override
+  String get gifts => 'ભેટો';
+
+  @override
+  String get giftedMovies => 'ભેટમાં મળેલી ફિલ્મો';
+
+  @override
+  String get claimGiftCard => 'ગિફ્ટ કાર્ડ ક્લેમ કરો';
+
+  @override
+  String get features => 'વિશેષતાઓ';
+
+  @override
+  String get feedbackAndInformation => 'પ્રતિસાદ અને માહિતી';
+
+  @override
+  String get termsPoliciesLiscenses => 'શરતો, નીતિઓ અને લાયસન્સ';
+
+  @override
+  String get aboutFilmytell => 'ફિલ્મિટેલ વિશે';
+
+  @override
+  String get rateUs => 'અમને રેટ કરો';
+
+  @override
   String get logout => 'લૉગઆઉટ';
 }

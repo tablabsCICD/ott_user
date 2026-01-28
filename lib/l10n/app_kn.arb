@@ -113,5 +113,17 @@
   "rentDuration": "ಬಾಡಿಗೆ ಅವಧಿ",
   "price": "ಬೆಲೆ",
 
+
+
+  "myCredits": "ನನ್ನ ಕ್ರೆಡಿಟ್ಸ್",
+  "gifts": "ಉಡುಗೊರೆಗಳು",
+  "giftedMovies": "ಉಡುಗೊರೆಯಾಗಿ ಪಡೆದ ಚಿತ್ರಗಳು",
+  "claimGiftCard": "ಗಿಫ್ಟ್ ಕಾರ್ಡ್ ಕ್ಲೇಮ್ ಮಾಡಿ",
+  "features": "ವೈಶಿಷ್ಟ್ಯಗಳು",
+  "feedbackAndInformation": "ಪ್ರತಿಕ್ರಿಯೆ ಮತ್ತು ಮಾಹಿತಿ",
+  "termsPoliciesLiscenses": "ನಿಯಮಗಳು, ನೀತಿಗಳು ಮತ್ತು ಪರವಾನಗಿಗಳು",
+  "aboutFilmytell": "ಫಿಲ್ಮಿಟೆಲ್ ಬಗ್ಗೆ",
+  "rateUs": "ನಮಗೆ ಮೌಲ್ಯಮಾಪನ ನೀಡಿ",
+
   "logout": "ಲಾಗ್ ಔಟ್"
 }

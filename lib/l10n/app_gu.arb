@@ -113,5 +113,18 @@
   "rentDuration": "ભાડાની અવધિ",
   "price": "કિંમત",
 
+
+
+  "myCredits": "મારા ક્રેડિટ્સ",
+  "gifts": "ભેટો",
+  "giftedMovies": "ભેટમાં મળેલી ફિલ્મો",
+  "claimGiftCard": "ગિફ્ટ કાર્ડ ક્લેમ કરો",
+  "features": "વિશેષતાઓ",
+  "feedbackAndInformation": "પ્રતિસાદ અને માહિતી",
+  "termsPoliciesLiscenses": "શરતો, નીતિઓ અને લાયસન્સ",
+  "aboutFilmytell": "ફિલ્મિટેલ વિશે",
+  "rateUs": "અમને રેટ કરો",
+  
+
   "logout": "લૉગઆઉટ"
 }

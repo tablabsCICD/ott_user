@@ -710,6 +710,60 @@ abstract class AppLocalizations {
   /// **'Price'**
   String get price;
 
+  /// No description provided for @myCredits.
+  ///
+  /// In en, this message translates to:
+  /// **'My Credits'**
+  String get myCredits;
+
+  /// No description provided for @gifts.
+  ///
+  /// In en, this message translates to:
+  /// **'Gifts'**
+  String get gifts;
+
+  /// No description provided for @giftedMovies.
+  ///
+  /// In en, this message translates to:
+  /// **'Gifted Movies'**
+  String get giftedMovies;
+
+  /// No description provided for @claimGiftCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim Gift Card'**
+  String get claimGiftCard;
+
+  /// No description provided for @features.
+  ///
+  /// In en, this message translates to:
+  /// **'Features'**
+  String get features;
+
+  /// No description provided for @feedbackAndInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback & Information'**
+  String get feedbackAndInformation;
+
+  /// No description provided for @termsPoliciesLiscenses.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms, Policies and Liscenses'**
+  String get termsPoliciesLiscenses;
+
+  /// No description provided for @aboutFilmytell.
+  ///
+  /// In en, this message translates to:
+  /// **'About Filmytell'**
+  String get aboutFilmytell;
+
+  /// No description provided for @rateUs.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate Us'**
+  String get rateUs;
+
   /// No description provided for @logout.
   ///
   /// In en, this message translates to:
