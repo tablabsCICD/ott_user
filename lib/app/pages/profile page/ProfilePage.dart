@@ -733,13 +733,13 @@ class _ProfilePageState extends State<ProfilePage> {
                     fontSize: 14,
                   ),
                 ),
-                Text(
-                  userProvider.userObj.id.toString() ?? '',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 8,
-                  ),
-                ),
+                // Text(
+                //   userProvider.userObj.id.toString() ?? '',
+                //   style: TextStyle(
+                //     color: Colors.white,
+                //     fontSize: 8,
+                //   ),
+                // ),
                 const SizedBox(height: 10),
                 ElevatedButton(
                   onPressed: () {

@@ -203,6 +203,9 @@ class _TrailerPageState extends State<TrailerPage> {
       onTap: _onInteraction,
       onPanDown: (_) => _onInteraction(),
       child: Scaffold(
+        appBar: AppBar(
+          forceMaterialTransparency: true,
+        ),
         backgroundColor: Colors.black,
         body: Stack(
           children: [

@@ -3,9 +3,9 @@
     package="com.example.ott">
 
     <application
-        android:label="ott"
+        android:label="Filmytell"
         android:name="${applicationName}"
-        android:icon="@mipmap/logo">
+        android:icon="@mipmap/ic_launcher">
 
         <activity
             android:name=".MainActivity"

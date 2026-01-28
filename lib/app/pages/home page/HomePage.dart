@@ -133,7 +133,7 @@ class _HomePageState extends State<HomePage> {
 
 // Check if the list is empty
     if (selectedLanguages.isEmpty || selectedLanguages == []) {
-      await getMovieList(dashBoardProvider, selectedType, ["Hindi", "English"]);
+      await getMovieList(dashBoardProvider, selectedType, ["English"]);
     } else {
       await getMovieList(dashBoardProvider, selectedType, selectedLanguages);
     }
@@ -202,7 +202,7 @@ class _HomePageState extends State<HomePage> {
                                                 dashboardData.movies!.isEmpty)
                                             ? SizedBox.shrink()
                                             : SizedBox(
-                                                height: 350,
+                                                height: 300,
                                                 child: ListView.builder(
                                                   scrollDirection:
                                                       Axis.horizontal,
@@ -248,6 +248,7 @@ class _HomePageState extends State<HomePage> {
     final lang = AppLocalizations.of(context)!;
 
     return SliverAppBar(
+      automaticallyImplyLeading: false,
       forceMaterialTransparency:
           ResponsiveWidget.isDesktop(context) ? true : false,
       // expandedHeight: bannerHeight(context),
@@ -266,8 +267,13 @@ class _HomePageState extends State<HomePage> {
                 fontWeight: FontWeight.bold,
               ),
             )
-          : SizedBox(
-              width: 35,
+          : Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(
+                  25,
+                ),
+              ),
+              width: 50,
               child: Hero(
                 tag: "logo",
                 child: InkWell(
@@ -283,7 +289,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       );
                     },
-                    child: Image.asset(ImageConstant.logo3)),
+                    child: Image.asset(ImageConstant.logo)),
               ),
             ),
       titleSpacing: ResponsiveWidget.isTablet(context) ? 50 : 10,

@@ -1,13 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/pages/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/watchlist%20page/playMoviePage.dart';
 import 'package:ott/app/pages/wallet%20page/BillingPage.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
-import 'package:ott/data/models/response/saveUserContent.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:video_player/video_player.dart';
 
@@ -105,7 +104,7 @@ class _MovieCardState extends State<MovieCard> {
           child: Column(
             children: [
               Expanded(
-                flex: 6,
+                flex: 8,
                 child: ClipRRect(
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(12)),
@@ -113,7 +112,7 @@ class _MovieCardState extends State<MovieCard> {
                 ),
               ),
               Expanded(
-                flex: 5,
+                flex: 4,
                 child: _buildContentSection(theme, lang),
               ),
             ],
@@ -204,12 +203,6 @@ class _MovieCardState extends State<MovieCard> {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
-              Text(
-                movie.genreList?.join(', ') ?? 'N/A',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
               Text.rich(
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
@@ -221,17 +214,42 @@ class _MovieCardState extends State<MovieCard> {
                   children: [
                     TextSpan(text: movie.releaseDate ?? ''),
                     const TextSpan(text: ' | '),
-                    TextSpan(text: movie.description ?? ''),
+                    TextSpan(
+                      text: movie.genreList?.join(', ') ?? 'N/A',
+                    ),
                   ],
                 ),
               ),
+              // Text(
+              //   movie.genreList?.join(', ') ?? 'N/A',
+              //   maxLines: 1,
+              //   overflow: TextOverflow.ellipsis,
+              // ),
+              // const SizedBox(height: 4),
+              // Text.rich(
+              //   maxLines: 3,
+              //   overflow: TextOverflow.ellipsis,
+              //   TextSpan(
+              //     style: TextStyle(
+              //       color: theme.canvasColor.withOpacity(0.7),
+              //       fontSize: 12,
+              //     ),
+              //     children: [
+              //       TextSpan(text: movie.releaseDate ?? ''),
+              //       const TextSpan(text: ' | '),
+              //       TextSpan(text: movie.description ?? ''),
+              //     ],
+              //   ),
+              // ),
             ],
           ),
         ),
         Positioned(
           right: 6,
           top: 6,
-          child: _buildPriceButton(theme, lang, price),
+          child: movie.isFeatured == true
+              ? SizedBox()
+              : _buildPriceButton(theme, lang, price),
         ),
       ],
     );
@@ -243,8 +261,11 @@ class _MovieCardState extends State<MovieCard> {
     final isRental = movie.isRental ?? false;
 
     return GestureDetector(
-      onTap: () =>
-          isRental ? _playMovie() : _showCupertinoDialog(context, movie),
+      onTap: () => movie.type!.toLowerCase() == 'series'
+          ? _openDetails()
+          : isRental
+              ? _playMovie()
+              : _showCupertinoDialog(context, movie),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
         decoration: BoxDecoration(
@@ -253,19 +274,21 @@ class _MovieCardState extends State<MovieCard> {
         ),
         child: Row(
           children: [
-            if (!isRental)
-              SizedBox(
-                height: 14,
-                width: 14,
-                child: Image.asset(ImageConstant.coin),
-              ),
-            const SizedBox(width: 4),
+            //if (!isRental)
+            // SizedBox(
+            //   height: 14,
+            //   width: 14,
+            //   child: Image.asset(ImageConstant.coin),
+            // ),
+            //const SizedBox(width: 4),
             Text(
-              isRental
-                  ? movie.type?.toLowerCase() == "movie"
-                      ? lang.watchMovie
-                      : lang.watchSeries
-                  : "$price",
+              movie.type!.toLowerCase() == 'series'
+                  ? 'Watch Series'
+                  : isRental
+                      ? movie.type?.toLowerCase() == "movie"
+                          ? lang.watchMovie
+                          : lang.watchSeries
+                      : "₹ $price",
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
@@ -286,9 +309,14 @@ class _MovieCardState extends State<MovieCard> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => movie.type!.toLowerCase() == 'movie'
-            ? MovieDetailsPage(movieId: movie.id!)
-            : SeriesDetailsPage(seriesId: movie.id!, content: movie),
+        builder: (_) => movie.isFeatured == true
+            ? TrailerPage(
+                trailerUrl: movie.trailerUrl,
+                isTrailerUrl: true,
+                content: movie)
+            : movie.type!.toLowerCase() == 'movie'
+                ? MovieDetailsPage(movieId: movie.id!)
+                : SeriesDetailsPage(seriesId: movie.id!, content: movie),
       ),
     );
   }
@@ -317,15 +345,7 @@ class _MovieCardState extends State<MovieCard> {
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-                height: 15, width: 15, child: Image.asset(ImageConstant.coin)),
-            const SizedBox(width: 4),
-            Text('${movie.price ?? 0}'),
-          ],
-        ),
+        title: Text('₹ ${movie.price ?? 0}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

@@ -77,29 +77,13 @@ class _ShortsPageState extends State<ShortsPage> {
                   12,
                 ),
               ),
-              child: Row(
-                children: [
-                  Hero(
-                    tag: 'coin',
-                    child: SizedBox(
-                      height: 20,
-                      child: Image.asset(
-                        ImageConstant.coin,
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 5,
-                  ),
-                  Text(
-                    coinsBalance.toString(),
-                    style: TextStyle(
-                      color: theme.canvasColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
+              child: Text(
+                "₹ ${coinsBalance ?? 0}",
+                style: TextStyle(
+                  color: theme.canvasColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
             ),
           ),

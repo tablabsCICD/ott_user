@@ -81,20 +81,25 @@ class _WalletPageState extends State<WalletPage> {
                               const Spacer(),
 
                               /// Coin Icon
-                              Hero(
-                                tag: 'coin',
-                                child: Image.asset(
-                                  ImageConstant.coin,
-                                  width: 70,
-                                  height: 70,
-                                ),
+                              // Hero(
+                              //   tag: 'coin',
+                              //   child: Image.asset(
+                              //     ImageConstant.coin,
+                              //     width: 70,
+                              //     height: 70,
+                              //   ),
+                              // ),
+                              Icon(
+                                Icons.account_balance_wallet,
+                                size: 80,
+                                color: Colors.white38,
                               ),
 
                               const SizedBox(height: 6),
 
                               /// Balance
                               Text(
-                                walletProvider.walletBalance.toStringAsFixed(1),
+                                "₹ ${walletProvider.walletBalance.toStringAsFixed(1)}",
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 36,
@@ -195,7 +200,18 @@ class _WalletPageState extends State<WalletPage> {
                       ),
                       child: Row(
                         children: [
-                          Image.asset(ImageConstant.coin, width: 28),
+                          CircleAvatar(
+                            radius: 15,
+                            backgroundColor: theme.scaffoldBackgroundColor,
+                            foregroundColor:
+                                isCredit ? Colors.green : Colors.red,
+                            child: Text(
+                              '₹',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -259,17 +275,6 @@ class _WalletPageState extends State<WalletPage> {
                               fontWeight: FontWeight.bold,
                               color: isCredit ? Colors.green : Colors.red,
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Container(
-                            padding: EdgeInsets.all(1),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isCredit ? Colors.green : Colors.red,
-                              ),
-                            ),
-                            child: Image.asset(ImageConstant.coin, width: 18),
                           ),
                         ],
                       ),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -18,7 +19,9 @@ class PurchaseContentProvider extends ChangeNotifier {
 
   Future<Map<String, Object>> saveUserContent(Content content) async {
     String apiUrl = ApiConstant.saveUserContent;
-    print(apiUrl);
+
+    log("save user content $apiUrl");
+
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
     Map<String, dynamic> mapData = {
       "active": true,
@@ -39,7 +42,7 @@ class PurchaseContentProvider extends ChangeNotifier {
 
     try {
       var response = await apiHelper.postApiWithBody(apiUrl, mapData);
-      print(response);
+      log("save user content ${response.statusCode}");
       if (response.statusCode == 200) {
         Map<String, dynamic> responseBody = json.decode(response.body);
         SavePurchaseContentResponse addUserResponse =

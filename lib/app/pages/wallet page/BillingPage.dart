@@ -89,10 +89,14 @@ class _BillingPageState extends State<BillingPage> {
                       return Column(
                         children: [
                           const Spacer(),
-                          Image.asset(ImageConstant.coin, width: 70),
+                          Icon(
+                            Icons.account_balance_wallet,
+                            size: 80,
+                            color: Colors.white38,
+                          ),
                           const SizedBox(height: 10),
                           Text(
-                            walletProvider.walletBalance.toStringAsFixed(0),
+                            "₹ ${walletProvider.walletBalance.toStringAsFixed(0)}",
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 36,
@@ -134,7 +138,7 @@ class _BillingPageState extends State<BillingPage> {
                           const SizedBox(height: 12),
                           widget.giftCount == 0
                               ? Text(
-                                  "Price: ${moviePrice.toStringAsFixed(0)} Coins",
+                                  "Price: ₹ ${moviePrice.toStringAsFixed(0)} Coins",
                                   style: const TextStyle(fontSize: 16),
                                 )
                               : Text(
@@ -144,7 +148,7 @@ class _BillingPageState extends State<BillingPage> {
                                 ),
                           const SizedBox(height: 6),
                           Text(
-                            "Total: ${totalCoins.toStringAsFixed(0)} Coins",
+                            "Total: ₹ ${totalCoins.toStringAsFixed(0)} Coins",
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -164,11 +168,11 @@ class _BillingPageState extends State<BillingPage> {
                               padding: const EdgeInsets.all(12),
                               child: Row(
                                 children: [
-                                  Image.asset(ImageConstant.coin, width: 22),
-                                  const SizedBox(width: 10),
+                                  // Image.asset(ImageConstant.coin, width: 22),
+                                  //const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
-                                      "Wallet: ${provider.walletBalance.toStringAsFixed(0)} Coins",
+                                      "Wallet: ₹ ${provider.walletBalance.toStringAsFixed(0)} Coins",
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
@@ -311,8 +315,8 @@ class _BillingPageState extends State<BillingPage> {
                                   tx.date ?? 0);
 
                               return ListTile(
-                                leading:
-                                    Image.asset(ImageConstant.coin, width: 22),
+                                // leading:
+                                //     Image.asset(ImageConstant.coin, width: 22),
                                 title: Text(tx.status ?? "NA",
                                     style: const TextStyle(
                                         fontWeight: FontWeight.w600)),
@@ -320,7 +324,7 @@ class _BillingPageState extends State<BillingPage> {
                                     "${tx.reason ?? ''}\n${DateFormat('dd MMM yyyy • hh:mm a').format(date)}"),
                                 isThreeLine: true,
                                 trailing: Text(
-                                  "${isCredit ? "+" : "-"}${tx.amount?.toStringAsFixed(0) ?? "--"}",
+                                  "₹ ${isCredit ? "+" : "-"}${tx.amount?.toStringAsFixed(0) ?? "--"}",
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
