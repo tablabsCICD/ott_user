@@ -15,25 +15,19 @@ class WatchlistPage extends StatefulWidget {
 
 class _WatchlistPageState extends State<WatchlistPage> {
   bool isLoading = true;
+  bool showExpired = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeData();
+    _load();
   }
 
-  Future<void> _initializeData() async {
-    try {
-      final purchaseContentProvider =
-          Provider.of<PurchaseContentProvider>(context, listen: false);
-      await purchaseContentProvider.getPurchaseContent();
-    } catch (e) {
-      debugPrint("Error initializing data: $e");
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
+  Future<void> _load() async {
+    final provider =
+        Provider.of<PurchaseContentProvider>(context, listen: false);
+    await provider.getPurchaseContent();
+    setState(() => isLoading = false);
   }
 
   @override
@@ -42,387 +36,231 @@ class _WatchlistPageState extends State<WatchlistPage> {
     final lang = AppLocalizations.of(context)!;
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        toolbarHeight: 60,
-        forceMaterialTransparency:
-            ResponsiveWidget.isDesktop(context) ? true : false,
+        elevation: 0,
+        backgroundColor: theme.primaryColor,
         centerTitle: true,
         title: Text(
           lang.watchlist,
-          style:
-              TextStyle(color: theme.canvasColor, fontWeight: FontWeight.bold),
-        ), //const Text("Content Purchase History"),
-        backgroundColor: theme.primaryColor,
+          style: TextStyle(
+            color: theme.canvasColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: isLoading
           ? ComingSoonShimmer()
           : Consumer<PurchaseContentProvider>(
-              builder: (context, provider, child) {
-                if (provider.userContentList.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.movie_creation_sharp,
-                          size: 90,
-                          color: theme.canvasColor.withOpacity(0.7),
-                        ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          "No content available.",
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  );
+              builder: (_, provider, __) {
+                final items = provider.userContentList
+                    .where((e) => showExpired ? !e.active! : e.active!)
+                    .toList();
+
+                if (items.isEmpty) {
+                  return _emptyState(theme);
                 }
 
-                return CustomScrollView(
-                  slivers: [
-                    SliverPadding(
-                      padding: const EdgeInsets.all(16.0),
-                      sliver: SliverGrid(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final content = provider.userContentList[index];
-                            final item = content.movie;
-
-                            if (item == null) {
-                              return const Center(
-                                child: Text("Invalid content data."),
-                              );
-                            }
-
-                            final fromDate =
-                                DateTime.fromMillisecondsSinceEpoch(
-                                    content.dateFrom ?? 0);
-                            final toDate = DateTime.fromMillisecondsSinceEpoch(
-                                content.dateTo ?? 0);
-
-                            return Card(
-                              elevation: 5,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                              child: InkWell(
-                                onTap: content.active == false
-                                    ? null
-                                    : () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => PlayMediaPage(
-                                              title: item.title ?? '',
-                                              mediaId: item.id ?? 0,
-                                              videoUrl: item.contentUrl ?? '',
-                                              content: item,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                child: Stack(
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(15),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          // Poster
-                                          Expanded(
-                                            flex: 6,
-                                            child: item.posterUrlList
-                                                        ?.isNotEmpty ==
-                                                    true
-                                                ? Image.network(
-                                                    item.posterUrlList![0],
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (context,
-                                                            error,
-                                                            stackTrace) =>
-                                                        Container(
-                                                      color:
-                                                          Colors.grey.shade300,
-                                                      child: const Icon(
-                                                        Icons.broken_image,
-                                                        color: Colors.red,
-                                                        size: 50,
-                                                      ),
-                                                    ),
-                                                  )
-                                                : Container(
-                                                    color: Colors.grey.shade300,
-                                                    child: const Icon(
-                                                      Icons.broken_image,
-                                                      color: Colors.red,
-                                                      size: 50,
-                                                    ),
-                                                  ),
-                                          ),
-                                          Expanded(
-                                            flex: 5,
-                                            child: SingleChildScrollView(
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(12.0),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      item.title ??
-                                                          "Unknown Title",
-                                                      style: TextStyle(
-                                                        color:
-                                                            theme.canvasColor,
-                                                        fontSize: 16,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                    Text.rich(
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      TextSpan(
-                                                          style: TextStyle(
-                                                            color: theme
-                                                                .canvasColor,
-                                                            fontSize: 12,
-                                                          ),
-                                                          children: [
-                                                            TextSpan(
-                                                              text: 'Access: ',
-                                                              style: TextStyle(
-                                                                color: theme
-                                                                    .primaryColor,
-                                                              ),
-                                                            ),
-                                                            TextSpan(
-                                                              text:
-                                                                  item.rentlDuration ??
-                                                                      '',
-                                                            )
-                                                          ]),
-                                                    ),
-                                                    Text.rich(
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      TextSpan(
-                                                          style: TextStyle(
-                                                            color: theme
-                                                                .canvasColor,
-                                                            fontSize: 12,
-                                                          ),
-                                                          children: [
-                                                            TextSpan(
-                                                              text:
-                                                                  'Date From: ',
-                                                              style: TextStyle(
-                                                                color: theme
-                                                                    .primaryColor,
-                                                              ),
-                                                            ),
-                                                            TextSpan(
-                                                              text: fromDate
-                                                                  .toLocal()
-                                                                  .toString()
-                                                                  .split(
-                                                                      ' ')[0],
-                                                            )
-                                                          ]),
-                                                    ),
-                                                    Text.rich(
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      TextSpan(
-                                                          style: TextStyle(
-                                                            color: theme
-                                                                .canvasColor,
-                                                            fontSize: 12,
-                                                          ),
-                                                          children: [
-                                                            TextSpan(
-                                                              text: 'Date To: ',
-                                                              style: TextStyle(
-                                                                color: theme
-                                                                    .primaryColor,
-                                                              ),
-                                                            ),
-                                                            TextSpan(
-                                                              text: toDate
-                                                                  .toLocal()
-                                                                  .toString()
-                                                                  .split(
-                                                                      ' ')[0],
-                                                            )
-                                                          ]),
-                                                    ),
-                                                    Divider(
-                                                      color: theme.primaryColor
-                                                          .withOpacity(0.5),
-                                                    ),
-                                                    Text.rich(
-                                                      maxLines: 4,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      TextSpan(
-                                                          style: TextStyle(
-                                                            color: theme
-                                                                .canvasColor
-                                                                .withOpacity(
-                                                                    0.7),
-                                                            fontSize: 12,
-                                                          ),
-                                                          children: [
-                                                            TextSpan(
-                                                              text:
-                                                                  item.releaseDate ??
-                                                                      '',
-                                                              style: TextStyle(
-                                                                color: theme
-                                                                    .canvasColor,
-                                                                fontSize: 12,
-                                                              ),
-                                                            ),
-                                                            TextSpan(
-                                                              text: ' | ',
-                                                              style: TextStyle(
-                                                                color: theme
-                                                                    .canvasColor
-                                                                    .withOpacity(
-                                                                        0.7),
-                                                                fontSize: 14,
-                                                              ),
-                                                            ),
-                                                            TextSpan(
-                                                              text:
-                                                                  item.description ??
-                                                                      '',
-                                                              style: TextStyle(
-                                                                overflow:
-                                                                    TextOverflow
-                                                                        .ellipsis,
-                                                                fontSize: 12,
-                                                                color: theme
-                                                                    .canvasColor
-                                                                    .withOpacity(
-                                                                        0.7),
-                                                              ),
-                                                            )
-                                                          ]),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Positioned(
-                                      right: 5,
-                                      top: 1,
-                                      child: Text(
-                                        content.remainingDays! > 0
-                                            ? "Expires in ${content.remainingDays} days"
-                                            : content.remainingDays! == 0
-                                                ? "Expires In Today"
-                                                : "Expired",
-                                        style: TextStyle(
-                                          backgroundColor: Colors.black26,
-                                          color: content.remainingDays! > 0
-                                              ? Colors.green
-                                              : Colors.red,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    Positioned(
-                                      top: 5,
-                                      left: 5,
-                                      child: content.isGifted!
-                                          ? Container(
-                                              padding: EdgeInsets.symmetric(
-                                                  vertical: 0.5, horizontal: 3),
-                                              decoration: BoxDecoration(
-                                                color: theme.primaryColor,
-                                                borderRadius:
-                                                    BorderRadius.circular(
-                                                  10,
-                                                ),
-                                              ),
-                                              child: Text(
-                                                'Gifted',
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            )
-                                          : SizedBox(),
-                                    ),
-                                    if (content.active == false)
-                                      Positioned.fill(
-                                        child: Container(
-                                          padding: const EdgeInsets.all(8),
-                                          alignment: Alignment.center,
-                                          decoration: BoxDecoration(
-                                            color: theme.cardColor
-                                                .withOpacity(0.7),
-                                            borderRadius:
-                                                BorderRadius.circular(15),
-                                          ),
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 4, horizontal: 8),
-                                            decoration: BoxDecoration(
-                                              color: theme
-                                                  .scaffoldBackgroundColor
-                                                  .withOpacity(0.4),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
-                                            child: Text(
-                                              "Expired",
-                                              style: TextStyle(
-                                                color: theme.primaryColor,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 14,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                          childCount: provider.userContentList.length,
-                        ),
+                return Column(
+                  children: [
+                    _segmentedToggle(theme),
+                    Expanded(
+                      child: GridView.builder(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        itemCount: items.length,
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount:
-                              ResponsiveWidget.isMobile(context) ? 2 : 4,
-                          mainAxisSpacing: 8.0,
-                          crossAxisSpacing: 8.0,
-                          childAspectRatio: 2 / 3,
+                              ResponsiveWidget.isMobile(context) ? 1 : 3,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 16 / 9, // 🔒 fixed
                         ),
+                        itemBuilder: (_, i) => _netflixCard(context, items[i]),
                       ),
                     ),
                   ],
                 );
               },
             ),
+    );
+  }
+
+  // 🔁 Netflix-style segmented control
+  Widget _segmentedToggle(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Container(
+        height: 40,
+        width: ResponsiveWidget.isMobile(context) ? double.infinity : 400,
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          children: [
+            _segment(theme, false, "Available"),
+            _segment(theme, true, "Expired"),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _segment(ThemeData theme, bool value, String label) {
+    final selected = showExpired == value;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => showExpired = value),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          decoration: BoxDecoration(
+            color: selected ? theme.primaryColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.white : theme.canvasColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 🎬 Netflix / Hotstar Card
+  Widget _netflixCard(BuildContext context, dynamic content) {
+    final theme = Theme.of(context);
+    final item = content.movie;
+    if (item == null) return const SizedBox();
+
+    return GestureDetector(
+      onTap: content.active
+          ? () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => PlayMediaPage(
+                    title: item.title ?? '',
+                    mediaId: item.id ?? 0,
+                    videoUrl: item.contentUrl ?? '',
+                    content: item,
+                  ),
+                ),
+              );
+            }
+          : null,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            // 🎞 Poster
+            Positioned.fill(
+              child: Image.network(
+                item.posterUrlList?.first ?? '',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(color: Colors.black26),
+              ),
+            ),
+
+            // 🌑 Gradient overlay
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black54,
+                      Colors.black87,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // 📄 Title + Duration
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 12,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.schedule,
+                          size: 12, color: Colors.white70),
+                      const SizedBox(width: 4),
+                      Text(
+                        item.rentlDuration ?? 'NA',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // ❌ Expired overlay
+            if (!content.active)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withOpacity(0.55),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    "Expired",
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _emptyState(ThemeData theme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.video_library_outlined,
+              size: 80, color: theme.canvasColor.withOpacity(0.6)),
+          const SizedBox(height: 12),
+          Text(
+            "No content found",
+            style: TextStyle(
+              color: theme.canvasColor,
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

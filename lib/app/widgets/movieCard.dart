@@ -1,13 +1,19 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/pages/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/watchlist%20page/playMoviePage.dart';
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
+import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:ott/data/models/content.dart';
@@ -108,7 +114,7 @@ class _MovieCardState extends State<MovieCard> {
                 child: ClipRRect(
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(12)),
-                  child: _buildMediaPreview(posterUrl, theme),
+                  child: _buildMediaPreview(posterUrl, theme, widget.movie),
                 ),
               ),
               Expanded(
@@ -122,7 +128,8 @@ class _MovieCardState extends State<MovieCard> {
     );
   }
 
-  Widget _buildMediaPreview(String? posterUrl, ThemeData theme) {
+  Widget _buildMediaPreview(
+      String? posterUrl, ThemeData theme, Content content) {
     if (_isHovered && _isVideoInitialized && _videoController != null) {
       return AspectRatio(
         aspectRatio: 19 / 8,
@@ -148,29 +155,35 @@ class _MovieCardState extends State<MovieCard> {
                 ),
                 onPressed: _toggleMute,
               ),
-            )
+            ),
+            _actionButtons(context, content)
           ],
         ),
       );
     }
 
-    return posterUrl != null
-        ? Image.network(
-            posterUrl,
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
-            errorBuilder: (_, __, ___) => Icon(
-              Icons.broken_image,
-              color: theme.canvasColor.withOpacity(0.3),
-              size: 40,
-            ),
-          )
-        : Icon(
-            Icons.broken_image,
-            color: theme.canvasColor.withOpacity(0.3),
-            size: 40,
-          );
+    return Stack(
+      children: [
+        posterUrl != null
+            ? Image.network(
+                posterUrl,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (_, __, ___) => Icon(
+                  Icons.broken_image,
+                  color: theme.canvasColor.withOpacity(0.3),
+                  size: 40,
+                ),
+              )
+            : Icon(
+                Icons.broken_image,
+                color: theme.canvasColor.withOpacity(0.3),
+                size: 40,
+              ),
+        _actionButtons(context, content)
+      ],
+    );
   }
 
   Widget _buildContentSection(ThemeData theme, AppLocalizations lang) {
@@ -186,10 +199,21 @@ class _MovieCardState extends State<MovieCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              StarRatingWidget(
-                rating: rating,
-                starSize: 16,
-                textSize: 16,
+              Row(
+                children: [
+                  StarRatingWidget(
+                    rating: rating,
+                  ),
+                  Text(
+                    " (${movie.ratingCount ?? 0})",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.canvasColor.withOpacity(0.7),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
               Text(
@@ -204,7 +228,7 @@ class _MovieCardState extends State<MovieCard> {
               ),
               const SizedBox(height: 2),
               Text.rich(
-                maxLines: 3,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 TextSpan(
                   style: TextStyle(
@@ -220,27 +244,6 @@ class _MovieCardState extends State<MovieCard> {
                   ],
                 ),
               ),
-              // Text(
-              //   movie.genreList?.join(', ') ?? 'N/A',
-              //   maxLines: 1,
-              //   overflow: TextOverflow.ellipsis,
-              // ),
-              // const SizedBox(height: 4),
-              // Text.rich(
-              //   maxLines: 3,
-              //   overflow: TextOverflow.ellipsis,
-              //   TextSpan(
-              //     style: TextStyle(
-              //       color: theme.canvasColor.withOpacity(0.7),
-              //       fontSize: 12,
-              //     ),
-              //     children: [
-              //       TextSpan(text: movie.releaseDate ?? ''),
-              //       const TextSpan(text: ' | '),
-              //       TextSpan(text: movie.description ?? ''),
-              //     ],
-              //   ),
-              // ),
             ],
           ),
         ),
@@ -397,5 +400,233 @@ class _MovieCardState extends State<MovieCard> {
         ],
       ),
     );
+  }
+
+  Widget _actionButtons(BuildContext context, Content movie) {
+    final theme = Theme.of(context);
+    final TextEditingController _countController = TextEditingController();
+    double iconSize = ResponsiveWidget.isMobile(context) ? 18 : 20;
+
+    return Positioned(
+        bottom: 5,
+        right: 5,
+        child: Column(
+          children: [
+            GestureDetector(
+              onTap: () => _shareMovie(context, movie),
+              child: Tooltip(
+                message: "Share Movie",
+                child: Container(
+                  padding: EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: theme.primaryColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.share,
+                    size: iconSize,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 5,
+            ),
+            movie.type!.toLowerCase() == "series"
+                ? SizedBox()
+                : GestureDetector(
+                    onTap: () => showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (context) {
+                        return Dialog(
+                          backgroundColor: theme.cardColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          insetPadding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 24),
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: SizedBox(
+                              width: ResponsiveWidget.isMobile(context)
+                                  ? double.infinity
+                                  : 400,
+                              child: Stack(
+                                children: [
+                                  Positioned(
+                                    top: 1,
+                                    left: 1,
+                                    right: 1,
+                                    bottom: 1,
+                                    child: Icon(
+                                      LucideIcons.gift,
+                                      size: 200,
+                                      color: theme.canvasColor.withOpacity(0.1),
+                                    ),
+                                  ),
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Header
+                                      Row(
+                                        children: [
+                                          Icon(LucideIcons.gift,
+                                              color: theme.primaryColor,
+                                              size: 28),
+                                          const SizedBox(width: 10),
+                                          Text(
+                                            "Gift This Movie",
+                                            style: theme.textTheme.titleLarge
+                                                ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 16),
+
+                                      // Description
+                                      Text(
+                                        "Enter how many people you’d like to gift this movie to.",
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                          color: theme.canvasColor,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+
+                                      // Input field
+                                      CustomTextField(
+                                        backgroundColor:
+                                            theme.scaffoldBackgroundColor,
+                                        isDigits: true,
+                                        controller: _countController,
+                                        hintText: "Number of recipients",
+                                        textInputType: TextInputType.number,
+                                      ),
+                                      const SizedBox(height: 24),
+
+                                      // Action buttons
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
+                                        children: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context),
+                                            child: Text(
+                                              "Cancel",
+                                              style: TextStyle(
+                                                  color: theme.canvasColor),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  theme.primaryColor,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 24,
+                                                vertical: 12,
+                                              ),
+                                            ),
+                                            onPressed: () {
+                                              final count = int.tryParse(
+                                                  _countController.text);
+                                              if (count == null || count <= 0) {
+                                                CustomToast.show(context,
+                                                    'Please enter valid number',
+                                                    isSuccess: false);
+                                                return;
+                                              }
+
+                                              Navigator.pop(context);
+                                              // _trailerController.pause?.call();
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      MovieBillingPage(
+                                                    movie: movie,
+                                                    giftCount: count,
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                            child: const Text(
+                                              "Continue",
+                                              style: TextStyle(
+                                                  color: Colors.white),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    child: Tooltip(
+                      message: "Gift Movie",
+                      child: Container(
+                        padding: EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          LucideIcons.gift,
+                          size: iconSize,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+          ],
+        ));
+  }
+
+  void _shareMovie(BuildContext context, Content movie) async {
+    final String shareText = '''
+🎬 ${movie.title ?? ''}
+
+${movie.description ?? ''}
+
+▶️ Watch here:
+${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? ''}
+
+📲 Download OTT Media House App now!
+'''
+        .trim();
+
+    if (kIsWeb) {
+      // Flutter Web fallback → Copy to Clipboard
+      await Clipboard.setData(ClipboardData(text: shareText));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Share text copied to clipboard"),
+        ),
+      );
+    } else {
+      // Android / iOS / Desktop
+      await Share.share(
+        shareText,
+        subject: movie.title ?? "Movie",
+      );
+    }
   }
 }

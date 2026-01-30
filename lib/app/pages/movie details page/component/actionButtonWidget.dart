@@ -22,7 +22,7 @@ class ActionButtonWidget extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: selectedThemeData.primaryColor,
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       icon: Icon(

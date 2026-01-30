@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:chewie/chewie.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:video_player/video_player.dart';
 import 'package:universal_html/html.dart' as html;
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../data/models/content.dart';
 import '../../data/models/response/saveViewHistory.dart';
@@ -30,104 +32,71 @@ class TrailerPage extends StatefulWidget {
 }
 
 class _TrailerPageState extends State<TrailerPage> {
-  VideoPlayerController? _controller;
+  VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
 
   bool _initialized = false;
-  bool _showControls = true;
-  bool _isMuted = false;
-  bool _isFullScreen = false;
   bool _historySaved = false;
-
-  Timer? _hideTimer;
-  Duration _position = Duration.zero;
-  Duration _duration = Duration.zero;
 
   bool get _hasUrl => widget.trailerUrl?.isNotEmpty == true;
 
   @override
   void initState() {
     super.initState();
-    if (_hasUrl) _init();
+    if (_hasUrl) _initPlayer();
   }
 
-  Future<void> _init() async {
-    final c = VideoPlayerController.networkUrl(Uri.parse(widget.trailerUrl!));
-    await c.initialize();
-    c.setLooping(false);
-    c.play(); // autoplay
+  Future<void> _initPlayer() async {
+    _videoController =
+        VideoPlayerController.networkUrl(Uri.parse(widget.trailerUrl!));
 
-    c.addListener(() {
+    await _videoController!.initialize();
+    _videoController!.play();
+
+    _videoController!.addListener(() {
       if (!mounted) return;
 
-      setState(() {
-        _position = c.value.position;
-        _duration = c.value.duration;
-      });
+      // 🔋 wakelock like PlayMediaPage
+      if (_videoController!.value.isPlaying) {
+        WakelockPlus.enable();
+      } else {
+        WakelockPlus.disable();
+      }
 
-      if (c.value.isPlaying && !_historySaved && !widget.isTrailerUrl) {
+      // 👁 save history once (non-trailer playback)
+      if (_videoController!.value.isPlaying &&
+          !_historySaved &&
+          !widget.isTrailerUrl) {
         _historySaved = true;
         _saveHistory();
       }
     });
 
-    setState(() {
-      _controller = c;
-      _initialized = true;
-    });
-
-    _startHideTimer();
-  }
-
-  void _startHideTimer() {
-    _hideTimer?.cancel();
-    _hideTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted) setState(() => _showControls = false);
-    });
-  }
-
-  void _onInteract() {
-    setState(() => _showControls = true);
-    _startHideTimer();
-  }
-
-  void _togglePlay() {
-    final c = _controller;
-    if (c == null) return;
-    c.value.isPlaying ? c.pause() : c.play();
-    setState(() {});
-  }
-
-  void _toggleMute() {
-    final c = _controller;
-    if (c == null) return;
-    _isMuted = !_isMuted;
-    c.setVolume(_isMuted ? 0 : 1);
-    setState(() {});
-  }
-
-  void _seek(int seconds) {
-    final c = _controller;
-    if (c == null) return;
-    final target = (c.value.position.inSeconds + seconds)
-        .clamp(0, c.value.duration.inSeconds);
-    c.seekTo(Duration(seconds: target));
-  }
-
-  void _toggleFullscreen() {
-    _isFullScreen = !_isFullScreen;
-    if (_isFullScreen) {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-      SystemChrome.setPreferredOrientations([
+    _chewieController = ChewieController(
+      videoPlayerController: _videoController!,
+      autoPlay: true,
+      looping: false,
+      allowFullScreen: true,
+      allowMuting: true,
+      allowPlaybackSpeedChanging: true,
+      zoomAndPan: true,
+      showControls: true,
+      materialProgressColors: ChewieProgressColors(
+        playedColor: Colors.redAccent,
+        bufferedColor: Colors.white30,
+        handleColor: Colors.white,
+        backgroundColor: Colors.white12,
+      ),
+      deviceOrientationsOnEnterFullScreen: const [
         DeviceOrientation.landscapeLeft,
         DeviceOrientation.landscapeRight,
-      ]);
-    } else {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-      SystemChrome.setPreferredOrientations([
+      ],
+      deviceOrientationsAfterFullScreen: const [
         DeviceOrientation.portraitUp,
-      ]);
-    }
-    setState(() {});
+      ],
+    );
+
+    setState(() => _initialized = true);
   }
 
   Future<void> _saveHistory() async {
@@ -137,149 +106,102 @@ class _TrailerPageState extends State<TrailerPage> {
 
       final body = {
         "contentId": widget.content.id,
-        "resumeTime": _controller?.value.position.toString() ?? "0:00",
+        "resumeTime": _videoController?.value.position.toString() ?? "0:00",
         "selectedLanguage":
             widget.content.languageList?.first.language ?? "Unknown",
         "userId": user.id,
         "viewDate": DateTime.now().toUtc().toIso8601String(),
       };
 
-      final res =
-          await ApiHelper().postApiWithBody(ApiConstant.saveViewHistory, body);
-
-      if (res.statusCode == 200) {
-        final parsed = SaveViewHistory.fromJson(json.decode(res.body));
-        if (parsed.success != true) {
-          debugPrint("History save failed: ${parsed.message}");
-        }
-      }
-    } catch (e) {
-      debugPrint("History error: $e");
-    }
+      await ApiHelper().postApiWithBody(ApiConstant.saveViewHistory, body);
+    } catch (_) {}
   }
 
   @override
   void dispose() {
-    _hideTimer?.cancel();
-    _controller?.dispose();
+    _videoController?.dispose();
+    _chewieController?.dispose();
+    WakelockPlus.disable();
+
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _onInteract,
-      onPanDown: (_) => _onInteract(),
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: Stack(
-          children: [
-            Center(
-              child: !_hasUrl
-                  ? const Text("No trailer available",
-                      style: TextStyle(color: Colors.white))
-                  : _initialized
-                      ? AspectRatio(
-                          aspectRatio: _controller!.value.aspectRatio,
-                          child: VideoPlayer(_controller!),
-                        )
-                      : CircularProgressIndicator(
-                          color: Theme.of(context).primaryColor,
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: !_hasUrl
+          ? const Center(
+              child: Text("No trailer available",
+                  style: TextStyle(color: Colors.white)),
+            )
+          : !_initialized
+              ? Center(
+                  child: CircularProgressIndicator(
+                  color: Theme.of(context).primaryColor,
+                ))
+              : Stack(
+                  children: [
+                    Center(child: _playerSurface()),
+
+                    // 🔙 Back button overlay
+                    SafeArea(
+                      child: Align(
+                        alignment: Alignment.topLeft,
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back_ios,
+                              color: Colors.white),
+                          onPressed: () => Navigator.pop(context),
                         ),
-            ),
-            if (_showControls) _buildOverlay(),
-          ],
-        ),
-      ),
+                      ),
+                    ),
+                  ],
+                ),
     );
   }
 
-  Widget _buildOverlay() {
-    return SafeArea(
-      child: Container(
-        height: double.infinity,
-        width: double.infinity,
-        color: Colors.black.withOpacity(0.35),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: Icon(_isMuted ? Icons.volume_off : Icons.volume_up,
-                      color: Colors.white),
-                  onPressed: _toggleMute,
-                ),
-                IconButton(
-                  icon: Icon(
-                      _isFullScreen
-                          ? Icons.rotate_90_degrees_ccw
-                          : Icons.rotate_90_degrees_cw,
-                      color: Colors.white),
-                  onPressed: _toggleFullscreen,
-                ),
-              ],
-            ),
-            const Spacer(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                    onPressed: () => _seek(-10),
-                    icon: const Icon(Icons.replay_10, color: Colors.white)),
-                IconButton(
-                  onPressed: _togglePlay,
-                  icon: Icon(
-                    _controller?.value.isPlaying == true
-                        ? Icons.pause_circle_filled
-                        : Icons.play_circle_filled,
-                    size: 48,
-                    color: Colors.white,
-                  ),
-                ),
-                IconButton(
-                    onPressed: () => _seek(10),
-                    icon: const Icon(Icons.forward_10, color: Colors.white)),
-              ],
-            ),
-            Spacer(),
-            _buildProgress(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProgress() {
-    final theme = Theme.of(context);
-
-    String fmt(Duration d) =>
-        "${d.inMinutes.remainder(60).toString().padLeft(2, '0')}:${d.inSeconds.remainder(60).toString().padLeft(2, '0')}";
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
+  Widget _playerSurface() {
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Stack(
         children: [
-          Slider(
-            activeColor: theme.primaryColor,
-            min: 0,
-            max: _duration.inSeconds.toDouble(),
-            value: _position.inSeconds.clamp(0, _duration.inSeconds).toDouble(),
-            onChanged: (v) => _controller?.seekTo(Duration(seconds: v.toInt())),
+          Chewie(controller: _chewieController!),
+
+          /// 🎯 Netflix-style gesture overlay
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onDoubleTapDown: (details) async {
+                final box = context.findRenderObject() as RenderBox;
+                final local = box.globalToLocal(details.globalPosition);
+                final isLeft = local.dx < box.size.width / 2;
+
+                final current = _videoController!.value.position;
+                final duration = _videoController!.value.duration;
+
+                final target = isLeft
+                    ? current - const Duration(seconds: 10)
+                    : current + const Duration(seconds: 10);
+
+                await _videoController!.seekTo(
+                  target < Duration.zero
+                      ? Duration.zero
+                      : target > duration
+                          ? duration
+                          : target,
+                );
+              },
+              onLongPressStart: (_) {
+                _videoController!.setPlaybackSpeed(2.0);
+              },
+              onLongPressEnd: (_) {
+                _videoController!.setPlaybackSpeed(1.0);
+              },
+            ),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(fmt(_position), style: const TextStyle(color: Colors.white)),
-              Text(fmt(_duration), style: const TextStyle(color: Colors.white)),
-            ],
-          )
         ],
       ),
     );

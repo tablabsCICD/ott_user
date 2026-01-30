@@ -68,7 +68,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
 
           return CustomScrollView(
             slivers: [
-              _buildHero(series),
+              _buildHero(series, theme),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.symmetric(
@@ -86,8 +86,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                       const SizedBox(height: 16),
                       ...season.episodes
                           .map((e) => _episodeTile(context, season, e, theme)),
-                      const SizedBox(height: 32),
-                      _buildDetailsSection(context, widget.content),
+                      Divider(),
+                      const SizedBox(height: 26),
+                      _buildDetailsSection(context, widget.content, theme),
                       const SizedBox(height: 32),
                       _buildGallery(widget.content),
                       const SizedBox(height: 60),
@@ -104,7 +105,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
 
   // ---------------- HERO ----------------
 
-  SliverAppBar _buildHero(series) {
+  SliverAppBar _buildHero(series, ThemeData theme) {
     return SliverAppBar(
       pinned: true,
       expandedHeight: ResponsiveWidget.isMobile(context)
@@ -168,7 +169,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                   ),
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -372,11 +373,20 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      ep.posterUrl,
-                      width: 120,
-                      height: 80,
-                      fit: BoxFit.cover,
+                    child: Stack(
+                      alignment: AlignmentGeometry.center,
+                      children: [
+                        Image.network(
+                          ep.posterUrl,
+                          width: 120,
+                          height: 80,
+                          fit: BoxFit.cover,
+                        ),
+                        Icon(
+                          Icons.play_arrow,
+                          color: Colors.white70,
+                        )
+                      ],
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -469,20 +479,21 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     );
   }
 
-  Widget _buildDetailsSection(BuildContext context, Content movie) {
+  Widget _buildDetailsSection(
+      BuildContext context, Content movie, ThemeData theme) {
     final lang = AppLocalizations.of(context)!;
-    TextStyle titleStyle = const TextStyle(
-      color: Colors.white,
+    TextStyle titleStyle = TextStyle(
+      color: theme.canvasColor,
       fontWeight: FontWeight.bold,
     );
-    TextStyle contentStyle = const TextStyle(
-      color: Colors.white70,
+    TextStyle contentStyle = TextStyle(
+      color: theme.canvasColor.withOpacity(0.7),
     );
 
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.white24),
+        border: Border.all(color: theme.canvasColor.withOpacity(0.3)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Table(
@@ -491,7 +502,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           1: FlexColumnWidth(),
         },
         border: TableBorder.symmetric(
-          inside: BorderSide(color: Colors.white12, width: 0.5),
+          inside:
+              BorderSide(color: theme.canvasColor.withOpacity(0.3), width: 0.5),
         ),
         defaultVerticalAlignment: TableCellVerticalAlignment.middle,
         children: [
@@ -516,8 +528,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                   : 'N/A',
               titleStyle,
               contentStyle),
-          _buildTableRow(lang.runtime, movie.runtime?.toString() ?? 'N/A',
-              titleStyle, contentStyle),
+          _buildTableRow(lang.runtime, "${movie.runtime ?? 0} min", titleStyle,
+              contentStyle),
           _buildTableRow(lang.price, movie.price?.toString() ?? 'N/A',
               titleStyle, contentStyle),
           _buildTableRow(
@@ -542,16 +554,6 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
               '${double.parse(
                 (movie.ratings ?? 0.0).toStringAsFixed(1),
               )} ⭐',
-              titleStyle,
-              contentStyle),
-          _buildTableRow(
-              lang.audioFormat,
-              (movie.audioFormatList ?? []).join(', '),
-              titleStyle,
-              contentStyle),
-          _buildTableRow(
-              lang.subtitle,
-              (movie.subtitleLanguageList ?? []).join(', '),
               titleStyle,
               contentStyle),
           _buildTableRow(lang.ageRating, movie.ageRating ?? 'N/A', titleStyle,

@@ -8,6 +8,7 @@ import 'package:ott/app/pages/gifted%20movies%20page/GiftedMoviesPage.dart';
 import 'package:ott/app/pages/help%20support%20page/HelpSupportPage.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/app/pages/profile%20page/component/EditProfilePage.dart';
+import 'package:ott/app/pages/profile%20page/component/about_filmytell_dialog.dart';
 import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/pages/upcoming%20movies%20page/UpcomingPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
@@ -477,7 +478,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ProfileOption(
                                   icon: Icons.info,
                                   title: lang.aboutFilmytell,
-                                  onTap: () {},
+                                  onTap: () {
+                                    AboutFilmytellDialog.show(context);
+                                  },
                                 ),
                                 ProfileOption(
                                   icon: Icons.star,
