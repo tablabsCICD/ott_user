@@ -12,7 +12,7 @@ class ProfileShimmer extends StatelessWidget {
             // 🔵 Profile Header Shimmer
             Container(
               height: 280,
-              width: ResponsiveWidget.isMobile(context) ? double.infinity : 500,
+              width: ResponsiveWidget.isMobile(context) ? double.infinity : 600,
               padding: const EdgeInsets.all(10.0),
               decoration: BoxDecoration(
                 color: Colors.grey.withOpacity(0.2),
@@ -54,36 +54,12 @@ class ProfileShimmer extends StatelessWidget {
             // 🔲 Profile Options List Shimmer
             for (int i = 0; i < 8; i++)
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 5.0, horizontal: 16),
-                child: ListTile(
-                  leading: ShimmerLoader(
-                    height: 50,
-                    width: 50,
-                    borderRadius: 50,
-                  ),
-                  title: ShimmerLoader(
-                    height: 10,
-                    width: 30,
-                    borderRadius: 10,
-                  ),
-                  subtitle: ShimmerLoader(
-                    height: 10,
-                    width: 20,
-                    borderRadius: 10,
-                  ),
-                  trailing: ShimmerLoader(
-                    height: 20,
-                    width: 20,
-                    borderRadius: 50,
-                  ),
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: ShimmerLoader(
+                  height: 100,
+                  width: 600,
+                  borderRadius: 10,
                 ),
-                // ShimmerLoader(
-                //     height: 50,
-                //     width: ResponsiveWidget.isDesktop(context)
-                //         ? 600
-                //         : double.infinity,
-                //     borderRadius: 10),
               ),
 
             const SizedBox(height: 250),

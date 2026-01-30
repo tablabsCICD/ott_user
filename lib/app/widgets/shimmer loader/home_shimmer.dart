@@ -9,8 +9,7 @@ class HomeShimmer extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildShimmerappbar(context),
-          SizedBox(height: 10),
+          SizedBox(height: ResponsiveWidget.isDesktop(context) ? 70 : 120),
           _buildShimmerFilters(),
           SizedBox(height: 30),
           _buildShimmerMovieSection(),
@@ -20,19 +19,6 @@ class HomeShimmer extends StatelessWidget {
           _buildShimmerMovieSection(),
         ],
       ),
-    );
-  }
-
-  // 📌 Filter Buttons Placeholder
-  Widget _buildShimmerappbar(BuildContext context) {
-    return SizedBox(
-      height: ResponsiveWidget.isMobile(context)
-          ? 240
-          : ResponsiveWidget.isTablet(context)
-              ? 360
-              : 380,
-      width: double.infinity,
-      child: ShimmerLoader(),
     );
   }
 

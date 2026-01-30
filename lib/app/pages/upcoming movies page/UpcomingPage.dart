@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/shimmer%20loader/comming_soon_shimmer.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -8,7 +7,7 @@ import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 class UpcomingPage extends StatefulWidget {
-  UpcomingPage({super.key});
+  const UpcomingPage({super.key});
 
   @override
   State<UpcomingPage> createState() => _UpcomingPageState();
@@ -20,21 +19,13 @@ class _UpcomingPageState extends State<UpcomingPage> {
   @override
   void initState() {
     super.initState();
-    _initializeData();
-
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() {
-        isLoading = false;
-      });
-    });
+    _load();
   }
 
-  Future<void> _initializeData() async {
-    final videoProvider = Provider.of<VideoProvider>(context, listen: false);
-    await videoProvider.upcomingContent();
-    setState(() {
-      isLoading = false;
-    });
+  Future<void> _load() async {
+    final provider = Provider.of<VideoProvider>(context, listen: false);
+    await provider.upcomingContent();
+    setState(() => isLoading = false);
   }
 
   @override
@@ -43,216 +34,176 @@ class _UpcomingPageState extends State<UpcomingPage> {
     final lang = AppLocalizations.of(context)!;
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        toolbarHeight: 60,
-        forceMaterialTransparency:
-            ResponsiveWidget.isDesktop(context) ? true : false,
         centerTitle: true,
+        backgroundColor: theme.primaryColor,
+        elevation: 0,
         title: Text(
           lang.upcoming,
-          style:
-              TextStyle(color: theme.canvasColor, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: theme.canvasColor,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        backgroundColor: theme.primaryColor,
       ),
       body: isLoading
           ? ComingSoonShimmer()
           : Consumer<VideoProvider>(
-              builder: (context, provider, child) {
+              builder: (_, provider, __) {
                 if (provider.upcomingContentList.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.movie_creation_sharp,
-                          size: 90,
-                          color: theme.canvasColor.withOpacity(0.7),
-                        ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          "No content available.",
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  );
+                  return _emptyState(theme);
                 }
-                return Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: GridView.builder(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount:
-                          ResponsiveWidget.isMobile(context) ? 2 : 5,
-                      mainAxisSpacing: 16.0,
-                      crossAxisSpacing: 16.0,
-                      childAspectRatio: 27 / 40,
-                    ),
-                    itemCount: provider.upcomingContentList.length,
-                    itemBuilder: (context, index) {
-                      final item = provider.upcomingContentList[index];
-                      return Card(
-                        elevation: 5,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(15),
-                          child: Stack(
-                            children: [
-                              // Background Image
-                              Positioned.fill(
-                                child: Image.network(
-                                  item.posterUrlList![0],
-                                  fit: BoxFit.cover,
-                                  loadingBuilder:
-                                      (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return Center(
-                                      child: CircularProgressIndicator(
-                                        value: loadingProgress
-                                                    .expectedTotalBytes !=
-                                                null
-                                            ? loadingProgress
-                                                    .cumulativeBytesLoaded /
-                                                (loadingProgress
-                                                        .expectedTotalBytes ??
-                                                    1)
-                                            : null,
-                                      ),
-                                    );
-                                  },
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      color: Colors.grey.shade300,
-                                      child: const Center(
-                                        child: Icon(
-                                          Icons.broken_image,
-                                          color: Colors.red,
-                                          size: 50,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
 
-                              // Overlay Details
-                              Positioned.fill(
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Colors.black.withOpacity(0.8),
-                                        Colors.transparent,
-                                      ],
-                                      begin: Alignment.bottomCenter,
-                                      end: Alignment.topCenter,
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              // Content
-                              Positioned(
-                                bottom: 16,
-                                left: 16,
-                                right: 16,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Title
-                                    Text(
-                                      item.title ?? '',
-                                      style:
-                                          theme.textTheme.titleMedium?.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 4.0),
-
-                                    // Description
-                                    Text(
-                                      item.description ?? '',
-                                      style:
-                                          theme.textTheme.bodySmall?.copyWith(
-                                        color: Colors.white70,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 8.0),
-
-                                    // Release Date
-                                    Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.date_range,
-                                          size: 18,
-                                          color: Colors.white70,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          item.releaseDate ?? '',
-                                          style: theme.textTheme.bodySmall
-                                              ?.copyWith(
-                                            color: Colors.white70,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-
-                                    // Action Buttons (Optional)
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        ElevatedButton.icon(
-                                          onPressed: () {
-                                            CustomToast.show(
-                                              context,
-                                              "You'll get a reminder when it releases.",
-                                              isSuccess: true,
-                                            );
-                                          },
-                                          icon: const Icon(
-                                              Icons.notifications_active,
-                                              color: Colors.white,
-                                              size: 16),
-                                          label: Text(
-                                            lang.notifyMe,
-                                            //"You'll Be Notified",
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: theme.primaryColor,
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 4,
-                                              horizontal: 12,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                return GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: provider.upcomingContentList.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: ResponsiveWidget.isMobile(context) ? 1 : 3,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    childAspectRatio: 16 / 9, // 🔒 fixed
                   ),
+                  itemBuilder: (_, index) {
+                    final item = provider.upcomingContentList[index];
+                    return _upcomingCard(context, item);
+                  },
                 );
               },
             ),
+    );
+  }
+
+  // 🎬 Netflix-style upcoming card
+  Widget _upcomingCard(BuildContext context, dynamic item) {
+    final theme = Theme.of(context);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Stack(
+        children: [
+          // 🎞 Poster
+          Positioned.fill(
+            child: Image.network(
+              item.posterUrlList?.first ?? '',
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(color: Colors.black26),
+            ),
+          ),
+
+          // 🌑 Gradient overlay
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black54,
+                    Colors.black87,
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 📄 Content
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 12,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title
+                Text(
+                  item.title ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                // Release date
+                Row(
+                  children: [
+                    const Icon(Icons.date_range,
+                        size: 12, color: Colors.white70),
+                    const SizedBox(width: 4),
+                    Text(
+                      item.releaseDate ?? '',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                // 🔔 Notify Me button
+                SizedBox(
+                  height: 28,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      CustomToast.show(
+                        context,
+                        "You’ll be notified on release day",
+                        isSuccess: true,
+                      );
+                    },
+                    icon: const Icon(
+                      Icons.notifications_active,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                    label: Text(
+                      AppLocalizations.of(context)!.notifyMe,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.primaryColor,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      minimumSize: Size.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyState(ThemeData theme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.upcoming_outlined,
+              size: 80, color: theme.canvasColor.withOpacity(0.6)),
+          const SizedBox(height: 12),
+          Text(
+            "No upcoming content",
+            style: TextStyle(
+              color: theme.canvasColor,
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

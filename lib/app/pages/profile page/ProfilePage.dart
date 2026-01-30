@@ -9,6 +9,7 @@ import 'package:ott/app/pages/help%20support%20page/HelpSupportPage.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/app/pages/profile%20page/component/EditProfilePage.dart';
 import 'package:ott/app/pages/profile%20page/component/about_filmytell_dialog.dart';
+import 'package:ott/app/pages/profile%20page/component/change_language.dart';
 import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/pages/upcoming%20movies%20page/UpcomingPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
@@ -93,82 +94,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: Center(
                         child: Column(
                           children: [
-                            // Container(
-                            //   width: ResponsiveWidget.isMobile(context)
-                            //       ? double.infinity
-                            //       : 400,
-                            //   padding: const EdgeInsets.all(20.0),
-                            //   decoration: BoxDecoration(
-                            //     color: theme.primaryColor,
-                            //     borderRadius: const BorderRadius.only(
-                            //       bottomLeft: Radius.circular(70),
-                            //       bottomRight: Radius.circular(70),
-                            //     ),
-                            //   ),
-                            //   child: Column(
-                            //     children: [
-                            //       Hero(
-                            //         tag: "profile",
-                            //         child: CircleAvatar(
-                            //           radius: 50,
-                            //           backgroundColor:
-                            //               selectedThemeData.cardColor,
-                            //           backgroundImage: userProvider
-                            //                       .userObj.profilePhoto ==
-                            //                   null
-                            //               ? AssetImage(ImageConstant.profile)
-                            //               : userProvider.userObj.profilePhoto!
-                            //                       .isNotEmpty
-                            //                   ? NetworkImage(
-                            //                       userProvider
-                            //                           .userObj.profilePhoto!,
-                            //                     )
-                            //                   : AssetImage(
-                            //                       ImageConstant.profile),
-                            //         ),
-                            //       ),
-                            //       const SizedBox(height: 10),
-                            //       Text(
-                            //         "${userProvider.userObj.firstName ?? 'First Name'} ${userProvider.userObj.lastName ?? 'Last Name'}",
-                            //         style: theme.textTheme.titleLarge?.copyWith(
-                            //           color: Colors.white,
-                            //           fontWeight: FontWeight.bold,
-                            //         ),
-                            //       ),
-                            //       Text(
-                            //         userProvider.userObj.emailId ?? "",
-                            //         style: theme.textTheme.titleSmall?.copyWith(
-                            //           color: Colors.white70,
-                            //         ),
-                            //       ),
-                            //       Text(
-                            //         userProvider.userObj.mobileNumber ?? '',
-                            //         style: theme.textTheme.titleSmall?.copyWith(
-                            //           color: Colors.white70,
-                            //         ),
-                            //       ),
-                            //       const SizedBox(height: 10),
-                            //       ElevatedButton(
-                            //         onPressed: () {
-                            //           Navigator.push(
-                            //             context,
-                            //             MaterialPageRoute(
-                            //               builder: (context) =>
-                            //                   const EditProfilePage(),
-                            //             ),
-                            //           );
-                            //         },
-                            //         child: Text(
-                            //           lang.editProfile,
-                            //           style: TextStyle(
-                            //             color: selectedThemeData.canvasColor,
-                            //           ),
-                            //         ),
-                            //       ),
-                            //     ],
-                            //   ),
-                            // ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 5),
                             profileCard(
                               lang.myCredits,
                               [
@@ -508,7 +434,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               style: const TextStyle(
                                 color: Colors.grey,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 14,
+                                fontSize: 12,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -527,7 +453,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               style: const TextStyle(
                                 color: Colors.grey,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 10,
+                                fontSize: 8,
                               ),
                             ),
                             const SizedBox(height: 20),
@@ -736,20 +662,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     fontSize: 14,
                   ),
                 ),
-                Text(
-                  userProvider.userObj.id.toString(),
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
-                ),
-                // Text(
-                //   userProvider.userObj.id.toString() ?? '',
-                //   style: TextStyle(
-                //     color: Colors.white,
-                //     fontSize: 8,
-                //   ),
-                // ),
                 const SizedBox(height: 10),
                 ElevatedButton(
                   onPressed: () {
@@ -776,7 +688,6 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 }
 
-///////////////////////////// Profile Option Widget /////////////////////////////
 class ProfileOption extends StatefulWidget {
   final IconData icon;
   final String title;
@@ -824,162 +735,6 @@ class _ProfileOptionState extends State<ProfileOption> {
             : null,
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: widget.onTap,
-      ),
-    );
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-class ChangeLanguage extends StatefulWidget {
-  const ChangeLanguage({super.key});
-
-  @override
-  State<ChangeLanguage> createState() => _ChangeLanguageState();
-}
-
-class _ChangeLanguageState extends State<ChangeLanguage> {
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final langProvider = Provider.of<LanguageProvider>(context, listen: false);
-    langProvider.fetchLanguages();
-  }
-
-  void _toggleSelection(String language, LanguageProvider languageProvider) {
-    final List<String> updated = List.from(languageProvider.selectedLanguages);
-
-    if (updated.contains(language)) {
-      updated.remove(language);
-    } else {
-      updated.add(language);
-    }
-
-    languageProvider.updateLanguages(updated);
-  }
-
-  Future<void> _saveLanguages(
-    UserProvider userProvider,
-    LanguageProvider languageProvider,
-  ) async {
-    if (languageProvider.selectedLanguages.isEmpty) {
-      CustomToast.show(context, 'Please select at least one language.',
-          isSuccess: false);
-      return;
-    }
-
-    var result =
-        await userProvider.updateUserLang(languageProvider.selectedLanguages);
-
-    if (result['success'] == true) {
-      CustomToast.show(context, "Language updated successfully.",
-          isSuccess: true);
-
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => NavigationPage(),
-          transitionDuration: Duration.zero,
-          reverseTransitionDuration: Duration.zero,
-        ),
-      );
-    } else {
-      CustomToast.show(context, result['message'].toString(), isSuccess: false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final lang = AppLocalizations.of(context)!;
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final userProvider = Provider.of<UserProvider>(context);
-    final selectedThemeData = themeProvider.getTheme;
-
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon:
-              Icon(Icons.arrow_back_ios, color: selectedThemeData.canvasColor),
-        ),
-        centerTitle: true,
-        backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-        title: Text(
-          lang.selectPreferredLanguage,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: selectedThemeData.canvasColor,
-          ),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Consumer<LanguageProvider>(
-          builder: (context, provider, _) {
-            return Column(
-              children: [
-                Expanded(
-                  child: GridView.builder(
-                    itemCount: provider.allLanguages.length,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount:
-                          ResponsiveWidget.isMobile(context) ? 3 : 6,
-                      crossAxisSpacing: 6,
-                      mainAxisSpacing: 6,
-                      childAspectRatio: 5 / 1.5,
-                    ),
-                    itemBuilder: (context, index) {
-                      final language = provider.allLanguages[index];
-                      final isSelected =
-                          provider.selectedLanguages.contains(language);
-
-                      return ElevatedButton(
-                        onPressed: () => _toggleSelection(language, provider),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isSelected
-                              ? selectedThemeData.primaryColor
-                              : selectedThemeData.cardColor,
-                          foregroundColor: isSelected
-                              ? Colors.white
-                              : selectedThemeData.canvasColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                        child: Text(language, overflow: TextOverflow.ellipsis),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: ResponsiveWidget.isMobile(context)
-                      ? double.infinity
-                      : 400,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: selectedThemeData.primaryColor,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
-                    onPressed: () => _saveLanguages(userProvider, provider),
-                    child: Text(
-                      lang.save,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 30),
-              ],
-            );
-          },
-        ),
       ),
     );
   }

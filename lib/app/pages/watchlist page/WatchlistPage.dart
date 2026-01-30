@@ -238,6 +238,18 @@ class _WatchlistPageState extends State<WatchlistPage> {
                   ),
                 ),
               ),
+            Positioned(
+              child: content.isGifted
+                  ? Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: Text('Gifted'),
+                    )
+                  : SizedBox(),
+            ),
           ],
         ),
       ),
@@ -247,8 +259,10 @@ class _WatchlistPageState extends State<WatchlistPage> {
   Widget _emptyState(ThemeData theme) {
     return Center(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
+          _segmentedToggle(theme),
+          Spacer(),
           Icon(Icons.video_library_outlined,
               size: 80, color: theme.canvasColor.withOpacity(0.6)),
           const SizedBox(height: 12),
@@ -259,6 +273,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
               fontSize: 16,
             ),
           ),
+          Spacer(),
         ],
       ),
     );
