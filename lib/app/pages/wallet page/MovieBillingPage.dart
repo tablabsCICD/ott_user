@@ -15,21 +15,21 @@ import '../../provider/ThemeProvider.dart';
 import '../../provider/dashboardProvider.dart';
 import '../../widgets/show_toast.dart';
 
-class BillingPage extends StatefulWidget {
+class MovieBillingPage extends StatefulWidget {
   final Content movie;
   int giftCount;
 
-  BillingPage({
+  MovieBillingPage({
     super.key,
     required this.movie,
     this.giftCount = 0,
   });
 
   @override
-  State<BillingPage> createState() => _BillingPageState();
+  State<MovieBillingPage> createState() => _MovieBillingPageState();
 }
 
-class _BillingPageState extends State<BillingPage> {
+class _MovieBillingPageState extends State<MovieBillingPage> {
   double moviePrice = 0.0;
   DateTime? _startDate;
   DateTime? _endDate;

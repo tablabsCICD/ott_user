@@ -7,7 +7,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/movie%20details%20page/component/AutoScrollingPosters.dart';
 import 'package:ott/app/pages/DisplayTrailer.dart';
-import 'package:ott/app/pages/wallet%20page/BillingPage.dart';
+import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
 import 'package:ott/app/pages/movie%20details%20page/component/actionButtonWidget.dart';
 import 'package:ott/app/provider/ThemeProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
@@ -19,6 +19,7 @@ import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:video_player/video_player.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../widgets/show_toast.dart';
 import '../watchlist page/playMoviePage.dart';
@@ -36,6 +37,8 @@ class MovieDetailsPage extends StatefulWidget {
 
 class _MovieDetailsPageState extends State<MovieDetailsPage> {
   bool isLoading = true;
+  final TrailerPreviewController _trailerController =
+      TrailerPreviewController();
 
   @override
   void initState() {
@@ -87,7 +90,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     );
 
     return isLoading
-        ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+        ? Scaffold(
+            body: Center(
+                child: CircularProgressIndicator(
+            color: Theme.of(context).primaryColor,
+          )))
         : Scaffold(
             backgroundColor: selectedThemeData.scaffoldBackgroundColor,
             extendBodyBehindAppBar: true,
@@ -115,7 +122,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 final content = provider.content;
 
                 if (content == null) {
-                  return const Center(child: CircularProgressIndicator());
+                  return Center(
+                      child: CircularProgressIndicator(
+                    color: Theme.of(context).primaryColor,
+                  ));
                 }
 
                 return Stack(
@@ -126,8 +136,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                         : _buildMobileView(
                             content, selectedThemeData, controller),
                     Positioned(
-                      top: 100,
-                      right: 5,
+                      bottom: 50,
+                      right: 10,
                       child: IconButton(
                         tooltip: 'Share Movie',
                         style: IconButton.styleFrom(
@@ -233,40 +243,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                       ],
                     ),
                     const SizedBox(height: 10),
-                    // (content.posterUrlList != null &&
-                    //         content.posterUrlList!.isNotEmpty)
-                    //     ? Row(
-                    //         children: [
-                    //           Expanded(
-                    //             child: SizedBox(
-                    //               width: double.infinity,
-                    //               child: AutoScrollingPosters(
-                    //                 imageUrls: [
-                    //                   if (content.posterUrlList != null &&
-                    //                       content.posterUrlList!.isNotEmpty)
-                    //                     content.posterUrlList!.length > 0
-                    //                         ? content.posterUrlList![0]
-                    //                         : "",
-                    //                   if (content.posterUrlList!.length > 1)
-                    //                     content.posterUrlList![1],
-                    //                   if (content.posterUrlList!.length > 2)
-                    //                     content.posterUrlList![2],
-                    //                 ],
-                    //                 height: 200,
-                    //                 aspectRatio: 16 / 8,
-                    //               ),
-                    //             ),
-                    //           ),
-                    //         ],
-                    //       )
-                    //     : SizedBox.shrink(),
                     const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         _buildButtons(context, content),
-                        //_buildShareButton(context, content),
-                        //_buildGifting(context, content),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -330,6 +311,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                     TrailerPreview(
                       trailerUrl: content.trailerUrl,
                       content: content,
+                      controller: _trailerController,
                     ),
                   ],
                 ),
@@ -343,6 +325,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
 
   Widget _buildMobileView(Content content, ThemeData selectedThemeData,
       YoutubePlayerController controller) {
+    VideoPlayerController? _videoController =
+        VideoPlayerController.networkUrl(Uri.parse(content.trailerUrl!));
+
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -365,31 +350,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(height: 120),
-              // Row(
-              //   mainAxisAlignment: MainAxisAlignment.center,
-              //   children: [
-              //     StarRatingWidget(
-              //       rating: double.parse(
-              //         (content.ratings ?? 0.0).toStringAsFixed(1),
-              //       ),
-              //       starSize: 20,
-              //       textSize: 16,
-              //     ),
-              //     const SizedBox(width: 4),
-              //     Text(
-              //       '(${content.ratingCount ?? '0'} reviews)',
-              //       style: const TextStyle(
-              //         fontSize: 14,
-              //         color: Colors.white70,
-              //       ),
-              //     ),
-              //     Spacer(),
-              //     _ageRating(content.ageRating ?? ""),
-              //   ],
-              // ),
               TrailerPreview(
                 trailerUrl: content.trailerUrl,
                 content: content,
+                controller: _trailerController,
               ),
               SizedBox(height: 30),
               Text(
@@ -654,10 +618,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                                     }
 
                                     Navigator.pop(context);
+                                    _trailerController.pause?.call();
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => BillingPage(
+                                        builder: (context) => MovieBillingPage(
                                           movie: movie,
                                           giftCount: count,
                                         ),
@@ -690,23 +655,6 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // ResponsiveWidget.isDesktop(context)
-        //     ? SizedBox()
-        //     : ActionButtonWidget(
-        //         label: lang.watchTrailer,
-        //         icon: Icons.play_circle_fill,
-        //         onTap: () {
-        //           Navigator.push(
-        //             context,
-        //             MaterialPageRoute(
-        //               builder: (context) => TrailerPreview(
-        //                 trailerUrl: movie.trailerUrl,
-        //                 content: movie,
-        //               ),
-        //             ),
-        //           );
-        //         },
-        //       ),
         _buildGifting(context, movie),
         const SizedBox(width: 20),
         movie.isRental == false
@@ -728,6 +676,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                     : lang.watchSeries,
                 icon: Icons.play_circle_fill,
                 onTap: () {
+                  _trailerController.pause?.call();
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -841,6 +790,7 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
             ),
           ),
           onPressed: () {
+            //_trailerController.pause?.call();
             Navigator.of(context).pop(); // Close the dialog
           },
           child: Text(lang.cancel),
@@ -855,11 +805,12 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
             ),
           ),
           onPressed: () {
+            _trailerController.pause?.call();
             Navigator.of(context).pop(); // Close the dialog
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => BillingPage(
+                builder: (context) => MovieBillingPage(
                   movie: movie,
                 ),
               ),

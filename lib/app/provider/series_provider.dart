@@ -1,99 +1,141 @@
 import 'dart:convert';
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:ott/app/core/constant/api_constant.dart';
-import 'package:ott/data/models/response/series_details.dart';
+import 'package:ott/app/core/network/api_helper.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
+import 'package:ott/data/models/response/SeriesDetailsResponse.dart';
+import 'package:ott/data/models/seriesModel.dart';
+import 'package:ott/data/models/user.dart';
 
-class SeriesProvider extends ChangeNotifier {
-  SeriesDetailsResponse? _data;
-  bool _loading = false;
+class SeriesProvider with ChangeNotifier {
+  final ApiHelper _apiHelper = ApiHelper();
+
+  bool _isLoading = false;
   String? _error;
+  SeriesEntity? _series;
 
-  final Set<int> _purchasedEpisodes = {};
-  final Set<int> _purchasedSeasons = {};
-
-  bool get loading => _loading;
+  bool get isLoading => _isLoading;
   String? get error => _error;
-  SeriesDetailsResponse? get data => _data;
+  SeriesEntity? get series => _series;
 
-  bool isEpisodeUnlocked(Episode ep) =>
-      ep.free || _purchasedEpisodes.contains(ep.id);
+  Future<void> fetchSeriesDetails(int seriesId) async {
+    User? user = await LocalSharePreferences.localSharePreferences.getUser();
 
-  bool isSeasonUnlocked(int seasonId) => _purchasedSeasons.contains(seasonId);
-
-  Future<void> loadSeries(int seriesId) async {
-    _loading = true;
+    _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final url = Uri.parse(ApiConstant.seriesDetails(seriesId));
-      final res = await http.get(url);
+      final url = ApiConstant.seriesDetails(seriesId, user!.id);
+      log('📡 Fetch Series URL: $url');
 
-      if (res.statusCode == 200) {
-        final jsonMap = jsonDecode(utf8.decode(res.bodyBytes));
-        _data = SeriesDetailsResponse.fromJson(jsonMap);
-      } else {
-        _error = "Failed to load series (${res.statusCode})";
-      }
-    } catch (e) {
-      _error = "Unable to load series";
+      final response = await _apiHelper.getApi(url);
+      log('📥 Fetch Series Raw Response: ${response.body}');
+
+      final Map<String, dynamic> json =
+          jsonDecode(response.body) as Map<String, dynamic>;
+
+      log('🧩 Parsed Series JSON Keys: ${json.keys}');
+
+      final data = SeriesDetailsResponse.fromJson(json);
+      _series = data.toEntity();
+
+      log('✅ Series Loaded: ${_series?.title}');
+      log('🎬 Seasons Count: ${_series?.seasons.length}');
+    } catch (e, st) {
+      log('❌ SeriesProvider.fetchSeriesDetails Error: $e', stackTrace: st);
+      _error = e.toString();
     } finally {
-      _loading = false;
+      _isLoading = false;
       notifyListeners();
+      log('🔄 fetchSeriesDetails completed');
     }
   }
 
-  Future<String> purchaseEpisode({
-    required int episodeId,
-    required int userId,
-  }) async {
-    final url = Uri.parse(
-      "${ApiConstant.baseUrl}/ott/series/purchase/episode?episodeId=$episodeId&userId=$userId",
-    );
+  Future<bool> purchaseEpisode(int episodeId, int seriesId) async {
+    User? user = await LocalSharePreferences.localSharePreferences.getUser();
 
-    final res = await http.put(url);
-    final json = jsonDecode(res.body);
+    try {
+      final url = ApiConstant.purchaseEpisode(episodeId, user!.id);
+      log('🛒 Purchase Episode URL: $url');
 
-    if (json['success'] == true) {
-      _purchasedEpisodes.add(episodeId);
-      notifyListeners();
-      return json['data']['message'];
-    } else {
-      return json['message'];
-    }
-  }
+      final response = await _apiHelper.putApi(url);
 
-  Future<String> purchaseSeason({
-    required int seasonId,
-    required int userId,
-    required List<Episode> episodes,
-  }) async {
-    final url = Uri.parse(
-      "${ApiConstant.baseUrl}/ott/series/purchase/season?seasonId=$seasonId&userId=$userId",
-    );
+      log('📥 Status: ${response.statusCode}');
+      log('📥 Raw: ${response.body}');
 
-    final res = await http.put(url);
-    final json = jsonDecode(res.body);
-
-    if (json['success'] == true) {
-      _purchasedSeasons.add(seasonId);
-      for (final ep in episodes) {
-        _purchasedEpisodes.add(ep.id);
+      if (response.statusCode != 200) {
+        _error =
+            'Server error (${response.statusCode}). Please try again later.';
+        notifyListeners();
+        return false;
       }
+
+      final Map<String, dynamic> json =
+          jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (json['success'] == true || json['isSuccess'] == true) {
+        log('✅ Episode purchased: $episodeId');
+        await fetchSeriesDetails(seriesId);
+        return true;
+      }
+
+      _error = json['message'] ?? 'Purchase failed';
       notifyListeners();
-      return json['data']['message'];
-    } else {
-      return json['message'];
+      return false;
+    } catch (e, st) {
+      log('❌ purchaseEpisode exception: $e', stackTrace: st);
+      _error = 'Something went wrong. Please try again.';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> purchaseSeason(int seasonId, int seriesId) async {
+    User? user = await LocalSharePreferences.localSharePreferences.getUser();
+
+    try {
+      final url = ApiConstant.purchaseSeason(seasonId, user!.id);
+      log('🛒 Purchase Episode URL: $url');
+
+      final response = await _apiHelper.putApi(url);
+
+      log('📥 Status: ${response.statusCode}');
+      log('📥 Raw: ${response.body}');
+
+      if (response.statusCode != 200) {
+        _error =
+            'Server error (${response.statusCode}). Please try again later.';
+        notifyListeners();
+        return false;
+      }
+
+      final Map<String, dynamic> json =
+          jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (json['success'] == true || json['isSuccess'] == true) {
+        log('✅ Episode purchased: $seasonId');
+        await fetchSeriesDetails(seriesId);
+        return true;
+      }
+
+      _error = json['message'] ?? 'Purchase failed';
+      notifyListeners();
+      return false;
+    } catch (e, st) {
+      log('❌ purchaseSeason exception: $e', stackTrace: st);
+      _error = 'Something went wrong. Please try again.';
+      notifyListeners();
+      return false;
     }
   }
 
   void clear() {
-    _data = null;
+    log('🧹 Clearing SeriesProvider state');
+    _series = null;
     _error = null;
-    _loading = false;
-    _purchasedEpisodes.clear();
-    _purchasedSeasons.clear();
     notifyListeners();
   }
 }

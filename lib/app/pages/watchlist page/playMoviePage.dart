@@ -1,24 +1,16 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:ott/app/core/constant/api_constant.dart';
-import 'package:ott/app/pages/movie%20details%20page/component/starRating.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
-import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
-import 'package:ott/app/provider/ThemeProvider.dart';
-import 'package:ott/app/provider/dashboardProvider.dart';
-import 'package:ott/app/provider/videoProvider.dart';
-import 'package:ott/app/widgets/StarRatingWidget.dart';
-import 'package:ott/app/widgets/show_toast.dart';
-import 'package:ott/data/models/content.dart';
-import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 
-
+import 'package:ott/app/core/constant/api_constant.dart';
+import 'package:ott/app/provider/ThemeProvider.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/data/models/content.dart';
 import '../../core/utils/sharepreferences.dart';
 
 class PlayMediaPage extends StatefulWidget {
@@ -40,211 +32,157 @@ class PlayMediaPage extends StatefulWidget {
 }
 
 class _PlayMediaPageState extends State<PlayMediaPage> {
-  bool _isLoading = true;
-
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchData();
+
+    _initPlayer();
     _addViewApi();
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) setState(() => _isLoading = false);
-    });
   }
 
-  Future<void> _addViewApi() async {
-    try {
-      final localSharePreferences = LocalSharePreferences();
-      final user = await localSharePreferences.getUser();
+  Future<void> _initPlayer() async {
+    if (_videoController != null) return;
 
-      if (user == null || user.id == null) {
-        debugPrint("View API skipped → User not found");
-        return;
-      }
+    _videoController = VideoPlayerController.networkUrl(
+      Uri.parse(widget.videoUrl),
+    );
 
-      if (widget.mediaId == null || widget.mediaId <= 0) {
-        debugPrint("View API skipped → Invalid mediaId");
-        return;
-      }
+    await _videoController!.initialize();
 
-      final bool isSeries = widget.content?.type?.toLowerCase() == "series";
-
-      final String url = isSeries
-          ? ApiConstant.addViewForEpisode(widget.mediaId, user.id!)
-          : ApiConstant.addViewForMovie(widget.mediaId, user.id!);
-
-      debugPrint("View API URL → $url");
-
-      final response = await http.post(Uri.parse(url));
-
-      if (response.statusCode == 200) {
-        final body = json.decode(response.body);
-        debugPrint("View API Success → ${body['message']}");
-      } else {
-        debugPrint(
-            "View API Failed → ${response.statusCode} → ${response.body}");
-      }
-    } catch (e, s) {
-      debugPrint("View API Error → $e");
-      debugPrint("Stack → $s");
-    }
-  }
-
-  Future<void> _fetchData() async {
-    if (widget.content != null) {
-      await Provider.of<DashboardProvider>(context, listen: false)
-          .getContentById(widget.content!.id!);
-    }
-
-    await Provider.of<VideoProvider>(context, listen: false)
-        .getRatingReview(widget.mediaId);
-  }
-
-  void _setupPlayer(String url) {
-    if (url.isEmpty) return;
-
-    _videoController?.dispose();
-    _chewieController?.dispose();
-
-    _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
     _videoController!.addListener(() {
       if (_videoController!.value.isPlaying) {
-        WakelockPlus.enable();   // 🔓 keep screen ON
+        WakelockPlus.enable();
       } else {
-        WakelockPlus.disable();  // 🔒 restore lock
+        WakelockPlus.disable();
       }
     });
 
     _chewieController = ChewieController(
       videoPlayerController: _videoController!,
-      autoInitialize: true,
       autoPlay: true,
       looping: false,
+      showControls: true,
+      allowFullScreen: true,
       allowMuting: true,
       allowPlaybackSpeedChanging: true,
       zoomAndPan: true,
-      allowFullScreen: true,
-      deviceOrientationsAfterFullScreen: const [
-        DeviceOrientation.portraitUp,
-        DeviceOrientation.portraitDown,
-      ],
+      materialProgressColors: ChewieProgressColors(
+        playedColor: Colors.redAccent,
+        bufferedColor: Colors.white30,
+        handleColor: Colors.white,
+        backgroundColor: Colors.white12,
+      ),
       deviceOrientationsOnEnterFullScreen: const [
         DeviceOrientation.landscapeLeft,
         DeviceOrientation.landscapeRight,
       ],
-      materialProgressColors: ChewieProgressColors(
-        playedColor: Colors.redAccent,
-        handleColor: Colors.white,
-        backgroundColor: Colors.white12,
-        bufferedColor: Colors.white24,
-      ),
+      deviceOrientationsAfterFullScreen: const [
+        DeviceOrientation.portraitUp,
+      ],
     );
 
-    _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
+    setState(() => _loading = false);
+  }
 
+  Future<void> _addViewApi() async {
+    try {
+      final prefs = LocalSharePreferences();
+      final user = await prefs.getUser();
 
+      if (user == null || user.id == null) return;
 
+      final isSeries = widget.content?.type?.toLowerCase() == "series";
 
-    setState(() {});
+      final url = isSeries
+          ? ApiConstant.addViewForEpisode(widget.mediaId, user.id!)
+          : ApiConstant.addViewForMovie(widget.mediaId, user.id!);
+
+      await http.post(Uri.parse(url));
+    } catch (_) {}
   }
 
   @override
   void dispose() {
     _videoController?.dispose();
     _chewieController?.dispose();
-    super.dispose();
-    // 🔥 RESTORE AUTO SCREEN LOCK
     WakelockPlus.disable();
-  }
-
-  String _formatEpoch(int? ms) {
-    if (ms == null) return '';
-    return DateFormat('yyyy-MM-dd')
-        .format(DateTime.fromMillisecondsSinceEpoch(ms));
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context).getTheme;
 
-    if (_chewieController == null) {
-      _setupPlayer(widget.videoUrl);
-    }
-
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: ResponsiveWidget.isDesktop(context)
-            ? const Text('')
-            : Text(widget.title, style: TextStyle(color: theme.canvasColor)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ResponsiveWidget.isMobile(context)
-              ? _mobileUI(context)
-              : _desktopUI(context),
+      appBar: ResponsiveWidget.isDesktop(context)
+          ? null
+          : AppBar(
+              backgroundColor: theme.scaffoldBackgroundColor,
+              elevation: 0,
+              title: Text(
+                widget.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: theme.canvasColor,
+                ),
+              ),
+            ),
+      body: _loading
+          ? Center(
+              child: CircularProgressIndicator(
+              color: theme.primaryColor,
+            ))
+          : Center(
+              child: ResponsiveWidget.isDesktop(context)
+                  ? _desktopPlayer()
+                  : _mobilePlayer(),
+            ),
     );
   }
 
-  Widget _mobileUI(BuildContext context) {
+  Widget _mobilePlayer() {
     return Column(
       children: [
-        _playerView(),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: _ratingReviewSection(),
-          ),
-        ),
+        _playerSurface(),
+        const SizedBox(height: 12),
       ],
     );
   }
 
-  Widget _desktopUI(BuildContext context) {
+  Widget _desktopPlayer() {
     return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
+      padding: const EdgeInsets.all(24),
+      child: Column(
         children: [
-          Expanded(
-            flex: 10,
-            child: Column(
-              children: [
-                _playerView(),
-                _ratingReviewSection(),
-              ],
-            ),
-          ),
+          Expanded(child: _playerSurface()),
+          const SizedBox(height: 16),
         ],
       ),
     );
   }
 
-  Widget _playerView() {
-    if (_chewieController == null || _videoController == null) {
-      return const SizedBox();
-    }
-
+  Widget _playerSurface() {
     return AspectRatio(
       aspectRatio: 16 / 9,
       child: Stack(
         children: [
           Chewie(controller: _chewieController!),
 
-          /// Gesture Layer
+          /// Gesture overlay (Netflix-style)
           Positioned.fill(
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
               onDoubleTapDown: (details) async {
                 final box = context.findRenderObject() as RenderBox;
                 final local = box.globalToLocal(details.globalPosition);
-
                 final isLeft = local.dx < box.size.width / 2;
+
                 final current = _videoController!.value.position;
                 final duration = _videoController!.value.duration;
 
@@ -252,11 +190,13 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
                     ? current - const Duration(seconds: 10)
                     : current + const Duration(seconds: 10);
 
-                final safe = target < Duration.zero
-                    ? Duration.zero
-                    : (target > duration ? duration : target);
-
-                await _videoController!.seekTo(safe);
+                await _videoController!.seekTo(
+                  target < Duration.zero
+                      ? Duration.zero
+                      : target > duration
+                          ? duration
+                          : target,
+                );
               },
               onLongPressStart: (_) {
                 _videoController!.setPlaybackSpeed(2.0);
@@ -266,150 +206,8 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
               },
             ),
           ),
-
-          /// Desktop Controls
-          if (ResponsiveWidget.isDesktop(context))
-            Positioned(
-              left: 16,
-              bottom: 16,
-              child: IconButton(
-                icon: const Icon(Icons.replay_10, color: Colors.white),
-                onPressed: () async {
-                  final p = _videoController!.value.position;
-                  await _videoController!
-                      .seekTo(p - const Duration(seconds: 10));
-                },
-              ),
-            ),
-
-          if (ResponsiveWidget.isDesktop(context))
-            Positioned(
-              right: 16,
-              bottom: 16,
-              child: IconButton(
-                icon: const Icon(Icons.forward_10, color: Colors.white),
-                onPressed: () async {
-                  final p = _videoController!.value.position;
-                  await _videoController!
-                      .seekTo(p + const Duration(seconds: 10));
-                },
-              ),
-            ),
         ],
       ),
     );
-  }
-
-  Widget _ratingReviewSection() {
-    final theme = Theme.of(context);
-
-    return Consumer<VideoProvider>(builder: (context, provider, child) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 16),
-          Text(
-            "Rate your experience",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: theme.canvasColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          StarRating(
-            rating: provider.rating,
-            onRatingChanged: (rating) =>
-                setState(() => provider.rating = rating),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: provider.reviewController,
-            maxLines: 3,
-            style: TextStyle(color: theme.canvasColor),
-            decoration: InputDecoration(
-              hintText: "Write your feedback...",
-              filled: true,
-              fillColor: theme.cardColor,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.primaryColor,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              if (provider.reviewController.text.trim().isEmpty) {
-                CustomToast.show(context, "Write a comment", isSuccess: false);
-                return;
-              }
-
-              final result = await provider.saveRatingReview(widget.mediaId);
-              if (result['success'] == true) {
-                provider.reviewController.clear();
-                CustomToast.show(context, "Review submitted", isSuccess: true);
-                await provider.getRatingReview(widget.mediaId);
-              } else {
-                CustomToast.show(context, "Failed to submit", isSuccess: false);
-              }
-            },
-            child: const Text("Submit Review"),
-          ),
-          const SizedBox(height: 16),
-          ...provider.reviewList.map((r) {
-            return Container(
-              margin: const EdgeInsets.symmetric(vertical: 6),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundImage: r.userProfile != null
-                            ? NetworkImage(r.userProfile!)
-                            : null,
-                        child: r.userProfile == null
-                            ? const Icon(Icons.person)
-                            : null,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        r.username ?? "User",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: theme.canvasColor,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(_formatEpoch(r.createdAt),
-                          style: const TextStyle(fontSize: 12)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  StarRatingWidget(
-                    rating: (r.rating ?? 0).toDouble(),
-                    starSize: 16,
-                    textSize: 12,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(r.title ?? "",
-                      style: TextStyle(color: theme.canvasColor)),
-                ],
-              ),
-            );
-          })
-        ],
-      );
-    });
   }
 }

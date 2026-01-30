@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/pages/DisplayTrailer.dart';
-import 'package:ott/app/pages/wallet%20page/BillingPage.dart';
-import 'package:ott/app/pages/movie%20details%20page/component/actionButtonWidget.dart';
+import 'package:ott/app/pages/wallet%20page/SeriesBillingPage.dart';
 import 'package:ott/app/pages/watchlist%20page/playMoviePage.dart';
 import 'package:ott/app/provider/ThemeProvider.dart';
 import 'package:ott/app/provider/series_provider.dart';
+import 'package:ott/app/widgets/StarRatingWidget.dart';
+import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -26,423 +26,458 @@ class SeriesDetailsPage extends StatefulWidget {
 }
 
 class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
-  int selectedSeasonIndex = 0;
+  int _selectedSeasonIndex = 0;
+  final TrailerPreviewController _trailerController =
+      TrailerPreviewController();
 
   @override
   void initState() {
     super.initState();
-    Provider.of<SeriesProvider>(context, listen: false)
-        .loadSeries(widget.seriesId);
+    Future.microtask(() {
+      context.read<SeriesProvider>().fetchSeriesDetails(widget.seriesId);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Provider.of<ThemeProvider>(context).getTheme;
+    final theme = context.watch<ThemeProvider>().getTheme;
 
-    return Consumer<SeriesProvider>(
-      builder: (context, provider, _) {
-        if (provider.loading) {
-          return Scaffold(
-            backgroundColor: theme.scaffoldBackgroundColor,
-            body: const Center(child: CircularProgressIndicator()),
-          );
-        }
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Consumer<SeriesProvider>(
+        builder: (context, provider, _) {
+          if (provider.isLoading) {
+            return Center(
+              child: CircularProgressIndicator(color: theme.primaryColor),
+            );
+          }
 
-        if (provider.error != null) {
-          return Scaffold(
-            backgroundColor: theme.scaffoldBackgroundColor,
-            body: Center(
-              child: Text(provider.error!,
-                  style: TextStyle(color: theme.canvasColor)),
-            ),
-          );
-        }
+          if (provider.error != null) {
+            return Center(child: Text(provider.error!));
+          }
 
-        final data = provider.data;
-        if (data == null) {
-          return const Scaffold(body: Center(child: Text("No data")));
-        }
+          final series = provider.series;
+          if (series == null) return const SizedBox();
 
-        final series = data.series;
-        final seasons = data.seasons;
-        final currentSeason = seasons[selectedSeasonIndex];
-        final episodes = currentSeason.episodes;
+          final seasons = series.seasons;
+          if (_selectedSeasonIndex >= seasons.length) {
+            _selectedSeasonIndex = 0;
+          }
 
-        return Scaffold(
-          backgroundColor: theme.scaffoldBackgroundColor,
-          extendBodyBehindAppBar: true,
-          appBar: AppBar(
-            forceMaterialTransparency: true,
-            title: ResponsiveWidget.isDesktop(context)
-                ? const Text('')
-                : Text(
-                    series.title,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 2,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 22,
-                      color: theme.primaryColor,
-                    ),
+          final season = seasons[_selectedSeasonIndex];
+
+          return CustomScrollView(
+            slivers: [
+              _buildHero(series),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: ResponsiveWidget.isDesktop(context) ? 64 : 16,
+                    vertical: 16,
                   ),
-            backgroundColor: Colors.transparent,
-            centerTitle: true,
-            elevation: 0,
-          ),
-          body: Stack(
-            fit: StackFit.expand,
-            children: [
-              _buildBackground(series.posterUrlList.isNotEmpty
-                  ? series.posterUrlList.first
-                  : null),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.8),
-                      Colors.black.withOpacity(0.95),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTitleBlock(series, theme),
+                      const SizedBox(height: 20),
+                      _buildSeasonSelector(seasons, theme),
+                      const SizedBox(height: 20),
+                      _buildSeasonInfo(context, season, theme),
+                      const SizedBox(height: 16),
+                      ...season.episodes
+                          .map((e) => _episodeTile(context, season, e, theme)),
+                      const SizedBox(height: 32),
+                      _buildDetailsSection(context, widget.content),
+                      const SizedBox(height: 32),
+                      _buildGallery(widget.content),
+                      const SizedBox(height: 60),
                     ],
                   ),
                 ),
               ),
-              ResponsiveWidget.isDesktop(context)
-                  ? Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: _buildLeftPane(
-                            context,
-                            theme,
-                            series,
-                            seasons,
-                            currentSeason,
-                            episodes,
-                          ),
-                        ),
-                        const SizedBox(width: 20),
-                        Expanded(
-                          flex: 2,
-                          child: SingleChildScrollView(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              children: [
-                                Container(
-                                  height: 400,
-                                  child: TrailerPage(
-                                    trailerUrl: series.trailerURL,
-                                    isTrailerUrl: true,
-                                    content: widget.content,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : _buildMobileView(
-                      context,
-                      theme,
-                      series,
-                      seasons,
-                      currentSeason,
-                      episodes,
-                    ),
             ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildLeftPane(
-    BuildContext context,
-    ThemeData theme,
-    dynamic series,
-    List seasons,
-    dynamic currentSeason,
-    List episodes,
-  ) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: _buildBody(
-        context,
-        theme,
-        series,
-        seasons,
-        currentSeason,
-        episodes,
-        showTrailerButton: false,
+          );
+        },
       ),
     );
   }
 
-  Widget _buildMobileView(
-    BuildContext context,
-    ThemeData theme,
-    dynamic series,
-    List seasons,
-    dynamic currentSeason,
-    List episodes,
-  ) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          const SizedBox(height: 80),
-          _buildBody(
-            context,
-            theme,
-            series,
-            seasons,
-            currentSeason,
-            episodes,
-            showTrailerButton: true,
-          ),
-        ],
+  // ---------------- HERO ----------------
+
+  SliverAppBar _buildHero(series) {
+    return SliverAppBar(
+      pinned: true,
+      expandedHeight: ResponsiveWidget.isMobile(context)
+          ? 260
+          : ResponsiveWidget.isTablet(context)
+              ? 420
+              : 560,
+      forceMaterialTransparency: true,
+      backgroundColor: Colors.black,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              series.posterUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(color: Colors.black),
+            ),
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black54,
+                    Colors.black,
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              right: 5,
+              bottom: 5,
+              child: Container(
+                height: ResponsiveWidget.isMobile(context)
+                    ? 120
+                    : ResponsiveWidget.isTablet(context)
+                        ? 180
+                        : 200,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(
+                    15,
+                  ),
+                  border: Border.all(
+                    color: Colors.grey,
+                    width: 0.2,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(
+                    15,
+                  ),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 8,
+                    child: TrailerPreview(
+                      trailerUrl: widget.content.trailerUrl,
+                      content: widget.content,
+                      controller: _trailerController,
+                    ),
+                  ),
+                ),
+              ),
+            )
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildBody(
-    BuildContext context,
-    ThemeData theme,
-    dynamic series,
-    List seasons,
-    dynamic currentSeason,
-    List episodes, {
-    required bool showTrailerButton,
-  }) {
-    final lang = AppLocalizations.of(context)!;
+  // ---------------- TITLE BLOCK ----------------
 
+  Widget _buildTitleBlock(series, ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 20),
-        ResponsiveWidget.isDesktop(context)
-            ? Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        width: 1,
-                        color: Colors.white.withOpacity(0.5),
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                        left: 10,
-                        right: 10,
-                        top: 6,
-                        bottom: 6,
-                      ),
-                      child: Text(
-                        series.title ?? "",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 22,
-                          color: theme.primaryColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              )
-            : SizedBox(),
-        const SizedBox(height: 16),
-
-        // Posters
-        SizedBox(
-          height: 200,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: series.posterUrlList.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (_, i) => ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: AspectRatio(
-                aspectRatio: 16 / 8,
-                child: Image.network(
-                  series.posterUrlList[i],
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
+        Text(
+          series.title,
+          style: TextStyle(
+            fontSize: ResponsiveWidget.isDesktop(context) ? 32 : 24,
+            fontWeight: FontWeight.bold,
+            color: theme.primaryColor,
           ),
         ),
-        const SizedBox(height: 16),
-
-        // Buttons
+        const SizedBox(height: 8),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            if (showTrailerButton)
-              ActionButtonWidget(
-                label: lang.watchTrailer,
-                icon: Icons.play_circle_fill,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TrailerPage(
-                        trailerUrl: series.trailerURL,
-                        isTrailerUrl: true,
-                        content: widget.content,
-                      ),
-                    ),
-                  );
-                },
+            StarRatingWidget(
+              rating: double.parse(
+                widget.content.ratings!.toStringAsFixed(2),
               ),
-            ActionButtonWidget(
-              label: '${lang.rent} ₹${series.price}',
-              icon: Icons.movie,
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (_) => _buildConfirmationBox(context, series),
-                );
-              },
+            ),
+            Text(
+              " (${widget.content.ratingCount ?? 0})",
+              maxLines: 5,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  color: theme.canvasColor.withOpacity(0.7), height: 1.4),
             ),
           ],
         ),
-
-        const SizedBox(height: 16),
-
-        // About
+        const SizedBox(height: 8),
         Text(
           series.description,
-          maxLines: ResponsiveWidget.isMobile(context) ? 3 : 5,
+          maxLines: 5,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.8),
-          ),
+          style:
+              TextStyle(color: theme.canvasColor.withOpacity(0.7), height: 1.4),
         ),
-
-        const SizedBox(height: 16),
-
-        // Seasons
-        SizedBox(
-          height: 35,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: seasons.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              final isSelected = index == selectedSeasonIndex;
-              return GestureDetector(
-                onTap: () => setState(() => selectedSeasonIndex = index),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? theme.primaryColor
-                        : theme.cardColor.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Text(
-                    "Season ${seasons[index].season.seasonNumber}",
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : theme.canvasColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        Text(
-          currentSeason.season.description,
-          maxLines: ResponsiveWidget.isMobile(context) ? 3 : 5,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: Colors.white.withOpacity(0.7)),
-        ),
-
-        const SizedBox(height: 12),
-
-        episodes.isEmpty
-            ? SizedBox(
-                height: 200,
-                child: Center(
-                  child: Text(
-                    "Episodes will be available soon.",
-                    style: TextStyle(color: Colors.white.withOpacity(0.7)),
-                  ),
-                ),
-              )
-            : SizedBox(
-                height: 200,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: episodes.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 14),
-                  itemBuilder: (context, index) {
-                    final ep = episodes[index];
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => PlayMediaPage(
-                              title: ep.title,
-                              mediaId: ep.id,
-                              videoUrl: ep.videoUrl,
-                              content:
-                                  widget.content, // parent Content if needed
-                            ),
-                          ),
-                        );
-                      },
-                      child: SizedBox(
-                        width: 220,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(14),
-                              child: AspectRatio(
-                                aspectRatio: 16 / 8,
-                                child: Image.network(ep.posterUrl,
-                                    fit: BoxFit.cover),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              "E${ep.episodeNumber} • ${ep.title}",
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-        const SizedBox(height: 20),
-
-        _buildMetaTable(theme, series),
       ],
     );
   }
 
-  Widget _buildMetaTable(ThemeData theme, dynamic series) {
-    TextStyle title = const TextStyle(
+  // ---------------- SEASON SELECTOR ----------------
+
+  Widget _buildSeasonSelector(List seasons, ThemeData theme) {
+    return SizedBox(
+      height: 40,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: seasons.length,
+        itemBuilder: (context, i) {
+          final selected = i == _selectedSeasonIndex;
+          return GestureDetector(
+            onTap: () {
+              setState(() => _selectedSeasonIndex = i);
+            },
+            child: Container(
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: selected ? theme.primaryColor : theme.cardColor,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                "Season ${seasons[i].seasonNumber}",
+                style: TextStyle(
+                  color: selected
+                      ? Colors.white
+                      : theme.canvasColor.withOpacity(0.7),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ---------------- SEASON INFO ----------------
+
+  Widget _buildSeasonInfo(BuildContext context, season, ThemeData theme) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Season ${season.seasonNumber}: ${season.title}",
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: theme.canvasColor,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                season.description,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: theme.canvasColor.withOpacity(0.7)),
+              ),
+              const SizedBox(height: 6),
+              ResponsiveWidget.isMobile(context)
+                  ? !season.isSeasonPurchased
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: theme.primaryColor,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              onPressed: () async {
+                                _trailerController.pause?.call();
+                                final result = await Navigator.push<bool>(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => SeriesBillingPage(
+                                      seriesId: widget.seriesId,
+                                      seasonId: season.seasonId,
+                                      amount: season.price.toDouble(),
+                                      isSeason: true,
+                                    ),
+                                  ),
+                                );
+
+                                if (result == true && mounted) {
+                                  CustomToast.show(
+                                    context,
+                                    "Season unlocked! Enjoy watching 🎬",
+                                    isSuccess: true,
+                                  );
+                                }
+                              },
+                              child: Text(
+                                "Rent complete Season ₹${season.price}",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : SizedBox()
+                  : SizedBox(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ---------------- EPISODE TILE ----------------
+
+  Widget _episodeTile(BuildContext context, season, ep, ThemeData theme) {
+    final canPlay = season.isSeasonPurchased || ep.isPurchased || ep.isFree;
+
+    return GestureDetector(
+      onTap: () {
+        if (!canPlay) return;
+
+        _trailerController.pause?.call();
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PlayMediaPage(
+              title: ep.title!,
+              mediaId: widget.content.id!,
+              videoUrl: ep.videoUrl,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        child: Stack(
+          children: [
+            Container(
+              padding: EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(12)),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      ep.posterUrl,
+                      width: 120,
+                      height: 80,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "${ep.title}",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: theme.canvasColor,
+                              fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          "Ep. ${ep.episodeNumber} • ${ep.runtime} min ",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: theme.canvasColor.withOpacity(0.7)),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          "${ep.description}",
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: theme.canvasColor.withOpacity(0.7),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              bottom: 5,
+              right: 5,
+              child: canPlay
+                  ? SizedBox()
+                  : ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.primaryColor,
+                        minimumSize: const Size(0, 32), // default is ~40–48
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () async {
+                        _trailerController.pause?.call();
+                        final result = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => SeriesBillingPage(
+                              seriesId: widget.seriesId,
+                              episodeId: ep.episodeId,
+                              amount: ep.price.toDouble(),
+                              isSeason: false,
+                            ),
+                          ),
+                        );
+
+                        if (result == true && mounted) {
+                          CustomToast.show(
+                            context,
+                            "Episode unlocked! Enjoy watching 🎬",
+                            isSuccess: true,
+                          );
+                        }
+                      },
+                      child: Text(
+                        "₹${ep.price}",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailsSection(BuildContext context, Content movie) {
+    final lang = AppLocalizations.of(context)!;
+    TextStyle titleStyle = const TextStyle(
       color: Colors.white,
       fontWeight: FontWeight.bold,
     );
-    TextStyle value = const TextStyle(color: Colors.white70);
+    TextStyle contentStyle = const TextStyle(
+      color: Colors.white70,
+    );
 
     return Container(
       width: double.infinity,
@@ -458,91 +493,128 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
         border: TableBorder.symmetric(
           inside: BorderSide(color: Colors.white12, width: 0.5),
         ),
+        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
         children: [
-          _row("Genres", series.genreList.join(', '), title, value),
-          _row("Directors", series.directorList.join(', '), title, value),
-          _row("Cast", series.castList.join(', '), title, value),
-          _row(
-              "Languages",
-              widget.content.languageList!.map((e) => e.language).join(', '),
-              title,
-              value),
-          _row("Rating", "${series.ratings} ⭐", title, value),
-          _row("Price", "₹${series.price}", title, value),
+          _buildTableRow(
+              lang.director,
+              (movie.directorList != null && movie.directorList!.isNotEmpty)
+                  ? movie.directorList!.first
+                  : 'Unknown',
+              titleStyle,
+              contentStyle),
+          _buildTableRow(
+              lang.cast,
+              (movie.castList != null && movie.castList!.isNotEmpty)
+                  ? movie.castList!.join(', ')
+                  : 'N/A',
+              titleStyle,
+              contentStyle),
+          _buildTableRow(
+              lang.genres,
+              (movie.genreList != null && movie.genreList!.isNotEmpty)
+                  ? movie.genreList!.join(', ')
+                  : 'N/A',
+              titleStyle,
+              contentStyle),
+          _buildTableRow(lang.runtime, movie.runtime?.toString() ?? 'N/A',
+              titleStyle, contentStyle),
+          _buildTableRow(lang.price, movie.price?.toString() ?? 'N/A',
+              titleStyle, contentStyle),
+          _buildTableRow(
+              lang.rentDuration,
+              movie.rentlDuration?.toString() ?? 'N/A',
+              titleStyle,
+              contentStyle),
+          _buildTableRow(
+              lang.mediaHouse,
+              movie.mediaHouseName?.toString() ?? 'N/A',
+              titleStyle,
+              contentStyle),
+          _buildTableRow(lang.releaseDate, movie.releaseDate ?? 'N/A',
+              titleStyle, contentStyle),
+          _buildTableRow(
+              lang.languages,
+              (movie.languageList!.map((e) => e.language) ?? []).join(', '),
+              titleStyle,
+              contentStyle),
+          _buildTableRow(
+              lang.rating,
+              '${double.parse(
+                (movie.ratings ?? 0.0).toStringAsFixed(1),
+              )} ⭐',
+              titleStyle,
+              contentStyle),
+          _buildTableRow(
+              lang.audioFormat,
+              (movie.audioFormatList ?? []).join(', '),
+              titleStyle,
+              contentStyle),
+          _buildTableRow(
+              lang.subtitle,
+              (movie.subtitleLanguageList ?? []).join(', '),
+              titleStyle,
+              contentStyle),
+          _buildTableRow(lang.ageRating, movie.ageRating ?? 'N/A', titleStyle,
+              contentStyle),
         ],
       ),
     );
   }
 
-  TableRow _row(String k, String v, TextStyle t, TextStyle c) {
-    return TableRow(children: [
-      Padding(
-        padding: const EdgeInsets.all(10),
-        child: Text("$k:", style: t),
-      ),
-      Padding(
-        padding: const EdgeInsets.all(10),
-        child: Text(v, style: c),
-      ),
-    ]);
-  }
-
-  Widget _buildBackground(String? imageUrl) {
-    return imageUrl != null && imageUrl.isNotEmpty
-        ? Image.network(imageUrl, fit: BoxFit.cover)
-        : Container(color: Colors.black);
-  }
-
-  Widget _buildConfirmationBox(BuildContext context, dynamic series) {
-    final theme = Provider.of<ThemeProvider>(context, listen: true).getTheme;
-    final lang = AppLocalizations.of(context)!;
-
-    return AlertDialog(
-      backgroundColor: theme.cardColor,
-      title: Center(
-        child: Text(
-          series.title,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: theme.primaryColor,
-          ),
+  TableRow _buildTableRow(String title, String content, TextStyle titleStyle,
+      TextStyle contentStyle) {
+    return TableRow(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          child: Text('$title:', style: titleStyle),
         ),
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('${lang.price}: ₹${series.price}',
-              style: TextStyle(color: theme.secondaryHeaderColor)),
-          const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          child: Text(content, style: contentStyle),
+        ),
+      ],
+    );
+  }
+
+  // ---------------- GALLERY ----------------
+
+  Widget _buildGallery(Content content) {
+    final theme = Theme.of(context);
+    // Using poster as placeholder images
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (content.posterUrlList != null &&
+            content.posterUrlList!.isNotEmpty) ...[
           Text(
-            'Do you want to rent this series?',
-            style: TextStyle(color: theme.primaryColor),
-            textAlign: TextAlign.center,
+            "Gallery",
+            style: TextStyle(
+              color: theme.primaryColor,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 160,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: content.posterUrlList!.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    content.posterUrlList![index],
+                    width: 320,
+                    fit: BoxFit.cover,
+                  ),
+                );
+              },
+            ),
           ),
         ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(lang.cancel),
-        ),
-        TextButton(
-          style: TextButton.styleFrom(
-            backgroundColor: theme.primaryColor,
-            foregroundColor: Colors.white,
-          ),
-          onPressed: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => BillingPage(movie: widget.content),
-              ),
-            );
-          },
-          child: const Text("Continue"),
-        ),
       ],
     );
   }

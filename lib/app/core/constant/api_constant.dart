@@ -93,5 +93,10 @@ class ApiConstant {
       "${baseUrl}api/shortsMaster/purchaseShort?partId=$partId&userId=$userId";
 
   //series
-  static String seriesDetails(seriesId) => "${baseUrl}series/$seriesId/details";
+  static String seriesDetails(seriesId, userId) =>
+      "${baseUrl}api/userSeries/$seriesId/user-details?userId=$userId";
+  static String purchaseEpisode(episodeId, userId) =>
+      '${baseUrl}series/purchase/episode?episodeId=$episodeId&userId=$userId';
+  static String purchaseSeason(seasonId, userId) =>
+      '${baseUrl}series/purchase/season?seasonId=$seasonId&userId=$userId';
 }

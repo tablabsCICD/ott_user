@@ -5,7 +5,7 @@ import 'package:ott/app/pages/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/watchlist%20page/playMoviePage.dart';
-import 'package:ott/app/pages/wallet%20page/BillingPage.dart';
+import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:video_player/video_player.dart';
@@ -125,10 +125,10 @@ class _MovieCardState extends State<MovieCard> {
   Widget _buildMediaPreview(String? posterUrl, ThemeData theme) {
     if (_isHovered && _isVideoInitialized && _videoController != null) {
       return AspectRatio(
-        aspectRatio: _videoController!.value.aspectRatio,
+        aspectRatio: 19 / 8,
         child: Stack(
           children: [
-            VideoPlayer(_videoController!),
+            Expanded(child: VideoPlayer(_videoController!)),
             Positioned(
               bottom: 0,
               left: 0,
@@ -248,7 +248,22 @@ class _MovieCardState extends State<MovieCard> {
           right: 6,
           top: 6,
           child: movie.isFeatured == true
-              ? SizedBox()
+              ? Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: theme.primaryColor.withOpacity(0.9),
+                  ),
+                  child: Text(
+                    "Watch Trailer",
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                )
               : _buildPriceButton(theme, lang, price),
         ),
       ],
@@ -274,7 +289,9 @@ class _MovieCardState extends State<MovieCard> {
         ),
         child: Text(
           movie.type!.toLowerCase() == 'series'
-              ? 'Watch Series'
+              ? isRental
+                  ? "Watch Series"
+                  : 'Rent Series'
               : isRental
                   ? movie.type?.toLowerCase() == "movie"
                       ? lang.watchMovie
@@ -372,7 +389,7 @@ class _MovieCardState extends State<MovieCard> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => BillingPage(movie: movie),
+                  builder: (_) => MovieBillingPage(movie: movie),
                 ),
               );
             },
