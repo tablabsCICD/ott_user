@@ -9,7 +9,7 @@ class HomeShimmer extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: ResponsiveWidget.isDesktop(context) ? 70 : 120),
+          //SizedBox(height: ResponsiveWidget.isDesktop(context) ? 70 : 120),
           _buildShimmerFilters(),
           SizedBox(height: 30),
           _buildShimmerMovieSection(),

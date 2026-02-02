@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -206,6 +207,25 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
               },
             ),
           ),
+          // Positioned(
+          //   top: 10,
+          //   right: 10,
+          //   child: Container(
+          //     height: 30,
+          //     width: 30,
+          //     decoration: BoxDecoration(
+          //       borderRadius: BorderRadius.circular(
+          //         25,
+          //       ),
+          //     ),
+          //     child: ClipRRect(
+          //       borderRadius: BorderRadiusGeometry.circular(20),
+          //       child: Image.asset(
+          //         ImageConstant.logo,
+          //       ),
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );

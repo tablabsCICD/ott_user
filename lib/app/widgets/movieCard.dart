@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/pages/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
@@ -94,37 +95,45 @@ class _MovieCardState extends State<MovieCard> {
         ? widget.movie.posterUrlList!.first
         : null;
 
-    return MouseRegion(
-      onEnter: (_) => _handleHover(true),
-      onExit: (_) => _handleHover(false),
-      child: GestureDetector(
-        onTap: _openDetails,
-        child: Container(
-          width: 300,
-          margin: const EdgeInsets.all(8),
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            color: theme.cardColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              Expanded(
-                flex: 8,
-                child: ClipRRect(
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(12)),
-                  child: _buildMediaPreview(posterUrl, theme, widget.movie),
-                ),
+    return Stack(
+      children: [
+        MouseRegion(
+          onEnter: (_) => _handleHover(true),
+          onExit: (_) => _handleHover(false),
+          child: GestureDetector(
+            onTap: _openDetails,
+            child: Container(
+              width: 300,
+              margin: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(12),
               ),
-              Expanded(
-                flex: 4,
-                child: _buildContentSection(theme, lang),
+              child: Column(
+                children: [
+                  Expanded(
+                    flex: 8,
+                    child: ClipRRect(
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(12)),
+                      child: _buildMediaPreview(posterUrl, theme, widget.movie),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 4,
+                    child: _buildContentSection(theme, lang),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
-      ),
+        _optionButton(
+          context,
+          widget.movie,
+        ),
+      ],
     );
   }
 
@@ -147,7 +156,7 @@ class _MovieCardState extends State<MovieCard> {
             ),
             Positioned(
               right: 5,
-              top: 5,
+              bottom: 5,
               child: IconButton(
                 icon: Icon(
                   _isMuted ? Icons.volume_off : Icons.volume_up,
@@ -156,34 +165,28 @@ class _MovieCardState extends State<MovieCard> {
                 onPressed: _toggleMute,
               ),
             ),
-            _actionButtons(context, content)
           ],
         ),
       );
     }
 
-    return Stack(
-      children: [
-        posterUrl != null
-            ? Image.network(
-                posterUrl,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (_, __, ___) => Icon(
-                  Icons.broken_image,
-                  color: theme.canvasColor.withOpacity(0.3),
-                  size: 40,
-                ),
-              )
-            : Icon(
-                Icons.broken_image,
-                color: theme.canvasColor.withOpacity(0.3),
-                size: 40,
-              ),
-        _actionButtons(context, content)
-      ],
-    );
+    return posterUrl != null
+        ? Image.network(
+            posterUrl,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+            errorBuilder: (_, __, ___) => Icon(
+              Icons.broken_image,
+              color: theme.canvasColor.withOpacity(0.3),
+              size: 40,
+            ),
+          )
+        : Icon(
+            Icons.broken_image,
+            color: theme.canvasColor.withOpacity(0.3),
+            size: 40,
+          );
   }
 
   Widget _buildContentSection(ThemeData theme, AppLocalizations lang) {
@@ -250,24 +253,32 @@ class _MovieCardState extends State<MovieCard> {
         Positioned(
           right: 6,
           top: 6,
-          child: movie.isFeatured == true
-              ? Container(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    color: theme.primaryColor.withOpacity(0.9),
-                  ),
-                  child: Text(
-                    "Watch Trailer",
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                )
-              : _buildPriceButton(theme, lang, price),
+          child: Row(
+            children: [
+              // _optionButton(context, movie),
+              // SizedBox(
+              //   width: 5,
+              // ),
+              movie.isFeatured == true
+                  ? Container(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 6, horizontal: 10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: theme.primaryColor.withOpacity(0.9),
+                      ),
+                      child: Text(
+                        "Watch Trailer",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
+                  : _buildPriceButton(theme, lang, price),
+            ],
+          ),
         ),
       ],
     );
@@ -402,201 +413,108 @@ class _MovieCardState extends State<MovieCard> {
     );
   }
 
-  Widget _actionButtons(BuildContext context, Content movie) {
+  Widget _optionButton(BuildContext context, Content movie) {
     final theme = Theme.of(context);
-    final TextEditingController _countController = TextEditingController();
-    double iconSize = ResponsiveWidget.isMobile(context) ? 18 : 20;
+    final bool isSeries = movie.type?.toLowerCase() == "series";
+
+    final ValueNotifier<bool> isDialOpen = ValueNotifier(false);
+    final TextEditingController countController = TextEditingController();
 
     return Positioned(
-        bottom: 5,
-        right: 5,
-        child: Column(
-          children: [
-            GestureDetector(
-              onTap: () => _shareMovie(context, movie),
-              child: Tooltip(
-                message: "Share Movie",
-                child: Container(
-                  padding: EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: theme.primaryColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.share,
-                    size: iconSize,
-                    color: Colors.white,
-                  ),
-                ),
+      top: 12,
+      right: 12,
+      child: SpeedDial(
+        openCloseDial: isDialOpen, // ✅ REQUIRED for desktop
+        onPress: () {
+          isDialOpen.value = !isDialOpen.value; // explicit toggle
+        },
+
+        icon: Icons.more_vert,
+        activeIcon: Icons.close,
+
+        backgroundColor: theme.primaryColor,
+        foregroundColor: Colors.white,
+
+        overlayColor: Colors.black,
+        overlayOpacity: 0.3,
+
+        elevation: 2,
+        direction: SpeedDialDirection.down,
+
+        // 🔽 COMPACT SETTINGS
+        buttonSize: const Size(30, 30),
+        childrenButtonSize: const Size(30, 35),
+        spacing: 2,
+        // tooltip: "options",
+
+        children: [
+          /// 🔗 Bookmark
+          SpeedDialChild(
+            label: "Bookmark",
+            labelBackgroundColor: theme.cardColor,
+            labelStyle: TextStyle(
+              color: theme.canvasColor,
+              fontSize: 10,
+            ),
+            child: Icon(
+              Icons.bookmark,
+              size: 14,
+              color: Colors.white,
+            ),
+            backgroundColor: theme.primaryColor,
+            onTap: () {
+              isDialOpen.value = false;
+              CustomToast.show(
+                context,
+                "${movie.title} is added to bookmark",
+                isSuccess: true,
+              );
+            },
+          ),
+
+          /// 🔗 Share
+          SpeedDialChild(
+            label: "Share",
+            labelBackgroundColor: theme.cardColor,
+            labelStyle: TextStyle(
+              color: theme.canvasColor,
+              fontSize: 10,
+            ),
+            child: Icon(
+              Icons.share,
+              size: 14,
+              color: Colors.white,
+            ),
+            backgroundColor: theme.primaryColor,
+            onTap: () {
+              isDialOpen.value = false;
+              _shareMovie(context, movie);
+            },
+          ),
+
+          /// 🎁 Gift (movies only)
+          if (!isSeries)
+            SpeedDialChild(
+              label: "Gift",
+              labelBackgroundColor: theme.cardColor,
+              labelStyle: TextStyle(
+                color: theme.canvasColor,
+                fontSize: 10,
               ),
+              child: Icon(
+                LucideIcons.gift,
+                size: 14,
+                color: Colors.white,
+              ),
+              backgroundColor: theme.primaryColor,
+              onTap: () {
+                isDialOpen.value = false;
+                _showGiftDialog(context, movie, countController);
+              },
             ),
-            SizedBox(
-              height: 5,
-            ),
-            movie.type!.toLowerCase() == "series"
-                ? SizedBox()
-                : GestureDetector(
-                    onTap: () => showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) {
-                        return Dialog(
-                          backgroundColor: theme.cardColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          insetPadding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 24),
-                          child: Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: SizedBox(
-                              width: ResponsiveWidget.isMobile(context)
-                                  ? double.infinity
-                                  : 400,
-                              child: Stack(
-                                children: [
-                                  Positioned(
-                                    top: 1,
-                                    left: 1,
-                                    right: 1,
-                                    bottom: 1,
-                                    child: Icon(
-                                      LucideIcons.gift,
-                                      size: 200,
-                                      color: theme.canvasColor.withOpacity(0.1),
-                                    ),
-                                  ),
-                                  Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Header
-                                      Row(
-                                        children: [
-                                          Icon(LucideIcons.gift,
-                                              color: theme.primaryColor,
-                                              size: 28),
-                                          const SizedBox(width: 10),
-                                          Text(
-                                            "Gift This Movie",
-                                            style: theme.textTheme.titleLarge
-                                                ?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 16),
-
-                                      // Description
-                                      Text(
-                                        "Enter how many people you’d like to gift this movie to.",
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                          color: theme.canvasColor,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-
-                                      // Input field
-                                      CustomTextField(
-                                        backgroundColor:
-                                            theme.scaffoldBackgroundColor,
-                                        isDigits: true,
-                                        controller: _countController,
-                                        hintText: "Number of recipients",
-                                        textInputType: TextInputType.number,
-                                      ),
-                                      const SizedBox(height: 24),
-
-                                      // Action buttons
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(context),
-                                            child: Text(
-                                              "Cancel",
-                                              style: TextStyle(
-                                                  color: theme.canvasColor),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          ElevatedButton(
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor:
-                                                  theme.primaryColor,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 24,
-                                                vertical: 12,
-                                              ),
-                                            ),
-                                            onPressed: () {
-                                              final count = int.tryParse(
-                                                  _countController.text);
-                                              if (count == null || count <= 0) {
-                                                CustomToast.show(context,
-                                                    'Please enter valid number',
-                                                    isSuccess: false);
-                                                return;
-                                              }
-
-                                              Navigator.pop(context);
-                                              // _trailerController.pause?.call();
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      MovieBillingPage(
-                                                    movie: movie,
-                                                    giftCount: count,
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                            child: const Text(
-                                              "Continue",
-                                              style: TextStyle(
-                                                  color: Colors.white),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    child: Tooltip(
-                      message: "Gift Movie",
-                      child: Container(
-                        padding: EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: theme.primaryColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          LucideIcons.gift,
-                          size: iconSize,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-          ],
-        ));
+        ],
+      ),
+    );
   }
 
   void _shareMovie(BuildContext context, Content movie) async {
@@ -628,5 +546,115 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
         subject: movie.title ?? "Movie",
       );
     }
+  }
+
+  void _showGiftDialog(
+    BuildContext context,
+    Content movie,
+    TextEditingController countController,
+  ) {
+    final theme = Theme.of(context);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: theme.cardColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          insetPadding: const EdgeInsets.all(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(
+              width: ResponsiveWidget.isMobile(context) ? double.infinity : 360,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(LucideIcons.gift,
+                          color: theme.primaryColor, size: 20),
+                      const SizedBox(width: 8),
+                      const Text(
+                        "Gift Movie",
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "How many people do you want to gift this movie to?",
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: theme.canvasColor.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  CustomTextField(
+                    controller: countController,
+                    hintText: "Recipients",
+                    isDigits: true,
+                    textInputType: TextInputType.number,
+                    backgroundColor: theme.scaffoldBackgroundColor,
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text("Cancel"),
+                      ),
+                      const SizedBox(width: 10),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primaryColor,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 18, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () {
+                          final count =
+                              int.tryParse(countController.text.trim());
+                          if (count == null || count <= 0) {
+                            CustomToast.show(
+                              context,
+                              'Enter a valid number',
+                              isSuccess: false,
+                            );
+                            return;
+                          }
+
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => MovieBillingPage(
+                                movie: movie,
+                                giftCount: count,
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          "Continue",
+                          style: TextStyle(color: Colors.white, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }

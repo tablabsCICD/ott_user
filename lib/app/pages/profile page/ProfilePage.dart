@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
+import 'package:ott/app/pages/bookmarks%20page/bookmarks_page.dart';
 import 'package:ott/app/pages/gifted%20movies%20page/GiftedMoviesPage.dart';
 import 'package:ott/app/pages/help%20support%20page/HelpSupportPage.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
@@ -356,6 +357,15 @@ class _ProfilePageState extends State<ProfilePage> {
                                     context,
                                     MaterialPageRoute(
                                         builder: (context) => UpcomingPage()),
+                                  ),
+                                ),
+                                ProfileOption(
+                                  icon: Icons.bookmark,
+                                  title: "Bookmarks",
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => BookmarksPage()),
                                   ),
                                 ),
                                 ProfileOption(

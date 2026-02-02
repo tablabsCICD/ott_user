@@ -2,107 +2,116 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
-import 'package:ott/app/pages/onboarding%20pages/selectLanguagePage.dart';
+import 'package:ott/app/pages/onboarding pages/selectLanguagePage.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 import '../../core/constant/prefrense_constant.dart';
 import '../../core/utils/sharepreferences.dart';
 
 class SplashScreen extends StatefulWidget {
-  //final bool isLoggedIn;
-
-  //SplashScreen({super.key, required this.isLoggedIn});
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  bool isLoggedIn = false;
-  final LocalSharePreferences localSharePreferences = LocalSharePreferences();
-
-  Future<void> _initializeSplash() async {
-    await getData();
-  }
-
-  Future<void> getData() async {
-    final bool? loggedIn = await localSharePreferences
-        .getBool(SharedPreferencesConstant.isUserLoggedIn);
-    print(loggedIn);
-    setState(() {
-      isLoggedIn = loggedIn ?? false; // Default to false if null
-    });
-  }
+class _SplashScreenState extends State<SplashScreen> {
+  final LocalSharePreferences _prefs = LocalSharePreferences();
+  bool _isLoggedIn = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeSplash();
-
-    // Initialize the animation controller for the ripple effect
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(); // Loop the animation
-
-    // Timer for navigation after 2 seconds
-    Timer(const Duration(seconds: 2), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) =>
-              isLoggedIn ? NavigationPage() : SelectLocaleLanguagePage(),
-        ),
-      );
-    });
+    _startFlow();
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  Future<void> _startFlow() async {
+    final loggedIn =
+        await _prefs.getBool(SharedPreferencesConstant.isUserLoggedIn);
+
+    _isLoggedIn = loggedIn ?? false;
+
+    // Splash delay
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            _isLoggedIn ? NavigationPage() : const SelectLocaleLanguagePage(),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final size = MediaQuery.of(context).size;
+
+    /// Responsive logo size
+    double logoSize;
+    if (ResponsiveWidget.isMobile(context)) {
+      logoSize = size.width * 0.42;
+    } else if (ResponsiveWidget.isTablet(context)) {
+      logoSize = size.width * 0.28;
+    } else {
+      logoSize = size.width * 0.18;
+    }
+
+    /// Responsive text size
+    double textSize;
+    if (ResponsiveWidget.isMobile(context)) {
+      textSize = 16;
+    } else if (ResponsiveWidget.isTablet(context)) {
+      textSize = 20;
+    } else {
+      textSize = 22;
+    }
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Hero(
-              tag: "logo",
-              child: ClipRRect(
-                borderRadius: BorderRadiusGeometry.circular(25),
-                child: Image.asset(
-                  ImageConstant.logo,
-                  width: ResponsiveWidget.isMobile(context) ? 150 : 200,
-                  fit: BoxFit.contain,
+      backgroundColor: theme.primaryColor,
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            children: [
+              const Spacer(flex: 3),
+
+              /// Logo
+              Hero(
+                tag: 'logo',
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(logoSize),
+                  child: Image.asset(
+                    ImageConstant.logo,
+                    width: logoSize,
+                    height: logoSize,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
-            ),
-            SizedBox(
-              height: ResponsiveWidget.isMobile(context) ? 80 : 70,
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Text(
-                'Discover, Watch & Collect the Latest Movies',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: ResponsiveWidget.isMobile(context) ? 13 : 18,
-                  color: theme.canvasColor,
-                  fontWeight: FontWeight.w600,
+
+              const Spacer(flex: 2),
+
+              /// Tagline
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  'Watch First Day First Show',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: textSize,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                  ),
                 ),
               ),
-            )
-          ],
+
+              const Spacer(flex: 4),
+            ],
+          ),
         ),
       ),
     );
