@@ -437,7 +437,26 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 200),
+                            //Text(
+                            //   "${userProvider.userObj.id ?? ''}",
+                            //   style: TextStyle(
+                            //     color: Colors.white70,
+                            //     fontSize: 10,
+                            //   ),
+                            // ),
+                            const SizedBox(height: 250),
+                            Opacity(
+                              opacity: 0.4,
+                              child: CircleAvatar(
+                                backgroundColor: theme.scaffoldBackgroundColor,
+                                foregroundColor: theme.scaffoldBackgroundColor,
+                                foregroundImage:
+                                    AssetImage(ImageConstant.logo2),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+
+                            const SizedBox(height: 2),
 
                             Text(
                               "Version · ${AppConstant.appVersion}",
@@ -447,7 +466,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                 fontSize: 12,
                               ),
                             ),
-                            const SizedBox(height: 2),
 
                             // Text(
                             //   'Joining date: ${userProvider.userObject.joinDate}',

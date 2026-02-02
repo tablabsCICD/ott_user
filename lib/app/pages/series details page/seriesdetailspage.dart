@@ -314,52 +314,51 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 style: TextStyle(color: theme.canvasColor.withOpacity(0.7)),
               ),
               const SizedBox(height: 6),
-              ResponsiveWidget.isMobile(context)
-                  ? !season.isSeasonPurchased
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: theme.primaryColor,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              onPressed: () async {
-                                _trailerController.pause?.call();
-                                final result = await Navigator.push<bool>(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => SeriesBillingPage(
-                                      seriesId: widget.seriesId,
-                                      seasonId: season.seasonId,
-                                      amount: season.price.toDouble(),
-                                      isSeason: true,
-                                    ),
-                                  ),
-                                );
-
-                                if (result == true && mounted) {
-                                  CustomToast.show(
-                                    context,
-                                    "Season unlocked! Enjoy watching 🎬",
-                                    isSuccess: true,
-                                  );
-                                }
-                              },
-                              child: Text(
-                                "Rent complete Season ₹${season.price}",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+              !season.isSeasonPurchased
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.primaryColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                          ],
-                        )
-                      : SizedBox()
-                  : SizedBox(),
+                          ),
+                          onPressed: () async {
+                            _trailerController.pause?.call();
+                            final result = await Navigator.push<bool>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => SeriesBillingPage(
+                                  seriesId: widget.seriesId,
+                                  seasonId: season.seasonId,
+                                  amount: season.price.toDouble(),
+                                  isSeason: true,
+                                ),
+                              ),
+                            );
+
+                            if (result == true && mounted) {
+                              CustomToast.show(
+                                context,
+                                "Season unlocked! Enjoy watching 🎬",
+                                isSuccess: true,
+                              );
+                            }
+                          },
+                          child: Text(
+                            "Rent complete Season ₹${season.price}",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : SizedBox()
+              //: SizedBox(),
             ],
           ),
         ),

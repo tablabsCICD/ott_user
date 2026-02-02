@@ -95,6 +95,7 @@ class PurchaseContentProvider extends ChangeNotifier {
         Map<String, dynamic> responseBody = json.decode(response.body);
 
         // SAFELY parse the response with try-catch to catch date format issues
+
         try {
           PurchaseContentListResponse parsedResponse =
               PurchaseContentListResponse.fromJson(responseBody);
