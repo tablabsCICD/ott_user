@@ -77,6 +77,8 @@ Future<void> main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => PlayMediaProvider(),
+        ),
+        ChangeNotifierProvider(
           create: (_) => BookmarkProvider(),
         ),
       ],
