@@ -690,8 +690,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                     context,
                     MaterialPageRoute(
                       builder: (_) => PlayMediaPage(
-                        title: movie.title!,
-                        mediaId: movie.id!,
+                        seasons: null,
+                        seasonIndex: 0,
+                        episodeIndex: 0,
                         videoUrl: movie.contentUrl!,
                         content: movie,
                       ),

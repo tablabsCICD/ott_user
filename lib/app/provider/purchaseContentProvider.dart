@@ -20,7 +20,7 @@ class PurchaseContentProvider extends ChangeNotifier {
   Future<Map<String, Object>> saveUserContent(Content content) async {
     String apiUrl = ApiConstant.saveUserContent;
 
-    log("save user content $apiUrl");
+    debugPrint("save user content=================== $apiUrl");
 
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
     Map<String, dynamic> mapData = {
@@ -38,11 +38,12 @@ class PurchaseContentProvider extends ChangeNotifier {
       "userIdGiftFrom": 0,
       "userIdGiftTo": 0
     };
+    debugPrint(mapData.toString());
     ApiHelper apiHelper = ApiHelper();
 
     try {
       var response = await apiHelper.postApiWithBody(apiUrl, mapData);
-      log("save user content ${response.statusCode}");
+      debugPrint("save user content ${response.body}");
       if (response.statusCode == 200) {
         Map<String, dynamic> responseBody = json.decode(response.body);
         SavePurchaseContentResponse addUserResponse =

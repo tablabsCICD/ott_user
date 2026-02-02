@@ -18,7 +18,7 @@ class ApiHelper {
   }
 
   Future<dynamic> getApi1(String URL) async {
-    debugPrint(URL);
+    debugPrint("GET API"+URL);
     final url = Uri.parse(URL);
     var request = await http.get(url);
     debugPrint("GETAPI RESPONSE ${request.body}");

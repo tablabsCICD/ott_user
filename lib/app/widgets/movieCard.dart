@@ -9,6 +9,7 @@ import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/watchlist%20page/playMoviePage.dart';
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
+import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
@@ -50,6 +51,31 @@ class _MovieCardState extends State<MovieCard> {
         }
       });
     });
+  }
+
+  bool get _hasWatchProgress =>
+      (widget.movie.watchedPercentage ?? 0) > 0 &&
+          (widget.movie.watchedPercentage ?? 0) < 100;
+
+  Widget _watchProgressBar() {
+    final progress = (widget.movie.watchedPercentage ?? 0) / 100;
+
+    return Positioned(
+      left: 8,
+      right: 8,
+      bottom: 8,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: LinearProgressIndicator(
+          value: progress.clamp(0.0, 1.0),
+          minHeight: 4,
+          backgroundColor: Colors.white.withOpacity(0.3),
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Colors.redAccent, // Netflix-style
+          ),
+        ),
+      ),
+    );
   }
 
   void _toggleMute() {
@@ -132,6 +158,8 @@ class _MovieCardState extends State<MovieCard> {
                       child: _buildMediaPreview(posterUrl, theme, widget.movie),
                     ),
                   ),
+                  // 🎯 CONTINUE WATCHING PROGRESS
+                  if (_hasWatchProgress) _watchProgressBar(),
                   Expanded(
                     flex: 4,
                     child: _buildContentSection(theme, lang),
@@ -177,6 +205,7 @@ class _MovieCardState extends State<MovieCard> {
                 onPressed: _toggleMute,
               ),
             ),
+
           ],
         ),
       );
@@ -361,13 +390,19 @@ class _MovieCardState extends State<MovieCard> {
       context,
       MaterialPageRoute(
         builder: (_) => PlayMediaPage(
-          title: movie.title ?? '',
-          mediaId: movie.id!,
           videoUrl: movie.contentUrl!,
           content: movie,
+          seasonIndex: 0,
+          episodeIndex: 0,
+          seasons: [],
         ),
       ),
-    );
+    ).then((refresh) {
+      if (refresh == true) {
+        context.read<DashboardProvider>().getContinueWatchedMovieList();
+      }
+    });
+
   }
 
   void _showCupertinoDialog(BuildContext context, Content movie) {

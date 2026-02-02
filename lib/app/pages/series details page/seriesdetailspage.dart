@@ -3,13 +3,17 @@ import 'package:ott/app/pages/DisplayTrailer.dart';
 import 'package:ott/app/pages/wallet%20page/SeriesBillingPage.dart';
 import 'package:ott/app/pages/watchlist%20page/playMoviePage.dart';
 import 'package:ott/app/provider/ThemeProvider.dart';
+import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/series_provider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/content.dart';
+import 'package:ott/data/models/seriesModel.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
+
+import '../../provider/playMediaProvider.dart';
 
 class SeriesDetailsPage extends StatefulWidget {
   final int seriesId;
@@ -35,6 +39,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     super.initState();
     Future.microtask(() {
       context.read<SeriesProvider>().fetchSeriesDetails(widget.seriesId);
+      context.read<PlayMediaProvider>().loadLocalResumes();
     });
   }
 
@@ -56,15 +61,15 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
             return Center(child: Text(provider.error!));
           }
 
-          final series = provider.series;
+          SeriesEntity? series = provider.series;
           if (series == null) return const SizedBox();
 
-          final seasons = series.seasons;
+          List<SeasonEntity> seasons = series.seasons;
           if (_selectedSeasonIndex >= seasons.length) {
             _selectedSeasonIndex = 0;
           }
 
-          final season = seasons[_selectedSeasonIndex];
+          SeasonEntity season = seasons[_selectedSeasonIndex];
 
           return CustomScrollView(
             slivers: [
@@ -368,144 +373,198 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
 
   // ---------------- EPISODE TILE ----------------
 
-  Widget _episodeTile(BuildContext context, season, ep, ThemeData theme) {
+  Widget _episodeTile(
+      BuildContext context,
+      SeasonEntity season,
+      EpisodeEntity ep,
+      ThemeData theme,
+      ) {
     final canPlay = season.isSeasonPurchased || ep.isPurchased || ep.isFree;
+    final resumeSeconds =
+    context.watch<PlayMediaProvider>().getLocalResume(
+      contentId: widget.content!.id!,
+      seasonId: season.seasonId,
+      episodeId: ep.episodeId,
+    );
+
+    final progress = ep.runtime > 0
+        ? (resumeSeconds / (ep.runtime * 60)).clamp(0.0, 1.0)
+        : 0.0;
 
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         if (!canPlay) return;
 
         _trailerController.pause?.call();
-        Navigator.push(
+        final shouldRefresh = await Navigator.push<bool>(
           context,
           MaterialPageRoute(
             builder: (_) => PlayMediaPage(
-              title: ep.title!,
-              mediaId: widget.content.id!,
-              videoUrl: ep.videoUrl,
+              videoUrl: ep.videoUrl??"",
+              content: widget.content,
+              seasonIndex: season.seasonId,
+              episodeIndex: ep.episodeId,
+              seasons: [season],
             ),
           ),
         );
+
+        if (shouldRefresh == true && context.mounted) {
+          context.read<DashboardProvider>().getContinueWatchedMovieList();
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 14),
-        child: Stack(
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
           children: [
-            Container(
-              padding: EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                  color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(12)),
+            /// ================= MAIN CONTENT =================
+            Padding(
+              padding: const EdgeInsets.all(10),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  /// 🎬 POSTER
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Stack(
-                      alignment: AlignmentGeometry.center,
+                      alignment: Alignment.center,
                       children: [
                         Image.network(
                           ep.posterUrl,
                           width: 120,
                           height: 80,
                           fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 120,
+                            height: 80,
+                            color: Colors.grey.shade800,
+                            child: const Icon(
+                              Icons.broken_image,
+                              color: Colors.white54,
+                              size: 30,
+                            ),
+                          ),
                         ),
-                        Icon(
-                          Icons.play_arrow,
+                        const Icon(
+                          Icons.play_circle_fill,
                           color: Colors.white70,
-                        )
+                          size: 28,
+                        ),
                       ],
                     ),
                   ),
+
                   const SizedBox(width: 12),
+
+                  /// 📄 DETAILS
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "${ep.title}",
+                          ep.title ?? "",
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              color: theme.canvasColor,
-                              fontWeight: FontWeight.w600),
+                            color: theme.canvasColor,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
                         Text(
-                          "Ep. ${ep.episodeNumber} • ${ep.runtime} min ",
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          "Ep. ${ep.episodeNumber} • ${ep.runtime} min",
                           style: TextStyle(
-                              color: theme.canvasColor.withOpacity(0.7)),
+                            fontSize: 12,
+                            color: theme.canvasColor.withOpacity(0.7),
+                          ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 6),
                         Text(
-                          "${ep.description}",
+                          ep.description ?? "",
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: theme.canvasColor.withOpacity(0.7),
                             fontSize: 12,
+                            color: theme.canvasColor.withOpacity(0.7),
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            Positioned(
-              bottom: 5,
-              right: 5,
-              child: canPlay
-                  ? SizedBox()
-                  : ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryColor,
-                        minimumSize: const Size(0, 32), // default is ~40–48
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      onPressed: () async {
-                        _trailerController.pause?.call();
-                        final result = await Navigator.push<bool>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => SeriesBillingPage(
-                              seriesId: widget.seriesId,
-                              episodeId: ep.episodeId,
-                              amount: ep.price.toDouble(),
-                              isSeason: false,
-                            ),
-                          ),
-                        );
 
-                        if (result == true && mounted) {
-                          CustomToast.show(
+                  /// 🔐 PRICE BUTTON (if locked)
+                  if (!canPlay)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primaryColor,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () async {
+                          _trailerController.pause?.call();
+                          final result = await Navigator.push<bool>(
                             context,
-                            "Episode unlocked! Enjoy watching 🎬",
-                            isSuccess: true,
+                            MaterialPageRoute(
+                              builder: (_) => SeriesBillingPage(
+                                seriesId: widget.seriesId,
+                                episodeId: ep.episodeId,
+                                amount: ep.price.toDouble(),
+                                isSeason: false,
+                              ),
+                            ),
                           );
-                        }
-                      },
-                      child: Text(
-                        "₹${ep.price}",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+
+                          if (result == true && mounted) {
+                            CustomToast.show(
+                              context,
+                              "Episode unlocked! Enjoy watching 🎬",
+                              isSuccess: true,
+                            );
+                          }
+                        },
+                        child: Text(
+                          "₹${ep.price}",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
+                ],
+              ),
             ),
+
+            /// ================= WATCH PROGRESS =================
+            if (progress > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 3,
+                  backgroundColor: Colors.grey.withOpacity(0.3),
+                  valueColor: AlwaysStoppedAnimation(theme.primaryColor),
+                ),
+              ),
+
           ],
         ),
       ),
     );
   }
+
 
   Widget _buildDetailsSection(
       BuildContext context, Content movie, ThemeData theme) {

@@ -99,6 +99,7 @@ class ApiConstant {
       '${baseUrl}series/purchase/episode?episodeId=$episodeId&userId=$userId';
   static String purchaseSeason(seasonId, userId) =>
       '${baseUrl}series/purchase/season?seasonId=$seasonId&userId=$userId';
+  static String continueWatchedMoviesByUser(userId) => "${baseUrl}continue-watching/user/$userId";
 
   // bookmarks
   static String addBookmark(userId, contentId) =>

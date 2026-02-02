@@ -31,6 +31,10 @@ class Content {
   int? ratingCount;
   String? rentlDuration;
   bool? isRental;
+  int? watchedSeconds;
+  int? watchedPercentage;
+  int? seasonId;
+  int? episodeId;
 
   Content(
       {this.id,
@@ -64,7 +68,12 @@ class Content {
       this.mediaHouseId,
       this.ratingCount,
       this.rentlDuration,
-      this.isRental});
+      this.isRental,
+        this.watchedPercentage,
+        this.watchedSeconds,
+        this.episodeId,
+        this.seasonId
+      });
 
   factory Content.fromJson(Map<String, dynamic> json) => Content(
         id: json["id"],
@@ -116,6 +125,10 @@ class Content {
         ratingCount: json["ratingCount"],
         rentlDuration: json["rentlDuration"],
         isRental: json["isRental"],
+    watchedPercentage: json["watchedPercentage"],
+    watchedSeconds: json["watchedSeconds"],
+      episodeId: json["episodeId"],
+      seasonId: json["seasonId"]
       );
 
   Map<String, dynamic> toJson() => {
@@ -163,7 +176,11 @@ class Content {
         "mediaHouseId": mediaHouseId,
         "ratingCount": ratingCount,
         "rentlDuration": rentlDuration,
-        "isRental": isRental
+        "isRental": isRental,
+        "watchedPercentage": watchedPercentage,
+        "watchedSeconds": watchedSeconds,
+    "episodeId":episodeId,
+    "seasonId":seasonId
       };
 }
 
