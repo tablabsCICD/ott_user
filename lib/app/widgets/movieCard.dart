@@ -10,6 +10,7 @@ import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/watchlist%20page/playMoviePage.dart';
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
+import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -40,6 +41,16 @@ class _MovieCardState extends State<MovieCard> {
   void initState() {
     super.initState();
     _initializeVideo();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context
+          .read<BookmarkProvider>()
+          .isBookmarked(widget.movie.id ?? 0)
+          .then((value) {
+        if (value) {
+          context.read<BookmarkProvider>().addBookmark(widget.movie.id ?? 0);
+        }
+      });
+    });
   }
 
   bool get _hasWatchProgress =>
@@ -453,6 +464,10 @@ class _MovieCardState extends State<MovieCard> {
     final theme = Theme.of(context);
     final bool isSeries = movie.type?.toLowerCase() == "series";
 
+    final bookmarkProvider = context.watch<BookmarkProvider>();
+    final bool isBookmarked =
+        bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
+
     final ValueNotifier<bool> isDialOpen = ValueNotifier(false);
     final TextEditingController countController = TextEditingController();
 
@@ -460,51 +475,49 @@ class _MovieCardState extends State<MovieCard> {
       top: 12,
       right: 12,
       child: SpeedDial(
-        openCloseDial: isDialOpen, // ✅ REQUIRED for desktop
-        onPress: () {
-          isDialOpen.value = !isDialOpen.value; // explicit toggle
-        },
-
+        openCloseDial: isDialOpen,
+        onPress: () => isDialOpen.value = !isDialOpen.value,
         icon: Icons.more_vert,
         activeIcon: Icons.close,
-
         backgroundColor: theme.primaryColor,
         foregroundColor: Colors.white,
-
         overlayColor: Colors.black,
         overlayOpacity: 0.3,
-
         elevation: 2,
         direction: SpeedDialDirection.down,
-
-        // 🔽 COMPACT SETTINGS
         buttonSize: const Size(30, 30),
         childrenButtonSize: const Size(30, 35),
         spacing: 2,
-        // tooltip: "options",
-
         children: [
-          /// 🔗 Bookmark
+          /// 🔖 Bookmark
           SpeedDialChild(
-            label: "Bookmark",
+            label: isBookmarked ? "Remove Bookmark" : "Bookmark",
             labelBackgroundColor: theme.cardColor,
             labelStyle: TextStyle(
               color: theme.canvasColor,
               fontSize: 10,
             ),
             child: Icon(
-              Icons.bookmark,
+              isBookmarked ? Icons.bookmark : Icons.bookmark_border,
               size: 14,
               color: Colors.white,
             ),
             backgroundColor: theme.primaryColor,
-            onTap: () {
-              isDialOpen.value = false;
+            onTap: () async {
+              final bool wasBookmarked =
+                  bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
+
+              await bookmarkProvider.toggleBookmark(movie);
+
               CustomToast.show(
                 context,
-                "${movie.title} is added to bookmark",
+                wasBookmarked
+                    ? "${movie.title} removed from bookmarks"
+                    : "${movie.title} added to bookmarks",
                 isSuccess: true,
               );
+
+              isDialOpen.value = false;
             },
           ),
 
@@ -516,11 +529,7 @@ class _MovieCardState extends State<MovieCard> {
               color: theme.canvasColor,
               fontSize: 10,
             ),
-            child: Icon(
-              Icons.share,
-              size: 14,
-              color: Colors.white,
-            ),
+            child: const Icon(Icons.share, size: 14, color: Colors.white),
             backgroundColor: theme.primaryColor,
             onTap: () {
               isDialOpen.value = false;
@@ -537,11 +546,8 @@ class _MovieCardState extends State<MovieCard> {
                 color: theme.canvasColor,
                 fontSize: 10,
               ),
-              child: Icon(
-                LucideIcons.gift,
-                size: 14,
-                color: Colors.white,
-              ),
+              child:
+                  const Icon(LucideIcons.gift, size: 14, color: Colors.white),
               backgroundColor: theme.primaryColor,
               onTap: () {
                 isDialOpen.value = false;
@@ -562,7 +568,7 @@ ${movie.description ?? ''}
 ▶️ Watch here:
 ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? ''}
 
-📲 Download OTT Media House App now!
+📲 Download Filmytell App now!
 '''
         .trim();
 

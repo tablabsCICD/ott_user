@@ -69,6 +69,15 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     if (movieContent == null) {
       return Scaffold(
         appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leading: IconButton(
+              onPressed: () {
+                _trailerController.pause?.call();
+              },
+              icon: Icon(
+                Icons.arrow_back_ios_new_outlined,
+                color: Colors.white,
+              )),
           title: const Text('Movie Details'),
           centerTitle: true,
           backgroundColor: Colors.transparent,

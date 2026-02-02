@@ -78,7 +78,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 child: Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: ResponsiveWidget.isDesktop(context) ? 64 : 16,
-                    vertical: 16,
+                    vertical: 1,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,11 +111,14 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   // ---------------- HERO ----------------
 
   SliverAppBar _buildHero(series, ThemeData theme) {
+    final bool isMobile = ResponsiveWidget.isMobile(context);
+    final bool isTablet = ResponsiveWidget.isTablet(context);
+
     return SliverAppBar(
       pinned: true,
-      expandedHeight: ResponsiveWidget.isMobile(context)
-          ? 260
-          : ResponsiveWidget.isTablet(context)
+      expandedHeight: isMobile
+          ? 300
+          : isTablet
               ? 420
               : 560,
       forceMaterialTransparency: true,
@@ -124,11 +127,14 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
         background: Stack(
           fit: StackFit.expand,
           children: [
+            /// 🎬 Background Poster
             Image.network(
               series.posterUrl,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Container(color: Colors.black),
             ),
+
+            /// 🌗 Gradient overlay
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -142,40 +148,63 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 ),
               ),
             ),
-            Positioned(
-              right: 5,
-              bottom: 5,
-              child: Container(
-                height: ResponsiveWidget.isMobile(context)
-                    ? 120
-                    : ResponsiveWidget.isTablet(context)
-                        ? 180
-                        : 200,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(
-                    15,
-                  ),
-                  border: Border.all(
-                    color: Colors.grey,
-                    width: 0.2,
-                  ),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(
-                    15,
-                  ),
-                  child: AspectRatio(
-                    aspectRatio: 16 / 8,
-                    child: TrailerPreview(
-                      trailerUrl: widget.content.trailerUrl,
-                      content: widget.content,
-                      controller: _trailerController,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+
+            /// ▶ Trailer Preview (Responsive)
+            if (isMobile)
+              _buildMobileTrailer()
+            else
+              _buildDesktopTabletTrailer(),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileTrailer() {
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 12,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: TrailerPreview(
+              trailerUrl: widget.content.trailerUrl,
+              content: widget.content,
+              controller: _trailerController,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopTabletTrailer() {
+    return Positioned(
+      right: 16,
+      bottom: 16,
+      child: Container(
+        height: ResponsiveWidget.isTablet(context) ? 240 : 300,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(
+            color: Colors.grey.withOpacity(0.4),
+            width: 0.5,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(15),
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: TrailerPreview(
+              trailerUrl: widget.content.trailerUrl,
+              content: widget.content,
+              controller: _trailerController,
+            ),
+          ),
         ),
       ),
     );
@@ -290,52 +319,51 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 style: TextStyle(color: theme.canvasColor.withOpacity(0.7)),
               ),
               const SizedBox(height: 6),
-              ResponsiveWidget.isMobile(context)
-                  ? !season.isSeasonPurchased
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: theme.primaryColor,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              onPressed: () async {
-                                _trailerController.pause?.call();
-                                final result = await Navigator.push<bool>(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => SeriesBillingPage(
-                                      seriesId: widget.seriesId,
-                                      seasonId: season.seasonId,
-                                      amount: season.price.toDouble(),
-                                      isSeason: true,
-                                    ),
-                                  ),
-                                );
-
-                                if (result == true && mounted) {
-                                  CustomToast.show(
-                                    context,
-                                    "Season unlocked! Enjoy watching 🎬",
-                                    isSuccess: true,
-                                  );
-                                }
-                              },
-                              child: Text(
-                                "Rent complete Season ₹${season.price}",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+              !season.isSeasonPurchased
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.primaryColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                          ],
-                        )
-                      : SizedBox()
-                  : SizedBox(),
+                          ),
+                          onPressed: () async {
+                            _trailerController.pause?.call();
+                            final result = await Navigator.push<bool>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => SeriesBillingPage(
+                                  seriesId: widget.seriesId,
+                                  seasonId: season.seasonId,
+                                  amount: season.price.toDouble(),
+                                  isSeason: true,
+                                ),
+                              ),
+                            );
+
+                            if (result == true && mounted) {
+                              CustomToast.show(
+                                context,
+                                "Season unlocked! Enjoy watching 🎬",
+                                isSuccess: true,
+                              );
+                            }
+                          },
+                          child: Text(
+                            "Rent complete Season ₹${season.price}",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : SizedBox()
+              //: SizedBox(),
             ],
           ),
         ),
