@@ -3,15 +3,19 @@ import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/content.dart';
+import 'package:ott/data/models/response/continueWatchedResponse.dart';
 import 'package:ott/data/models/response/getContentResponse.dart';
 import 'package:ott/data/models/user.dart';
+import '../../data/models/request/getAllVideoResponse.dart';
 import '../../data/models/response/get_dashboard_data.dart';
 import '../core/constant/api_constant.dart';
 import '../core/network/api_helper.dart';
 import 'baseProvider.dart';
 
 class DashboardProvider extends BaseProvider {
-  DashboardProvider() : super('Ideal') {}
+  DashboardProvider() : super('Ideal') {
+    getContinueWatchedMovieList();
+  }
 
   List<DashboardData> _dashboardData = [];
   List<DashboardData> get dashboardData => _dashboardData;
@@ -23,6 +27,9 @@ class DashboardProvider extends BaseProvider {
 
   bool _isLoadingDashboard = false;
   bool get isLoading => _isLoadingDashboard;
+
+  List<Content> _continueWatchedMovies = [];
+  List<Content> get continueWatchedMovies => _continueWatchedMovies;
 
   // ==================== DASHBOARD LOAD ====================
 
@@ -202,6 +209,32 @@ class DashboardProvider extends BaseProvider {
         if (addUserResponse.success == true &&
             addUserResponse.data?.contentList != null) {
           _content = addUserResponse.data!.contentList!;
+          notifyListeners();
+        }
+      }
+    } catch (error) {
+      debugPrint("❌ getContentById error: $error");
+    }
+  }
+
+  getContinueWatchedMovieList() async {
+    User? user = await LocalSharePreferences.localSharePreferences.getUser();
+    String apiUrl = ApiConstant.continueWatchedMoviesByUser(user!.id);
+    ApiHelper apiHelper = ApiHelper();
+
+    try {
+      var response = await apiHelper.getApi1(apiUrl);
+      debugPrint(response.body);
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
+
+        ContinueWatchedResponse continueWatchedResponse =
+        ContinueWatchedResponse.fromJson(responseBody);
+
+        if (continueWatchedResponse.isSuccess == true &&
+            continueWatchedResponse.data != null) {
+          _continueWatchedMovies = continueWatchedResponse.data!;
+          debugPrint(_continueWatchedMovies.toString());
           notifyListeners();
         }
       }

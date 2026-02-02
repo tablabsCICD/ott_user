@@ -171,6 +171,7 @@ class _HomePageState extends State<HomePage> {
                           SizedBox(
                             height: ResponsiveWidget.isMobile(context) ? 0 : 10,
                           ),
+                          continueWatchWidget(continueWatchList:dashboardProvider.continueWatchedMovies),
                           selectedType == 'SHORTS'
                               ? SizedBox(
                                   height:
@@ -281,6 +282,55 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
+    );
+  }
+
+  Widget continueWatchWidget({
+    required List<Content> continueWatchList,
+  }) {
+    if (continueWatchList.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 🔴 LABEL
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            "Continue Watching",
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ),
+
+        // 🎬 HORIZONTAL LIST
+        SizedBox(
+          height: 300,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: continueWatchList.length,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemBuilder: (context, index) {
+              final item = continueWatchList[index];
+
+              // ❌ Hide completed items
+              if ((item.watchedPercentage ?? 0) >= 95) {
+                return const SizedBox.shrink();
+              }
+
+              return SizedBox(
+                width: 300,
+                child: MovieCard(movie: item),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 

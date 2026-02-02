@@ -1,20 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AndroidLayouts">
+    <shared>
+      <config />
+    </shared>
+  </component>
   <component name="AutoImportSettings">
-    <option name="autoReloadType" value="SELECTIVE" />
+    <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3f04a968-27e5-4905-8561-ff00d911146d" name="Changes" comment="">
+    <list default="true" id="3f04a968-27e5-4905-8561-ff00d911146d" name="Changes" comment="added app localization file">
+      <change afterPath="$PROJECT_DIR$/lib/app/provider/playMediaProvider.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/data/models/response/continueWatchedResponse.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.flutter-plugins-dependencies" beforeDir="false" afterPath="$PROJECT_DIR$/.flutter-plugins-dependencies" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/src/main/AndroidManifest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/core/constant/api_constant.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/core/constant/api_constant.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/core/network/api_helper.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/core/network/api_helper.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/pages/home page/HomePage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/home page/HomePage.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/pages/movie details page/MovieDetailsPage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/movie details page/MovieDetailsPage.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/pages/series details page/seriesdetailspage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/series details page/seriesdetailspage.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/pages/watchlist page/WatchlistPage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/watchlist page/WatchlistPage.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/pages/watchlist page/playMoviePage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/watchlist page/playMoviePage.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/provider/dashboardProvider.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/provider/dashboardProvider.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/provider/purchaseContentProvider.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/provider/purchaseContentProvider.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/widgets/movieCard.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/widgets/movieCard.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/data/models/content.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/data/models/content.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/main.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/linux/flutter/generated_plugin_registrant.cc" beforeDir="false" afterPath="$PROJECT_DIR$/linux/flutter/generated_plugin_registrant.cc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/linux/flutter/generated_plugin_registrant.h" beforeDir="false" afterPath="$PROJECT_DIR$/linux/flutter/generated_plugin_registrant.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/linux/flutter/generated_plugins.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/linux/flutter/generated_plugins.cmake" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/macos/Flutter/GeneratedPluginRegistrant.swift" beforeDir="false" afterPath="$PROJECT_DIR$/macos/Flutter/GeneratedPluginRegistrant.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ott.iml" beforeDir="false" afterPath="$PROJECT_DIR$/ott.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/windows/flutter/generated_plugin_registrant.cc" beforeDir="false" afterPath="$PROJECT_DIR$/windows/flutter/generated_plugin_registrant.cc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/windows/flutter/generated_plugin_registrant.h" beforeDir="false" afterPath="$PROJECT_DIR$/windows/flutter/generated_plugin_registrant.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/windows/flutter/generated_plugins.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/windows/flutter/generated_plugins.cmake" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,6 +51,13 @@
       </file>
     </leaf>
   </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Dart File" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
@@ -45,6 +66,10 @@
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 4
+}</component>
+  <component name="ProjectId" id="38vJxWTAlzgaC2jLYxhXwxBJdH9" />
   <component name="ProjectView">
     <navigator currentView="ProjectPane" proportions="" version="1" />
     <panes>
@@ -53,15 +78,37 @@
       </pane>
     </panes>
   </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "Flutter.main.dart.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
     "dart.analysis.tool.window.visible": "false",
-    "git-widget-placeholder": "main",
-    "settings.editor.selected.configurable": "flutter.settings"
+    "git-widget-placeholder": "swati__dev",
+    "io.flutter.project.isFirstOpen": "true",
+    "io.flutter.reload.alreadyRun": "true",
+    "kotlin-language-version-configured": "true",
+    "settings.editor.selected.configurable": "flutter.settings",
+    "show.migrate.to.gradle.popup": "false"
   }
 }]]></component>
   <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="3f04a968-27e5-4905-8561-ff00d911146d" name="Changes" comment="added app localization file" />
+      <created>1769674357465</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1769674357465</updated>
+    </task>
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -69,5 +116,43 @@
     <layout>
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
     </layout>
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="Dart">
+          <url>file://$PROJECT_DIR$/lib/app/pages/watchlist page/playMoviePage.dart</url>
+          <line>14</line>
+          <option name="timeStamp" value="5" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="Dart">
+          <url>file://$PROJECT_DIR$/lib/app/pages/watchlist page/playMoviePage.dart</url>
+          <line>27</line>
+          <option name="timeStamp" value="6" />
+        </line-breakpoint>
+      </breakpoints>
+      <default-breakpoints>
+        <breakpoint type="dart-exception" />
+      </default-breakpoints>
+    </breakpoint-manager>
+  </component>
+  <component name="github-copilot-workspace">
+    <instructionFileLocations>
+      <option value=".github/instructions" />
+    </instructionFileLocations>
+    <promptFileLocations>
+      <option value=".github/prompts" />
+    </promptFileLocations>
   </component>
 </project>
