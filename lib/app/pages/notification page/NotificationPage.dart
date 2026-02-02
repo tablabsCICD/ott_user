@@ -39,32 +39,7 @@ class _NotificationPageState extends State<NotificationPage> {
     } else {
       // Dummy notifications if there are none in storage
       setState(() {
-        notifications = [
-          {
-            "message": "New Movie Released: Kantara",
-            "time": "Just now",
-            "posterURL":
-                "https://m.media-amazon.com/images/M/MV5BNTRlYmEzM2EtMWRkMC00OWJkLWFmN2ItNTQxNmQ4Zjk1OGQ5XkEyXkFqcGc@._V1_QL75_UX348_.jpg",
-            "isRead": false,
-            "movieId": 1,
-          },
-          {
-            "message": "Trending Now: Chhava",
-            "time": "1 hour ago",
-            "posterURL":
-                "https://m.media-amazon.com/images/M/MV5BMWI4N2Y5NWUtNzEwOC00YjYzLWEzY2ItN2YwYTIxYzBjZGZmXkEyXkFqcGc@._V1_QL75_UX332_.jpg",
-            "isRead": false,
-            "movieId": 2
-          },
-          {
-            "message": "Exclusive: The Midnight Sky",
-            "time": "Yesterday",
-            "posterURL":
-                "https://m.media-amazon.com/images/M/MV5BYjk4M2VjYmEtNGJlNy00NDhjLTlhY2YtNDA0NjdhYWEwZjdmXkEyXkFqcGc@._V1_QL75_UX804_.jpg",
-            "isRead": false,
-            "movieId": 14
-          },
-        ];
+        notifications = [];
       });
     }
   }

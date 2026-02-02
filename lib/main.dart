@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:ott/app/provider/ThemeProvider.dart';
+import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/provider/language_provider.dart';
@@ -72,6 +73,9 @@ Future<void> main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => SeriesProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => BookmarkProvider(),
         ),
       ],
       child: MyApp(

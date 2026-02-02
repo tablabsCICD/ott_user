@@ -99,4 +99,13 @@ class ApiConstant {
       '${baseUrl}series/purchase/episode?episodeId=$episodeId&userId=$userId';
   static String purchaseSeason(seasonId, userId) =>
       '${baseUrl}series/purchase/season?seasonId=$seasonId&userId=$userId';
+
+  // bookmarks
+  static String addBookmark(userId, contentId) =>
+      "${baseUrl}bookmarks/add?userId=$userId&contentId=$contentId";
+  static String removeBookmark(userId, contentId) =>
+      "${baseUrl}bookmarks/remove?userId=$userId&contentId=$contentId";
+  static String isBookmarked(userId, contentId) =>
+      "${baseUrl}bookmarks/status?userId=$userId&contentId=$contentId";
+  static String getUserBookmarks(userId) => "${baseUrl}bookmarks/user/$userId";
 }
