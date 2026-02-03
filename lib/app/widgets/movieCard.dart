@@ -263,7 +263,7 @@ class _MovieCardState extends State<MovieCard> {
     if (_isStartingPreview || _isPreviewPlaying) return;
     if (!_isPlayTriggerActive) return;
 
-    _playDelayTimer = Timer(const Duration(seconds: 2), () {
+    _playDelayTimer = Timer(const Duration(seconds: 1), () {
       _playDelayTimer = null;
       _startPreviewIfEligible();
     });
@@ -539,21 +539,21 @@ class _MovieCardState extends State<MovieCard> {
               // ),
               movie.isFeatured == true
                   ? Container(
-                padding: const EdgeInsets.symmetric(
-                    vertical: 6, horizontal: 10),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  color: theme.primaryColor.withOpacity(0.9),
-                ),
-                child: Text(
-                  "Watch Trailer",
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              )
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 6, horizontal: 10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: theme.primaryColor.withOpacity(0.9),
+                      ),
+                      child: Text(
+                        "Watch Trailer",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
                   : _buildPriceButton(theme, lang, price),
             ],
           ),
@@ -571,8 +571,8 @@ class _MovieCardState extends State<MovieCard> {
       onTap: () => movie.type!.toLowerCase() == 'series'
           ? _openDetails()
           : isRental
-          ? _playMovie()
-          : _showCupertinoDialog(context, movie),
+              ? _playMovie()
+              : _showCupertinoDialog(context, movie),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
         decoration: BoxDecoration(
@@ -582,13 +582,13 @@ class _MovieCardState extends State<MovieCard> {
         child: Text(
           movie.type!.toLowerCase() == 'series'
               ? isRental
-              ? "Watch Series"
-              : 'Rent Series'
+                  ? "Watch Series"
+                  : 'Rent Series'
               : isRental
-              ? movie.type?.toLowerCase() == "movie"
-              ? lang.watchMovie
-              : lang.watchSeries
-              : "₹ $price",
+                  ? movie.type?.toLowerCase() == "movie"
+                      ? lang.watchMovie
+                      : lang.watchSeries
+                  : "₹ $price",
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
@@ -609,12 +609,12 @@ class _MovieCardState extends State<MovieCard> {
       MaterialPageRoute(
         builder: (_) => movie.isFeatured == true
             ? TrailerPage(
-            trailerUrl: movie.trailerUrl ?? "",
-            isTrailerUrl: true,
-            content: movie)
+                trailerUrl: movie.trailerUrl ?? "",
+                isTrailerUrl: true,
+                content: movie)
             : movie.type!.toLowerCase() == 'movie'
-            ? MovieDetailsPage(movieId: movie.id!)
-            : SeriesDetailsPage(seriesId: movie.id!, content: movie),
+                ? MovieDetailsPage(movieId: movie.id!)
+                : SeriesDetailsPage(seriesId: movie.id!, content: movie),
       ),
     );
   }
@@ -722,7 +722,7 @@ class _MovieCardState extends State<MovieCard> {
 
     final bookmarkProvider = context.watch<BookmarkProvider>();
     final bool isBookmarked =
-    bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
+        bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
 
     final ValueNotifier<bool> isDialOpen = ValueNotifier(false);
     final TextEditingController countController = TextEditingController();
@@ -748,35 +748,35 @@ class _MovieCardState extends State<MovieCard> {
           movie.isRental!
               ? SpeedDialChild()
               : SpeedDialChild(
-            label: isBookmarked ? "Remove Bookmark" : "Bookmark",
-            labelBackgroundColor: theme.cardColor,
-            labelStyle: TextStyle(
-              color: theme.canvasColor,
-              fontSize: 10,
-            ),
-            child: Icon(
-              isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-              size: 14,
-              color: Colors.white,
-            ),
-            backgroundColor: theme.primaryColor,
-            onTap: () async {
-              final bool wasBookmarked =
-              bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
+                  label: isBookmarked ? "Remove Bookmark" : "Bookmark",
+                  labelBackgroundColor: theme.cardColor,
+                  labelStyle: TextStyle(
+                    color: theme.canvasColor,
+                    fontSize: 10,
+                  ),
+                  child: Icon(
+                    isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                  backgroundColor: theme.primaryColor,
+                  onTap: () async {
+                    final bool wasBookmarked =
+                        bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
 
-              await bookmarkProvider.toggleBookmark(movie);
+                    await bookmarkProvider.toggleBookmark(movie);
 
-              CustomToast.show(
-                context,
-                wasBookmarked
-                    ? "${movie.title} removed from bookmarks"
-                    : "${movie.title} added to bookmarks",
-                isSuccess: true,
-              );
+                    CustomToast.show(
+                      context,
+                      wasBookmarked
+                          ? "${movie.title} removed from bookmarks"
+                          : "${movie.title} added to bookmarks",
+                      isSuccess: true,
+                    );
 
-              isDialOpen.value = false;
-            },
-          ),
+                    isDialOpen.value = false;
+                  },
+                ),
 
           /// 🔗 Share
           SpeedDialChild(
@@ -804,7 +804,7 @@ class _MovieCardState extends State<MovieCard> {
                 fontSize: 10,
               ),
               child:
-              const Icon(LucideIcons.gift, size: 14, color: Colors.white),
+                  const Icon(LucideIcons.gift, size: 14, color: Colors.white),
               backgroundColor: theme.primaryColor,
               onTap: () {
                 isDialOpen.value = false;
@@ -848,10 +848,10 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
   }
 
   void _showGiftDialog(
-      BuildContext context,
-      Content movie,
-      TextEditingController countController,
-      ) {
+    BuildContext context,
+    Content movie,
+    TextEditingController countController,
+  ) {
     final theme = Theme.of(context);
 
     showDialog(
@@ -920,7 +920,7 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
                         ),
                         onPressed: () {
                           final count =
-                          int.tryParse(countController.text.trim());
+                              int.tryParse(countController.text.trim());
                           if (count == null || count <= 0) {
                             CustomToast.show(
                               context,
