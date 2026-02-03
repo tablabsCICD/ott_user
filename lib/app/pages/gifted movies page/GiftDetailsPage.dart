@@ -38,10 +38,11 @@ class _GiftDetailsPageState extends State<GiftDetailsPage> {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: theme.primaryColor,
+        foregroundColor: Colors.white,
+        centerTitle: true,
         title: const Text(
           "Gift Details",
           style: TextStyle(
-            color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),

@@ -77,12 +77,12 @@ class _NotificationPageState extends State<NotificationPage> {
       appBar: AppBar(
         centerTitle: true,
         backgroundColor: selectedThemeData.primaryColor,
+        foregroundColor: Colors.white,
         title: Text(
           lang.notification,
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 20,
-            color: Colors.white,
           ),
         ),
         actions: [

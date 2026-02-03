@@ -95,7 +95,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           },
         ),
       ),
-      body: Center(
+      body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Form(

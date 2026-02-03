@@ -44,6 +44,12 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   }
 
   @override
+  void dispose() {
+    _trailerController.pause?.call();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>().getTheme;
 
@@ -123,6 +129,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
               : 560,
       forceMaterialTransparency: true,
       backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           fit: StackFit.expand,
@@ -374,18 +381,17 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   // ---------------- EPISODE TILE ----------------
 
   Widget _episodeTile(
-      BuildContext context,
-      SeasonEntity season,
-      EpisodeEntity ep,
-      ThemeData theme,
-      ) {
+    BuildContext context,
+    SeasonEntity season,
+    EpisodeEntity ep,
+    ThemeData theme,
+  ) {
     final canPlay = season.isSeasonPurchased || ep.isPurchased || ep.isFree;
-    final resumeSeconds =
-    context.watch<PlayMediaProvider>().getLocalResume(
-      contentId: widget.content!.id!,
-      seasonId: season.seasonId,
-      episodeId: ep.episodeId,
-    );
+    final resumeSeconds = context.watch<PlayMediaProvider>().getLocalResume(
+          contentId: widget.content!.id!,
+          seasonId: season.seasonId,
+          episodeId: ep.episodeId,
+        );
 
     final progress = ep.runtime > 0
         ? (resumeSeconds / (ep.runtime * 60)).clamp(0.0, 1.0)
@@ -400,7 +406,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           context,
           MaterialPageRoute(
             builder: (_) => PlayMediaPage(
-              videoUrl: ep.videoUrl??"",
+              videoUrl: ep.videoUrl ?? "",
               content: widget.content,
               seasonIndex: season.seasonId,
               episodeIndex: ep.episodeId,
@@ -410,7 +416,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
         );
 
         if (shouldRefresh == true && context.mounted) {
-          context.read<DashboardProvider>().getContinueWatchedMovieList("SERIES");
+          context
+              .read<DashboardProvider>()
+              .getContinueWatchedMovieList("SERIES");
         }
       },
       child: Container(
@@ -558,13 +566,11 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                   valueColor: AlwaysStoppedAnimation(theme.primaryColor),
                 ),
               ),
-
           ],
         ),
       ),
     );
   }
-
 
   Widget _buildDetailsSection(
       BuildContext context, Content movie, ThemeData theme) {

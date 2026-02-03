@@ -55,9 +55,11 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        centerTitle: true,
+        backgroundColor: theme.primaryColor,
+        foregroundColor: Colors.white,
         title: Text(lang.helpAndSupport,
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-        backgroundColor: theme.primaryColor,
       ),
       body: Consumer<TicketProvider>(
         builder: (context, provider, child) => Center(

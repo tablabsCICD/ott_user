@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
@@ -45,17 +46,51 @@ class _HomePageState extends State<HomePage> {
 
   /// 🔥 NEW: Scroll controllers for each horizontal row
   final Map<int, ScrollController> _rowControllers = {};
+  final Map<int, ValueNotifier<int?>> _rowActiveIndexes = {};
+  final Map<int, int> _rowItemCounts = {};
+  final Map<int, GlobalKey> _rowKeys = {};
+  final ScrollController _verticalController = ScrollController();
+  final ScrollController _continueWatchController = ScrollController();
+  final ValueNotifier<int?> _continueWatchActiveIndex = ValueNotifier<int?>(0);
+  int _continueWatchItemCount = 0;
+  bool _continueWatchListenerAttached = false;
+  final GlobalKey _continueWatchKey = GlobalKey();
+  bool _visibleUpdateScheduled = false;
 
   @override
   void initState() {
     super.initState();
+
+    _verticalController.addListener(_updateVisibleRows);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!_dataLoaded) {
         _dataLoaded = true;
         await _initializeData();
       }
+      if (mounted) {
+        _updateVisibleRows();
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _rowControllers.values) {
+      controller.dispose();
+    }
+    for (final notifier in _rowActiveIndexes.values) {
+      notifier.dispose();
+    }
+    _rowControllers.clear();
+    _rowActiveIndexes.clear();
+    _rowItemCounts.clear();
+    _rowKeys.clear();
+
+    _verticalController.dispose();
+    _continueWatchController.dispose();
+    _continueWatchActiveIndex.dispose();
+    super.dispose();
   }
 
   Future<void> _initializeData() async {
@@ -140,6 +175,151 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _updateActiveIndex(
+    ValueNotifier<int?> notifier,
+    ScrollController controller,
+    int itemCount,
+  ) {
+    if (!controller.hasClients || itemCount <= 0) {
+      if (notifier.value != null) {
+        notifier.value = null;
+      }
+      return;
+    }
+
+    final viewport = controller.position.viewportDimension;
+    if (viewport <= 0) {
+      if (notifier.value != null) {
+        notifier.value = null;
+      }
+      return;
+    }
+
+    final viewStart = controller.offset;
+    final viewEnd = viewStart + viewport;
+    final viewCenter = viewStart + (viewport / 2);
+
+    int baseIndex = (viewCenter / MovieCard.itemExtent).floor();
+    if (baseIndex < 0) baseIndex = 0;
+    if (baseIndex > itemCount - 1) baseIndex = itemCount - 1;
+
+    int bestIndex = baseIndex;
+    double bestOverlap = _visibleOverlap(viewStart, viewEnd, bestIndex);
+
+    final candidates = <int>[
+      baseIndex - 1,
+      baseIndex,
+      baseIndex + 1,
+    ];
+
+    for (final candidate in candidates) {
+      if (candidate < 0 || candidate > itemCount - 1) continue;
+      final overlap = _visibleOverlap(viewStart, viewEnd, candidate);
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap;
+        bestIndex = candidate;
+      }
+    }
+
+    if (notifier.value != bestIndex) {
+      notifier.value = bestIndex;
+    }
+  }
+
+  double _visibleOverlap(double viewStart, double viewEnd, int index) {
+    final itemStart = index * MovieCard.itemExtent;
+    final itemEnd = itemStart + MovieCard.itemExtent;
+    final overlap = math.min(viewEnd, itemEnd) - math.max(viewStart, itemStart);
+    return overlap <= 0 ? 0 : overlap;
+  }
+
+  double? _rowCenterY(GlobalKey key) {
+    final context = key.currentContext;
+    if (context == null) return null;
+
+    final renderObject = context.findRenderObject();
+    if (renderObject is! RenderBox || !renderObject.hasSize) return null;
+
+    final position = renderObject.localToGlobal(Offset.zero);
+    final size = renderObject.size;
+    final centerY = position.dy + (size.height / 2);
+
+    return centerY;
+  }
+
+  void _updateVisibleRows() {
+    if (!mounted) return;
+
+    final screenHeight = MediaQuery.of(context).size.height;
+    final viewportCenter = screenHeight / 2;
+
+    double? bestDistance;
+    int? bestRowIndex;
+    bool bestIsContinueWatch = false;
+
+    if (_continueWatchItemCount > 0) {
+      final centerY = _rowCenterY(_continueWatchKey);
+      if (centerY != null && centerY >= 0 && centerY <= screenHeight) {
+        bestDistance = (centerY - viewportCenter).abs();
+        bestIsContinueWatch = true;
+      }
+    }
+
+    for (final entry in _rowActiveIndexes.entries) {
+      final rowIndex = entry.key;
+      final key = _rowKeys[rowIndex];
+      if (key == null) continue;
+      final centerY = _rowCenterY(key);
+      if (centerY == null || centerY < 0 || centerY > screenHeight) {
+        continue;
+      }
+
+      final distance = (centerY - viewportCenter).abs();
+      if (bestDistance == null || distance < bestDistance) {
+        bestDistance = distance;
+        bestRowIndex = rowIndex;
+        bestIsContinueWatch = false;
+      }
+    }
+
+    for (final entry in _rowActiveIndexes.entries) {
+      final rowIndex = entry.key;
+      final notifier = entry.value;
+      final controller = _rowControllers[rowIndex];
+      final itemCount = _rowItemCounts[rowIndex] ?? 0;
+
+      if (rowIndex != bestRowIndex || controller == null) {
+        if (notifier.value != null) {
+          notifier.value = null;
+        }
+        continue;
+      }
+
+      _updateActiveIndex(notifier, controller, itemCount);
+    }
+
+    if (_continueWatchItemCount > 0) {
+      if (bestIsContinueWatch) {
+        _updateActiveIndex(
+          _continueWatchActiveIndex,
+          _continueWatchController,
+          _continueWatchItemCount,
+        );
+      } else if (_continueWatchActiveIndex.value != null) {
+        _continueWatchActiveIndex.value = null;
+      }
+    }
+  }
+
+  void _scheduleVisibleUpdate() {
+    if (_visibleUpdateScheduled) return;
+    _visibleUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _visibleUpdateScheduled = false;
+      _updateVisibleRows();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     var themeProvider = Provider.of<ThemeProvider>(context, listen: true);
@@ -149,6 +329,7 @@ class _HomePageState extends State<HomePage> {
       body: isLoading
           ? HomeShimmer()
           : CustomScrollView(
+              controller: _verticalController,
               slivers: [
                 _buildSliverAppBar(context, selectedThemeData),
                 SliverToBoxAdapter(
@@ -172,9 +353,10 @@ class _HomePageState extends State<HomePage> {
                             height: ResponsiveWidget.isMobile(context) ? 0 : 10,
                           ),
                           selectedType == 'SHORTS'
-                              ? SizedBox.shrink() : continueWatchWidget(
-                              continueWatchList:
-                                  dashboardProvider.continueWatchedMovies),
+                              ? SizedBox.shrink()
+                              : continueWatchWidget(
+                                  continueWatchList:
+                                      dashboardProvider.continueWatchedMovies),
                           selectedType == 'SHORTS'
                               ? ShortsLibraryPage(useParentScroll: true)
                               : ListView.builder(
@@ -189,12 +371,23 @@ class _HomePageState extends State<HomePage> {
 
                                     _rowControllers.putIfAbsent(
                                         index, () => ScrollController());
+                                    _rowActiveIndexes.putIfAbsent(
+                                        index, () => ValueNotifier<int?>(0));
+                                    _rowItemCounts[index] =
+                                        dashboardData.movies?.length ?? 0;
+                                    _rowKeys.putIfAbsent(
+                                        index, () => GlobalKey());
 
                                     final controller = _rowControllers[index]!;
+                                    final activeIndex =
+                                        _rowActiveIndexes[index]!;
+                                    final rowKey = _rowKeys[index]!;
 
                                     // 🔥 Attach listener ONLY once
                                     if (!controller.hasListeners) {
                                       controller.addListener(() {
+                                        _scheduleVisibleUpdate();
+
                                         if (controller.position.pixels >=
                                             controller
                                                     .position.maxScrollExtent -
@@ -209,70 +402,80 @@ class _HomePageState extends State<HomePage> {
                                       });
                                     }
 
-                                    return Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "${dashboardData.language} - ${dashboardData.category}",
-                                          style: TextStyle(
-                                            overflow: TextOverflow.ellipsis,
-                                            fontSize: ResponsiveWidget.isMobile(
-                                                    context)
-                                                ? 18
-                                                : 20,
-                                            fontWeight: FontWeight.bold,
-                                            color:
-                                                selectedThemeData.canvasColor,
+                                    _scheduleVisibleUpdate();
+
+                                    return KeyedSubtree(
+                                      key: rowKey,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "${dashboardData.language} - ${dashboardData.category}",
+                                            style: TextStyle(
+                                              overflow: TextOverflow.ellipsis,
+                                              fontSize:
+                                                  ResponsiveWidget.isMobile(
+                                                          context)
+                                                      ? 18
+                                                      : 20,
+                                              fontWeight: FontWeight.bold,
+                                              color:
+                                                  selectedThemeData.canvasColor,
+                                            ),
                                           ),
-                                        ),
-                                        SizedBox(height: 10),
-                                        (dashboardData.movies == null ||
-                                                dashboardData.movies!.isEmpty)
-                                            ? SizedBox.shrink()
-                                            : SizedBox(
-                                                height: 300,
-                                                child: ListView.builder(
-                                                  controller: controller,
-                                                  scrollDirection:
-                                                      Axis.horizontal,
-                                                  itemCount: dashboardData
-                                                          .movies!.length +
-                                                      (dashboardData
-                                                              .isRowLoading
-                                                          ? 1
-                                                          : 0),
-                                                  itemBuilder: (context, i) {
-                                                    if (i <
-                                                        dashboardData
-                                                            .movies!.length) {
-                                                      return MovieCard(
-                                                          movie: dashboardData
-                                                              .movies![i]);
-                                                    } else if (dashboardData
-                                                        .isRowLoading) {
-                                                      return Padding(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .all(12),
-                                                        child: SizedBox(
-                                                          width: 40,
-                                                          height: 40,
-                                                          child:
-                                                              CircularProgressIndicator(
-                                                                  strokeWidth:
-                                                                      2),
-                                                        ),
-                                                      );
-                                                    } else {
-                                                      return const SizedBox
-                                                          .shrink();
-                                                    }
-                                                  },
+                                          SizedBox(height: 10),
+                                          (dashboardData.movies == null ||
+                                                  dashboardData.movies!.isEmpty)
+                                              ? SizedBox.shrink()
+                                              : SizedBox(
+                                                  height: 300,
+                                                  child: ListView.builder(
+                                                    controller: controller,
+                                                    scrollDirection:
+                                                        Axis.horizontal,
+                                                    padding: EdgeInsets.zero,
+                                                    itemCount: dashboardData
+                                                            .movies!.length +
+                                                        (dashboardData
+                                                                .isRowLoading
+                                                            ? 1
+                                                            : 0),
+                                                    itemBuilder: (context, i) {
+                                                      if (i <
+                                                          dashboardData
+                                                              .movies!.length) {
+                                                        return MovieCard(
+                                                            movie: dashboardData
+                                                                .movies![i],
+                                                            index: i,
+                                                            activeIndexListenable:
+                                                                activeIndex);
+                                                      } else if (dashboardData
+                                                          .isRowLoading) {
+                                                        return Padding(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .all(12),
+                                                          child: SizedBox(
+                                                            width: 40,
+                                                            height: 40,
+                                                            child:
+                                                                CircularProgressIndicator(
+                                                                    strokeWidth:
+                                                                        2),
+                                                          ),
+                                                        );
+                                                      } else {
+                                                        return const SizedBox
+                                                            .shrink();
+                                                      }
+                                                    },
+                                                  ),
                                                 ),
-                                              ),
-                                        SizedBox(height: 20),
-                                      ],
+                                          SizedBox(height: 20),
+                                        ],
+                                      ),
                                     );
                                   },
                                 ),
@@ -289,50 +492,68 @@ class _HomePageState extends State<HomePage> {
   Widget continueWatchWidget({
     required List<Content> continueWatchList,
   }) {
-    if (continueWatchList.isEmpty) {
+    final items = continueWatchList
+        .where((item) => (item.watchedPercentage ?? 0) < 95)
+        .toList();
+
+    if (items.isEmpty) {
       return const SizedBox.shrink();
     }
     var theme = Theme.of(context);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 🔴 LABEL
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
-          child: Text(
-            "Continue Watching",
-            style: TextStyle(
-              overflow: TextOverflow.ellipsis,
-              fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
-              fontWeight: FontWeight.bold,
-              color: theme.canvasColor,
+    _continueWatchItemCount = items.length;
+    if (!_continueWatchListenerAttached) {
+      _continueWatchListenerAttached = true;
+      _continueWatchController.addListener(() {
+        _scheduleVisibleUpdate();
+      });
+    }
+
+    _scheduleVisibleUpdate();
+
+    return KeyedSubtree(
+      key: _continueWatchKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 🔴 LABEL
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+            child: Text(
+              "Continue Watching",
+              style: TextStyle(
+                overflow: TextOverflow.ellipsis,
+                fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
+                fontWeight: FontWeight.bold,
+                color: theme.canvasColor,
+              ),
             ),
           ),
-        ),
 
-        // 🎬 HORIZONTAL LIST
-        SizedBox(
-          height: 300,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: continueWatchList.length,
-            itemBuilder: (context, index) {
-              final item = continueWatchList[index];
+          // 🎬 HORIZONTAL LIST
+          SizedBox(
+            height: 300,
+            child: ListView.builder(
+              controller: _continueWatchController,
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.zero,
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
 
-              // ❌ Hide completed items
-              if ((item.watchedPercentage ?? 0) >= 95) {
-                return const SizedBox.shrink();
-              }
-
-              return SizedBox(
-                width: 320,
-                child: MovieCard(movie: item),
-              );
-            },
+                return SizedBox(
+                  width: MovieCard.itemExtent,
+                  child: MovieCard(
+                    movie: item,
+                    index: index,
+                    activeIndexListenable: _continueWatchActiveIndex,
+                  ),
+                );
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

@@ -38,11 +38,11 @@ class _UpcomingPageState extends State<UpcomingPage> {
       appBar: AppBar(
         centerTitle: true,
         backgroundColor: theme.primaryColor,
+        foregroundColor: Colors.white,
         elevation: 0,
         title: Text(
           lang.upcoming,
           style: TextStyle(
-            color: theme.canvasColor,
             fontWeight: FontWeight.bold,
           ),
         ),
