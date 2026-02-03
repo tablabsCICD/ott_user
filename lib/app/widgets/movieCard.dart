@@ -55,7 +55,7 @@ class _MovieCardState extends State<MovieCard> {
 
   bool get _hasWatchProgress =>
       (widget.movie.watchedPercentage ?? 0) > 0 &&
-          (widget.movie.watchedPercentage ?? 0) < 100;
+      (widget.movie.watchedPercentage ?? 0) < 100;
 
   Widget _watchProgressBar() {
     final progress = (widget.movie.watchedPercentage ?? 0) / 100;
@@ -205,7 +205,6 @@ class _MovieCardState extends State<MovieCard> {
                 onPressed: _toggleMute,
               ),
             ),
-
           ],
         ),
       );
@@ -402,7 +401,6 @@ class _MovieCardState extends State<MovieCard> {
         context.read<DashboardProvider>().getContinueWatchedMovieList();
       }
     });
-
   }
 
   void _showCupertinoDialog(BuildContext context, Content movie) {
@@ -489,37 +487,38 @@ class _MovieCardState extends State<MovieCard> {
         childrenButtonSize: const Size(30, 35),
         spacing: 2,
         children: [
-          /// 🔖 Bookmark
-          SpeedDialChild(
-            label: isBookmarked ? "Remove Bookmark" : "Bookmark",
-            labelBackgroundColor: theme.cardColor,
-            labelStyle: TextStyle(
-              color: theme.canvasColor,
-              fontSize: 10,
-            ),
-            child: Icon(
-              isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-              size: 14,
-              color: Colors.white,
-            ),
-            backgroundColor: theme.primaryColor,
-            onTap: () async {
-              final bool wasBookmarked =
-                  bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
+          movie.isRental!
+              ? SpeedDialChild()
+              : SpeedDialChild(
+                  label: isBookmarked ? "Remove Bookmark" : "Bookmark",
+                  labelBackgroundColor: theme.cardColor,
+                  labelStyle: TextStyle(
+                    color: theme.canvasColor,
+                    fontSize: 10,
+                  ),
+                  child: Icon(
+                    isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                  backgroundColor: theme.primaryColor,
+                  onTap: () async {
+                    final bool wasBookmarked =
+                        bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
 
-              await bookmarkProvider.toggleBookmark(movie);
+                    await bookmarkProvider.toggleBookmark(movie);
 
-              CustomToast.show(
-                context,
-                wasBookmarked
-                    ? "${movie.title} removed from bookmarks"
-                    : "${movie.title} added to bookmarks",
-                isSuccess: true,
-              );
+                    CustomToast.show(
+                      context,
+                      wasBookmarked
+                          ? "${movie.title} removed from bookmarks"
+                          : "${movie.title} added to bookmarks",
+                      isSuccess: true,
+                    );
 
-              isDialOpen.value = false;
-            },
-          ),
+                    isDialOpen.value = false;
+                  },
+                ),
 
           /// 🔗 Share
           SpeedDialChild(
