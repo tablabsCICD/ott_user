@@ -171,7 +171,8 @@ class _HomePageState extends State<HomePage> {
                           SizedBox(
                             height: ResponsiveWidget.isMobile(context) ? 0 : 10,
                           ),
-                          continueWatchWidget(
+                          selectedType == 'SHORTS'
+                              ? SizedBox.shrink() : continueWatchWidget(
                               continueWatchList:
                                   dashboardProvider.continueWatchedMovies),
                           selectedType == 'SHORTS'

@@ -410,7 +410,7 @@ class _MovieCardState extends State<MovieCard> {
       ),
     ).then((refresh) {
       if (refresh == true) {
-        context.read<DashboardProvider>().getContinueWatchedMovieList();
+        context.read<DashboardProvider>().getContinueWatchedMovieList(widget.movie.type??"MOVIE");
       }
     });
   }
