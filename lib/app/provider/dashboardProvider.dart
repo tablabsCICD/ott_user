@@ -12,6 +12,8 @@ import '../core/constant/api_constant.dart';
 import '../core/network/api_helper.dart';
 import 'baseProvider.dart';
 
+
+
 class DashboardProvider extends BaseProvider {
   DashboardProvider() : super('Ideal') {
     getContinueWatchedMovieList();
@@ -213,7 +215,7 @@ class DashboardProvider extends BaseProvider {
         }
       }
     } catch (error) {
-      debugPrint("❌ getContentById error: $error");
+      debugPrint("❌ getContentById error::: $error");
     }
   }
 
@@ -224,7 +226,6 @@ class DashboardProvider extends BaseProvider {
 
     try {
       var response = await apiHelper.getApi1(apiUrl);
-      debugPrint(response.body);
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
 
@@ -234,12 +235,13 @@ class DashboardProvider extends BaseProvider {
         if (continueWatchedResponse.isSuccess == true &&
             continueWatchedResponse.data != null) {
           _continueWatchedMovies = continueWatchedResponse.data!;
-          debugPrint(_continueWatchedMovies.toString());
+          debugPrint("✅✅✅✅✅✅✅✅✅✅✅✅✅✅");
+          debugPrint(_continueWatchedMovies.length.toString());
           notifyListeners();
         }
       }
     } catch (error) {
-      debugPrint("❌ getContentById error: $error");
+      debugPrint("❌ continue watching error: $error");
     }
   }
 }

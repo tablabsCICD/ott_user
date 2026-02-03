@@ -298,7 +298,7 @@ class _HomePageState extends State<HomePage> {
       children: [
         // 🔴 LABEL
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
           child: Text(
             "Continue Watching",
             style: TextStyle(
@@ -316,7 +316,6 @@ class _HomePageState extends State<HomePage> {
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: continueWatchList.length,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
             itemBuilder: (context, index) {
               final item = continueWatchList[index];
 
@@ -326,7 +325,7 @@ class _HomePageState extends State<HomePage> {
               }
 
               return SizedBox(
-                width: 300,
+                width: 320,
                 child: MovieCard(movie: item),
               );
             },
