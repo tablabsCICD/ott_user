@@ -9,12 +9,15 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3f04a968-27e5-4905-8561-ff00d911146d" name="Changes" comment="changes in continue watch card and media player">
-      <change afterPath="$PROJECT_DIR$/lib/app/pages/movie details page/component/mobile_preview_cordinator.dart" afterDir="false" />
+    <list default="true" id="3f04a968-27e5-4905-8561-ff00d911146d" name="Changes" comment="changes in change_language and home screen">
+      <change beforePath="$PROJECT_DIR$/.flutter-plugins-dependencies" beforeDir="false" afterPath="$PROJECT_DIR$/.flutter-plugins-dependencies" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/build.gradle.kts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/app/pages/home page/HomePage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/home page/HomePage.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/app/pages/profile page/component/change_language.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/profile page/component/change_language.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/app/widgets/movieCard.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/widgets/movieCard.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -142,7 +145,15 @@
       <option name="project" value="LOCAL" />
       <updated>1770109389340</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="changes in change_language and home screen">
+      <option name="closed" value="true" />
+      <created>1770121683319</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1770121683319</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -167,7 +178,8 @@
     <MESSAGE value="added app localization file" />
     <MESSAGE value="changes in continue watch card" />
     <MESSAGE value="changes in continue watch card and media player" />
-    <option name="LAST_COMMIT_MESSAGE" value="changes in continue watch card and media player" />
+    <MESSAGE value="changes in change_language and home screen" />
+    <option name="LAST_COMMIT_MESSAGE" value="changes in change_language and home screen" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
