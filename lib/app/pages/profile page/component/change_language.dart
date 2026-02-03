@@ -104,18 +104,13 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: Icon(Icons.arrow_back_ios, color: theme.canvasColor),
-        ),
         centerTitle: true,
-        backgroundColor: theme.scaffoldBackgroundColor,
+        backgroundColor: theme.primaryColor,
+        foregroundColor: Colors.white,
         title: Text(
           lang.selectPreferredLanguage,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: theme.canvasColor,
           ),
         ),
       ),

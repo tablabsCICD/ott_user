@@ -41,6 +41,9 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
   bool _handlingEnd = false;
   Duration _lastSavedPosition = Duration.zero;
   bool _wakelockEnabled = false;
+  bool _isDisposed = false;
+  bool _isExiting = false;
+  int _setupToken = 0;
 
   bool get _isSeries =>
       widget.content?.type?.toLowerCase() == "series" &&
@@ -71,37 +74,47 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
   // ================= PLAYER SETUP =================
 
   Future<void> _setupPlayer(String url) async {
-    setState(() => _loading = true);
+    final token = ++_setupToken;
+
+    if (mounted) {
+      setState(() => _loading = true);
+    }
 
     _progressTimer?.cancel();
-
-    _videoController?.removeListener(_videoListener);
-    await _videoController?.pause();
-    await _videoController?.dispose();
-    _chewieController?.dispose();
-
-    _videoController = null;
-    _chewieController = null;
+    await _disposePlayer(saveProgress: false);
+    if (_isDisposed || !mounted || token != _setupToken) return;
 
     // 🔑 Give MIUI time to release decoder
     await Future.delayed(const Duration(milliseconds: 500));
+    if (_isDisposed || !mounted || token != _setupToken) return;
 
     debugPrint("VIDEO URL => $url");
 
-    _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
-    await _videoController!.initialize();
-    if (!mounted) return;
+    final controller = VideoPlayerController.networkUrl(Uri.parse(url));
+    try {
+      await controller.initialize();
+    } catch (e) {
+      debugPrint("VIDEO INIT ERROR => $e");
+      await controller.dispose();
+      return;
+    }
 
-    if (_videoController!.value.hasError) {
+    if (_isDisposed || !mounted || token != _setupToken) {
+      await controller.dispose();
+      return;
+    }
+
+    if (controller.value.hasError) {
       debugPrint(
-        "VIDEO ERROR => ${_videoController!.value.errorDescription}",
+        "VIDEO ERROR => ${controller.value.errorDescription}",
       );
     }
 
-    _videoController!.addListener(_videoListener);
+    controller.addListener(_videoListener);
+    _videoController = controller;
 
     _chewieController = ChewieController(
-      videoPlayerController: _videoController!,
+      videoPlayerController: controller,
       autoPlay: false, // we already call play()
       looping: false,
       allowFullScreen: true,
@@ -115,15 +128,16 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
       ],
     );
 
-    if (mounted) {
+    if (mounted && token == _setupToken) {
       setState(() => _loading = false);
     }
 
-    _resumeAndPlay();
+    await _resumeAndPlay(token);
   }
 
-  Future<void> _resumeAndPlay() async {
+  Future<void> _resumeAndPlay(int token) async {
     if (_videoController == null || !mounted) return;
+    if (_isDisposed || token != _setupToken) return;
 
     await _videoController!.setVolume(1.0);
 
@@ -141,6 +155,7 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     }
 
     await _videoController!.play();
+    if (_isDisposed || token != _setupToken) return;
 
     _progressTimer = Timer.periodic(
       const Duration(seconds: 15),
@@ -150,6 +165,7 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
 
   // ================= VIDEO LISTENER =================
   void _videoListener() {
+    if (_isDisposed || !mounted) return;
     if (_videoController == null || _handlingEnd) return;
 
     final value = _videoController!.value;
@@ -248,14 +264,79 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
 
   @override
   void dispose() {
-    _saveProgress(); // 🔥 FINAL SAVE
-    _progressTimer?.cancel();
-    _videoController?.removeListener(_videoListener);
-    _videoController?.dispose();
-    _chewieController?.dispose();
-    WakelockPlus.disable();
-    _wakelockEnabled = false;
+    _isDisposed = true;
+    _setupToken++;
+    _disposePlayerSync(saveProgress: true);
     super.dispose();
+  }
+
+  Future<void> _disposePlayer({bool saveProgress = true}) async {
+    if (saveProgress) {
+      _saveProgress();
+    }
+    _progressTimer?.cancel();
+    _progressTimer = null;
+
+    final controller = _videoController;
+    _videoController = null;
+
+    if (controller != null) {
+      controller.removeListener(_videoListener);
+      try {
+        await controller.pause();
+      } catch (_) {}
+      try {
+        await controller.setVolume(0.0);
+      } catch (_) {}
+      await controller.dispose();
+    }
+
+    _chewieController?.dispose();
+    _chewieController = null;
+
+    if (_wakelockEnabled) {
+      WakelockPlus.disable();
+      _wakelockEnabled = false;
+    }
+  }
+
+  void _disposePlayerSync({bool saveProgress = true}) {
+    if (saveProgress) {
+      _saveProgress();
+    }
+    _progressTimer?.cancel();
+    _progressTimer = null;
+
+    final controller = _videoController;
+    _videoController = null;
+
+    if (controller != null) {
+      controller.removeListener(_videoListener);
+      try {
+        controller.pause();
+      } catch (_) {}
+      try {
+        controller.setVolume(0.0);
+      } catch (_) {}
+      controller.dispose();
+    }
+
+    _chewieController?.dispose();
+    _chewieController = null;
+
+    if (_wakelockEnabled) {
+      WakelockPlus.disable();
+      _wakelockEnabled = false;
+    }
+  }
+
+  Future<void> _handleExit() async {
+    if (_isExiting) return;
+    _isExiting = true;
+    await _disposePlayer(saveProgress: true);
+    if (mounted) {
+      Navigator.pop(context, true);
+    }
   }
 
   // ================= UI =================
@@ -266,8 +347,7 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
 
     return WillPopScope(
       onWillPop: () async {
-        _saveProgress();
-        Navigator.pop(context, true); // 🔥 SEND REFRESH SIGNAL
+        await _handleExit();
         return false;
       },
       child: Scaffold(
@@ -276,9 +356,14 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
             ? null
             : AppBar(
                 backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
                 title: Text(
                   widget.content?.title ?? "",
                   style: const TextStyle(color: Colors.white),
+                ),
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: _handleExit,
                 ),
               ),
         body: _loading

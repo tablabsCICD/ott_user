@@ -42,11 +42,11 @@ class _WatchlistPageState extends State<WatchlistPage> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: theme.primaryColor,
+        foregroundColor: Colors.white,
         centerTitle: true,
         title: Text(
           lang.watchlist,
           style: TextStyle(
-            color: theme.canvasColor,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -165,7 +165,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
                     content: item,
                     seasons: null,
                     videoUrl: item.contentUrl ?? '',
-                    seasonIndex: 0, episodeIndex: 0,
+                    seasonIndex: 0,
+                    episodeIndex: 0,
                   ),
                 ),
               );

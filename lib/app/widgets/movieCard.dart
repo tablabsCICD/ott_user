@@ -1,11 +1,11 @@
 import 'dart:async';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
@@ -13,6 +13,7 @@ import 'package:ott/app/pages/watchlist%20page/playMoviePage.dart';
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
+import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -27,19 +28,37 @@ import 'package:ott/data/models/content.dart';
 import '../pages/movie details page/component/mobile_preview_cordinator.dart';
 
 class MovieCard extends StatefulWidget {
-  final Content movie;
+  static const double itemWidth = 300;
+  static const double itemMargin = 8;
+  static const double itemExtent = itemWidth + (itemMargin * 2);
 
-  const MovieCard({super.key, required this.movie});
+  final Content movie;
+  final ValueListenable<int?>? activeIndexListenable;
+  final int? index;
+
+  const MovieCard({
+    super.key,
+    required this.movie,
+    this.activeIndexListenable,
+    this.index,
+  });
 
   @override
   State<MovieCard> createState() => _MovieCardState();
 }
 
 class _MovieCardState extends State<MovieCard> {
+  static _MovieCardState? _activePreviewState;
   VideoPlayerController? _videoController;
   bool _isHovered = false;
-  bool _isMuted = false;
+  bool _isMuted = true;
   bool _isVideoInitialized = false;
+  bool _isPreviewPlaying = false;
+  bool _isAutoPlayActive = false;
+  bool _hasPlayedOnce = false;
+  bool _isStartingPreview = false;
+  bool _hasVideoListener = false;
+  Timer? _playDelayTimer;
 
   /// MOBILE preview
   Timer? _previewDelayTimer;
@@ -48,18 +67,7 @@ class _MovieCardState extends State<MovieCard> {
   @override
   void initState() {
     super.initState();
-
-    /// 🌐 WEB: real hover preview
-      _initializeVideo();
-
-    /// 📱 MOBILE: request preview after 2 seconds
-    if (!kIsWeb) {
-      _previewDelayTimer = Timer(const Duration(seconds: 2), () {
-        if (!mounted) return;
-        MobilePreviewCoordinator.requestPreview(widget.movie.id!);
-      });
-    }
-
+    widget.activeIndexListenable?.addListener(_handleActiveIndexChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context
           .read<BookmarkProvider>()
@@ -69,6 +77,10 @@ class _MovieCardState extends State<MovieCard> {
           context.read<BookmarkProvider>().addBookmark(widget.movie.id ?? 0);
         }
       });
+
+      if (mounted) {
+        _handleActiveIndexChanged();
+      }
     });
   }
 
@@ -83,92 +95,257 @@ class _MovieCardState extends State<MovieCard> {
   void _onPreviewChanged() async {
     final activeId = MobilePreviewCoordinator.activeMovieId.value;
 
-    if (activeId == widget.movie.id) {
-      setState(() => _showPreview = true);
+  void _toggleMute() {
+    final controller = _videoController;
+    setState(() {
+      _isMuted = !_isMuted;
+    });
+    controller?.setVolume(_isMuted ? 0 : 1);
+  }
 
-      // 🔥 MOBILE VIDEO INIT (lazy)
-      if (!kIsWeb && !_isVideoInitialized) {
-        await _initializeVideo();
-        _videoController?.setVolume(0); // 🔇 ALWAYS MUTED
-        _videoController?.play();
-        setState(() => _isMobileVideoReady = true);
-      } else {
-        _videoController?.play();
+  Future<bool> _ensureVideoInitialized() async {
+    if (_isVideoInitialized) return true;
+
+    final trailerUrl = widget.movie.trailerUrl;
+    if (trailerUrl?.isNotEmpty != true) return false;
+
+    _videoController ??=
+        VideoPlayerController.networkUrl(Uri.parse(trailerUrl!));
+
+    try {
+      await _videoController!.initialize();
+      _videoController!
+        ..setLooping(false)
+        ..setVolume(_isMuted ? 0.0 : 1.0);
+
+      if (!_hasVideoListener) {
+        _videoController!.addListener(_handleVideoTick);
+        _hasVideoListener = true;
       }
-    } else {
-      if (_showPreview) {
-        _videoController?.pause();
-        _videoController?.seekTo(Duration.zero);
-        setState(() {
-          _showPreview = false;
-          _isMobileVideoReady = false;
-        });
+
+      if (mounted) {
+        setState(() => _isVideoInitialized = true);
       }
+      return true;
+    } catch (e) {
+      debugPrint("Video init failed: $e");
+      _disposeVideoController();
+      return false;
+    }
+  }
+
+  void _disposeVideoController() {
+    if (_videoController != null && _hasVideoListener) {
+      _videoController!.removeListener(_handleVideoTick);
+      _hasVideoListener = false;
+    }
+    _videoController?.dispose();
+    _videoController = null;
+    _isVideoInitialized = false;
+  }
+
+  @override
+  void didUpdateWidget(covariant MovieCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.activeIndexListenable != widget.activeIndexListenable) {
+      oldWidget.activeIndexListenable
+          ?.removeListener(_handleActiveIndexChanged);
+      widget.activeIndexListenable?.addListener(_handleActiveIndexChanged);
+      _handleActiveIndexChanged();
+    } else if (oldWidget.index != widget.index) {
+      _handleActiveIndexChanged();
+    }
+
+    if (oldWidget.movie.trailerUrl != widget.movie.trailerUrl) {
+      _playDelayTimer?.cancel();
+      _hasPlayedOnce = false;
+      _stopPreview();
+      _disposeVideoController();
     }
   }
 
   @override
   void dispose() {
-    _previewDelayTimer?.cancel();
-    MobilePreviewCoordinator.activeMovieId
-        .removeListener(_onPreviewChanged);
-    _videoController?.dispose();
-    super.dispose();
-  }
-
-  Future<void> _initializeVideo() async {
-    final trailerUrl = widget.movie.trailerUrl;
-    if (trailerUrl?.isNotEmpty == true) {
-      _videoController =
-          VideoPlayerController.networkUrl(Uri.parse(trailerUrl!));
-
-      try {
-        await _videoController!.initialize();
-        _videoController!
-          ..setLooping(true)
-          ..setVolume(1.0);
-        setState(() => _isVideoInitialized = true);
-      } catch (e) {
-        debugPrint("Video init failed: $e");
-      }
+    if (_activePreviewState == this) {
+      _activePreviewState = null;
     }
+    widget.activeIndexListenable?.removeListener(_handleActiveIndexChanged);
+    _playDelayTimer?.cancel();
+    _disposeVideoController();
+    super.dispose();
   }
 
   void _handleHover(bool hovering) {
     setState(() => _isHovered = hovering);
 
-    if (_videoController == null || !_isVideoInitialized) return;
-    hovering ? _videoController!.play() : _videoController!.pause();
+    if (hovering) {
+      _schedulePreview();
+    } else {
+      _playDelayTimer?.cancel();
+      _hasPlayedOnce = false;
+      _stopPreview();
+      if (_activePreviewState == this) {
+        _activePreviewState = null;
+      }
+    }
   }
 
-  void _toggleMute() {
-    if (_videoController == null) return;
-    setState(() {
-      _isMuted = !_isMuted;
-      _videoController!.setVolume(_isMuted ? 0 : 1);
+  void _handleActiveIndexChanged() {
+    final activeIndex = widget.activeIndexListenable?.value;
+    final shouldAutoPlay = _isAutoPlayDevice &&
+        widget.index != null &&
+        activeIndex != null &&
+        activeIndex == widget.index;
+
+    if (shouldAutoPlay == _isAutoPlayActive) return;
+    _isAutoPlayActive = shouldAutoPlay;
+
+    if (shouldAutoPlay) {
+      _schedulePreview();
+    } else {
+      _playDelayTimer?.cancel();
+      _hasPlayedOnce = false;
+      _stopPreview();
+      if (_activePreviewState == this) {
+        _activePreviewState = null;
+      }
+    }
+  }
+
+  bool get _isAutoPlayDevice {
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+      case TargetPlatform.iOS:
+        return true;
+      case TargetPlatform.macOS:
+      case TargetPlatform.windows:
+      case TargetPlatform.linux:
+      case TargetPlatform.fuchsia:
+        return false;
+    }
+  }
+
+  void _handleVideoTick() {
+    if (!mounted) return;
+    final controller = _videoController;
+    if (controller == null || !_isVideoInitialized) return;
+
+    final value = controller.value;
+    if (value.hasError) {
+      debugPrint("Trailer playback error: ${value.errorDescription}");
+      _stopPreview(markPlayed: true);
+      if (_activePreviewState == this) {
+        _activePreviewState = null;
+      }
+      return;
+    }
+
+    if (!_isPreviewPlaying) return;
+    if (!value.isInitialized || value.duration == Duration.zero) return;
+
+    final nearlyDone =
+        value.position >= value.duration - const Duration(milliseconds: 200);
+    if (nearlyDone) {
+      _stopPreview(markPlayed: true);
+      if (_activePreviewState == this) {
+        _activePreviewState = null;
+      }
+    }
+  }
+
+  void _schedulePreview() {
+    if (_hasPlayedOnce || _playDelayTimer != null) return;
+    if (_isStartingPreview || _isPreviewPlaying) return;
+    if (!_isPlayTriggerActive) return;
+
+    _playDelayTimer = Timer(const Duration(seconds: 2), () {
+      _playDelayTimer = null;
+      _startPreviewIfEligible();
     });
   }
 
+  bool get _isPlayTriggerActive {
+    return _isHovered || _isAutoPlayActive;
+  }
 
-  Widget _watchProgressBar() {
-    final progress = (widget.movie.watchedPercentage ?? 0) / 100;
+  Future<void> _startPreviewIfEligible() async {
+    if (!mounted) return;
+    if (_hasPlayedOnce || !_isPlayTriggerActive) return;
+    if (_isStartingPreview || _isPreviewPlaying) return;
 
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 8,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child: LinearProgressIndicator(
-          value: progress.clamp(0.0, 1.0),
-          minHeight: 4,
-          backgroundColor: Colors.white.withOpacity(0.3),
-          valueColor: AlwaysStoppedAnimation<Color>(
-            Colors.blue, // Netflix-style
-          ),
-        ),
-      ),
-    );
+    if (!_isHovered &&
+        _activePreviewState != null &&
+        _activePreviewState != this &&
+        _activePreviewState!._isPreviewPlaying) {
+      return;
+    }
+
+    _isStartingPreview = true;
+    try {
+      final ready = await _ensureVideoInitialized();
+      if (!ready || !mounted) {
+        if (_activePreviewState == this) {
+          _activePreviewState = null;
+        }
+        _stopPreview(markPlayed: true);
+        return;
+      }
+
+      if (!_isPlayTriggerActive) {
+        _stopPreview();
+        return;
+      }
+
+      _activatePreview();
+      _ensureMuted();
+
+      await _videoController!.play();
+      if (!mounted) return;
+      setState(() => _isPreviewPlaying = true);
+    } catch (e) {
+      debugPrint("Trailer play failed: $e");
+      _stopPreview(markPlayed: true);
+      if (_activePreviewState == this) {
+        _activePreviewState = null;
+      }
+    } finally {
+      _isStartingPreview = false;
+    }
+  }
+
+  void _activatePreview() {
+    if (_activePreviewState == this) return;
+    final previous = _activePreviewState;
+    _activePreviewState = this;
+    previous?._stopPreview(external: true);
+  }
+
+  void _ensureMuted() {
+    final controller = _videoController;
+    if (controller == null) return;
+    if (!_isMuted) {
+      setState(() => _isMuted = true);
+    }
+    controller.setVolume(0.0);
+  }
+
+  void _stopPreview({bool external = false, bool markPlayed = false}) {
+    final controller = _videoController;
+    if (controller == null || !_isVideoInitialized) return;
+
+    try {
+      controller.pause();
+      controller.seekTo(Duration.zero);
+    } catch (e) {
+      debugPrint("Trailer stop failed: $e");
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isPreviewPlaying = false;
+      if (markPlayed) _hasPlayedOnce = true;
+    });
   }
 
   @override
@@ -178,6 +355,7 @@ class _MovieCardState extends State<MovieCard> {
     final posterUrl = widget.movie.posterUrlList?.isNotEmpty == true
         ? widget.movie.posterUrlList!.first
         : null;
+    final showPreview = _isPreviewPlaying;
 
     return Stack(
       children: [
@@ -187,8 +365,8 @@ class _MovieCardState extends State<MovieCard> {
           child: GestureDetector(
             onTap: _openDetails,
             child: Container(
-              width: 300,
-              margin: const EdgeInsets.all(8),
+              width: MovieCard.itemWidth,
+              margin: const EdgeInsets.all(MovieCard.itemMargin),
               decoration: BoxDecoration(
                 color: theme.cardColor,
                 borderRadius: BorderRadius.circular(12),
@@ -208,6 +386,7 @@ class _MovieCardState extends State<MovieCard> {
                             posterUrl,
                             theme,
                             widget.movie,
+                            showPreview,
                           ),
                         ),
 
@@ -236,39 +415,32 @@ class _MovieCardState extends State<MovieCard> {
   }
 
   Widget _buildMediaPreview(
-      String? posterUrl, ThemeData theme, Content content) {
-
-    /// 🌐 WEB → hover autoplay (unchanged)
-    if (kIsWeb && _isHovered && _isVideoInitialized && _videoController != null) {
-      return AspectRatio(
-        aspectRatio: 19 / 8,
-        child: Stack(
-          children: [
-            VideoPlayer(_videoController!),
-
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: VideoProgressIndicator(
-                _videoController!,
-                allowScrubbing: true,
-              ),
+      String? posterUrl, ThemeData theme, Content content, bool showPreview) {
+    if (showPreview && _isVideoInitialized && _videoController != null) {
+      return Stack(
+        children: [
+          Positioned.fill(child: VideoPlayer(_videoController!)),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: VideoProgressIndicator(
+              _videoController!,
+              allowScrubbing: true,
             ),
-
-            Positioned(
-              right: 5,
-              bottom: 5,
-              child: IconButton(
-                icon: Icon(
-                  _isMuted ? Icons.volume_off : Icons.volume_up,
-                  color: Colors.white.withOpacity(0.7),
-                ),
-                onPressed: _toggleMute,
+          ),
+          Positioned(
+            right: 5,
+            bottom: 5,
+            child: IconButton(
+              icon: Icon(
+                _isMuted ? Icons.volume_off : Icons.volume_up,
+                color: Colors.white.withOpacity(0.7),
               ),
+              onPressed: _toggleMute,
             ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
@@ -464,7 +636,7 @@ class _MovieCardState extends State<MovieCard> {
       MaterialPageRoute(
         builder: (_) => movie.isFeatured == true
             ? TrailerPage(
-                trailerUrl: movie.trailerUrl??"",
+                trailerUrl: movie.trailerUrl ?? "",
                 isTrailerUrl: true,
                 content: movie)
             : movie.type!.toLowerCase() == 'movie'
@@ -491,7 +663,9 @@ class _MovieCardState extends State<MovieCard> {
       ),
     ).then((refresh) {
       if (refresh == true) {
-        context.read<DashboardProvider>().getContinueWatchedMovieList(widget.movie.type??"MOVIE");
+        context
+            .read<DashboardProvider>()
+            .getContinueWatchedMovieList(widget.movie.type ?? "MOVIE");
       }
     });
   }
@@ -543,12 +717,30 @@ class _MovieCardState extends State<MovieCard> {
                 MaterialPageRoute(
                   builder: (_) => MovieBillingPage(movie: movie),
                 ),
-              );
+              ).then((result) {
+                if (result == true) {
+                  _refreshAfterPurchase();
+                }
+              });
             },
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _refreshAfterPurchase() async {
+    final user = await LocalSharePreferences().getUser();
+    if (!mounted || user == null) return;
+
+    final userProvider = context.read<UserProvider>();
+    final dashboardProvider = context.read<DashboardProvider>();
+
+    final type = (widget.movie.type ?? "MOVIE").toUpperCase();
+    final languages = userProvider.userObject.selectedLanguages ?? [];
+    final langList = languages.isEmpty ? ["English"] : languages;
+
+    await dashboardProvider.getDashboardData(type, langList, user.id!);
   }
 
   Widget _optionButton(BuildContext context, Content movie) {

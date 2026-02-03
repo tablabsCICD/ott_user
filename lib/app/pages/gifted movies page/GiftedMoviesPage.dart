@@ -38,10 +38,10 @@ class _GiftedMoviesPageState extends State<GiftedMoviesPage> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
+        foregroundColor: Colors.white,
         title: const Text(
           "Gifted Movies",
           style: TextStyle(
-            color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),

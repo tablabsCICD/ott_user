@@ -506,7 +506,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                         context,
                         MaterialPageRoute(
                             builder: (context) => GiftedMoviesPage()))
-                    : Navigator.pop(context);
+                    : Navigator.pop(context, true);
               },
               child: const Text("Confirm & Pay",
                   style: TextStyle(color: Colors.white)),

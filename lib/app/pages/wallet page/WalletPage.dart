@@ -41,6 +41,7 @@ class _WalletPageState extends State<WalletPage> {
             pinned: true,
             expandedHeight: 280,
             backgroundColor: theme.primaryColor,
+            foregroundColor: Colors.white,
             elevation: 0,
             actions: [
               _buildFilterBar(context),

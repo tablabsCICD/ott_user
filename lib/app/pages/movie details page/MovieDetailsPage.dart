@@ -59,6 +59,12 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   }
 
   @override
+  void dispose() {
+    _trailerController.pause?.call();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     var selectedThemeData =
         Provider.of<ThemeProvider>(context, listen: true).getTheme;
@@ -109,6 +115,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
             extendBodyBehindAppBar: true,
             appBar: AppBar(
               forceMaterialTransparency: true,
+              foregroundColor: Colors.white,
               title: ResponsiveWidget.isDesktop(context)
                   ? const Text('')
                   : Text(

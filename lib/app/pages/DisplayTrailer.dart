@@ -229,6 +229,9 @@ class TrailerPreview extends StatefulWidget {
 class _TrailerPreviewState extends State<TrailerPreview> {
   VideoPlayerController? _c;
   bool _showControls = false;
+  bool _isDisposed = false;
+  bool _hasError = false;
+  int _initToken = 0;
 
   @override
   void initState() {
@@ -246,18 +249,65 @@ class _TrailerPreviewState extends State<TrailerPreview> {
   }
 
   Future<void> _init() async {
-    final c = VideoPlayerController.networkUrl(Uri.parse(widget.trailerUrl!));
-    await c.initialize();
-    c.setLooping(true);
-    c.play();
-    setState(() => _c = c);
+    final trailerUrl = widget.trailerUrl;
+    if (trailerUrl?.isNotEmpty != true) return;
+
+    final currentToken = ++_initToken;
+    final c = VideoPlayerController.networkUrl(Uri.parse(trailerUrl!));
+
+    try {
+      await c.initialize();
+      if (_isDisposed || currentToken != _initToken) {
+        await c.dispose();
+        return;
+      }
+
+      c.setLooping(true);
+      await c.play();
+      if (_isDisposed || currentToken != _initToken) {
+        await c.dispose();
+        return;
+      }
+
+      if (mounted) {
+        setState(() {
+          _hasError = false;
+          _c = c;
+        });
+      }
+    } catch (e) {
+      await c.dispose();
+      if (mounted && !_isDisposed) {
+        setState(() => _hasError = true);
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant TrailerPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.trailerUrl != widget.trailerUrl) {
+      _disposeController();
+      _hasError = false;
+      if (widget.trailerUrl?.isNotEmpty == true) {
+        _init();
+      }
+    }
+  }
+
+  void _disposeController() {
+    _initToken++;
+    _c?.pause();
+    _c?.dispose();
+    _c = null;
   }
 
   @override
   void dispose() {
+    _isDisposed = true;
     widget.controller.pause = null;
     widget.controller.play = null;
-    _c?.dispose();
+    _disposeController();
     super.dispose();
   }
 
@@ -269,6 +319,18 @@ class _TrailerPreviewState extends State<TrailerPreview> {
 
   @override
   Widget build(BuildContext context) {
+    if (_hasError) {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Center(
+          child: Text(
+            "Trailer unavailable",
+            style: TextStyle(color: Colors.white.withOpacity(0.7)),
+          ),
+        ),
+      );
+    }
+
     if (_c == null) {
       return AspectRatio(
         aspectRatio: 16 / 9,
