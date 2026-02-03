@@ -25,8 +25,6 @@ import 'package:video_player/video_player.dart';
 
 import 'package:ott/data/models/content.dart';
 
-import '../pages/movie details page/component/mobile_preview_cordinator.dart';
-
 class MovieCard extends StatefulWidget {
   static const double itemWidth = 300;
   static const double itemMargin = 8;
@@ -60,10 +58,6 @@ class _MovieCardState extends State<MovieCard> {
   bool _hasVideoListener = false;
   Timer? _playDelayTimer;
 
-  /// MOBILE preview
-  Timer? _previewDelayTimer;
-  bool _showPreview = false;
-
   @override
   void initState() {
     super.initState();
@@ -84,16 +78,30 @@ class _MovieCardState extends State<MovieCard> {
     });
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    MobilePreviewCoordinator.activeMovieId.addListener(_onPreviewChanged);
+  bool get _hasWatchProgress =>
+      (widget.movie.watchedPercentage ?? 0) > 0 &&
+          (widget.movie.watchedPercentage ?? 0) < 100;
+
+  Widget _watchProgressBar() {
+    final progress = (widget.movie.watchedPercentage ?? 0) / 100;
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 8,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: LinearProgressIndicator(
+          value: progress.clamp(0.0, 1.0),
+          minHeight: 4,
+          backgroundColor: Colors.white.withOpacity(0.3),
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Colors.blue, // Netflix-style
+          ),
+        ),
+      ),
+    );
   }
-
-  bool _isMobileVideoReady = false;
-
-  void _onPreviewChanged() async {
-    final activeId = MobilePreviewCoordinator.activeMovieId.value;
 
   void _toggleMute() {
     final controller = _videoController;
@@ -444,37 +452,6 @@ class _MovieCardState extends State<MovieCard> {
       );
     }
 
-    /// 📱 MOBILE → REAL autoplay using trailerUrl (MUTED)
-    if (!kIsWeb &&
-        _showPreview &&
-        _videoController != null &&
-        _isVideoInitialized &&
-        _isMobileVideoReady) {
-      return AspectRatio(
-        aspectRatio: 19 / 8,
-        child: Stack(
-          children: [
-            VideoPlayer(_videoController!),
-
-            // dark overlay (Netflix style)
-            Container(color: Colors.black.withOpacity(0.15)),
-
-            // mute indicator (informational only)
-            Positioned(
-              right: 6,
-              bottom: 6,
-              child: Icon(
-                Icons.volume_off,
-                color: Colors.white.withOpacity(0.7),
-                size: 18,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    /// 🖼 FALLBACK → poster
     return posterUrl != null
         ? Image.network(
       posterUrl,
@@ -566,21 +543,21 @@ class _MovieCardState extends State<MovieCard> {
               // ),
               movie.isFeatured == true
                   ? Container(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 6, horizontal: 10),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        color: theme.primaryColor.withOpacity(0.9),
-                      ),
-                      child: Text(
-                        "Watch Trailer",
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    )
+                padding: const EdgeInsets.symmetric(
+                    vertical: 6, horizontal: 10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: theme.primaryColor.withOpacity(0.9),
+                ),
+                child: Text(
+                  "Watch Trailer",
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              )
                   : _buildPriceButton(theme, lang, price),
             ],
           ),
@@ -598,8 +575,8 @@ class _MovieCardState extends State<MovieCard> {
       onTap: () => movie.type!.toLowerCase() == 'series'
           ? _openDetails()
           : isRental
-              ? _playMovie()
-              : _showCupertinoDialog(context, movie),
+          ? _playMovie()
+          : _showCupertinoDialog(context, movie),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
         decoration: BoxDecoration(
@@ -609,13 +586,13 @@ class _MovieCardState extends State<MovieCard> {
         child: Text(
           movie.type!.toLowerCase() == 'series'
               ? isRental
-                  ? "Watch Series"
-                  : 'Rent Series'
+              ? "Watch Series"
+              : 'Rent Series'
               : isRental
-                  ? movie.type?.toLowerCase() == "movie"
-                      ? lang.watchMovie
-                      : lang.watchSeries
-                  : "₹ $price",
+              ? movie.type?.toLowerCase() == "movie"
+              ? lang.watchMovie
+              : lang.watchSeries
+              : "₹ $price",
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
@@ -636,12 +613,12 @@ class _MovieCardState extends State<MovieCard> {
       MaterialPageRoute(
         builder: (_) => movie.isFeatured == true
             ? TrailerPage(
-                trailerUrl: movie.trailerUrl ?? "",
-                isTrailerUrl: true,
-                content: movie)
+            trailerUrl: movie.trailerUrl ?? "",
+            isTrailerUrl: true,
+            content: movie)
             : movie.type!.toLowerCase() == 'movie'
-                ? MovieDetailsPage(movieId: movie.id!)
-                : SeriesDetailsPage(seriesId: movie.id!, content: movie),
+            ? MovieDetailsPage(movieId: movie.id!)
+            : SeriesDetailsPage(seriesId: movie.id!, content: movie),
       ),
     );
   }
@@ -749,7 +726,7 @@ class _MovieCardState extends State<MovieCard> {
 
     final bookmarkProvider = context.watch<BookmarkProvider>();
     final bool isBookmarked =
-        bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
+    bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
 
     final ValueNotifier<bool> isDialOpen = ValueNotifier(false);
     final TextEditingController countController = TextEditingController();
@@ -775,35 +752,35 @@ class _MovieCardState extends State<MovieCard> {
           movie.isRental!
               ? SpeedDialChild()
               : SpeedDialChild(
-                  label: isBookmarked ? "Remove Bookmark" : "Bookmark",
-                  labelBackgroundColor: theme.cardColor,
-                  labelStyle: TextStyle(
-                    color: theme.canvasColor,
-                    fontSize: 10,
-                  ),
-                  child: Icon(
-                    isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                    size: 14,
-                    color: Colors.white,
-                  ),
-                  backgroundColor: theme.primaryColor,
-                  onTap: () async {
-                    final bool wasBookmarked =
-                        bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
+            label: isBookmarked ? "Remove Bookmark" : "Bookmark",
+            labelBackgroundColor: theme.cardColor,
+            labelStyle: TextStyle(
+              color: theme.canvasColor,
+              fontSize: 10,
+            ),
+            child: Icon(
+              isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+              size: 14,
+              color: Colors.white,
+            ),
+            backgroundColor: theme.primaryColor,
+            onTap: () async {
+              final bool wasBookmarked =
+              bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
 
-                    await bookmarkProvider.toggleBookmark(movie);
+              await bookmarkProvider.toggleBookmark(movie);
 
-                    CustomToast.show(
-                      context,
-                      wasBookmarked
-                          ? "${movie.title} removed from bookmarks"
-                          : "${movie.title} added to bookmarks",
-                      isSuccess: true,
-                    );
+              CustomToast.show(
+                context,
+                wasBookmarked
+                    ? "${movie.title} removed from bookmarks"
+                    : "${movie.title} added to bookmarks",
+                isSuccess: true,
+              );
 
-                    isDialOpen.value = false;
-                  },
-                ),
+              isDialOpen.value = false;
+            },
+          ),
 
           /// 🔗 Share
           SpeedDialChild(
@@ -831,7 +808,7 @@ class _MovieCardState extends State<MovieCard> {
                 fontSize: 10,
               ),
               child:
-                  const Icon(LucideIcons.gift, size: 14, color: Colors.white),
+              const Icon(LucideIcons.gift, size: 14, color: Colors.white),
               backgroundColor: theme.primaryColor,
               onTap: () {
                 isDialOpen.value = false;
@@ -875,10 +852,10 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
   }
 
   void _showGiftDialog(
-    BuildContext context,
-    Content movie,
-    TextEditingController countController,
-  ) {
+      BuildContext context,
+      Content movie,
+      TextEditingController countController,
+      ) {
     final theme = Theme.of(context);
 
     showDialog(
@@ -947,7 +924,7 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
                         ),
                         onPressed: () {
                           final count =
-                              int.tryParse(countController.text.trim());
+                          int.tryParse(countController.text.trim());
                           if (count == null || count <= 0) {
                             CustomToast.show(
                               context,

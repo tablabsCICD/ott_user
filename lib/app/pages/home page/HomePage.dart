@@ -1039,10 +1039,10 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.symmetric(horizontal: 8.0),
           child: GestureDetector(
             onTap: () async {
-              await dashboardProvider.getContinueWatchedMovieList(selectedType);
 
               setState(() {
                 selectedType = type;
+                dashboardProvider.getContinueWatchedMovieList(selectedType);
               });
               final selectedLanguages =
                   Provider.of<UserProvider>(context, listen: false)
