@@ -34,7 +34,7 @@ class BookmarkPosterCard extends StatelessWidget {
             MaterialPageRoute(
               builder: (context) => movie.isFeatured ?? true
                   ? TrailerPage(
-                      trailerUrl: movie.trailerUrl,
+                      trailerUrl: movie.trailerUrl??"",
                       isTrailerUrl: true,
                       content: movie,
                     )

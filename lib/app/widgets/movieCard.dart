@@ -61,8 +61,8 @@ class _MovieCardState extends State<MovieCard> {
     final progress = (widget.movie.watchedPercentage ?? 0) / 100;
 
     return Positioned(
-      left: 8,
-      right: 8,
+      left: 0,
+      right: 0,
       bottom: 8,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(6),
@@ -71,7 +71,7 @@ class _MovieCardState extends State<MovieCard> {
           minHeight: 4,
           backgroundColor: Colors.white.withOpacity(0.3),
           valueColor: AlwaysStoppedAnimation<Color>(
-            Colors.redAccent, // Netflix-style
+            Colors.blue, // Netflix-style
           ),
         ),
       ),
@@ -143,23 +143,36 @@ class _MovieCardState extends State<MovieCard> {
             child: Container(
               width: 300,
               margin: const EdgeInsets.all(8),
-              padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
                 color: theme.cardColor,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 children: [
+                  /// 🎬 POSTER + PROGRESS BAR STACK
                   Expanded(
                     flex: 8,
-                    child: ClipRRect(
-                      borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(12)),
-                      child: _buildMediaPreview(posterUrl, theme, widget.movie),
+                    child: Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(12),
+                          ),
+                          child: _buildMediaPreview(
+                            posterUrl,
+                            theme,
+                            widget.movie,
+                          ),
+                        ),
+
+                        /// 🔥 CONTINUE WATCHING BAR
+                        if ((widget.movie.watchedPercentage ?? 0) > 0)
+                          _watchProgressBar(),
+                      ],
                     ),
                   ),
-                  // 🎯 CONTINUE WATCHING PROGRESS
-                  if (_hasWatchProgress) _watchProgressBar(),
+
+                  /// 📄 DETAILS SECTION
                   Expanded(
                     flex: 4,
                     child: _buildContentSection(theme, lang),
@@ -169,10 +182,9 @@ class _MovieCardState extends State<MovieCard> {
             ),
           ),
         ),
-        _optionButton(
-          context,
-          widget.movie,
-        ),
+
+        /// ⋮ OPTIONS BUTTON
+        _optionButton(context, widget.movie),
       ],
     );
   }
@@ -372,7 +384,7 @@ class _MovieCardState extends State<MovieCard> {
       MaterialPageRoute(
         builder: (_) => movie.isFeatured == true
             ? TrailerPage(
-                trailerUrl: movie.trailerUrl,
+                trailerUrl: movie.trailerUrl??"",
                 isTrailerUrl: true,
                 content: movie)
             : movie.type!.toLowerCase() == 'movie'

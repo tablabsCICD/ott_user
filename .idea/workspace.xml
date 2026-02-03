@@ -9,23 +9,19 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3f04a968-27e5-4905-8561-ff00d911146d" name="Changes" comment="added continue watch flow">
-      <change afterPath="$PROJECT_DIR$/lib/l10n/app_localizations.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/l10n/app_localizations_as.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/l10n/app_localizations_bn.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/l10n/app_localizations_en.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/l10n/app_localizations_gu.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/l10n/app_localizations_hi.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/l10n/app_localizations_kn.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/l10n/app_localizations_ml.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/l10n/app_localizations_mr.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/l10n/app_localizations_ne.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/l10n/app_localizations_or.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/l10n/app_localizations_pa.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/l10n/app_localizations_ta.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/l10n/app_localizations_te.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/l10n/app_localizations_ur.dart" afterDir="false" />
+    <list default="true" id="3f04a968-27e5-4905-8561-ff00d911146d" name="Changes" comment="added app localization file">
+      <change beforePath="$PROJECT_DIR$/.flutter-plugins-dependencies" beforeDir="false" afterPath="$PROJECT_DIR$/.flutter-plugins-dependencies" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/pages/DisplayTrailer.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/DisplayTrailer.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/pages/bookmarks page/component/bookmark_card.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/bookmarks page/component/bookmark_card.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/pages/home page/HomePage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/home page/HomePage.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/pages/movie details page/MovieDetailsPage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/movie details page/MovieDetailsPage.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/pages/series details page/seriesdetailspage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/series details page/seriesdetailspage.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/provider/dashboardProvider.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/provider/dashboardProvider.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/widgets/movieCard.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/widgets/movieCard.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/data/models/content.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/data/models/content.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -94,13 +90,14 @@
     "io.flutter.project.isFirstOpen": "true",
     "io.flutter.reload.alreadyRun": "true",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "D:/Tablab Workspace/OTT/ott_user/lib/l10n",
+    "last_opened_file_path": "D:/Tablab Workspace/OTT/ott_user/lib",
     "settings.editor.selected.configurable": "flutter.settings",
     "show.migrate.to.gradle.popup": "false"
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\Tablab Workspace\OTT\ott_user\lib" />
       <recent name="D:\Tablab Workspace\OTT\ott_user\lib\l10n" />
     </key>
   </component>
@@ -128,7 +125,15 @@
       <option name="project" value="LOCAL" />
       <updated>1770035677148</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="added app localization file">
+      <option name="closed" value="true" />
+      <created>1770037067389</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1770037067389</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -150,7 +155,8 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="added continue watch flow" />
-    <option name="LAST_COMMIT_MESSAGE" value="added continue watch flow" />
+    <MESSAGE value="added app localization file" />
+    <option name="LAST_COMMIT_MESSAGE" value="added app localization file" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -164,6 +170,11 @@
           <url>file://$PROJECT_DIR$/lib/app/pages/watchlist page/playMoviePage.dart</url>
           <line>27</line>
           <option name="timeStamp" value="6" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="Dart">
+          <url>file://$PROJECT_DIR$/lib/app/provider/dashboardProvider.dart</url>
+          <line>221</line>
+          <option name="timeStamp" value="7" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>

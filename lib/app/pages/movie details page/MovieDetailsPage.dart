@@ -37,8 +37,8 @@ class MovieDetailsPage extends StatefulWidget {
 
 class _MovieDetailsPageState extends State<MovieDetailsPage> {
   bool isLoading = true;
-  final TrailerPreviewController _trailerController =
-      TrailerPreviewController();
+ /* final TrailerPreviewController _trailerController =
+      TrailerPreviewController();*/
 
   @override
   void initState() {
@@ -72,7 +72,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           automaticallyImplyLeading: false,
           leading: IconButton(
               onPressed: () {
-                _trailerController.pause?.call();
+              //  _trailerController.pause?.call();
               },
               icon: Icon(
                 Icons.arrow_back_ios_new_outlined,
@@ -320,7 +320,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                     TrailerPreview(
                       trailerUrl: content.trailerUrl,
                       content: content,
-                      controller: _trailerController,
+                     // controller: _trailerController,
                     ),
                   ],
                 ),
@@ -362,7 +362,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               TrailerPreview(
                 trailerUrl: content.trailerUrl,
                 content: content,
-                controller: _trailerController,
+               // controller: _trailerController,
               ),
               SizedBox(height: 30),
               Text(
@@ -627,7 +627,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                                     }
 
                                     Navigator.pop(context);
-                                    _trailerController.pause?.call();
+                                   // _trailerController.pause?.call();
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
@@ -685,7 +685,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                     : lang.watchSeries,
                 icon: Icons.play_circle_fill,
                 onTap: () {
-                  _trailerController.pause?.call();
+                 // _trailerController.pause?.call();
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -815,7 +815,7 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
             ),
           ),
           onPressed: () {
-            _trailerController.pause?.call();
+            //_trailerController.pause?.call();
             Navigator.of(context).pop(); // Close the dialog
             Navigator.push(
               context,
