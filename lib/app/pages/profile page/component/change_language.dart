@@ -21,11 +21,23 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
   void initState() {
     super.initState();
 
-    // ✅ Fetch once, safely
-    Future.microtask(() {
-      context.read<LanguageProvider>().fetchLanguages();
+    Future.microtask(() async {
+      final languageProvider = context.read<LanguageProvider>();
+      final userProvider = context.read<UserProvider>();
+
+      // 1️⃣ Fetch available languages
+      await languageProvider.fetchLanguages();
+
+      // 2️⃣ Apply user's already-selected languages
+      final userSelected =
+          userProvider.userObject.selectedLanguages ?? [];
+
+      if (userSelected.isNotEmpty) {
+        languageProvider.updateLanguages(List<String>.from(userSelected));
+      }
     });
   }
+
 
   void _toggleSelection(
     String language,

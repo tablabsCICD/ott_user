@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/profile%20page/component/change_language.dart';
@@ -368,31 +369,39 @@ class _HomePageState extends State<HomePage> {
               ),
             )
           : Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(
-                  25,
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.white),
+        ),
+        child: Hero(
+          tag: "logo",
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () {
+              Navigator.pushReplacement(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      NavigationPage(),
+                  transitionDuration: Duration.zero,
+                  reverseTransitionDuration: Duration.zero,
                 ),
-              ),
-              width: 50,
-              child: Hero(
-                tag: "logo",
-                child: InkWell(
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        PageRouteBuilder(
-                          pageBuilder:
-                              (context, animation, secondaryAnimation) =>
-                                  NavigationPage(),
-                          transitionDuration: Duration.zero,
-                          reverseTransitionDuration: Duration.zero,
-                        ),
-                      );
-                    },
-                    child: Image.asset(ImageConstant.logo)),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: Image.asset(
+                ImageConstant.logo,
+                fit: BoxFit.contain,
               ),
             ),
-      titleSpacing: ResponsiveWidget.isTablet(context) ? 50 : 10,
+          ),
+        ),
+      ),
+
+        titleSpacing: ResponsiveWidget.isTablet(context) ? 50 : 10,
       actions: [
         //LanguageDropdown(),
         IconButton(
@@ -432,15 +441,23 @@ class _HomePageState extends State<HomePage> {
           width: 4,
         ),
         IconButton(
-          icon: Icon(Icons.language_sharp,
-              color: ResponsiveWidget.isDesktop(context)
-                  ? selectedThemeData.canvasColor
-                  : Colors.white),
           tooltip: lang.selectPreferredLanguage,
           style: IconButton.styleFrom(
-              backgroundColor: ResponsiveWidget.isDesktop(context)
-                  ? Colors.white.withOpacity(0.3)
-                  : Colors.black.withOpacity(0.2)),
+            backgroundColor: ResponsiveWidget.isDesktop(context)
+                ? Colors.white.withOpacity(0.3)
+                : Colors.black.withOpacity(0.2),
+          ),
+          icon: SvgPicture.asset(
+            'assets/icons/translate_swap.svg',
+            width: 30,
+            height: 30,
+            colorFilter: ColorFilter.mode(
+              ResponsiveWidget.isDesktop(context)
+                  ? selectedThemeData.canvasColor
+                  : Colors.white,
+              BlendMode.srcIn,
+            ),
+          ),
           onPressed: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -448,6 +465,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ),
+
         SizedBox(
           width: 4,
         ),
@@ -800,6 +818,8 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.symmetric(horizontal: 8.0),
           child: GestureDetector(
             onTap: () async {
+              await dashboardProvider.getContinueWatchedMovieList(selectedType);
+
               setState(() {
                 selectedType = type;
               });

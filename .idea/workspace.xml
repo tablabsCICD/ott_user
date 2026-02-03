@@ -9,15 +9,11 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3f04a968-27e5-4905-8561-ff00d911146d" name="Changes" comment="changes in continue watch card">
-      <change beforePath="$PROJECT_DIR$/.flutter-plugins-dependencies" beforeDir="false" afterPath="$PROJECT_DIR$/.flutter-plugins-dependencies" afterDir="false" />
+    <list default="true" id="3f04a968-27e5-4905-8561-ff00d911146d" name="Changes" comment="changes in continue watch card and media player">
+      <change afterPath="$PROJECT_DIR$/lib/app/pages/movie details page/component/mobile_preview_cordinator.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/app/core/constant/api_constant.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/core/constant/api_constant.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/app/pages/DisplayTrailer.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/DisplayTrailer.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/app/pages/home page/HomePage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/home page/HomePage.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/app/pages/movie details page/MovieDetailsPage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/movie details page/MovieDetailsPage.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/app/pages/series details page/seriesdetailspage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/series details page/seriesdetailspage.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/app/provider/dashboardProvider.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/provider/dashboardProvider.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/pages/profile page/component/change_language.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/profile page/component/change_language.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/app/widgets/movieCard.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/widgets/movieCard.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -138,7 +134,15 @@
       <option name="project" value="LOCAL" />
       <updated>1770105193922</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="changes in continue watch card and media player">
+      <option name="closed" value="true" />
+      <created>1770109389340</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1770109389340</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -162,7 +166,8 @@
     <MESSAGE value="added continue watch flow" />
     <MESSAGE value="added app localization file" />
     <MESSAGE value="changes in continue watch card" />
-    <option name="LAST_COMMIT_MESSAGE" value="changes in continue watch card" />
+    <MESSAGE value="changes in continue watch card and media player" />
+    <option name="LAST_COMMIT_MESSAGE" value="changes in continue watch card and media player" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
