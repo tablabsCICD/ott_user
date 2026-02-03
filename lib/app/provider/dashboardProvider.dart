@@ -16,7 +16,7 @@ import 'baseProvider.dart';
 
 class DashboardProvider extends BaseProvider {
   DashboardProvider() : super('Ideal') {
-    getContinueWatchedMovieList();
+    getContinueWatchedMovieList("MOVIE");
   }
 
   List<DashboardData> _dashboardData = [];
@@ -219,9 +219,9 @@ class DashboardProvider extends BaseProvider {
     }
   }
 
-  getContinueWatchedMovieList() async {
+  getContinueWatchedMovieList(String type) async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
-    String apiUrl = ApiConstant.continueWatchedMoviesByUser(user!.id);
+    String apiUrl = ApiConstant.continueWatchedMoviesByUser(user!.id,type);
     ApiHelper apiHelper = ApiHelper();
 
     try {
@@ -235,7 +235,6 @@ class DashboardProvider extends BaseProvider {
         if (continueWatchedResponse.isSuccess == true &&
             continueWatchedResponse.data != null) {
           _continueWatchedMovies = continueWatchedResponse.data!;
-          debugPrint("✅✅✅✅✅✅✅✅✅✅✅✅✅✅");
           debugPrint(_continueWatchedMovies.length.toString());
           notifyListeners();
         }

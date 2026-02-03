@@ -31,8 +31,8 @@ class SeriesDetailsPage extends StatefulWidget {
 
 class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   int _selectedSeasonIndex = 0;
-/*  final TrailerPreviewController _trailerController =
-      TrailerPreviewController();*/
+  final TrailerPreviewController _trailerController =
+      TrailerPreviewController();
 
   @override
   void initState() {
@@ -174,7 +174,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
             child: TrailerPreview(
               trailerUrl: widget.content.trailerUrl,
               content: widget.content,
-             // controller: _trailerController,
+              controller: _trailerController,
             ),
           ),
         ),
@@ -202,7 +202,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
             child: TrailerPreview(
               trailerUrl: widget.content.trailerUrl,
               content: widget.content,
-             // controller: _trailerController,
+              controller: _trailerController,
             ),
           ),
         ),
@@ -331,7 +331,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                             ),
                           ),
                           onPressed: () async {
-                           // _trailerController.pause?.call();
+                            _trailerController.pause?.call();
                             final result = await Navigator.push<bool>(
                               context,
                               MaterialPageRoute(
@@ -395,7 +395,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
       onTap: () async {
         if (!canPlay) return;
 
-       // _trailerController.pause?.call();
+        _trailerController.pause?.call();
         final shouldRefresh = await Navigator.push<bool>(
           context,
           MaterialPageRoute(
@@ -410,7 +410,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
         );
 
         if (shouldRefresh == true && context.mounted) {
-          context.read<DashboardProvider>().getContinueWatchedMovieList();
+          context.read<DashboardProvider>().getContinueWatchedMovieList("SERIES");
         }
       },
       child: Container(
@@ -513,7 +513,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                           ),
                         ),
                         onPressed: () async {
-                         // _trailerController.pause?.call();
+                          _trailerController.pause?.call();
                           final result = await Navigator.push<bool>(
                             context,
                             MaterialPageRoute(

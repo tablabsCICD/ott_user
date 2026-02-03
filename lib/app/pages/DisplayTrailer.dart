@@ -1,15 +1,22 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:chewie/chewie.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:video_player/video_player.dart';
-import 'package:flutter_vlc_player/flutter_vlc_player.dart';
+import 'package:universal_html/html.dart' as html;
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../data/models/content.dart';
+import '../../data/models/response/saveViewHistory.dart';
+import '../core/constant/api_constant.dart';
+import '../core/network/api_helper.dart';
+import '../core/utils/sharepreferences.dart';
 
 class TrailerPage extends StatefulWidget {
-  final String trailerUrl;
+  final String? trailerUrl;
   final bool isTrailerUrl;
   final Content content;
 
@@ -25,111 +32,130 @@ class TrailerPage extends StatefulWidget {
 }
 
 class _TrailerPageState extends State<TrailerPage> {
-  VideoPlayerController? _video;
-  ChewieController? _chewie;
+  VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
 
-  VlcPlayerController? _vlc;
-
-  bool _useVlc = false;
   bool _initialized = false;
-  bool _vlcControlsVisible = true;
+  bool _historySaved = false;
+
+  bool get _hasUrl => widget.trailerUrl?.isNotEmpty == true;
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 300), _initChewie);
+    if (_hasUrl) _initPlayer();
   }
 
-  // -------------------- CHEWIE (PRIMARY) --------------------
+  Future<void> _initPlayer() async {
+    _videoController =
+        VideoPlayerController.networkUrl(Uri.parse(widget.trailerUrl!));
 
-  Future<void> _initChewie() async {
-    try {
-      _video = VideoPlayerController.networkUrl(Uri.parse(widget.trailerUrl));
-      await _video!.initialize();
-      _video!.play();
-      _video!.addListener(_chewieListener);
+    await _videoController!.initialize();
+    _videoController!.play();
 
-      _chewie = ChewieController(
-        videoPlayerController: _video!,
-        autoPlay: true,
-        looping: false,
-        allowFullScreen: true,
-        showControls: true,
-        deviceOrientationsOnEnterFullScreen: const [
-          DeviceOrientation.landscapeLeft,
-          DeviceOrientation.landscapeRight,
-        ],
-        deviceOrientationsAfterFullScreen: const [
-          DeviceOrientation.portraitUp,
-        ],
-      );
+    _videoController!.addListener(() {
+      if (!mounted) return;
 
-      setState(() => _initialized = true);
-    } catch (_) {
-      _switchToVlc();
-    }
-  }
+      // 🔋 wakelock like PlayMediaPage
+      if (_videoController!.value.isPlaying) {
+        WakelockPlus.enable();
+      } else {
+        WakelockPlus.disable();
+      }
 
-  void _chewieListener() {
-    final v = _video?.value;
-    if (v == null) return;
+      // 👁 save history once (non-trailer playback)
+      if (_videoController!.value.isPlaying &&
+          !_historySaved &&
+          !widget.isTrailerUrl) {
+        _historySaved = true;
+        _saveHistory();
+      }
+    });
 
-    if (v.hasError) {
-      _switchToVlc();
-      return;
-    }
-
-    if (v.isPlaying) {
-      WakelockPlus.enable();
-    } else {
-      WakelockPlus.disable();
-    }
-  }
-
-  // -------------------- VLC FALLBACK --------------------
-
-  Future<void> _switchToVlc() async {
-    if (_useVlc) return;
-
-    await _video?.dispose();
-     _chewie?.dispose();
-    _video = null;
-    _chewie = null;
-
-    _vlc = VlcPlayerController.network(
-      widget.trailerUrl,
-      hwAcc: HwAcc.disabled, // 🚨 software decode
+    _chewieController = ChewieController(
+      videoPlayerController: _videoController!,
       autoPlay: true,
-      options: VlcPlayerOptions(
-        advanced: VlcAdvancedOptions([
-          VlcAdvancedOptions.networkCaching(1500),
-        ]),
+      looping: false,
+      allowFullScreen: true,
+      allowMuting: true,
+      allowPlaybackSpeedChanging: true,
+      zoomAndPan: true,
+      showControls: true,
+      materialProgressColors: ChewieProgressColors(
+        playedColor: Colors.redAccent,
+        bufferedColor: Colors.white30,
+        handleColor: Colors.white,
+        backgroundColor: Colors.white12,
       ),
+      deviceOrientationsOnEnterFullScreen: const [
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ],
+      deviceOrientationsAfterFullScreen: const [
+        DeviceOrientation.portraitUp,
+      ],
     );
 
-    setState(() {
-      _useVlc = true;
-      _initialized = true;
-    });
+    setState(() => _initialized = true);
   }
 
-  // -------------------- UI --------------------
+  Future<void> _saveHistory() async {
+    try {
+      final user = await LocalSharePreferences.localSharePreferences.getUser();
+      if (user == null) return;
+
+      final body = {
+        "contentId": widget.content.id,
+        "resumeTime": _videoController?.value.position.toString() ?? "0:00",
+        "selectedLanguage":
+        widget.content.languageList?.first.language ?? "Unknown",
+        "userId": user.id,
+        "viewDate": DateTime.now().toUtc().toIso8601String(),
+      };
+
+      await ApiHelper().postApiWithBody(ApiConstant.saveViewHistory, body);
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    _chewieController?.dispose();
+    WakelockPlus.disable();
+
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: !_initialized
-          ? const Center(child: CircularProgressIndicator())
+      body: !_hasUrl
+          ? const Center(
+        child: Text("No trailer available",
+            style: TextStyle(color: Colors.white)),
+      )
+          : !_initialized
+          ? Center(
+          child: CircularProgressIndicator(
+            color: Theme.of(context).primaryColor,
+          ))
           : Stack(
         children: [
-          Center(
-            child: _useVlc ? _vlcSurface() : _chewieSurface(),
-          ),
+          Center(child: _playerSurface()),
+
+          // 🔙 Back button overlay
           SafeArea(
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_ios,
+                    color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
             ),
           ),
         ],
@@ -137,128 +163,243 @@ class _TrailerPageState extends State<TrailerPage> {
     );
   }
 
-  Widget _chewieSurface() {
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: Chewie(controller: _chewie!),
-    );
-  }
-
-  Widget _vlcSurface() {
+  Widget _playerSurface() {
     return AspectRatio(
       aspectRatio: 16 / 9,
       child: Stack(
         children: [
-          VlcPlayer(
-            controller: _vlc!,
-            aspectRatio: 16 / 9,
-            placeholder: const Center(
-              child: CircularProgressIndicator(color: Colors.redAccent),
-            ),
-          ),
+          Chewie(controller: _chewieController!),
 
-          // Gestures
+          /// 🎯 Netflix-style gesture overlay
           Positioned.fill(
             child: GestureDetector(
-              onTap: () =>
-                  setState(() => _vlcControlsVisible = !_vlcControlsVisible),
-              onDoubleTapDown: (d) {
+              behavior: HitTestBehavior.translucent,
+              onDoubleTapDown: (details) async {
                 final box = context.findRenderObject() as RenderBox;
-                final local = box.globalToLocal(d.globalPosition);
+                final local = box.globalToLocal(details.globalPosition);
                 final isLeft = local.dx < box.size.width / 2;
-                final pos = _vlc!.value.position;
-                _vlc!.seekTo(
-                  pos + (isLeft
-                      ? const Duration(seconds: -10)
-                      : const Duration(seconds: 10)),
+
+                final current = _videoController!.value.position;
+                final duration = _videoController!.value.duration;
+
+                final target = isLeft
+                    ? current - const Duration(seconds: 10)
+                    : current + const Duration(seconds: 10);
+
+                await _videoController!.seekTo(
+                  target < Duration.zero
+                      ? Duration.zero
+                      : target > duration
+                      ? duration
+                      : target,
                 );
               },
-              onLongPressStart: (_) => _vlc!.setPlaybackSpeed(2),
-              onLongPressEnd: (_) => _vlc!.setPlaybackSpeed(1),
+              onLongPressStart: (_) {
+                _videoController!.setPlaybackSpeed(2.0);
+              },
+              onLongPressEnd: (_) {
+                _videoController!.setPlaybackSpeed(1.0);
+              },
             ),
           ),
-
-          if (_vlcControlsVisible) ...[
-            Positioned.fill(
-              child: Container(color: Colors.black.withOpacity(0.35)),
-            ),
-            Center(
-              child: IconButton(
-                iconSize: 56,
-                color: Colors.white,
-                icon: Icon(
-                  _vlc!.value.isPlaying
-                      ? Icons.pause_circle_filled
-                      : Icons.play_circle_filled,
-                ),
-                onPressed: () {
-                  _vlc!.value.isPlaying ? _vlc!.pause() : _vlc!.play();
-                },
-              ),
-            ),
-          ],
         ],
       ),
     );
   }
-
-  @override
-  void dispose() {
-    _video?.dispose();
-    _chewie?.dispose();
-    _vlc?.dispose();
-    WakelockPlus.disable();
-    super.dispose();
-  }
 }
 
-
-class TrailerPreview extends StatelessWidget {
+/// Lightweight autoplay preview for MovieDetailsPage
+///
+class TrailerPreview extends StatefulWidget {
   final String? trailerUrl;
   final Content content;
+  final TrailerPreviewController controller;
 
   const TrailerPreview({
     super.key,
     required this.trailerUrl,
     required this.content,
+    required this.controller,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: Stack(
-        children: [
-          // Thumbnail (replace with your real image)
-          Container(
-            color: Colors.black,
-            child: const Center(
-              child: Icon(Icons.movie, color: Colors.white54, size: 48),
-            ),
-          ),
+  State<TrailerPreview> createState() => _TrailerPreviewState();
+}
 
-          // Play button
-          Center(
-            child: IconButton(
-              iconSize: 56,
-              icon: const Icon(Icons.play_circle_fill, color: Colors.white),
-              onPressed: () {
-                if (trailerUrl == null) return;
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => TrailerPage(
-                      trailerUrl: trailerUrl!,
-                      isTrailerUrl: true,
-                      content: content,
+class _TrailerPreviewState extends State<TrailerPreview> {
+  VideoPlayerController? _c;
+  bool _showControls = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    widget.controller.pause = () {
+      _c?.pause();
+    };
+
+    widget.controller.play = () {
+      _c?.play();
+    };
+
+    if (widget.trailerUrl?.isNotEmpty == true) _init();
+  }
+
+  Future<void> _init() async {
+    final c = VideoPlayerController.networkUrl(Uri.parse(widget.trailerUrl!));
+    await c.initialize();
+    c.setLooping(true);
+    c.play();
+    setState(() => _c = c);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.pause = null;
+    widget.controller.play = null;
+    _c?.dispose();
+    super.dispose();
+  }
+
+  String _format(Duration d) {
+    if (d == Duration.zero) return "00:00";
+    String two(int n) => n.toString().padLeft(2, '0');
+    return "${two(d.inMinutes.remainder(60))}:${two(d.inSeconds.remainder(60))}";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_c == null) {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Center(
+            child: CircularProgressIndicator(
+              color: Theme.of(context).primaryColor,
+            )),
+      );
+    }
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _showControls = true),
+      onExit: (_) => setState(() => _showControls = false),
+      child: GestureDetector(
+        onTap: () => setState(() => _showControls = !_showControls),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Stack(
+            children: [
+              Positioned.fill(child: VideoPlayer(_c!)),
+              if (_showControls) ...[
+                // Dark overlay
+                Positioned.fill(
+                  child: Container(color: Colors.black.withOpacity(0.35)),
+                ),
+
+                // Center Play / Pause
+                Center(
+                  child: IconButton(
+                    iconSize: 40,
+                    icon: Icon(
+                      _c!.value.isPlaying
+                          ? Icons.pause_circle_filled
+                          : Icons.play_circle_filled,
+                      color: Colors.white,
                     ),
+                    onPressed: () {
+                      setState(() {
+                        _c!.value.isPlaying ? _c!.pause() : _c!.play();
+                      });
+                    },
                   ),
-                );
-              },
-            ),
+                ),
+
+                // Bottom controls
+                Positioned(
+                  left: 12,
+                  right: 12,
+                  bottom: 8,
+                  child: Row(
+                    children: [
+                      // Current time
+                      Text(
+                        _format(_c!.value.position),
+                        style:
+                        const TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+
+                      const SizedBox(width: 6),
+
+                      // Progress bar
+                      Expanded(
+                        child: VideoProgressIndicator(
+                          _c!,
+                          allowScrubbing: true,
+                          colors: const VideoProgressColors(
+                            playedColor: Colors.red,
+                            bufferedColor: Colors.white54,
+                            backgroundColor: Colors.white24,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 6),
+
+                      // Total duration
+                      Text(
+                        _format(_c!.value.duration),
+                        style:
+                        const TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              Positioned(
+                top: 0,
+                left: 1,
+                child: IconButton(
+                  icon: Icon(
+                    _c!.value.volume == 0 ? Icons.volume_off : Icons.volume_up,
+                    color: Colors.white,
+                  ),
+                  onPressed: () {
+                    final muted = _c!.value.volume == 0;
+                    _c!.setVolume(muted ? 1 : 0);
+                    setState(() {});
+                  },
+                ),
+              ),
+              Positioned(
+                top: 0,
+                right: 1,
+                child: IconButton(
+                  onPressed: () {
+                    _c!.pause(); // pauses preview while navigating to fullsfcreen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TrailerPage(
+                            trailerUrl: widget.trailerUrl,
+                            isTrailerUrl: true,
+                            content: widget.content),
+                      ),
+                    );
+                  },
+                  icon: Icon(
+                    Icons.fullscreen,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
+}
+
+class TrailerPreviewController {
+  VoidCallback? pause;
+  VoidCallback? play;
 }
