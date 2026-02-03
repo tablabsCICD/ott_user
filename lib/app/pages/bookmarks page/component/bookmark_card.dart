@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ott/app/pages/DisplayTrailer.dart';
+import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
@@ -34,7 +34,7 @@ class BookmarkPosterCard extends StatelessWidget {
             MaterialPageRoute(
               builder: (context) => movie.isFeatured ?? true
                   ? TrailerPage(
-                      trailerUrl: movie.trailerUrl??"",
+                      trailerUrl: movie.trailerUrl ?? "",
                       isTrailerUrl: true,
                       content: movie,
                     )

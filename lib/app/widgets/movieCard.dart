@@ -6,10 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
-import 'package:ott/app/pages/DisplayTrailer.dart';
+import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
-import 'package:ott/app/pages/watchlist%20page/playMoviePage.dart';
+import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
@@ -77,10 +77,6 @@ class _MovieCardState extends State<MovieCard> {
       }
     });
   }
-
-  bool get _hasWatchProgress =>
-      (widget.movie.watchedPercentage ?? 0) > 0 &&
-          (widget.movie.watchedPercentage ?? 0) < 100;
 
   Widget _watchProgressBar() {
     final progress = (widget.movie.watchedPercentage ?? 0) / 100;
@@ -454,21 +450,21 @@ class _MovieCardState extends State<MovieCard> {
 
     return posterUrl != null
         ? Image.network(
-      posterUrl,
-      fit: BoxFit.cover,
-      width: double.infinity,
-      height: double.infinity,
-      errorBuilder: (_, __, ___) => Icon(
-        Icons.broken_image,
-        color: theme.canvasColor.withOpacity(0.3),
-        size: 40,
-      ),
-    )
+            posterUrl,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+            errorBuilder: (_, __, ___) => Icon(
+              Icons.broken_image,
+              color: theme.canvasColor.withOpacity(0.3),
+              size: 40,
+            ),
+          )
         : Icon(
-      Icons.broken_image,
-      color: theme.canvasColor.withOpacity(0.3),
-      size: 40,
-    );
+            Icons.broken_image,
+            color: theme.canvasColor.withOpacity(0.3),
+            size: 40,
+          );
   }
 
   Widget _buildContentSection(ThemeData theme, AppLocalizations lang) {

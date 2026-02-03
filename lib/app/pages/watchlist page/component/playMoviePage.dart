@@ -10,7 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:ott/app/provider/ThemeProvider.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/data/models/content.dart';
-import '../../provider/playMediaProvider.dart';
+import '../../../provider/playMediaProvider.dart';
 
 class PlayMediaPage extends StatefulWidget {
   final Content? content;
@@ -367,7 +367,10 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
                 ),
               ),
         body: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? Center(
+                child: CircularProgressIndicator(
+                color: theme.primaryColor,
+              ))
             : ResponsiveWidget.isDesktop(context)
                 ? _desktopPlayer()
                 : _mobilePlayer(),
@@ -394,7 +397,11 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     if (_videoController == null ||
         !_videoController!.value.isInitialized ||
         _chewieController == null) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(
+          color: Theme.of(context).primaryColor,
+        ),
+      );
     }
 
     return SizedBox.expand(

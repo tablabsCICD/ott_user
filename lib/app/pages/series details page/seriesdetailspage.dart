@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:ott/app/pages/DisplayTrailer.dart';
+import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/wallet%20page/SeriesBillingPage.dart';
-import 'package:ott/app/pages/watchlist%20page/playMoviePage.dart';
+import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
 import 'package:ott/app/provider/ThemeProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/series_provider.dart';
@@ -388,7 +388,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   ) {
     final canPlay = season.isSeasonPurchased || ep.isPurchased || ep.isFree;
     final resumeSeconds = context.watch<PlayMediaProvider>().getLocalResume(
-          contentId: widget.content!.id!,
+          contentId: widget.content.id!,
           seasonId: season.seasonId,
           episodeId: ep.episodeId,
         );
@@ -474,7 +474,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          ep.title ?? "",
+                          ep.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -492,7 +492,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          ep.description ?? "",
+                          ep.description,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -639,7 +639,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
               titleStyle, contentStyle),
           _buildTableRow(
               lang.languages,
-              (movie.languageList!.map((e) => e.language) ?? []).join(', '),
+              (movie.languageList!.map((e) => e.language)).join(', '),
               titleStyle,
               contentStyle),
           _buildTableRow(

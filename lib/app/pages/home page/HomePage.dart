@@ -590,39 +590,39 @@ class _HomePageState extends State<HomePage> {
               ),
             )
           : Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white),
-        ),
-        child: Hero(
-          tag: "logo",
-          child: InkWell(
-            borderRadius: BorderRadius.circular(10),
-            onTap: () {
-              Navigator.pushReplacement(
-                context,
-                PageRouteBuilder(
-                  pageBuilder: (context, animation, secondaryAnimation) =>
-                      NavigationPage(),
-                  transitionDuration: Duration.zero,
-                  reverseTransitionDuration: Duration.zero,
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white),
+              ),
+              child: Hero(
+                tag: "logo",
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            NavigationPage(),
+                        transitionDuration: Duration.zero,
+                        reverseTransitionDuration: Duration.zero,
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Image.asset(
+                      ImageConstant.logo,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
                 ),
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(6),
-              child: Image.asset(
-                ImageConstant.logo,
-                fit: BoxFit.contain,
               ),
             ),
-          ),
-        ),
-      ),
 
-        titleSpacing: ResponsiveWidget.isTablet(context) ? 50 : 10,
+      titleSpacing: ResponsiveWidget.isTablet(context) ? 50 : 10,
       actions: [
         //LanguageDropdown(),
         IconButton(
@@ -1039,10 +1039,9 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.symmetric(horizontal: 8.0),
           child: GestureDetector(
             onTap: () async {
-
               setState(() {
-                selectedType = type;
                 dashboardProvider.getContinueWatchedMovieList(selectedType);
+                selectedType = type;
               });
               final selectedLanguages =
                   Provider.of<UserProvider>(context, listen: false)
