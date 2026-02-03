@@ -6,10 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
-import 'package:ott/app/pages/DisplayTrailer.dart';
+import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
-import 'package:ott/app/pages/watchlist%20page/playMoviePage.dart';
+import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
@@ -24,8 +24,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:ott/data/models/content.dart';
-
-import '../pages/movie details page/component/mobile_preview_cordinator.dart';
 
 class MovieCard extends StatefulWidget {
   static const double itemWidth = 300;
@@ -60,10 +58,6 @@ class _MovieCardState extends State<MovieCard> {
   bool _hasVideoListener = false;
   Timer? _playDelayTimer;
 
-  /// MOBILE preview
-  Timer? _previewDelayTimer;
-  bool _showPreview = false;
-
   @override
   void initState() {
     super.initState();
@@ -84,16 +78,26 @@ class _MovieCardState extends State<MovieCard> {
     });
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    MobilePreviewCoordinator.activeMovieId.addListener(_onPreviewChanged);
+  Widget _watchProgressBar() {
+    final progress = (widget.movie.watchedPercentage ?? 0) / 100;
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 8,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: LinearProgressIndicator(
+          value: progress.clamp(0.0, 1.0),
+          minHeight: 4,
+          backgroundColor: Colors.white.withOpacity(0.3),
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Colors.blue, // Netflix-style
+          ),
+        ),
+      ),
+    );
   }
-
-  bool _isMobileVideoReady = false;
-
-  void _onPreviewChanged() async {
-    final activeId = MobilePreviewCoordinator.activeMovieId.value;
 
   void _toggleMute() {
     final controller = _videoController;
@@ -444,54 +448,23 @@ class _MovieCardState extends State<MovieCard> {
       );
     }
 
-    /// 📱 MOBILE → REAL autoplay using trailerUrl (MUTED)
-    if (!kIsWeb &&
-        _showPreview &&
-        _videoController != null &&
-        _isVideoInitialized &&
-        _isMobileVideoReady) {
-      return AspectRatio(
-        aspectRatio: 19 / 8,
-        child: Stack(
-          children: [
-            VideoPlayer(_videoController!),
-
-            // dark overlay (Netflix style)
-            Container(color: Colors.black.withOpacity(0.15)),
-
-            // mute indicator (informational only)
-            Positioned(
-              right: 6,
-              bottom: 6,
-              child: Icon(
-                Icons.volume_off,
-                color: Colors.white.withOpacity(0.7),
-                size: 18,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    /// 🖼 FALLBACK → poster
     return posterUrl != null
         ? Image.network(
-      posterUrl,
-      fit: BoxFit.cover,
-      width: double.infinity,
-      height: double.infinity,
-      errorBuilder: (_, __, ___) => Icon(
-        Icons.broken_image,
-        color: theme.canvasColor.withOpacity(0.3),
-        size: 40,
-      ),
-    )
+            posterUrl,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+            errorBuilder: (_, __, ___) => Icon(
+              Icons.broken_image,
+              color: theme.canvasColor.withOpacity(0.3),
+              size: 40,
+            ),
+          )
         : Icon(
-      Icons.broken_image,
-      color: theme.canvasColor.withOpacity(0.3),
-      size: 40,
-    );
+            Icons.broken_image,
+            color: theme.canvasColor.withOpacity(0.3),
+            size: 40,
+          );
   }
 
   Widget _buildContentSection(ThemeData theme, AppLocalizations lang) {

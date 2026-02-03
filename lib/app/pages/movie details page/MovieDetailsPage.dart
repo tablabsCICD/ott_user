@@ -5,8 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
-import 'package:ott/app/pages/movie%20details%20page/component/AutoScrollingPosters.dart';
-import 'package:ott/app/pages/DisplayTrailer.dart';
+import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
 import 'package:ott/app/pages/movie%20details%20page/component/actionButtonWidget.dart';
 import 'package:ott/app/provider/ThemeProvider.dart';
@@ -19,10 +18,9 @@ import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:video_player/video_player.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../widgets/show_toast.dart';
-import '../watchlist page/playMoviePage.dart';
+import '../watchlist page/component/playMoviePage.dart';
 import 'component/displayStar.dart';
 import 'component/starRating.dart';
 
@@ -72,28 +70,6 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     Content? movieContent =
         Provider.of<DashboardProvider>(context, listen: true).content;
 
-    if (movieContent == null) {
-      return Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          leading: IconButton(
-              onPressed: () {
-                _trailerController.pause?.call();
-              },
-              icon: Icon(
-                Icons.arrow_back_ios_new_outlined,
-                color: Colors.white,
-              )),
-          title: const Text('Movie Details'),
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-        ),
-        body: const Center(
-          child: Text('Movie not found.'),
-        ),
-      );
-    }
-
     final controller = YoutubePlayerController(
       initialVideoId:
           YoutubePlayer.convertUrlToId(movieContent.trailerUrl ?? '') ?? '',
@@ -136,13 +112,6 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
             body: Consumer<DashboardProvider>(
               builder: (context, provider, child) {
                 final content = provider.content;
-
-                if (content == null) {
-                  return Center(
-                      child: CircularProgressIndicator(
-                    color: Theme.of(context).primaryColor,
-                  ));
-                }
 
                 return Stack(
                   children: [
@@ -341,9 +310,6 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
 
   Widget _buildMobileView(Content content, ThemeData selectedThemeData,
       YoutubePlayerController controller) {
-    VideoPlayerController? _videoController =
-        VideoPlayerController.networkUrl(Uri.parse(content.trailerUrl!));
-
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -904,7 +870,7 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
               titleStyle, contentStyle),
           _buildTableRow(
               lang.languages,
-              (movie.languageList!.map((e) => e.language) ?? []).join(', '),
+              (movie.languageList!.map((e) => e.language)).join(', '),
               titleStyle,
               contentStyle),
           _buildTableRow(
@@ -944,17 +910,6 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
           child: Text(content, style: contentStyle),
         ),
       ],
-    );
-  }
-
-  Widget _buildDetailItem(String title, String content) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Text(
-        '$title:  $content',
-        style:
-            const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-      ),
     );
   }
 

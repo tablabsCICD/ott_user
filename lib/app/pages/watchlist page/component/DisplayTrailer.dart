@@ -1,19 +1,15 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:video_player/video_player.dart';
-import 'package:universal_html/html.dart' as html;
 import 'package:wakelock_plus/wakelock_plus.dart';
 
-import '../../data/models/content.dart';
-import '../../data/models/response/saveViewHistory.dart';
-import '../core/constant/api_constant.dart';
-import '../core/network/api_helper.dart';
-import '../core/utils/sharepreferences.dart';
+import '../../../../data/models/content.dart';
+import '../../../core/constant/api_constant.dart';
+import '../../../core/network/api_helper.dart';
+import '../../../core/utils/sharepreferences.dart';
 
 class TrailerPage extends StatefulWidget {
   final String? trailerUrl;
@@ -26,7 +22,6 @@ class TrailerPage extends StatefulWidget {
     required this.isTrailerUrl,
     required this.content,
   });
-
   @override
   State<TrailerPage> createState() => _TrailerPageState();
 }
@@ -108,7 +103,7 @@ class _TrailerPageState extends State<TrailerPage> {
         "contentId": widget.content.id,
         "resumeTime": _videoController?.value.position.toString() ?? "0:00",
         "selectedLanguage":
-        widget.content.languageList?.first.language ?? "Unknown",
+            widget.content.languageList?.first.language ?? "Unknown",
         "userId": user.id,
         "viewDate": DateTime.now().toUtc().toIso8601String(),
       };
@@ -135,31 +130,31 @@ class _TrailerPageState extends State<TrailerPage> {
       backgroundColor: Colors.black,
       body: !_hasUrl
           ? const Center(
-        child: Text("No trailer available",
-            style: TextStyle(color: Colors.white)),
-      )
+              child: Text("No trailer available",
+                  style: TextStyle(color: Colors.white)),
+            )
           : !_initialized
-          ? Center(
-          child: CircularProgressIndicator(
-            color: Theme.of(context).primaryColor,
-          ))
-          : Stack(
-        children: [
-          Center(child: _playerSurface()),
+              ? Center(
+                  child: CircularProgressIndicator(
+                  color: Theme.of(context).primaryColor,
+                ))
+              : Stack(
+                  children: [
+                    Center(child: _playerSurface()),
 
-          // 🔙 Back button overlay
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topLeft,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back_ios,
-                    color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-          ),
-        ],
-      ),
+                    // 🔙 Back button overlay
+                    SafeArea(
+                      child: Align(
+                        alignment: Alignment.topLeft,
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back_ios,
+                              color: Colors.white),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
     );
   }
 
@@ -190,8 +185,8 @@ class _TrailerPageState extends State<TrailerPage> {
                   target < Duration.zero
                       ? Duration.zero
                       : target > duration
-                      ? duration
-                      : target,
+                          ? duration
+                          : target,
                 );
               },
               onLongPressStart: (_) {
@@ -336,8 +331,8 @@ class _TrailerPreviewState extends State<TrailerPreview> {
         aspectRatio: 16 / 9,
         child: Center(
             child: CircularProgressIndicator(
-              color: Theme.of(context).primaryColor,
-            )),
+          color: Theme.of(context).primaryColor,
+        )),
       );
     }
 
@@ -386,7 +381,7 @@ class _TrailerPreviewState extends State<TrailerPreview> {
                       Text(
                         _format(_c!.value.position),
                         style:
-                        const TextStyle(color: Colors.white, fontSize: 12),
+                            const TextStyle(color: Colors.white, fontSize: 12),
                       ),
 
                       const SizedBox(width: 6),
@@ -410,7 +405,7 @@ class _TrailerPreviewState extends State<TrailerPreview> {
                       Text(
                         _format(_c!.value.duration),
                         style:
-                        const TextStyle(color: Colors.white, fontSize: 12),
+                            const TextStyle(color: Colors.white, fontSize: 12),
                       ),
                     ],
                   ),
