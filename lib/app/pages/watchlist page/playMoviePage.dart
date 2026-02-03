@@ -40,13 +40,12 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
   bool _loading = true;
   bool _handlingEnd = false;
   Duration _lastSavedPosition = Duration.zero;
-  bool _isInitializedOnce = false;
-
+  bool _wakelockEnabled = false;
 
   bool get _isSeries =>
       widget.content?.type?.toLowerCase() == "series" &&
-          widget.seasons != null &&
-          widget.episodeIndex != null;
+      widget.seasons != null &&
+      widget.episodeIndex != null;
 
   @override
   void initState() {
@@ -64,11 +63,9 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     if (widget.content?.id == null) return;
 
     context.read<PlayMediaProvider>().addView(
-      mediaId: _isSeries
-          ? widget.episodeIndex!
-          : widget.content!.id!,
-      isSeries: _isSeries,
-    );
+          mediaId: _isSeries ? widget.episodeIndex! : widget.content!.id!,
+          isSeries: _isSeries,
+        );
   }
 
   // ================= PLAYER SETUP =================
@@ -81,7 +78,7 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     _videoController?.removeListener(_videoListener);
     await _videoController?.pause();
     await _videoController?.dispose();
-   _chewieController?.dispose();
+    _chewieController?.dispose();
 
     _videoController = null;
     _chewieController = null;
@@ -93,6 +90,7 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
 
     _videoController = VideoPlayerController.networkUrl(Uri.parse(url));
     await _videoController!.initialize();
+    if (!mounted) return;
 
     if (_videoController!.value.hasError) {
       debugPrint(
@@ -101,34 +99,6 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     }
 
     _videoController!.addListener(_videoListener);
-
-    // 🔥 FORCE PLAY (CRITICAL FIX)
-    await _videoController!.setVolume(1.0);
-
-    final provider = context.read<PlayMediaProvider>();
-
-    final resumeSeconds = _isSeries
-        ? provider.getLocalResume(
-      contentId: widget.content!.id!,
-      seasonId: widget.seasonIndex,
-      episodeId: widget.episodeIndex,
-    )
-        : widget.content?.watchedSeconds ?? 0;
-
-
-
-    if (resumeSeconds > 5) {
-      await _videoController!.seekTo(Duration(seconds: resumeSeconds));
-    }
-
-    await _videoController!.play();
-
-    await _videoController!.play();
-
-    _progressTimer = Timer.periodic(
-      const Duration(seconds: 15),
-          (_) => _saveProgress(),
-    );
 
     _chewieController = ChewieController(
       videoPlayerController: _videoController!,
@@ -148,6 +118,34 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     if (mounted) {
       setState(() => _loading = false);
     }
+
+    _resumeAndPlay();
+  }
+
+  Future<void> _resumeAndPlay() async {
+    if (_videoController == null || !mounted) return;
+
+    await _videoController!.setVolume(1.0);
+
+    final provider = context.read<PlayMediaProvider>();
+    final resumeSeconds = _isSeries
+        ? provider.getLocalResume(
+            contentId: widget.content!.id!,
+            seasonId: widget.seasonIndex,
+            episodeId: widget.episodeIndex,
+          )
+        : widget.content?.watchedSeconds ?? 0;
+
+    if (resumeSeconds > 5) {
+      await _videoController!.seekTo(Duration(seconds: resumeSeconds));
+    }
+
+    await _videoController!.play();
+
+    _progressTimer = Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => _saveProgress(),
+    );
   }
 
   // ================= VIDEO LISTENER =================
@@ -157,10 +155,12 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     final value = _videoController!.value;
 
     // 🔋 wakelock
-    if (value.isPlaying) {
+    if (value.isPlaying && !_wakelockEnabled) {
       WakelockPlus.enable();
-    } else {
+      _wakelockEnabled = true;
+    } else if (!value.isPlaying && _wakelockEnabled) {
       WakelockPlus.disable();
+      _wakelockEnabled = false;
     }
 
     // ▶ SAVE EVERY 15s WHILE PLAYING
@@ -185,9 +185,6 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     }
   }
 
-
-
-
   // ================= SAVE PROGRESS =================
 
   void _saveProgress() {
@@ -205,21 +202,20 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     );
 
     context.read<PlayMediaProvider>().saveLocalResume(
-      contentId: widget.content!.id!,
-      seasonId: _isSeries ? widget.seasonIndex : null,
-      episodeId: _isSeries ? widget.episodeIndex : null,
-      seconds: position.inSeconds,
-    );
+          contentId: widget.content!.id!,
+          seasonId: _isSeries ? widget.seasonIndex : null,
+          episodeId: _isSeries ? widget.episodeIndex : null,
+          seconds: position.inSeconds,
+        );
 
     context.read<PlayMediaProvider>().saveContinueWatching(
-      contentId: widget.content!.id!,
-      seasonId: _isSeries ? widget.seasonIndex : null,
-      episodeId: _isSeries ? widget.episodeIndex : null,
-      position: position,
-      duration: duration,
-    );
+          contentId: widget.content!.id!,
+          seasonId: _isSeries ? widget.seasonIndex : null,
+          episodeId: _isSeries ? widget.episodeIndex : null,
+          position: position,
+          duration: duration,
+        );
   }
-
 
   // ================= AUTO NEXT =================
 
@@ -234,8 +230,9 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     final provider = context.read<PlayMediaProvider>();
 
     final next = provider.getNextEpisode(
-
-      seasons: widget.seasons!, seasonId: widget.seasonIndex!, episodeId: widget.episodeIndex!,
+      seasons: widget.seasons!,
+      seasonId: widget.seasonIndex!,
+      episodeId: widget.episodeIndex!,
     );
 
     if (next == null) {
@@ -244,7 +241,7 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     }
 
     _handlingEnd = false;
-    await _setupPlayer(next.videoUrl??"");
+    await _setupPlayer(next.videoUrl ?? "");
   }
 
   // ================= DISPOSE =================
@@ -257,9 +254,9 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     _videoController?.dispose();
     _chewieController?.dispose();
     WakelockPlus.disable();
+    _wakelockEnabled = false;
     super.dispose();
   }
-
 
   // ================= UI =================
 
@@ -278,17 +275,17 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
         appBar: ResponsiveWidget.isDesktop(context)
             ? null
             : AppBar(
-          backgroundColor: Colors.black,
-          title: Text(
-            widget.content?.title ?? "",
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
+                backgroundColor: Colors.black,
+                title: Text(
+                  widget.content?.title ?? "",
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : ResponsiveWidget.isDesktop(context)
-            ? _desktopPlayer()
-            : _mobilePlayer(),
+                ? _desktopPlayer()
+                : _mobilePlayer(),
       ),
     );
   }
@@ -315,9 +312,9 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return SizedBox.expand( // 🔥 CRITICAL
+    return SizedBox.expand(
+      // 🔥 CRITICAL
       child: Chewie(controller: _chewieController!),
     );
   }
-
 }

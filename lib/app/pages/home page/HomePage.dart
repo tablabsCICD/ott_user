@@ -171,13 +171,11 @@ class _HomePageState extends State<HomePage> {
                           SizedBox(
                             height: ResponsiveWidget.isMobile(context) ? 0 : 10,
                           ),
-                          continueWatchWidget(continueWatchList:dashboardProvider.continueWatchedMovies),
+                          continueWatchWidget(
+                              continueWatchList:
+                                  dashboardProvider.continueWatchedMovies),
                           selectedType == 'SHORTS'
-                              ? SizedBox(
-                                  height:
-                                      MediaQuery.of(context).size.height * 0.7,
-                                  child: ShortsLibraryPage(),
-                                )
+                              ? ShortsLibraryPage(useParentScroll: true)
                               : ListView.builder(
                                   shrinkWrap: true,
                                   physics: NeverScrollableScrollPhysics(),
@@ -217,13 +215,15 @@ class _HomePageState extends State<HomePage> {
                                         Text(
                                           "${dashboardData.language} - ${dashboardData.category}",
                                           style: TextStyle(
-                                              overflow: TextOverflow.ellipsis,
-                                              fontSize:
-                                                  ResponsiveWidget.isMobile(
-                                                          context)
-                                                      ? 18
-                                                      : 20,
-                                              fontWeight: FontWeight.bold),
+                                            overflow: TextOverflow.ellipsis,
+                                            fontSize: ResponsiveWidget.isMobile(
+                                                    context)
+                                                ? 18
+                                                : 20,
+                                            fontWeight: FontWeight.bold,
+                                            color:
+                                                selectedThemeData.canvasColor,
+                                          ),
                                         ),
                                         SizedBox(height: 10),
                                         (dashboardData.movies == null ||
@@ -291,6 +291,7 @@ class _HomePageState extends State<HomePage> {
     if (continueWatchList.isEmpty) {
       return const SizedBox.shrink();
     }
+    var theme = Theme.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -300,9 +301,11 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
           child: Text(
             "Continue Watching",
-            style: const TextStyle(
-              fontSize: 20,
+            style: TextStyle(
+              overflow: TextOverflow.ellipsis,
+              fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
               fontWeight: FontWeight.bold,
+              color: theme.canvasColor,
             ),
           ),
         ),

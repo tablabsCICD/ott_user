@@ -5,7 +5,9 @@ import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 
 class ShortsLibraryPage extends StatefulWidget {
-  const ShortsLibraryPage({super.key});
+  const ShortsLibraryPage({super.key, this.useParentScroll = false});
+
+  final bool useParentScroll;
 
   @override
   State<ShortsLibraryPage> createState() => _ShortsLibraryPageState();
@@ -41,10 +43,16 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
 
         final shorts = provider.shorts;
 
+        final useParentScroll = widget.useParentScroll;
+
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: GridView.builder(
-            physics: const BouncingScrollPhysics(),
+            shrinkWrap: useParentScroll,
+            primary: !useParentScroll,
+            physics: useParentScroll
+                ? const NeverScrollableScrollPhysics()
+                : const BouncingScrollPhysics(),
             itemCount: shorts.length,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: ResponsiveWidget.isDesktop(context)
