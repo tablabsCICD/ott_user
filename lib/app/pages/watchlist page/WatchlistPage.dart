@@ -52,7 +52,10 @@ class _WatchlistPageState extends State<WatchlistPage> {
         ),
       ),
       body: isLoading
-          ? ComingSoonShimmer()
+          ? const ComingSoonShimmer(
+              showSegmentedToggle: true,
+              showActionButton: false,
+            )
           : Consumer<PurchaseContentProvider>(
               builder: (_, provider, __) {
                 final items = provider.userContentList.where((e) {
