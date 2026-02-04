@@ -179,6 +179,14 @@ class WalletProvider extends ChangeNotifier {
 
   Future<Map<String, Object>> getBalance() async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
+    if (user == null || user.id == null) {
+      _walletBalance = 0.0;
+      notifyListeners();
+      return {
+        'success': false,
+        'message': 'User not found',
+      };
+    }
     String apiUrl = ApiConstant.getWalletBalanceByUserId(user!.id!);
 
     ApiHelper apiHelper = ApiHelper();

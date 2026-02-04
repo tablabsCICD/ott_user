@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/shorts%20page/component/shortsLibraryPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
@@ -78,7 +77,7 @@ class _ShortsPageState extends State<ShortsPage> {
                 ),
               ),
               child: Text(
-                "₹ ${coinsBalance ?? 0}",
+                "₹ $coinsBalance",
                 style: TextStyle(
                   color: theme.canvasColor,
                   fontWeight: FontWeight.bold,

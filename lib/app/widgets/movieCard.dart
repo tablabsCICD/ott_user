@@ -78,21 +78,21 @@ class _MovieCardState extends State<MovieCard> {
     });
   }
 
-  Widget _watchProgressBar() {
+  Widget _watchProgressBar(ThemeData theme) {
     final progress = (widget.movie.watchedPercentage ?? 0) / 100;
 
     return Positioned(
       left: 0,
       right: 0,
-      bottom: 8,
+      bottom: 0.3,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(6),
         child: LinearProgressIndicator(
           value: progress.clamp(0.0, 1.0),
           minHeight: 4,
-          backgroundColor: Colors.white.withOpacity(0.3),
+          backgroundColor: theme.cardColor,
           valueColor: AlwaysStoppedAnimation<Color>(
-            Colors.blue, // Netflix-style
+            theme.primaryColor, // Netflix-style
           ),
         ),
       ),
@@ -380,24 +380,16 @@ class _MovieCardState extends State<MovieCard> {
                   /// 🎬 POSTER + PROGRESS BAR STACK
                   Expanded(
                     flex: 8,
-                    child: Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(12),
-                          ),
-                          child: _buildMediaPreview(
-                            posterUrl,
-                            theme,
-                            widget.movie,
-                            showPreview,
-                          ),
-                        ),
-
-                        /// 🔥 CONTINUE WATCHING BAR
-                        if ((widget.movie.watchedPercentage ?? 0) > 0)
-                          _watchProgressBar(),
-                      ],
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(12),
+                      ),
+                      child: _buildMediaPreview(
+                        posterUrl,
+                        theme,
+                        widget.movie,
+                        showPreview,
+                      ),
                     ),
                   ),
 
@@ -448,23 +440,30 @@ class _MovieCardState extends State<MovieCard> {
       );
     }
 
-    return posterUrl != null
-        ? Image.network(
-            posterUrl,
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
-            errorBuilder: (_, __, ___) => Icon(
-              Icons.broken_image,
-              color: theme.canvasColor.withOpacity(0.3),
-              size: 40,
-            ),
-          )
-        : Icon(
-            Icons.broken_image,
-            color: theme.canvasColor.withOpacity(0.3),
-            size: 40,
-          );
+    return Stack(
+      children: [
+        posterUrl != null
+            ? Image.network(
+                posterUrl,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (_, __, ___) => Icon(
+                  Icons.broken_image,
+                  color: theme.canvasColor.withOpacity(0.3),
+                  size: 40,
+                ),
+              )
+            : Icon(
+                Icons.broken_image,
+                color: theme.canvasColor.withOpacity(0.3),
+                size: 40,
+              ),
+
+        /// 🔥 CONTINUE WATCHING BAR
+        if ((widget.movie.watchedPercentage ?? 0) > 0) _watchProgressBar(theme),
+      ],
+    );
   }
 
   Widget _buildContentSection(ThemeData theme, AppLocalizations lang) {

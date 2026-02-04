@@ -590,8 +590,8 @@ class _HomePageState extends State<HomePage> {
               ),
             )
           : Container(
-              width: 52,
-              height: 52,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.white),
@@ -612,10 +612,13 @@ class _HomePageState extends State<HomePage> {
                     );
                   },
                   child: Padding(
-                    padding: const EdgeInsets.all(6),
-                    child: Image.asset(
-                      ImageConstant.logo,
-                      fit: BoxFit.contain,
+                    padding: const EdgeInsets.all(1),
+                    child: ClipRRect(
+                      borderRadius: BorderRadiusGeometry.circular(20),
+                      child: Image.asset(
+                        ImageConstant.logo,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                 ),

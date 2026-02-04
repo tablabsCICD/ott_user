@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:ott/app/pages/shorts%20page/component/shortsSeriesPlayerPage.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
+import 'package:ott/app/pages/shorts%20page/component/ShortsPlayerPage.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
@@ -69,9 +70,11 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
 
               return GestureDetector(
                 onTap: () async {
+                  final user = await LocalSharePreferences.localSharePreferences
+                      .getUser();
                   await context
                       .read<ShortProvider>()
-                      .fetchShortDetail(short.id, 1);
+                      .fetchShortDetail(short.id, user?.id ?? 1);
 
                   if (mounted &&
                       context.read<ShortProvider>().shortDetail != null) {
@@ -188,30 +191,31 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                         ),
                       ),
                       Positioned(
-                          right: 8,
-                          bottom: 5,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Icon(
-                                Icons.remove_red_eye,
+                        right: 8,
+                        bottom: 5,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Icon(
+                              Icons.remove_red_eye,
+                              color: Colors.white70,
+                              size: 13,
+                            ),
+                            SizedBox(
+                              width: 4,
+                            ),
+                            Text(
+                              short.likeCount.toString(),
+                              style: TextStyle(
                                 color: Colors.white70,
-                                size: 13,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
                               ),
-                              SizedBox(
-                                width: 4,
-                              ),
-                              Text(
-                                short.likeCount.toString(),
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              )
-                            ],
-                          ))
+                            )
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
