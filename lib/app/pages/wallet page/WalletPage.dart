@@ -43,9 +43,9 @@ class _WalletPageState extends State<WalletPage> {
             backgroundColor: theme.primaryColor,
             foregroundColor: Colors.white,
             elevation: 0,
-            actions: [
-              _buildFilterBar(context),
-            ],
+            // actions: [
+            //   _buildFilterBar(context),
+            // ],
             actionsPadding: EdgeInsets.symmetric(
               vertical: 4,
               horizontal: 8,
@@ -174,8 +174,7 @@ class _WalletPageState extends State<WalletPage> {
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (_, i) {
                     final tx = list[i];
-                    final isCredit =
-                        tx.status?.toLowerCase() == "amount creadited";
+                    final isCredit = tx.action?.toLowerCase() == "credit";
 
                     return Container(
                       padding: const EdgeInsets.all(14),
@@ -283,77 +282,117 @@ class _WalletPageState extends State<WalletPage> {
     );
   }
 
-  Widget _buildFilterBar(BuildContext context) {
-    return OutlinedButton.icon(
-      icon: const Icon(
-        Icons.date_range,
-        size: 18,
-        color: Colors.white,
-      ),
-      label: Text(
-        _startDate == null || _endDate == null
-            ? "Select Date"
-            : '${DateFormat('dd MMM').format(_startDate!)} - ${DateFormat('dd MMM').format(_endDate!)}',
-        style: TextStyle(
-          color: Colors.white,
-        ),
-      ),
-      onPressed: () async {
-        final picked = await showDateRangePicker(
-          context: context,
-          firstDate: DateTime(2020),
-          lastDate: DateTime.now(),
-        );
-        if (picked != null) {
-          setState(() {
-            _startDate = picked.start;
-            _endDate = picked.end;
-          });
-          Provider.of<WalletProvider>(context, listen: false)
-              .filterDateWiseTransaction(_startDate, _endDate);
-        }
-      },
-    );
-  }
+  // Widget _buildFilterBar(BuildContext context) {
+  //   return OutlinedButton.icon(
+  //     icon: const Icon(
+  //       Icons.date_range,
+  //       size: 18,
+  //       color: Colors.white,
+  //     ),
+  //     label: Text(
+  //       _startDate == null || _endDate == null
+  //           ? "Select Date"
+  //           : '${DateFormat('dd MMM').format(_startDate!)} - ${DateFormat('dd MMM').format(_endDate!)}',
+  //       style: TextStyle(
+  //         color: Colors.white,
+  //       ),
+  //     ),
+  //     onPressed: () async {
+  //       final picked = await showDateRangePicker(
+  //         context: context,
+  //         firstDate: DateTime(2020),
+  //         lastDate: DateTime.now(),
+  //       );
+  //       if (picked != null) {
+  //         setState(() {
+  //           _startDate = picked.start;
+  //           _endDate = picked.end;
+  //         });
+  //         Provider.of<WalletProvider>(context, listen: false)
+  //             .filterDateWiseTransaction(_startDate, _endDate);
+  //       }
+  //     },
+  //   );
+  // }
 
   void _showBuyDialog() {
     final controller = TextEditingController();
+    final pageContext = context;
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text("Recharge Wallet"),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: "Enter amount",
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel")),
-          ElevatedButton(
-            onPressed: () async {
-              final amt = double.tryParse(controller.text);
-              if (amt == null || amt < 10) {
-                CustomToast.show(context, "Minimum recharge amount is ₹10",
-                    isSuccess: false);
-                return;
-              }
+      builder: (dialogContext) {
+        bool isProcessing = false;
 
-              final p = Provider.of<WalletProvider>(context, listen: false);
-              await p.addBalance(amt);
-              Navigator.pop(context);
-            },
-            child: const Text("Proceed to pay"),
-          )
-        ],
-      ),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Consumer<WalletProvider>(
+              builder: (_, provider, __) {
+                final isBusy = isProcessing || provider.isAddingBalance;
+
+                return AlertDialog(
+                  backgroundColor: Theme.of(context).cardColor,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  title: const Text("Recharge Wallet"),
+                  content: TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: "Enter amount",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                        onPressed:
+                            isBusy ? null : () => Navigator.pop(dialogContext),
+                        child: const Text("Cancel")),
+                    ElevatedButton(
+                      onPressed: isBusy
+                          ? null
+                          : () async {
+                              final amt = double.tryParse(controller.text);
+                              if (amt == null || amt < 10) {
+                                CustomToast.show(
+                                  pageContext,
+                                  "Minimum recharge amount is ₹10",
+                                  isSuccess: false,
+                                );
+                                return;
+                              }
+
+                              setState(() => isProcessing = true);
+                              final result = await provider.addBalance(amt);
+
+                              if (!mounted) return;
+                              if (result['success'] == true) {
+                                CustomToast.show(
+                                  pageContext,
+                                  result['message']?.toString() ??
+                                      "Wallet recharged successfully.",
+                                  isSuccess: true,
+                                );
+                                Navigator.pop(dialogContext);
+                              } else {
+                                setState(() => isProcessing = false);
+                                CustomToast.show(
+                                  pageContext,
+                                  result['message']?.toString() ??
+                                      "Recharge failed. Please try again.",
+                                  isSuccess: false,
+                                );
+                              }
+                            },
+                      child: Text(isBusy ? "Processing..." : "Proceed to pay"),
+                    )
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

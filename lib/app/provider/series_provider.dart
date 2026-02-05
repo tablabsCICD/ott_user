@@ -15,10 +15,12 @@ class SeriesProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   SeriesEntity? _series;
+  bool _isPurchasing = false;
 
   bool get isLoading => _isLoading;
   String? get error => _error;
   SeriesEntity? get series => _series;
+  bool get isPurchasing => _isPurchasing;
 
   Future<void> fetchSeriesDetails(int seriesId) async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
@@ -57,6 +59,16 @@ class SeriesProvider with ChangeNotifier {
   Future<bool> purchaseEpisode(int episodeId, int seriesId) async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
 
+    if (_isPurchasing) {
+      _error = 'Purchase already in progress. Please wait.';
+      notifyListeners();
+      return false;
+    }
+
+    _isPurchasing = true;
+    _error = null;
+    notifyListeners();
+
     try {
       final url = ApiConstant.purchaseEpisode(episodeId, user!.id);
       log('🛒 Purchase Episode URL: $url');
@@ -90,11 +102,24 @@ class SeriesProvider with ChangeNotifier {
       _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
+    } finally {
+      _isPurchasing = false;
+      notifyListeners();
     }
   }
 
   Future<bool> purchaseSeason(int seasonId, int seriesId) async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
+
+    if (_isPurchasing) {
+      _error = 'Purchase already in progress. Please wait.';
+      notifyListeners();
+      return false;
+    }
+
+    _isPurchasing = true;
+    _error = null;
+    notifyListeners();
 
     try {
       final url = ApiConstant.purchaseSeason(seasonId, user!.id);
@@ -129,6 +154,9 @@ class SeriesProvider with ChangeNotifier {
       _error = 'Something went wrong. Please try again.';
       notifyListeners();
       return false;
+    } finally {
+      _isPurchasing = false;
+      notifyListeners();
     }
   }
 

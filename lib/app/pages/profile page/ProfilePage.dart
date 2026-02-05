@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
-import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/bookmarks%20page/bookmark_page.dart';
 import 'package:ott/app/pages/gifted%20movies%20page/GiftedMoviesPage.dart';
 import 'package:ott/app/pages/help%20support%20page/HelpSupportPage.dart';
@@ -17,7 +16,6 @@ import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/pages/watchlist%20page/WatchlistPage.dart';
 import 'package:ott/app/provider/ThemeProvider.dart';
 import 'package:ott/app/provider/giftProvider.dart';
-import 'package:ott/app/provider/language_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/LanguageDropdown.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
@@ -72,7 +70,6 @@ class _ProfilePageState extends State<ProfilePage> {
     final lang = AppLocalizations.of(context)!;
     var themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     var selectedThemeData = themeProvider.getTheme;
-    bool isDark = selectedThemeData.brightness == Brightness.dark;
 
     return Scaffold(
       body: isLoading
@@ -83,11 +80,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 SliverToBoxAdapter(
                   child: Consumer<UserProvider>(
                       builder: (context, userProvider, child) {
-                    final user = userProvider.userObject;
-
-                    if (user == null) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
                     TextEditingController couponCodeController =
                         TextEditingController();
 
@@ -685,6 +677,13 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 Text(
                   userProvider.userObj.mobileNumber ?? '',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  "${userProvider.userObj.id}",
                   style: TextStyle(
                     color: Colors.white70,
                     fontSize: 14,

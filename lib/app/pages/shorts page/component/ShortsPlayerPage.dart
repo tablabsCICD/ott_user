@@ -31,8 +31,11 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
   bool _isInitialized = false;
   bool _isLoadingPart = false;
   bool _isMetaExpanded = false;
+  bool _hasVideoError = false;
+  String? _videoErrorMessage;
 
   int get totalParts => _parts.length;
+  int? _parsePartId(ShortPart part) => int.tryParse(part.partId);
 
   @override
   void initState() {
@@ -89,6 +92,13 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     _isLoadingPart = true;
 
     try {
+      if (mounted) {
+        setState(() {
+          _hasVideoError = false;
+          _videoErrorMessage = null;
+        });
+      }
+
       final part = _parts[index];
 
       final old = _controller;
@@ -98,6 +108,17 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       await old?.dispose();
 
       if (!part.isFreePreview && !part.isPurchased) {
+        final partId = _parsePartId(part);
+        if (partId == null) {
+          if (mounted) {
+            setState(() {
+              _hasVideoError = true;
+              _videoErrorMessage = "Invalid video";
+            });
+          }
+          return;
+        }
+
         final wallet = context.read<WalletProvider>();
         await wallet.getBalance();
 
@@ -106,9 +127,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
           return;
         }
 
-        await context
-            .read<ShortProvider>()
-            .purchaseShortPart(partId: int.parse(part.partId));
+        await context.read<ShortProvider>().purchaseShortPart(partId: partId);
 
         await _refreshFromBackend();
       }
@@ -116,15 +135,41 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       final updated = _parts[index];
       if (!updated.isFreePreview && !updated.isPurchased) return;
 
+      if (updated.videoUrl.trim().isEmpty) {
+        if (mounted) {
+          setState(() {
+            _hasVideoError = true;
+            _videoErrorMessage = "Video unavailable";
+          });
+        }
+        return;
+      }
+
       final ctrl = VideoPlayerController.network(updated.videoUrl);
-      await ctrl.initialize();
+      try {
+        await ctrl.initialize();
+      } catch (e) {
+        await ctrl.dispose();
+        if (mounted) {
+          setState(() {
+            _hasVideoError = true;
+            _videoErrorMessage = "Failed to load video";
+          });
+        }
+        return;
+      }
+
       await ctrl.play();
 
-      if (!mounted) return;
+      if (!mounted) {
+        await ctrl.dispose();
+        return;
+      }
 
-      await context
-          .read<ShortProvider>()
-          .addShortView(partId: int.parse(updated.partId));
+      final updatedPartId = _parsePartId(updated);
+      if (updatedPartId != null) {
+        await context.read<ShortProvider>().addShortView(partId: updatedPartId);
+      }
 
       await _refreshFromBackend();
 
@@ -133,6 +178,8 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         _isInitialized = true;
         _currentIndex = index;
         ctrl.setVolume(1);
+        _hasVideoError = false;
+        _videoErrorMessage = null;
       });
     } finally {
       _isLoadingPart = false;
@@ -217,6 +264,25 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
   Widget _videoBackground() {
     final controller = _controller;
+    if (_hasVideoError) {
+      return Positioned.fill(
+        child: Container(
+          color: Colors.black,
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.play_disabled, color: Colors.white70, size: 32),
+              const SizedBox(height: 8),
+              Text(
+                _videoErrorMessage ?? "Video unavailable",
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     if (controller == null || !controller.value.isInitialized) {
       return const ShimmerLoader(
         height: double.infinity,
@@ -225,6 +291,25 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     }
 
     final size = controller.value.size;
+    if (controller.value.hasError) {
+      return Positioned.fill(
+        child: Container(
+          color: Colors.black,
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.play_disabled, color: Colors.white70, size: 32),
+              SizedBox(height: 8),
+              Text(
+                "Video unavailable",
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     if (size.width == 0 || size.height == 0) {
       return const ShimmerLoader(
         height: double.infinity,
@@ -471,13 +556,15 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
             provider.isLiking
                 ? null
                 : () async {
+                    final partId = _parsePartId(part);
+                    if (partId == null) return;
                     final ok = part.isLiked
                         ? await context
                             .read<ShortProvider>()
-                            .unlikeShortPart(partId: int.parse(part.partId))
+                            .unlikeShortPart(partId: partId)
                         : await context
                             .read<ShortProvider>()
-                            .likeShortPart(partId: int.parse(part.partId));
+                            .likeShortPart(partId: partId);
 
                     if (ok) await _refreshFromBackend();
                   },
@@ -625,17 +712,20 @@ ${short.durationSec ?? ''}
     }
 
     final value = controller.value;
-    if (!value.isInitialized || value.duration == Duration.zero) {
+    if (!value.isInitialized ||
+        value.duration == Duration.zero ||
+        value.hasError) {
       return const SizedBox.shrink();
     }
 
     final theme = Theme.of(context);
     final bottomInset = MediaQuery.of(context).padding.bottom;
+    final bottom = bottomInset > 2 ? bottomInset + 6 : 8.0;
 
     return Positioned(
-      left: 2,
-      right: 2,
-      //bottom: 3, //max(8.0, bottomInset + 6.0),
+      left: 12,
+      right: 12,
+      bottom: bottom,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(4),
         child: VideoProgressIndicator(
@@ -665,12 +755,15 @@ ${short.durationSec ?? ''}
       return;
     }
 
+    if (_currentIndex < 0 || _currentIndex >= _parts.length) return;
     final part = _parts[_currentIndex];
+    final partId = _parsePartId(part);
+    if (partId == null) return;
     final provider = context.read<ShortProvider>();
     if (provider.isLiking || part.isLiked) return;
 
     HapticFeedback.lightImpact();
-    final ok = await provider.likeShortPart(partId: int.parse(part.partId));
+    final ok = await provider.likeShortPart(partId: partId);
 
     if (ok) await _refreshFromBackend();
   }

@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
+import 'package:ott/app/pages/shorts%20page/component/ShortsPlayerPage.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
+import 'package:ott/app/provider/shorts_provider.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/content.dart';
+import 'package:ott/data/models/shorts.dart';
 import 'package:provider/provider.dart';
 
 class BookmarkPosterCard extends StatelessWidget {
@@ -116,6 +120,120 @@ class BookmarkPosterCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ShortBookmarkPosterCard extends StatelessWidget {
+  final ShortModel short;
+
+  const ShortBookmarkPosterCard({super.key, required this.short});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bookmarkProvider = context.watch<BookmarkProvider>();
+    final bool isBookmarked =
+        bookmarkProvider.isShortBookmarkedLocally(short.id);
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () async {
+          final user =
+              await LocalSharePreferences.localSharePreferences.getUser();
+          await context
+              .read<ShortProvider>()
+              .fetchShortDetail(short.id, user?.id ?? 1);
+
+          if (context.read<ShortProvider>().shortDetail != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ShortsPlayerPage(
+                  short: context.read<ShortProvider>().shortDetail!,
+                ),
+              ),
+            );
+          }
+        },
+        child: Stack(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: AspectRatio(
+                aspectRatio: 9 / 16,
+                child: Image.network(
+                  short.posterUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: theme.dividerColor,
+                    child: const Icon(Icons.movie, size: 40),
+                  ),
+                ),
+              ),
+            ), // Bottom gradient
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black.withOpacity(0.55),
+                    Colors.transparent,
+                  ],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.center,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 5,
+              right: 5,
+              child: IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                icon: Icon(
+                  isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                  size: 22,
+                  color: theme.primaryColor,
+                ),
+                onPressed: () async {
+                  await bookmarkProvider.toggleBookmarkShort(short);
+
+                  CustomToast.show(
+                    context,
+                    isBookmarked
+                        ? "${short.title} removed from bookmarks"
+                        : "${short.title} added to bookmarks",
+                    isSuccess: true,
+                    duration: const Duration(seconds: 1),
+                  );
+                },
+              ),
+            ),
+            Positioned(
+              bottom: 3,
+              left: 5,
+              child: Text(
+                short.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  shadows: [
+                    Shadow(
+                      offset: Offset(2, 2), // x, y
+                      blurRadius: 4,
+                      color: Colors.black.withOpacity(0.3),
+                    ),
+                  ],
                 ),
               ),
             ),

@@ -1,9 +1,17 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/shorts%20page/component/ShortsPlayerPage.dart';
+import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
+import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/data/models/shorts.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ShortsLibraryPage extends StatefulWidget {
   const ShortsLibraryPage({super.key, this.useParentScroll = false});
@@ -19,6 +27,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
   void initState() {
     super.initState();
     context.read<ShortProvider>().fetchShorts();
+    context.read<BookmarkProvider>().getUserBookmarkShort();
   }
 
   @override
@@ -28,7 +37,15 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
     return Consumer<ShortProvider>(
       builder: (context, provider, _) {
         if (provider.isLoading && provider.shorts.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+              child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                color: theme.primaryColor,
+              ),
+            ],
+          ));
         }
 
         if (provider.shorts.isEmpty) {
@@ -62,7 +79,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                       ? 4
                       : 2,
               crossAxisSpacing: 12,
-              mainAxisSpacing: 14,
+              mainAxisSpacing: 12,
               childAspectRatio: 9 / 16, // Enforced 9:16 ratio
             ),
             itemBuilder: (context, index) {
@@ -206,7 +223,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                               width: 4,
                             ),
                             Text(
-                              short.likeCount.toString(),
+                              "${short.viewCount}",
                               style: TextStyle(
                                 color: Colors.white70,
                                 fontSize: 10,
@@ -216,6 +233,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                           ],
                         ),
                       ),
+                      _optionButton(context, short),
                     ],
                   ),
                 ),
@@ -225,5 +243,114 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
         );
       },
     );
+  }
+
+  Widget _optionButton(BuildContext context, ShortModel short) {
+    final theme = Theme.of(context);
+
+    final bookmarkProvider = context.watch<BookmarkProvider>();
+    final bool isBookmarked =
+        bookmarkProvider.isShortBookmarkedLocally(short.id ?? 0);
+    final ValueNotifier<bool> isDialOpen = ValueNotifier(false);
+    final TextEditingController countController = TextEditingController();
+
+    return Positioned(
+      top: 5,
+      right: 5,
+      child: SpeedDial(
+        openCloseDial: isDialOpen,
+        onPress: () => isDialOpen.value = !isDialOpen.value,
+        icon: Icons.more_vert,
+        activeIcon: Icons.close,
+        backgroundColor: theme.primaryColor,
+        foregroundColor: Colors.white,
+        overlayColor: Colors.black,
+        overlayOpacity: 0.3,
+        elevation: 2,
+        direction: SpeedDialDirection.down,
+        buttonSize: const Size(30, 30),
+        childrenButtonSize: const Size(30, 35),
+        spacing: 2,
+        children: [
+          SpeedDialChild(
+            label: isBookmarked ? "Remove Bookmark" : "Bookmark",
+            labelBackgroundColor: theme.cardColor,
+            labelStyle: TextStyle(
+              color: theme.canvasColor,
+              fontSize: 10,
+            ),
+            child: Icon(
+              isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+              size: 14,
+              color: Colors.white,
+            ),
+            backgroundColor: theme.primaryColor,
+            onTap: () async {
+              final bool wasBookmarked =
+                  bookmarkProvider.isShortBookmarkedLocally(short.id ?? 0);
+
+              await bookmarkProvider.toggleBookmarkShort(short);
+
+              CustomToast.show(
+                context,
+                wasBookmarked
+                    ? "${short.title} removed from bookmarks"
+                    : "${short.title} added to bookmarks",
+                isSuccess: true,
+              );
+
+              isDialOpen.value = false;
+            },
+          ),
+
+          /// 🔗 Share
+          SpeedDialChild(
+            label: "Share",
+            labelBackgroundColor: theme.cardColor,
+            labelStyle: TextStyle(
+              color: theme.canvasColor,
+              fontSize: 10,
+            ),
+            child: const Icon(Icons.share, size: 14, color: Colors.white),
+            backgroundColor: theme.primaryColor,
+            onTap: () {
+              isDialOpen.value = false;
+              _shareMovie(context, short);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _shareMovie(BuildContext context, ShortModel short) async {
+    final String shareText = '''
+🎬 ${short.title ?? ''}
+
+${short.description ?? ''}
+
+▶️ Watch here:
+
+
+📲 Download Filmytell App now!
+'''
+        .trim();
+
+    if (kIsWeb) {
+      // Flutter Web fallback → Copy to Clipboard
+      await Clipboard.setData(ClipboardData(text: shareText));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Share text copied to clipboard"),
+        ),
+      );
+    } else {
+      // Android / iOS / Desktop
+      await Share.share(
+        shareText,
+        subject: short.title ?? "",
+      );
+    }
   }
 }

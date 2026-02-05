@@ -210,7 +210,6 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   ),
                                   onPressed: () {
                                     _showConfirmationDialog(
-                                      provider,
                                       totalCoins,
                                       widget.movie.id!,
                                       widget.giftCount,
@@ -236,7 +235,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                     ),
                                   ),
                                   onPressed: () =>
-                                      _showRechargeDialog(context, provider),
+                                      _showRechargeDialog(context),
                                 ),
 
                           const SizedBox(height: 10),
@@ -455,129 +454,231 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
 
   // ---------------- Confirmation ----------------
   void _showConfirmationDialog(
-    WalletProvider provider,
     double coins,
     int movieID,
     int giftCount,
   ) {
+    final pageContext = context;
     final theme = Theme.of(context);
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: theme.cardColor,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text("Confirm Purchase"),
-          content: const Text("Do you want to confirm the purchase?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              style:
-                  ElevatedButton.styleFrom(backgroundColor: theme.primaryColor),
-              onPressed: () async {
-                await provider.deductBalance(coins, movieID);
+      builder: (dialogContext) {
+        bool isProcessing = false;
 
-                if (giftCount > 0) {
-                  await Provider.of<GiftProvider>(context, listen: false)
-                      .saveUserGift(widget.movie, giftCount);
-                } else {
-                  await Provider.of<PurchaseContentProvider>(context,
-                          listen: false)
-                      .saveUserContent(widget.movie);
-                }
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Consumer3<WalletProvider, GiftProvider,
+                PurchaseContentProvider>(
+              builder:
+                  (_, walletProvider, giftProvider, purchaseProvider, __) {
+                final isBusy = isProcessing ||
+                    walletProvider.isDeductingBalance ||
+                    giftProvider.isSavingGift ||
+                    purchaseProvider.isSavingContent;
 
-                CustomToast.show(
-                  context,
-                  "Payment successful! Enjoy your movie 🎬",
-                  isSuccess: true,
+                return AlertDialog(
+                  backgroundColor: theme.cardColor,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  title: const Text("Confirm Purchase"),
+                  content: const Text("Do you want to confirm the purchase?"),
+                  actions: [
+                    TextButton(
+                      onPressed:
+                          isBusy ? null : () => Navigator.pop(dialogContext),
+                      child: const Text("Cancel"),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primaryColor),
+                      onPressed: isBusy
+                          ? null
+                          : () async {
+                              setState(() => isProcessing = true);
+
+                              final walletResult =
+                                  await walletProvider.deductBalance(
+                                      coins, movieID);
+
+                              if (!mounted) return;
+                              if (walletResult['success'] != true) {
+                                setState(() => isProcessing = false);
+                                final msg =
+                                    walletResult['message']?.toString() ??
+                                        "Payment failed. Please try again.";
+                                CustomToast.show(
+                                  pageContext,
+                                  msg,
+                                  isSuccess: false,
+                                );
+                                return;
+                              }
+
+                              Map<String, Object?> contentResult;
+                              if (giftCount > 0) {
+                                contentResult = Map<String, Object?>.from(
+                                  await giftProvider.saveUserGift(
+                                      widget.movie, giftCount),
+                                );
+                              } else {
+                                contentResult = Map<String, Object?>.from(
+                                  await purchaseProvider.saveUserContent(
+                                      widget.movie),
+                                );
+                              }
+
+                              if (!mounted) return;
+                              if (contentResult['success'] != true) {
+                                setState(() => isProcessing = false);
+                                final msg =
+                                    contentResult['message']?.toString() ??
+                                        "Purchase failed. Please try again.";
+                                CustomToast.show(
+                                  pageContext,
+                                  msg,
+                                  isSuccess: false,
+                                );
+                                return;
+                              }
+
+                              CustomToast.show(
+                                pageContext,
+                                "Payment successful! Enjoy your movie 🎬",
+                                isSuccess: true,
+                              );
+
+                              await Provider.of<DashboardProvider>(pageContext,
+                                      listen: false)
+                                  .getContentById(widget.movie.id!);
+
+                              if (!mounted) return;
+                              Navigator.pop(dialogContext);
+
+                              giftCount > 0
+                                  ? Navigator.pushReplacement(
+                                      pageContext,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              GiftedMoviesPage()))
+                                  : Navigator.pop(pageContext, true);
+                            },
+                      child: Text(
+                        isBusy ? "Processing..." : "Confirm & Pay",
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
                 );
-
-                await Provider.of<DashboardProvider>(context, listen: false)
-                    .getContentById(widget.movie.id!);
-
-                Navigator.pop(context);
-
-                giftCount > 0
-                    ? Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => GiftedMoviesPage()))
-                    : Navigator.pop(context, true);
               },
-              child: const Text("Confirm & Pay",
-                  style: TextStyle(color: Colors.white)),
-            ),
-          ],
+            );
+          },
         );
       },
     );
   }
 
   // ---------------- Recharge ----------------
-  void _showRechargeDialog(
-      BuildContext context, WalletProvider walletProvider) {
+  void _showRechargeDialog(BuildContext context) {
+    final pageContext = context;
     final theme = Theme.of(context);
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: theme.cardColor,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text("Recharge Wallet"),
-          content: TextField(
-            controller: walletProvider.amountController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: "Enter amount",
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              style:
-                  ElevatedButton.styleFrom(backgroundColor: theme.primaryColor),
-              onPressed: () async {
-                final amount =
-                    double.tryParse(walletProvider.amountController.text) ?? 0;
+      builder: (dialogContext) {
+        bool isProcessing = false;
 
-                if (amount > 0) {
-                  Navigator.pop(context);
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Consumer<WalletProvider>(
+              builder: (_, provider, __) {
+                final isBusy = isProcessing || provider.isAddingBalance;
 
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PaymentPage(amount: amount),
+                return AlertDialog(
+                  backgroundColor: theme.cardColor,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  title: const Text("Recharge Wallet"),
+                  content: TextField(
+                    controller: provider.amountController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: "Enter amount",
+                      border: OutlineInputBorder(),
                     ),
-                  );
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed:
+                          isBusy ? null : () => Navigator.pop(dialogContext),
+                      child: const Text("Cancel"),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primaryColor),
+                      onPressed: isBusy
+                          ? null
+                          : () async {
+                              final amount =
+                                  double.tryParse(provider.amountController.text) ??
+                                      0;
 
-                  if (result == true) {
-                    await walletProvider.addBalance(amount);
-                    CustomToast.show(
-                      context,
-                      "Wallet recharged successfully.",
-                      isSuccess: true,
-                    );
-                  } else {
-                    CustomToast.show(
-                      context,
-                      "Payment Failed ❌",
-                      isSuccess: false,
-                    );
-                  }
-                }
+                              if (amount <= 0) {
+                                CustomToast.show(
+                                  pageContext,
+                                  "Enter a valid amount",
+                                  isSuccess: false,
+                                );
+                                return;
+                              }
+
+                              setState(() => isProcessing = true);
+                              Navigator.pop(dialogContext);
+
+                              final result = await Navigator.push(
+                                pageContext,
+                                MaterialPageRoute(
+                                  builder: (_) => PaymentPage(amount: amount),
+                                ),
+                              );
+
+                              if (!mounted) return;
+                              if (result == true) {
+                                final addResult =
+                                    await provider.addBalance(amount);
+
+                                if (!mounted) return;
+                                if (addResult['success'] == true) {
+                                  CustomToast.show(
+                                    pageContext,
+                                    "Wallet recharged successfully.",
+                                    isSuccess: true,
+                                  );
+                                } else {
+                                  final msg = addResult['message']?.toString() ??
+                                      "Recharge failed. Please try again.";
+                                  CustomToast.show(
+                                    pageContext,
+                                    msg,
+                                    isSuccess: false,
+                                  );
+                                }
+                              } else {
+                                CustomToast.show(
+                                  pageContext,
+                                  "Payment Failed ❌",
+                                  isSuccess: false,
+                                );
+                              }
+                            },
+                      child: Text(
+                        isBusy ? "Processing..." : "Proceed to Pay",
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                );
               },
-              child: const Text("Proceed to Pay"),
-            ),
-          ],
+            );
+          },
         );
       },
     );

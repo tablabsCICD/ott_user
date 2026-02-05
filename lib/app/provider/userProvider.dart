@@ -415,8 +415,7 @@ class UserProvider extends BaseProvider {
 
     ApiHelper apiHelper = ApiHelper();
     Map<String, dynamic> data = {
-      "emailId": user!.emailId,
-      "firstName": user.firstName,
+      "firstName": user!.firstName,
       "id": user.id,
       "lastName": user.lastName,
       "mobileNumber": user.mobileNumber,
@@ -424,6 +423,7 @@ class UserProvider extends BaseProvider {
     };
     try {
       var response = await apiHelper.putApiWithBody(apiUrl, data);
+
       if (response.statusCode == 200) {
         Map<String, dynamic> responseBody = json.decode(response.body);
         UpdateUserResponse updateUserResponse =

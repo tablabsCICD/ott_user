@@ -14,10 +14,22 @@ import '../core/utils/sharepreferences.dart';
 
 class PurchaseContentProvider extends ChangeNotifier {
   List<UserContent> _userContentList = [];
+  bool _isSavingContent = false;
 
   List<UserContent> get userContentList => _userContentList;
+  bool get isSavingContent => _isSavingContent;
 
   Future<Map<String, Object>> saveUserContent(Content content) async {
+    if (_isSavingContent) {
+      return {
+        'success': false,
+        'message': 'Purchase already in progress. Please wait.'
+      };
+    }
+
+    _isSavingContent = true;
+    notifyListeners();
+
     String apiUrl = ApiConstant.saveUserContent;
 
     debugPrint("save user content=================== $apiUrl");
@@ -78,6 +90,9 @@ class PurchaseContentProvider extends ChangeNotifier {
         'success': false,
         'message': 'An error occurred while adding user: $error'
       };
+    } finally {
+      _isSavingContent = false;
+      notifyListeners();
     }
   }
 

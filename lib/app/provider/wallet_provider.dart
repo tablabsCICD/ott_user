@@ -20,6 +20,12 @@ class WalletProvider extends ChangeNotifier {
 
   List<Transactions> get transactionHistory => _transactionHistory;
 
+  bool _isAddingBalance = false;
+  bool _isDeductingBalance = false;
+
+  bool get isAddingBalance => _isAddingBalance;
+  bool get isDeductingBalance => _isDeductingBalance;
+
   List<Transactions> _filteredTransactionHistory = [];
 
   List<Transactions> get filteredTransactionHistory =>
@@ -30,6 +36,16 @@ class WalletProvider extends ChangeNotifier {
   TextEditingController referController = TextEditingController();
 
   Future<Map<String, Object>> addBalance(double amount) async {
+    if (_isAddingBalance) {
+      return {
+        'success': false,
+        'message': 'Recharge already in progress. Please wait.'
+      };
+    }
+
+    _isAddingBalance = true;
+    notifyListeners();
+
     String apiUrl = ApiConstant.addMoneyToWallet;
     print(apiUrl);
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
@@ -74,11 +90,24 @@ class WalletProvider extends ChangeNotifier {
         'success': false,
         'message': 'An error occurred while adding user: $error'
       };
+    } finally {
+      _isAddingBalance = false;
+      notifyListeners();
     }
   }
 
   Future<Map<String, Object>> deductBalance(
       double amount, int contentId) async {
+    if (_isDeductingBalance) {
+      return {
+        'success': false,
+        'message': 'Payment already in progress. Please wait.'
+      };
+    }
+
+    _isDeductingBalance = true;
+    notifyListeners();
+
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
     String apiUrl =
         ApiConstant.withdrawMoneyFromWallet(user!.id!, amount, contentId);
@@ -125,6 +154,9 @@ class WalletProvider extends ChangeNotifier {
         'success': false,
         'message': 'An error occurred while adding user: $error'
       };
+    } finally {
+      _isDeductingBalance = false;
+      notifyListeners();
     }
   }
 
@@ -229,38 +261,6 @@ class WalletProvider extends ChangeNotifier {
         'message': 'An error occurred while adding user: $error'
       };
     }
-  }
-
-  Future<void> filterDateWiseTransaction(
-    DateTime? startDate,
-    DateTime? endDate,
-  ) async {
-    _filteredTransactionHistory = _transactionHistory.where((tx) {
-      final txDate = DateTime.fromMillisecondsSinceEpoch(tx.date!);
-
-      final afterStart = startDate == null || !txDate.isBefore(startDate);
-      final beforeEnd = endDate == null || !txDate.isAfter(endDate);
-
-      return afterStart && beforeEnd; // in range → keep
-    }).toList();
-
-    notifyListeners();
-  }
-
-  Future<void> filterAmountWiseTransaction(
-    double? minAmt,
-    double? maxAmt,
-  ) async {
-    _filteredTransactionHistory = _transactionHistory.where((tx) {
-      final amount = tx.amount ?? 0.0;
-
-      final meetsMin = minAmt == null || amount >= minAmt;
-      final meetsMax = maxAmt == null || amount <= maxAmt;
-
-      return meetsMin && meetsMax;
-    }).toList();
-
-    notifyListeners(); // to update UI
   }
 
   void resetTransactionFilters() {

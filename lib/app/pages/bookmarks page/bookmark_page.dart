@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/bookmarks page/component/bookmark_card.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
+import 'package:ott/data/models/content.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
+
+enum BookmarkFilter { movies, series, shorts }
 
 class BookmarkPage extends StatefulWidget {
   const BookmarkPage({super.key});
@@ -11,11 +15,14 @@ class BookmarkPage extends StatefulWidget {
 }
 
 class _BookmarkPageState extends State<BookmarkPage> {
+  BookmarkFilter selectedFilter = BookmarkFilter.movies;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<BookmarkProvider>().getUserBookmarks();
+      context.read<BookmarkProvider>().getUserBookmarkShort();
     });
   }
 
@@ -38,66 +45,207 @@ class _BookmarkPageState extends State<BookmarkPage> {
       body: Consumer<BookmarkProvider>(
         builder: (context, provider, _) {
           if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+                child: CircularProgressIndicator(
+              color: theme.primaryColor,
+            ));
           }
 
-          if (provider.bookmarksList.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.bookmark_border,
-                    color: theme.canvasColor,
-                    size: 60,
+          final allBookmarks = provider.bookmarksList;
+          final allShortBookmarks = provider.shortBookmarksList;
+          final bool hasAnyBookmarks =
+              allBookmarks.isNotEmpty || allShortBookmarks.isNotEmpty;
+
+          if (!hasAnyBookmarks) {
+            return _emptyState(theme, message: "No bookmarks added");
+          }
+
+          if (selectedFilter == BookmarkFilter.shorts) {
+            if (allShortBookmarks.isEmpty) {
+              return _emptyState(
+                theme,
+                message: "No bookmarks found",
+              );
+            }
+
+            return Column(
+              children: [
+                _segmentedToggle(theme),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final width = constraints.maxWidth;
+
+                      int crossAxisCount = 2;
+                      if (width >= 1400) {
+                        crossAxisCount = 6;
+                      } else if (width >= 1100) {
+                        crossAxisCount = 5;
+                      } else if (width >= 800) {
+                        crossAxisCount = 4;
+                      }
+
+                      return GridView.builder(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          crossAxisSpacing: 20,
+                          mainAxisSpacing: 24,
+                          childAspectRatio: 9 / 16,
+                        ),
+                        itemCount: allShortBookmarks.length,
+                        itemBuilder: (context, index) {
+                          final short = allShortBookmarks[index];
+                          return ShortBookmarkPosterCard(short: short);
+                        },
+                      );
+                    },
                   ),
-                  SizedBox(
-                    height: 10,
-                  ),
-                  Text(
-                    'No bookmarks added',
-                    style: TextStyle(
-                      color: theme.canvasColor,
-                    ),
-                  )
-                ],
-              ),
+                ),
+              ],
             );
           }
 
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              final width = constraints.maxWidth;
+          final filteredBookmarks = _filterBookmarks(allBookmarks);
+          if (filteredBookmarks.isEmpty) {
+            return _emptyState(
+              theme,
+              message: "No bookmarks found",
+            );
+          }
 
-              int crossAxisCount = 1;
-              if (width >= 1400) {
-                crossAxisCount = 4;
-              } else if (width >= 1100) {
-                crossAxisCount = 3;
-              } else if (width >= 800) {
-                crossAxisCount = 2;
-              }
+          return Column(
+            children: [
+              _segmentedToggle(theme),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = constraints.maxWidth;
 
-              return GridView.builder(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+                    int crossAxisCount = 1;
+                    if (width >= 1400) {
+                      crossAxisCount = 4;
+                    } else if (width >= 1100) {
+                      crossAxisCount = 3;
+                    } else if (width >= 800) {
+                      crossAxisCount = 2;
+                    }
+
+                    return GridView.builder(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        crossAxisSpacing: 20,
+                        mainAxisSpacing: 24,
+                        childAspectRatio: 1.3,
+                      ),
+                      itemCount: filteredBookmarks.length,
+                      itemBuilder: (context, index) {
+                        final movie = filteredBookmarks[index];
+                        return BookmarkPosterCard(movie: movie);
+                      },
+                    );
+                  },
                 ),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: 20,
-                  mainAxisSpacing: 24,
-                  childAspectRatio: 1.3,
-                ),
-                itemCount: provider.bookmarksList.length,
-                itemBuilder: (context, index) {
-                  final movie = provider.bookmarksList[index];
-                  return BookmarkPosterCard(movie: movie);
-                },
-              );
-            },
+              ),
+            ],
           );
         },
+      ),
+    );
+  }
+
+  List<Content> _filterBookmarks(List<Content> bookmarks) {
+    switch (selectedFilter) {
+      case BookmarkFilter.movies:
+        return bookmarks
+            .where((item) => (item.type ?? '').toLowerCase() == 'movie')
+            .toList();
+      case BookmarkFilter.series:
+        return bookmarks
+            .where((item) => (item.type ?? '').toLowerCase() == 'series')
+            .toList();
+      case BookmarkFilter.shorts:
+        return [];
+    }
+  }
+
+  Widget _segmentedToggle(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Container(
+        height: 40,
+        width: ResponsiveWidget.isMobile(context) ? double.infinity : 520,
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          children: [
+            _segment(theme, BookmarkFilter.movies, "Movies"),
+            _segment(theme, BookmarkFilter.series, "Series"),
+            _segment(theme, BookmarkFilter.shorts, "Shorts"),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _segment(
+    ThemeData theme,
+    BookmarkFilter value,
+    String label,
+  ) {
+    final selected = selectedFilter == value;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => selectedFilter = value),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          decoration: BoxDecoration(
+            color: selected ? theme.primaryColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(30),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? Colors.white : theme.canvasColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _emptyState(ThemeData theme, {required String message}) {
+    return Center(
+      child: Column(
+        children: [
+          _segmentedToggle(theme),
+          const Spacer(),
+          Icon(
+            Icons.bookmark_border,
+            color: theme.canvasColor,
+            size: 60,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            message,
+            style: TextStyle(
+              color: theme.canvasColor,
+            ),
+          ),
+          const Spacer(),
+        ],
       ),
     );
   }

@@ -99,9 +99,10 @@ class ApiConstant {
       '${baseUrl}series/purchase/episode?episodeId=$episodeId&userId=$userId';
   static String purchaseSeason(seasonId, userId) =>
       '${baseUrl}series/purchase/season?seasonId=$seasonId&userId=$userId';
-  static String continueWatchedMoviesByUser(userId, type) => "${baseUrl}continue-watching/user/$userId?contentType=$type";
+  static String continueWatchedMoviesByUser(userId, type) =>
+      "${baseUrl}continue-watching/user/$userId?contentType=$type";
 
-  // bookmarks
+  // bookmarks movie
   static String addBookmark(userId, contentId) =>
       "${baseUrl}bookmarks/add?userId=$userId&contentId=$contentId";
   static String removeBookmark(userId, contentId) =>
@@ -109,4 +110,14 @@ class ApiConstant {
   static String isBookmarked(userId, contentId) =>
       "${baseUrl}bookmarks/status?userId=$userId&contentId=$contentId";
   static String getUserBookmarks(userId) => "${baseUrl}bookmarks/user/$userId";
+
+  // bookmarks movie
+  static String addBookmarkShort(userId, shortId) =>
+      "${baseUrl}short-bookmarks/add?userId=$userId&shortId=$shortId";
+  static String removeBookmarkShort(userId, shortId) =>
+      "${baseUrl}short-bookmarks/remove?userId=$userId&shortId=$shortId";
+  static String isBookmarkedShort(userId, shortId) =>
+      "${baseUrl}short-bookmarks/status?userId=$userId&shortId=$shortId";
+  static String getUserBookmarkShort(userId) =>
+      "${baseUrl}short-bookmarks/user/$userId";
 }

@@ -301,6 +301,10 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   // ---------------- SEASON INFO ----------------
 
   Widget _buildSeasonInfo(BuildContext context, season, ThemeData theme) {
+    final hasPurchasedEpisode =
+        season.episodes.any((EpisodeEntity ep) => ep.isPurchased);
+    final canPurchaseSeason = !season.isSeasonPurchased && !hasPurchasedEpisode;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -326,13 +330,17 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 style: TextStyle(color: theme.canvasColor.withOpacity(0.7)),
               ),
               const SizedBox(height: 6),
-              !season.isSeasonPurchased
+              !season.isSeasonPurchased && canPurchaseSeason
                   ? Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: theme.primaryColor,
+                            disabledBackgroundColor:
+                                theme.canvasColor.withOpacity(0.2),
+                            disabledForegroundColor:
+                                theme.canvasColor.withOpacity(0.6),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
@@ -369,7 +377,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                         ),
                       ],
                     )
-                  : SizedBox()
+                  : const SizedBox()
               //: SizedBox(),
             ],
           ),
@@ -435,6 +443,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text('${ep.episodeId}'),
+
                   /// 🎬 POSTER
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),

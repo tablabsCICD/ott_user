@@ -14,6 +14,9 @@ class GiftProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
+  bool _isSavingGift = false;
+  bool get isSavingGift => _isSavingGift;
+
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
@@ -26,6 +29,16 @@ class GiftProvider extends ChangeNotifier {
   /// Save user gift (send gift purchase request to API)
   Future<Map<String, dynamic>> saveUserGift(
       Content content, int giftCount) async {
+    if (_isSavingGift) {
+      return {
+        "success": false,
+        "message": "Gift purchase already in progress. Please wait."
+      };
+    }
+
+    _isSavingGift = true;
+    notifyListeners();
+
     final String apiUrl = ApiConstant.saveUserGift;
     log("API URL => $apiUrl");
 
@@ -73,6 +86,9 @@ class GiftProvider extends ChangeNotifier {
     } catch (error, stack) {
       log("Error in saveUserGift => $error", stackTrace: stack);
       return {"success": false, "message": "Something went wrong: $error"};
+    } finally {
+      _isSavingGift = false;
+      notifyListeners();
     }
   }
 
