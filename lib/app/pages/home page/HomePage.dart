@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:ffi';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
@@ -590,8 +591,8 @@ class _HomePageState extends State<HomePage> {
               ),
             )
           : Container(
-              width: 42,
-              height: 42,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.white),
@@ -612,13 +613,10 @@ class _HomePageState extends State<HomePage> {
                     );
                   },
                   child: Padding(
-                    padding: const EdgeInsets.all(1),
-                    child: ClipRRect(
-                      borderRadius: BorderRadiusGeometry.circular(20),
-                      child: Image.asset(
-                        ImageConstant.logo,
-                        fit: BoxFit.contain,
-                      ),
+                    padding: const EdgeInsets.all(6),
+                    child: Image.asset(
+                      ImageConstant.logo,
+                      fit: BoxFit.contain,
                     ),
                   ),
                 ),
@@ -1043,7 +1041,6 @@ class _HomePageState extends State<HomePage> {
           child: GestureDetector(
             onTap: () async {
               setState(() {
-                dashboardProvider.getContinueWatchedMovieList(selectedType);
                 selectedType = type;
               });
               final selectedLanguages =
@@ -1115,6 +1112,8 @@ class _HomePageState extends State<HomePage> {
     final localSharePreferences = LocalSharePreferences();
     final user = await localSharePreferences.getUser();
     log('User in getMovieList method ${user!.firstName} ');
+    await dashBoardProvider.getContinueWatchedMovieList(selectedType);
+
     await dashBoardProvider.getDashboardData(selectedType, langList, user.id!);
   }
 

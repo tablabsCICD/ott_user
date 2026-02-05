@@ -28,7 +28,6 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
   List<ShortPart> _parts = [];
   int _currentIndex = 0;
 
-  bool _isInitialized = false;
   bool _isLoadingPart = false;
   bool _isMetaExpanded = false;
   bool _hasVideoError = false;
@@ -103,7 +102,6 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
       final old = _controller;
       _controller = null;
-      _isInitialized = false;
       await old?.pause();
       await old?.dispose();
 
@@ -175,7 +173,6 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
       setState(() {
         _controller = ctrl;
-        _isInitialized = true;
         _currentIndex = index;
         ctrl.setVolume(1);
         _hasVideoError = false;
@@ -707,9 +704,7 @@ ${short.durationSec ?? ''}
 
   Widget _videoProgressBar() {
     final controller = _controller;
-    if (controller == null) {
-      return const SizedBox.shrink();
-    }
+    if (controller == null) return const SizedBox.shrink();
 
     final value = controller.value;
     if (!value.isInitialized ||
@@ -719,13 +714,9 @@ ${short.durationSec ?? ''}
     }
 
     final theme = Theme.of(context);
-    final bottomInset = MediaQuery.of(context).padding.bottom;
-    final bottom = bottomInset > 2 ? bottomInset + 6 : 8.0;
 
-    return Positioned(
-      left: 12,
-      right: 12,
-      bottom: bottom,
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(4),
         child: VideoProgressIndicator(

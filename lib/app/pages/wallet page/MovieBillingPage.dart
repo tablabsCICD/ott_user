@@ -142,7 +142,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   style: const TextStyle(fontSize: 16),
                                 )
                               : Text(
-                                  "${moviePrice.toStringAsFixed(0)} × ${widget.giftCount} Gifts",
+                                  "₹ ${moviePrice.toStringAsFixed(0)} × ${widget.giftCount} Gifts",
                                   style: const TextStyle(
                                       fontSize: 14, color: Colors.grey),
                                 ),
@@ -210,6 +210,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   ),
                                   onPressed: () {
                                     _showConfirmationDialog(
+                                      provider,
                                       totalCoins,
                                       widget.movie.id!,
                                       widget.giftCount,
@@ -234,8 +235,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  onPressed: () =>
-                                      _showRechargeDialog(context),
+                                  onPressed: () => _showRechargeDialog(context),
                                 ),
 
                           const SizedBox(height: 10),
@@ -314,8 +314,8 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                 color: theme.cardColor.withOpacity(0.2)),
                             itemBuilder: (context, index) {
                               final tx = transactions[index];
-                              final isCredit = tx.status?.toLowerCase() ==
-                                  "amount creadited";
+                              final isCredit =
+                                  tx.action?.toLowerCase() == "credit";
                               final date = DateTime.fromMillisecondsSinceEpoch(
                                   tx.date ?? 0);
 
@@ -454,6 +454,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
 
   // ---------------- Confirmation ----------------
   void _showConfirmationDialog(
+    WalletProvider provider,
     double coins,
     int movieID,
     int giftCount,
@@ -469,12 +470,12 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
           builder: (context, setState) {
             return Consumer3<WalletProvider, GiftProvider,
                 PurchaseContentProvider>(
-              builder:
-                  (_, walletProvider, giftProvider, purchaseProvider, __) {
+              builder: (_, walletProvider, giftProvider, purchaseProvider, __) {
                 final isBusy = isProcessing ||
                     walletProvider.isDeductingBalance ||
                     giftProvider.isSavingGift ||
                     purchaseProvider.isSavingContent;
+                bool isSuccess = false;
 
                 return AlertDialog(
                   backgroundColor: theme.cardColor,
@@ -495,72 +496,52 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                           ? null
                           : () async {
                               setState(() => isProcessing = true);
-
-                              final walletResult =
-                                  await walletProvider.deductBalance(
-                                      coins, movieID);
-
-                              if (!mounted) return;
-                              if (walletResult['success'] != true) {
-                                setState(() => isProcessing = false);
-                                final msg =
-                                    walletResult['message']?.toString() ??
-                                        "Payment failed. Please try again.";
-                                CustomToast.show(
-                                  pageContext,
-                                  msg,
-                                  isSuccess: false,
-                                );
-                                return;
-                              }
-
-                              Map<String, Object?> contentResult;
-                              if (giftCount > 0) {
-                                contentResult = Map<String, Object?>.from(
-                                  await giftProvider.saveUserGift(
-                                      widget.movie, giftCount),
-                                );
-                              } else {
-                                contentResult = Map<String, Object?>.from(
-                                  await purchaseProvider.saveUserContent(
-                                      widget.movie),
-                                );
-                              }
-
-                              if (!mounted) return;
-                              if (contentResult['success'] != true) {
-                                setState(() => isProcessing = false);
-                                final msg =
-                                    contentResult['message']?.toString() ??
-                                        "Purchase failed. Please try again.";
-                                CustomToast.show(
-                                  pageContext,
-                                  msg,
-                                  isSuccess: false,
-                                );
-                                return;
-                              }
-
-                              CustomToast.show(
-                                pageContext,
-                                "Payment successful! Enjoy your movie 🎬",
-                                isSuccess: true,
-                              );
-
-                              await Provider.of<DashboardProvider>(pageContext,
-                                      listen: false)
-                                  .getContentById(widget.movie.id!);
-
-                              if (!mounted) return;
                               Navigator.pop(dialogContext);
 
-                              giftCount > 0
-                                  ? Navigator.pushReplacement(
-                                      pageContext,
-                                      MaterialPageRoute(
-                                          builder: (context) =>
-                                              GiftedMoviesPage()))
-                                  : Navigator.pop(pageContext, true);
+                              try {
+                                if (giftCount > 0) {
+                                  await Provider.of<GiftProvider>(pageContext,
+                                          listen: false)
+                                      .saveUserGift(widget.movie, giftCount);
+                                } else {
+                                  await Provider.of<PurchaseContentProvider>(
+                                          pageContext,
+                                          listen: false)
+                                      .saveUserContent(widget.movie);
+                                }
+
+                                await provider.deductBalance(coins, movieID);
+
+                                await Provider.of<DashboardProvider>(
+                                        pageContext,
+                                        listen: false)
+                                    .getContentById(widget.movie.id!);
+
+                                if (!mounted) return;
+                                CustomToast.show(
+                                  pageContext,
+                                  "Payment successful! Enjoy your content 🎬",
+                                  isSuccess: true,
+                                );
+
+                                if (giftCount > 0) {
+                                  Navigator.pushReplacement(
+                                    pageContext,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            GiftedMoviesPage()),
+                                  );
+                                } else {
+                                  Navigator.pop(pageContext, true);
+                                }
+                              } catch (_) {
+                                if (!mounted) return;
+                                CustomToast.show(
+                                  pageContext,
+                                  "Payment failed. Please try again.",
+                                  isSuccess: false,
+                                );
+                              }
                             },
                       child: Text(
                         isBusy ? "Processing..." : "Confirm & Pay",
@@ -617,9 +598,9 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                       onPressed: isBusy
                           ? null
                           : () async {
-                              final amount =
-                                  double.tryParse(provider.amountController.text) ??
-                                      0;
+                              final amount = double.tryParse(
+                                      provider.amountController.text) ??
+                                  0;
 
                               if (amount <= 0) {
                                 CustomToast.show(
@@ -653,8 +634,9 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                     isSuccess: true,
                                   );
                                 } else {
-                                  final msg = addResult['message']?.toString() ??
-                                      "Recharge failed. Please try again.";
+                                  final msg =
+                                      addResult['message']?.toString() ??
+                                          "Recharge failed. Please try again.";
                                   CustomToast.show(
                                     pageContext,
                                     msg,

@@ -15,6 +15,8 @@ import 'package:ott/app/pages/upcoming%20movies%20page/UpcomingPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/pages/watchlist%20page/WatchlistPage.dart';
 import 'package:ott/app/provider/ThemeProvider.dart';
+import 'package:ott/app/provider/bookmarkProvider.dart';
+import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/LanguageDropdown.dart';
@@ -521,6 +523,11 @@ class _ProfilePageState extends State<ProfilePage> {
               localSharePreferences.setString(
                   SharedPreferencesConstant.currentUser, '');
 
+              // clear all the APIs used for the user
+              Provider.of<DashboardProvider>(context, listen: false).clear();
+              Provider.of<BookmarkProvider>(context, listen: false).clear();
+              Provider.of<UserProvider>(context, listen: false).clear();
+              Provider.of<UserProvider>(context, listen: false).disposeData();
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => LoginCard()),

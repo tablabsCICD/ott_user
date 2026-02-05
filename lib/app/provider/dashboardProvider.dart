@@ -12,12 +12,8 @@ import '../core/constant/api_constant.dart';
 import '../core/network/api_helper.dart';
 import 'baseProvider.dart';
 
-
-
 class DashboardProvider extends BaseProvider {
-  DashboardProvider() : super('Ideal') {
-    getContinueWatchedMovieList("MOVIE");
-  }
+  DashboardProvider() : super('Ideal') {}
 
   List<DashboardData> _dashboardData = [];
   List<DashboardData> get dashboardData => _dashboardData;
@@ -36,10 +32,10 @@ class DashboardProvider extends BaseProvider {
   // ==================== DASHBOARD LOAD ====================
 
   Future<void> getDashboardData(
-      String type,
-      List<String> languages,
-      int userId,
-      ) async {
+    String type,
+    List<String> languages,
+    int userId,
+  ) async {
     if (_isLoadingDashboard) return;
 
     _isLoadingDashboard = true;
@@ -83,10 +79,10 @@ class DashboardProvider extends BaseProvider {
   // ==================== HORIZONTAL PAGINATION ====================
 
   Future<void> loadMoreRowData(
-      DashboardData row,
-      String type,
-      int userId,
-      ) async {
+    DashboardData row,
+    String type,
+    int userId,
+  ) async {
     if (row.isRowLoading || !row.hasMore) return;
 
     row.isRowLoading = true;
@@ -110,7 +106,6 @@ class DashboardProvider extends BaseProvider {
             type, [row.language!], userId, nextPage);
       }
 
-
       if (newData.isNotEmpty &&
           newData.first.movies != null &&
           newData.first.movies!.isNotEmpty) {
@@ -128,39 +123,39 @@ class DashboardProvider extends BaseProvider {
   // ==================== PAGED APIs ====================
 
   Future<List<DashboardData>> getDashboardLatestPaged(
-      String type,
-      List<String> languages,
-      int userId,
-      int page,
-      ) async {
+    String type,
+    List<String> languages,
+    int userId,
+    int page,
+  ) async {
     return _getPagedApi("latest", type, languages, userId, page);
   }
 
   Future<List<DashboardData>> getDashboardTrendingPaged(
-      String type,
-      List<String> languages,
-      int userId,
-      int page,
-      ) async {
+    String type,
+    List<String> languages,
+    int userId,
+    int page,
+  ) async {
     return _getPagedApi("trending", type, languages, userId, page);
   }
 
   Future<List<DashboardData>> getDashboardUpcomingPaged(
-      String type,
-      List<String> languages,
-      int userId,
-      int page,
-      ) async {
+    String type,
+    List<String> languages,
+    int userId,
+    int page,
+  ) async {
     return _getPagedApi("upcoming", type, languages, userId, page);
   }
 
   Future<List<DashboardData>> _getPagedApi(
-      String endpoint,
-      String type,
-      List<String> languages,
-      int userId,
-      int page,
-      ) async {
+    String endpoint,
+    String type,
+    List<String> languages,
+    int userId,
+    int page,
+  ) async {
     String languagesParam = languages.map((lang) => "lang=$lang").join('&');
 
     String apiUrl =
@@ -206,7 +201,7 @@ class DashboardProvider extends BaseProvider {
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
         GetContentResponse addUserResponse =
-        GetContentResponse.fromJson(responseBody);
+            GetContentResponse.fromJson(responseBody);
 
         if (addUserResponse.success == true &&
             addUserResponse.data?.contentList != null) {
@@ -220,17 +215,19 @@ class DashboardProvider extends BaseProvider {
   }
 
   getContinueWatchedMovieList(String type) async {
-    User? user = await LocalSharePreferences.localSharePreferences.getUser();
-    String apiUrl = ApiConstant.continueWatchedMoviesByUser(user!.id,type);
+    final localSharePreferences = LocalSharePreferences();
+    final user = await localSharePreferences.getUser();
+    String apiUrl = ApiConstant.continueWatchedMoviesByUser(user!.id, type);
     ApiHelper apiHelper = ApiHelper();
-
+    debugPrint(apiUrl);
     try {
       var response = await apiHelper.getApi1(apiUrl);
+
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
 
         ContinueWatchedResponse continueWatchedResponse =
-        ContinueWatchedResponse.fromJson(responseBody);
+            ContinueWatchedResponse.fromJson(responseBody);
 
         if (continueWatchedResponse.isSuccess == true &&
             continueWatchedResponse.data != null) {
@@ -238,9 +235,17 @@ class DashboardProvider extends BaseProvider {
           debugPrint(_continueWatchedMovies.length.toString());
           notifyListeners();
         }
+      } else {
+        _continueWatchedMovies.clear();
       }
     } catch (error) {
       debugPrint("❌ continue watching error: $error");
     }
+  }
+
+  void clear() {
+    _dashboardData.clear();
+    _continueWatchedMovies.clear();
+    notifyListeners();
   }
 }

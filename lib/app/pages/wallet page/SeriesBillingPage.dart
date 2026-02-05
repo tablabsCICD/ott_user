@@ -208,8 +208,7 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold),
                                   ),
-                                  onPressed: () =>
-                                      _showRechargeDialog(context),
+                                  onPressed: () => _showRechargeDialog(context),
                                 ),
                         ],
                       ),
@@ -373,8 +372,9 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                                     isSuccess: true,
                                   );
                                 } else {
-                                  final msg = addResult['message']?.toString() ??
-                                      "Recharge failed. Please try again.";
+                                  final msg =
+                                      addResult['message']?.toString() ??
+                                          "Recharge failed. Please try again.";
                                   CustomToast.show(
                                     pageContext,
                                     msg,

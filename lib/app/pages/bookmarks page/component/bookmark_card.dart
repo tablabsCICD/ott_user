@@ -183,6 +183,7 @@ class ShortBookmarkPosterCard extends StatelessWidget {
             ), // Bottom gradient
             Container(
               decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
                 gradient: LinearGradient(
                   colors: [
                     Colors.black.withOpacity(0.55),
@@ -226,7 +227,8 @@ class ShortBookmarkPosterCard extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
                   shadows: [
                     Shadow(
                       offset: Offset(2, 2), // x, y

@@ -35,7 +35,6 @@ Future<void> main() async {
   // Check if user is logged in
   final isLoggedIn = await localSharePreferences
       .getBool(SharedPreferencesConstant.isUserLoggedIn);
-
   runApp(
     MultiProvider(
       providers: [
