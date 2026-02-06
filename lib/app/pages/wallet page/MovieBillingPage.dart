@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/gifted%20movies%20page/GiftedMoviesPage.dart';
 import 'package:ott/app/pages/wallet%20page/PaymentPage.dart';
 import 'package:ott/app/provider/giftProvider.dart';

@@ -27,7 +27,7 @@ import 'package:ott/data/models/content.dart';
 
 class MovieCard extends StatefulWidget {
   static const double itemWidth = 300;
-  static const double itemMargin = 8;
+  static const double itemMargin = 5;
   static const double itemExtent = itemWidth + (itemMargin * 2);
 
   final Content movie;
@@ -380,22 +380,32 @@ class _MovieCardState extends State<MovieCard> {
                   /// 🎬 POSTER + PROGRESS BAR STACK
                   Expanded(
                     flex: 8,
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(12),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          top: BorderSide(color: theme.cardColor, width: 1),
+                          left: BorderSide(color: theme.cardColor, width: 1),
+                          right: BorderSide(color: theme.cardColor, width: 1),
+                        ),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: _buildMediaPreview(
-                        posterUrl,
-                        theme,
-                        widget.movie,
-                        showPreview,
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(12),
+                        ),
+                        child: _buildMediaPreview(
+                          posterUrl,
+                          theme,
+                          widget.movie,
+                          showPreview,
+                        ),
                       ),
                     ),
                   ),
 
                   /// 📄 DETAILS SECTION
                   Expanded(
-                    flex: 4,
+                    flex: 3,
                     child: _buildContentSection(theme, lang),
                   ),
                 ],
@@ -475,7 +485,7 @@ class _MovieCardState extends State<MovieCard> {
     return Stack(
       children: [
         Padding(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -495,7 +505,7 @@ class _MovieCardState extends State<MovieCard> {
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 movie.title ?? 'No Title',
                 style: TextStyle(

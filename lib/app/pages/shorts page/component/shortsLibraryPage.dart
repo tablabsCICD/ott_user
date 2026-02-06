@@ -78,8 +78,8 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                   : ResponsiveWidget.isTablet(context)
                       ? 4
                       : 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
               childAspectRatio: 9 / 16, // Enforced 9:16 ratio
             ),
             itemBuilder: (context, index) {

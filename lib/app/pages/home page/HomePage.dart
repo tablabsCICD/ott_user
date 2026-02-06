@@ -1,8 +1,6 @@
 import 'dart:developer';
-import 'dart:ffi';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/profile%20page/component/change_language.dart';
@@ -343,16 +341,19 @@ class _HomePageState extends State<HomePage> {
                         return HomeShimmer();
                       }
                       return Column(
+                        mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(height: 10),
+                          SizedBox(
+                            height: 5,
+                          ),
                           SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child:
                                 _buildFilterButtons(context, dashboardProvider),
                           ),
                           SizedBox(
-                            height: ResponsiveWidget.isMobile(context) ? 0 : 10,
+                            height: 20,
                           ),
                           selectedType == 'SHORTS'
                               ? SizedBox.shrink()
@@ -412,31 +413,33 @@ class _HomePageState extends State<HomePage> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            "${dashboardData.language} - ${dashboardData.category}",
-                                            style: TextStyle(
-                                              overflow: TextOverflow.ellipsis,
-                                              fontSize:
-                                                  ResponsiveWidget.isMobile(
-                                                          context)
-                                                      ? 18
-                                                      : 20,
-                                              fontWeight: FontWeight.bold,
-                                              color:
-                                                  selectedThemeData.canvasColor,
-                                            ),
-                                          ),
-                                          SizedBox(height: 10),
+                                          (dashboardData.movies == null ||
+                                                  dashboardData.movies!.isEmpty)
+                                              ? SizedBox.shrink()
+                                              : Text(
+                                                  "${dashboardData.language} - ${dashboardData.category}",
+                                                  style: TextStyle(
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    fontSize: ResponsiveWidget
+                                                            .isMobile(context)
+                                                        ? 18
+                                                        : 20,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: selectedThemeData
+                                                        .canvasColor,
+                                                  ),
+                                                ),
                                           (dashboardData.movies == null ||
                                                   dashboardData.movies!.isEmpty)
                                               ? SizedBox.shrink()
                                               : SizedBox(
-                                                  height: 300,
+                                                  height: 270,
                                                   child: ListView.builder(
                                                     controller: controller,
                                                     scrollDirection:
                                                         Axis.horizontal,
-                                                    padding: EdgeInsets.zero,
+                                                    //padding: EdgeInsets.zero,
                                                     itemCount: dashboardData
                                                             .movies!.length +
                                                         (dashboardData
@@ -475,7 +478,10 @@ class _HomePageState extends State<HomePage> {
                                                     },
                                                   ),
                                                 ),
-                                          SizedBox(height: 20),
+                                          (dashboardData.movies == null ||
+                                                  dashboardData.movies!.isEmpty)
+                                              ? SizedBox.shrink()
+                                              : SizedBox(height: 20),
                                         ],
                                       ),
                                     );
@@ -520,7 +526,7 @@ class _HomePageState extends State<HomePage> {
         children: [
           // 🔴 LABEL
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
             child: Text(
               "Continue Watching",
               style: TextStyle(
@@ -534,7 +540,7 @@ class _HomePageState extends State<HomePage> {
 
           // 🎬 HORIZONTAL LIST
           SizedBox(
-            height: 300,
+            height: 270,
             child: ListView.builder(
               controller: _continueWatchController,
               scrollDirection: Axis.horizontal,
@@ -554,6 +560,7 @@ class _HomePageState extends State<HomePage> {
               },
             ),
           ),
+          SizedBox(height: 20),
         ],
       ),
     );
@@ -591,8 +598,8 @@ class _HomePageState extends State<HomePage> {
               ),
             )
           : Container(
-              width: 52,
-              height: 52,
+              width: 50,
+              height: 50,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.white),
@@ -612,10 +619,12 @@ class _HomePageState extends State<HomePage> {
                       ),
                     );
                   },
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
                     child: Image.asset(
                       ImageConstant.logo,
+                      width: 65,
+                      height: 65,
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -669,17 +678,10 @@ class _HomePageState extends State<HomePage> {
                 ? Colors.white.withOpacity(0.3)
                 : Colors.black.withOpacity(0.2),
           ),
-          icon: SvgPicture.asset(
-            'assets/icons/translate_swap.svg',
-            width: 30,
-            height: 30,
-            colorFilter: ColorFilter.mode(
-              ResponsiveWidget.isDesktop(context)
+          icon: Icon(Icons.language_sharp,
+              color: ResponsiveWidget.isDesktop(context)
                   ? selectedThemeData.canvasColor
-                  : Colors.white,
-              BlendMode.srcIn,
-            ),
-          ),
+                  : Colors.white),
           onPressed: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -1037,7 +1039,7 @@ class _HomePageState extends State<HomePage> {
         "SHORTS",
       ].map((type) {
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
           child: GestureDetector(
             onTap: () async {
               setState(() {

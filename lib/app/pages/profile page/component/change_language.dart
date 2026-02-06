@@ -1,11 +1,13 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/provider/language_provider.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
-import 'package:provider/provider.dart';
 
 class ChangeLanguage extends StatefulWidget {
   const ChangeLanguage({super.key});
@@ -25,40 +27,25 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
       final languageProvider = context.read<LanguageProvider>();
       final userProvider = context.read<UserProvider>();
 
-      // 1️⃣ Fetch available languages
-      await languageProvider.fetchLanguages();
+      // 1️⃣ NEW grouped API
+      await languageProvider.fetchGroupedLanguages();
 
-      // 2️⃣ Apply user's already-selected languages
-      final userSelected =
-          userProvider.userObject.selectedLanguages ?? [];
+      // 2️⃣ KEEP OLD FLOW (IMPORTANT)
+      final userSelected = userProvider.userObject.selectedLanguages ?? [];
 
       if (userSelected.isNotEmpty) {
-        languageProvider.updateLanguages(List<String>.from(userSelected));
+        languageProvider.updateLanguages(
+          List<String>.from(userSelected),
+        );
       }
     });
   }
 
-
-  void _toggleSelection(
-    String language,
-    LanguageProvider provider,
-  ) {
-    final updated = List<String>.from(provider.selectedLanguages);
-
-    if (updated.contains(language)) {
-      updated.remove(language);
-    } else {
-      updated.add(language);
-    }
-
-    provider.updateLanguages(updated);
-  }
-
   Future<void> _saveLanguages(
     UserProvider userProvider,
-    LanguageProvider languageProvider,
+    LanguageProvider provider,
   ) async {
-    if (languageProvider.selectedLanguages.isEmpty) {
+    if (provider.selectedLanguages.isEmpty) {
       CustomToast.show(
         context,
         'Please select at least one language.',
@@ -69,15 +56,16 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
 
     setState(() => _saving = true);
 
+    log("=====+====+==== selected languages ${provider.selectedLanguages}");
     final result =
-        await userProvider.updateUserLang(languageProvider.selectedLanguages);
+        await userProvider.updateUserLang(provider.selectedLanguages);
 
     setState(() => _saving = false);
 
     if (result['success'] == true) {
       CustomToast.show(
         context,
-        "Language updated successfully.",
+        'Language updated successfully.',
         isSuccess: true,
       );
 
@@ -89,10 +77,88 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
     } else {
       CustomToast.show(
         context,
-        result['message']?.toString() ?? "Update failed",
+        "${result['message'] ?? 'Update failed'}",
         isSuccess: false,
       );
     }
+  }
+
+  Widget _buildSection(
+    String title,
+    List items,
+    LanguageProvider provider,
+    ThemeData theme,
+  ) {
+    if (items.isEmpty) return const SizedBox();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 5),
+          child: Text(
+            title,
+            style: TextStyle(
+              color: theme.canvasColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
+        ),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: items.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: ResponsiveWidget.isMobile(context)
+                ? 2
+                : ResponsiveWidget.isTablet(context)
+                    ? 4
+                    : 5,
+            crossAxisSpacing: 5,
+            mainAxisSpacing: 5,
+            childAspectRatio: 2.5,
+          ),
+          itemBuilder: (context, index) {
+            final lang = items[index];
+            final isSelected = provider.selectedLanguages.contains(lang.name);
+
+            return InkWell(
+              onTap: () => provider.toggleLanguage(lang.name),
+              child: Card(
+                color: isSelected ? theme.primaryColor : theme.cardColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      lang.native ?? lang.name,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? Colors.white : theme.canvasColor,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      lang.name,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isSelected
+                            ? Colors.white70
+                            : theme.canvasColor.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
   }
 
   @override
@@ -104,112 +170,114 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        centerTitle: true,
-        backgroundColor: theme.primaryColor,
-        foregroundColor: Colors.white,
         title: Text(
-          lang.selectPreferredLanguage,
+          "Preferred Languages",
           style: TextStyle(
             fontWeight: FontWeight.bold,
           ),
         ),
+        backgroundColor: theme.primaryColor,
+        foregroundColor: Colors.white,
+        centerTitle: true,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(8),
         child: Consumer<LanguageProvider>(
           builder: (context, provider, _) {
-            // 🔄 Loading
             if (provider.loading) {
               return Center(
-                child: CircularProgressIndicator(
-                  color: theme.primaryColor,
-                ),
-              );
+                  child: CircularProgressIndicator(
+                color: theme.primaryColor,
+              ));
             }
 
-            // ❌ Error
             if (provider.error != null) {
               return Center(
                 child: Text(
-                  "Failed to load languages",
-                  style: TextStyle(color: theme.canvasColor),
+                  'Failed to load languages',
+                  style: TextStyle(
+                    color: theme.canvasColor,
+                  ),
                 ),
               );
             }
 
-            return Column(
+            return Stack(
               children: [
-                Expanded(
-                  child: GridView.builder(
-                    itemCount: provider.allLanguages.length,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount:
-                          ResponsiveWidget.isMobile(context) ? 3 : 6,
-                      crossAxisSpacing: 6,
-                      mainAxisSpacing: 6,
-                      childAspectRatio: 5 / 1.5,
-                    ),
-                    itemBuilder: (context, index) {
-                      final language = provider.allLanguages[index];
-                      final isSelected =
-                          provider.selectedLanguages.contains(language);
-
-                      return ElevatedButton(
-                        onPressed: () => _toggleSelection(language, provider),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              isSelected ? theme.primaryColor : theme.cardColor,
-                          foregroundColor:
-                              isSelected ? Colors.white : theme.canvasColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: Text(
-                          language,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: ResponsiveWidget.isMobile(context)
-                      ? double.infinity
-                      : 400,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: _saving
-                        ? null
-                        : () => _saveLanguages(userProvider, provider),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.primaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
+                SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _buildSection(
+                        'Major Indian Languages',
+                        provider.majorIndianLanguages,
+                        provider,
+                        theme,
                       ),
-                    ),
-                    child: _saving
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            lang.save,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                      SizedBox(
+                        height: 10,
+                      ),
+                      _buildSection(
+                        'Other Indian Languages',
+                        provider.otherIndianLanguages,
+                        provider,
+                        theme,
+                      ),
+                      SizedBox(
+                        height: 10,
+                      ),
+                      _buildSection(
+                        'Foreign Languages',
+                        provider.foreignLanguages,
+                        provider,
+                        theme,
+                      ),
+                      SizedBox(
+                        height: 80,
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 30),
+                Positioned(
+                  bottom: 20,
+                  left: ResponsiveWidget.isMobile(context)
+                      ? 90
+                      : ResponsiveWidget.isTablet(context)
+                          ? 200
+                          : 300,
+                  right: ResponsiveWidget.isMobile(context)
+                      ? 90
+                      : ResponsiveWidget.isTablet(context)
+                          ? 200
+                          : 300,
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.primaryColor,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: _saving
+                          ? null
+                          : () => _saveLanguages(
+                                userProvider,
+                                provider,
+                              ),
+                      child: _saving
+                          ? CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: theme.primaryColor,
+                            )
+                          : Text(
+                              lang.save,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
               ],
             );
           },

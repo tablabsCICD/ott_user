@@ -53,11 +53,11 @@ class _SplashScreenState extends State<SplashScreen> {
     /// Responsive logo size
     double logoSize;
     if (ResponsiveWidget.isMobile(context)) {
-      logoSize = size.width * 0.42;
+      logoSize = size.width * 0.62;
     } else if (ResponsiveWidget.isTablet(context)) {
-      logoSize = size.width * 0.28;
+      logoSize = size.width * 0.38;
     } else {
-      logoSize = size.width * 0.18;
+      logoSize = size.width * 0.28;
     }
 
     /// Responsive text size
@@ -91,8 +91,9 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                 ),
               ),
-
-              const Spacer(flex: 2),
+              SizedBox(
+                height: 10,
+              ),
 
               /// Tagline
               Padding(

@@ -95,147 +95,150 @@ class _EditProfilePageState extends State<EditProfilePage> {
           },
         ),
       ),
-      body: SingleChildScrollView(
+      body: Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Form(
             key: _formKey,
-            child: SizedBox(
-              width: ResponsiveWidget.isMobile(context) ? double.infinity : 400,
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
-                  Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      Hero(
-                        tag: 'profile',
-                        child: CircleAvatar(
-                            radius: 50,
-                            backgroundColor: selectedThemeData.cardColor,
-                            backgroundImage: userProvider
-                                    .profileController.text.isNotEmpty
-                                ? NetworkImage(
-                                    userProvider.profileController.text)
-                                : userProvider.userObj.profilePhoto != null
-                                    ? userProvider
-                                            .userObj.profilePhoto!.isNotEmpty
-                                        ? NetworkImage(
-                                            userProvider.userObj.profilePhoto!)
-                                        : AssetImage(ImageConstant.profile)
-                                    : AssetImage(ImageConstant.profile)),
-                      ),
-                      InkWell(
-                        onTap: () => userProvider.pickImage(),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: selectedThemeData.cardColor,
-                            border: Border.all(
+            child: SingleChildScrollView(
+              child: SizedBox(
+                width:
+                    ResponsiveWidget.isMobile(context) ? double.infinity : 400,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        Hero(
+                          tag: 'profile',
+                          child: CircleAvatar(
+                              radius: 50,
+                              backgroundColor: selectedThemeData.cardColor,
+                              backgroundImage: userProvider
+                                      .profileController.text.isNotEmpty
+                                  ? NetworkImage(
+                                      userProvider.profileController.text)
+                                  : userProvider.userObj.profilePhoto != null
+                                      ? userProvider
+                                              .userObj.profilePhoto!.isNotEmpty
+                                          ? NetworkImage(userProvider
+                                              .userObj.profilePhoto!)
+                                          : AssetImage(ImageConstant.profile)
+                                      : AssetImage(ImageConstant.profile)),
+                        ),
+                        InkWell(
+                          onTap: () => userProvider.pickImage(),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: selectedThemeData.cardColor,
+                              border: Border.all(
+                                color: selectedThemeData.canvasColor,
+                                width: 0.5,
+                              ),
+                            ),
+                            padding: const EdgeInsets.all(8.0),
+                            child: Icon(
+                              Icons.edit,
                               color: selectedThemeData.canvasColor,
-                              width: 0.5,
+                              size: 20,
                             ),
                           ),
-                          padding: const EdgeInsets.all(8.0),
-                          child: Icon(
-                            Icons.edit,
-                            color: selectedThemeData.canvasColor,
-                            size: 20,
-                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    CustomTextField(
+                      controller: userProvider.firstNameController,
+                      label: 'Enter First Name',
+                      isName: true,
+                      hintText: userProvider.userObj.firstName != null
+                          ? userProvider.userObj.firstName!.isNotEmpty
+                              ? userProvider.userObj.firstName!
+                              : 'Enter a valid name'
+                          : 'Enter a valid name',
+                      isValidator: true,
+                      textInputType: TextInputType.name,
+                    ),
+                    CustomTextField(
+                      controller: userProvider.lastNameController,
+                      label: 'Enter Last Name',
+                      isName: true,
+                      hintText: userProvider.userObj.lastName != null
+                          ? userProvider.userObj.lastName!.isNotEmpty
+                              ? userProvider.userObj.lastName!
+                              : 'Enter a valid name'
+                          : 'Enter a valid name',
+                      isValidator: true,
+                      textInputType: TextInputType.name,
+                    ),
+                    CustomTextField(
+                      controller: userProvider.emailController,
+                      label: 'Email',
+                      isEmail: true,
+                      isValidator: true,
+                      hintText:
+                          userProvider.userObj.emailId ?? 'Enter valid email',
+                      textInputType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 30),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: selectedThemeData.primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6)),
+                      ),
+                      onPressed: () async {
+                        if (userProvider.profileController.text.isEmpty) {
+                          userProvider.profileController.text =
+                              userProvider.userObj.profilePhoto!;
+                        }
+                        if (userProvider.emailController.text.isEmpty) {
+                          userProvider.emailController.text =
+                              userProvider.userObj.emailId!;
+                        }
+                        if (userProvider.firstNameController.text.isEmpty) {
+                          userProvider.firstNameController.text =
+                              userProvider.userObj.firstName!;
+                        }
+                        if (userProvider.lastNameController.text.isEmpty) {
+                          userProvider.lastNameController.text =
+                              userProvider.userObj.lastName!;
+                        }
+                        var result = await userProvider.updateUser();
+                        if (result['success'] == true) {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool('isLoggedIn', true);
+
+                          CustomToast.show(
+                            context,
+                            "Profile updated successfully!",
+                            isSuccess: true,
+                          );
+                          Navigator.of(context).pop();
+                        } else {
+                          CustomToast.show(
+                            context,
+                            'Failure: ${result['message']}',
+                            isSuccess: false,
+                          );
+                        }
+                      },
+                      child: const Center(
+                        child: Text(
+                          "Save",
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  CustomTextField(
-                    controller: userProvider.firstNameController,
-                    label: 'Enter First Name',
-                    isName: true,
-                    hintText: userProvider.userObj.firstName != null
-                        ? userProvider.userObj.firstName!.isNotEmpty
-                            ? userProvider.userObj.firstName!
-                            : 'Enter a valid name'
-                        : 'Enter a valid name',
-                    isValidator: true,
-                    textInputType: TextInputType.name,
-                  ),
-                  CustomTextField(
-                    controller: userProvider.lastNameController,
-                    label: 'Enter Last Name',
-                    isName: true,
-                    hintText: userProvider.userObj.lastName != null
-                        ? userProvider.userObj.lastName!.isNotEmpty
-                            ? userProvider.userObj.lastName!
-                            : 'Enter a valid name'
-                        : 'Enter a valid name',
-                    isValidator: true,
-                    textInputType: TextInputType.name,
-                  ),
-                  CustomTextField(
-                    controller: userProvider.emailController,
-                    label: 'Email',
-                    isEmail: true,
-                    isValidator: true,
-                    hintText:
-                        userProvider.userObj.emailId ?? 'Enter valid email',
-                    textInputType: TextInputType.emailAddress,
-                  ),
-                  const SizedBox(height: 30),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: selectedThemeData.primaryColor,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6)),
                     ),
-                    onPressed: () async {
-                      if (userProvider.profileController.text.isEmpty) {
-                        userProvider.profileController.text =
-                            userProvider.userObj.profilePhoto!;
-                      }
-                      if (userProvider.emailController.text.isEmpty) {
-                        userProvider.emailController.text =
-                            userProvider.userObj.emailId!;
-                      }
-                      if (userProvider.firstNameController.text.isEmpty) {
-                        userProvider.firstNameController.text =
-                            userProvider.userObj.firstName!;
-                      }
-                      if (userProvider.lastNameController.text.isEmpty) {
-                        userProvider.lastNameController.text =
-                            userProvider.userObj.lastName!;
-                      }
-                      var result = await userProvider.updateUser();
-                      if (result['success'] == true) {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setBool('isLoggedIn', true);
-
-                        CustomToast.show(
-                          context,
-                          "Profile updated successfully!",
-                          isSuccess: true,
-                        );
-                        Navigator.of(context).pop();
-                      } else {
-                        CustomToast.show(
-                          context,
-                          'Failure: ${result['message']}',
-                          isSuccess: false,
-                        );
-                      }
-                    },
-                    child: const Center(
-                      child: Text(
-                        "Save",
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                ],
+                    const SizedBox(height: 30),
+                  ],
+                ),
               ),
             ),
           ),

@@ -13,6 +13,11 @@ class LanguageProvider with ChangeNotifier {
   List<String> _allLanguages = [];
   List<String> _selectedLanguages = [];
 
+// grouped languges
+  List<GroupedLanguageItem> majorIndianLanguages = [];
+  List<GroupedLanguageItem> otherIndianLanguages = [];
+  List<GroupedLanguageItem> foreignLanguages = [];
+
   /// Getters
   bool get loading => _loading;
   String? get error => _error;
@@ -72,6 +77,45 @@ class LanguageProvider with ChangeNotifier {
     } catch (e) {
       _error = e.toString();
       log('Language fetch error: $_error');
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  /// ---------------------------
+  /// Fetch Grouped languages
+  /// ---------------------------
+  Future<void> fetchGroupedLanguages() async {
+    if (_loading) return;
+
+    _loading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final response = await ApiHelper().getApi(ApiConstant.fetchGroupedLang);
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to fetch grouped languages');
+      }
+
+      final body = json.decode(response.body);
+      final res = GroupedLanguageResponse.fromJson(body);
+
+      majorIndianLanguages = res.majorIndianLanguages;
+      otherIndianLanguages = res.otherIndianLanguages;
+      foreignLanguages = res.foreignLanguages;
+
+      log(
+        'Grouped languages loaded → '
+        'Major: ${majorIndianLanguages.length}, '
+        'Other: ${otherIndianLanguages.length}, '
+        'Foreign: ${foreignLanguages.length}',
+      );
+    } catch (e) {
+      _error = e.toString();
+      log('Grouped language fetch error: $_error');
     } finally {
       _loading = false;
       notifyListeners();

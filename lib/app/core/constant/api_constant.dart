@@ -40,7 +40,10 @@ class ApiConstant {
       "${baseUrl}api/forUser/user/Content/TopTen?userId=$userId";
 
   static String uploadImg = "${baseUrl}api/other/upload-file";
+
+  // get all languges
   static String fetchLang = "${baseUrl}api/Languages/getAll";
+  static String fetchGroupedLang = "${baseUrl}api/all/withGrouping";
 
   static String addMoneyToWallet = "${baseUrl}add-amount";
   static String withdrawMoneyFromWallet(userId, amount, contentId) =>
