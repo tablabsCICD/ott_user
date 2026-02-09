@@ -123,7 +123,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     return SliverAppBar(
       pinned: true,
       expandedHeight: isMobile
-          ? 300
+          ? 250
           : isTablet
               ? 420
               : 560,
@@ -148,8 +148,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.transparent,
-                    Colors.black54,
+                    Colors.black87,
+                    Colors.black87,
                     Colors.black,
                   ],
                 ),

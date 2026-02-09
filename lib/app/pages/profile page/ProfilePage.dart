@@ -10,6 +10,7 @@ import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/app/pages/profile%20page/component/EditProfilePage.dart';
 import 'package:ott/app/pages/profile%20page/component/about_filmytell_dialog.dart';
 import 'package:ott/app/pages/profile%20page/component/change_language.dart';
+import 'package:ott/app/pages/profile%20page/component/terms_codition_page.dart';
 import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/pages/upcoming%20movies%20page/UpcomingPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
@@ -403,7 +404,13 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ProfileOption(
                                   icon: Icons.file_copy,
                                   title: lang.termsPoliciesLiscenses,
-                                  onTap: () {},
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) => const FontDemoPage()),
+                                    );
+                                  },
                                 ),
                                 ProfileOption(
                                   icon: Icons.info,

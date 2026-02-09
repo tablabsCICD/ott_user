@@ -94,17 +94,24 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               foregroundColor: Colors.white,
               title: ResponsiveWidget.isDesktop(context)
                   ? const Text('')
-                  : Text(
-                      Provider.of<DashboardProvider>(context).content.title ??
-                          "",
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 22,
-                        color: selectedThemeData.primaryColor,
+                  : StarRatingWidget(
+                      rating: double.parse(
+                        (Provider.of<DashboardProvider>(context)
+                                    .content
+                                    .ratings ??
+                                0.0)
+                            .toStringAsFixed(1),
                       ),
+                      starSize: 20,
+                      textSize: 16,
                     ),
+              actions: [
+                _ageRating(
+                    Provider.of<DashboardProvider>(context).content.ageRating),
+                SizedBox(
+                  width: 5,
+                )
+              ],
               backgroundColor: Colors.transparent,
               centerTitle: true,
               elevation: 0,
@@ -251,6 +258,34 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                         ? _buildRatingReviewSection(context, content)
                         : SizedBox.shrink(),
                     const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              flex: 2,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: 100,
+                    ),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: TrailerPreview(
+                          trailerUrl: content.trailerUrl,
+                          content: content,
+                          controller: _trailerController,
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      height: 100,
+                    ),
                     if (content.posterUrlList != null &&
                         content.posterUrlList!.isNotEmpty) ...[
                       Text(
@@ -274,7 +309,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                               borderRadius: BorderRadius.circular(12),
                               child: Image.network(
                                 content.posterUrlList![index],
-                                width: 120,
+                                width: 320,
                                 fit: BoxFit.cover,
                               ),
                             );
@@ -282,22 +317,6 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                         ),
                       ),
                     ],
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              flex: 2,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    TrailerPreview(
-                      trailerUrl: content.trailerUrl,
-                      content: content,
-                      controller: _trailerController,
-                    ),
                   ],
                 ),
               ),
@@ -327,92 +346,61 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           ),
         ),
         SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(8.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: 120),
-              TrailerPreview(
-                trailerUrl: content.trailerUrl,
-                content: content,
-                controller: _trailerController,
+              SizedBox(height: 95),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: TrailerPreview(
+                    trailerUrl: content.trailerUrl,
+                    content: content,
+                    controller: _trailerController,
+                  ),
+                ),
               ),
-              SizedBox(height: 30),
+              SizedBox(height: 10),
               Text(
                 content.title ?? "",
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: selectedThemeData.primaryColor,
                 ),
               ),
-              const SizedBox(height: 6),
               Row(
                 children: [
-                  StarRatingWidget(
-                    rating: double.parse(
-                      (content.ratings ?? 0.0).toStringAsFixed(1),
+                  Text(
+                    (content.genreList != null && content.genreList!.isNotEmpty)
+                        ? content.genreList!.join(' | ')
+                        : 'N/A',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                      color: Colors.white.withOpacity(0.7),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  _ageRating(content.ageRating),
                 ],
               ),
-
-              // (content.posterUrlList != null &&
-              //         content.posterUrlList!.isNotEmpty)
-              //     ? Row(
-              //         children: [
-              //           Expanded(
-              //             child: SizedBox(
-              //               width: 300,
-              //               child: AutoScrollingPosters(
-              //                 imageUrls: [
-              //                   if (content.posterUrlList != null &&
-              //                       content.posterUrlList!.isNotEmpty)
-              //                     content.posterUrlList!.length > 0
-              //                         ? content.posterUrlList![0]
-              //                         : "",
-              //                   if (content.posterUrlList!.length > 1)
-              //                     content.posterUrlList![1],
-              //                   if (content.posterUrlList!.length > 2)
-              //                     content.posterUrlList![2],
-              //                 ],
-              //                 height: 300,
-              //                 aspectRatio: 16 / 8,
-              //               ),
-              //             ),
-              //           ),
-              //         ],
-              //       )
-              //     : SizedBox.shrink(),
-              const SizedBox(height: 20),
-              _buildButtons(context, content),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  //_buildShareButton(context, content),
-                  const SizedBox(width: 8),
-                  //_buildGifting(context, content),
-                ],
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 9),
               Text(
                 "  ${content.description ?? 'N/A'}",
                 textAlign: TextAlign.left,
+                maxLines: 6,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.7),
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.normal,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
+              _buildButtons(context, content),
+              const SizedBox(height: 10),
               _buildDetailsSection(context, content),
               const SizedBox(height: 16),
-              content.isRental == true
-                  ? _buildRatingReviewSection(context, content)
-                  : SizedBox.shrink(),
-              const SizedBox(height: 24),
               if (content.posterUrlList != null &&
                   content.posterUrlList!.isNotEmpty) ...[
                 Text(
@@ -442,6 +430,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                     },
                   ),
                 ),
+                const SizedBox(height: 35),
+                content.isRental == true
+                    ? _buildRatingReviewSection(context, content)
+                    : SizedBox.shrink(),
+                const SizedBox(height: 35),
               ],
             ],
           ),
@@ -494,7 +487,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
 
     return Center(
       child: ActionButtonWidget(
-        label: 'Gift This Movie',
+        label: 'Gift Movie',
         icon: LucideIcons.gift,
         onTap: () {
           showDialog(
@@ -641,7 +634,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
         const SizedBox(width: 20),
         movie.isRental == false
             ? ActionButtonWidget(
-                label: '${lang.rent} ${movie.price}',
+                label: '${lang.rent} ₹${movie.price}',
                 icon: Icons.movie,
                 onTap: () {
                   showDialog(
@@ -902,11 +895,11 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
     return TableRow(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
           child: Text('$title:', style: titleStyle),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
           child: Text(content, style: contentStyle),
         ),
       ],

@@ -571,8 +571,8 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
           _actionBtn(Icons.telegram_outlined, "share", () {
             _shareShort(context, part);
           }),
-          const SizedBox(height: 18),
-          _actionBtn(Icons.visibility_outlined, "${part.views}", null),
+          //const SizedBox(height: 18),
+          // _actionBtn(Icons.visibility_outlined, "${part.views}", null),
         ],
       ),
     );

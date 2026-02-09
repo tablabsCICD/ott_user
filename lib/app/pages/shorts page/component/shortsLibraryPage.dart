@@ -68,6 +68,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
           child: GridView.builder(
             shrinkWrap: useParentScroll,
             primary: !useParentScroll,
+            padding: EdgeInsets.zero,
             physics: useParentScroll
                 ? const NeverScrollableScrollPhysics()
                 : const BouncingScrollPhysics(),
