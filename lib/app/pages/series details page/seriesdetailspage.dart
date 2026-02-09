@@ -443,8 +443,6 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${ep.episodeId}'),
-
                   /// 🎬 POSTER
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),

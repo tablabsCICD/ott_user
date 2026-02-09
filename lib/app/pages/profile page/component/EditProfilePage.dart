@@ -3,13 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/provider/ThemeProvider.dart';
-
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
-import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../../../provider/userProvider.dart';
 import '../../../widgets/show_toast.dart';
 
@@ -88,7 +85,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 );
               },
             );
-
             if (shouldPop ?? false) {
               Navigator.of(context).pop();
             }

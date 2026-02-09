@@ -1,3 +1,5 @@
+import 'package:ott/data/models/content.dart';
+
 class ShortModel {
   final int id;
   final String title;
@@ -11,6 +13,8 @@ class ShortModel {
   final bool isTrending;
   final String category;
   final int? mediaHouseId;
+  String rentlDuration;
+  List<LanguageList> languageList;
 
   ShortModel({
     required this.id,
@@ -25,6 +29,8 @@ class ShortModel {
     required this.isTrending,
     required this.category,
     this.mediaHouseId,
+    required this.rentlDuration,
+    required this.languageList,
   });
 
   factory ShortModel.fromJson(Map<String, dynamic> json) {
@@ -41,6 +47,10 @@ class ShortModel {
       isTrending: json["isTrending"] ?? false,
       category: json["category"] ?? "",
       mediaHouseId: json["mediaHouseId"],
+      rentlDuration: json["rentlDuration"] ?? "",
+      languageList: (json["languageList"] as List? ?? [])
+          .map((e) => LanguageList.fromJson(e))
+          .toList(),
     );
   }
 }

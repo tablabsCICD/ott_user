@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/shorts%20page/component/shortsLibraryPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
-import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -15,12 +14,6 @@ class ShortsPage extends StatefulWidget {
 }
 
 class _ShortsPageState extends State<ShortsPage> {
-  @override
-  void initState() {
-    super.initState();
-    context.read<ShortProvider>().fetchShorts();
-  }
-
   @override
   Widget build(BuildContext context) {
     var theme = Theme.of(context);

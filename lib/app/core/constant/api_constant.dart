@@ -84,6 +84,8 @@ class ApiConstant {
 
   //shorts
   static String shortsMaster = "${baseUrl}api/shortsMaster";
+  static String getShortsByTypeLang(type, lang, page) =>
+      "${baseUrl}api/shortsMaster/$type?lang=$lang&page=$page&size=10";
   static String shortsDetails(id, userId) =>
       "${baseUrl}api/shortsMaster/$id?userId=$userId";
   static String likeshort(partId, userId) =>

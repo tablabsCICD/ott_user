@@ -7,6 +7,7 @@ import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/shorts%20page/component/ShortsPlayerPage.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
+import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -26,8 +27,29 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
   @override
   void initState() {
     super.initState();
-    context.read<ShortProvider>().fetchShorts();
-    context.read<BookmarkProvider>().getUserBookmarkShort();
+    _loadShortRows();
+  }
+
+  Future<void> _loadShortRows() async {
+    await context.read<BookmarkProvider>().getUserBookmarkShort();
+
+    final userProvider = context.read<UserProvider>();
+    List<String> selectedLanguages =
+        List<String>.from(userProvider.userObject.selectedLanguages ?? []);
+
+    if (selectedLanguages.isEmpty) {
+      final user = await LocalSharePreferences.localSharePreferences.getUser();
+      selectedLanguages = List<String>.from(user?.selectedLanguages ?? []);
+    }
+
+    if (selectedLanguages.isEmpty) {
+      selectedLanguages = ["English"];
+    }
+
+    if (!mounted) return;
+    await context
+        .read<ShortProvider>()
+        .fetchShortsByLanguages(selectedLanguages);
   }
 
   @override
@@ -36,7 +58,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
 
     return Consumer<ShortProvider>(
       builder: (context, provider, _) {
-        if (provider.isLoading && provider.shorts.isEmpty) {
+        if (provider.isLoading && provider.shortSections.isEmpty) {
           return Center(
               child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -48,201 +70,263 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
           ));
         }
 
-        if (provider.shorts.isEmpty) {
+        if (provider.shortSections.isEmpty) {
           return Center(
-            child: Text(
-              "No short films available",
-              style: TextStyle(
-                color: theme.canvasColor.withOpacity(0.6),
-              ),
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 300,
+                ),
+                Text(
+                  "No short films available",
+                  style: TextStyle(
+                    color: theme.canvasColor.withOpacity(0.6),
+                  ),
+                ),
+              ],
             ),
           );
         }
 
-        final shorts = provider.shorts;
+        final shortSections = provider.shortSections
+            .where((section) => section.shorts.isNotEmpty)
+            .toList();
+
+        if (shortSections.isEmpty) {
+          return Center(
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 300,
+                ),
+                Text(
+                  "No short films available",
+                  style: TextStyle(
+                    color: theme.canvasColor.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
 
         final useParentScroll = widget.useParentScroll;
+        final cardWidth = ResponsiveWidget.isDesktop(context)
+            ? 190.0
+            : ResponsiveWidget.isTablet(context)
+                ? 185.0
+                : 175.0;
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          child: GridView.builder(
+          child: ListView.builder(
             shrinkWrap: useParentScroll,
             primary: !useParentScroll,
             padding: EdgeInsets.zero,
             physics: useParentScroll
                 ? const NeverScrollableScrollPhysics()
                 : const BouncingScrollPhysics(),
-            itemCount: shorts.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: ResponsiveWidget.isDesktop(context)
-                  ? 5
-                  : ResponsiveWidget.isTablet(context)
-                      ? 4
-                      : 2,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: 9 / 16, // Enforced 9:16 ratio
-            ),
-            itemBuilder: (context, index) {
-              final short = shorts[index];
-
-              return GestureDetector(
-                onTap: () async {
-                  final user = await LocalSharePreferences.localSharePreferences
-                      .getUser();
-                  await context
-                      .read<ShortProvider>()
-                      .fetchShortDetail(short.id, user?.id ?? 1);
-
-                  if (mounted &&
-                      context.read<ShortProvider>().shortDetail != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ShortsPlayerPage(
-                          short: context.read<ShortProvider>().shortDetail!,
-                        ),
+            itemCount: shortSections.length,
+            itemBuilder: (context, sectionIndex) {
+              final section = shortSections[sectionIndex];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "${section.language} - ${section.category}",
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
+                        fontWeight: FontWeight.bold,
+                        color: theme.canvasColor,
                       ),
-                    );
-                  }
-                },
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      // Poster
-                      Image.network(
-                        short.posterUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Center(
-                          child: Icon(Icons.broken_image, color: Colors.grey),
-                        ),
+                    ),
+                    const SizedBox(height: 5),
+                    SizedBox(
+                      height: cardWidth * (16 / 9),
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: section.shorts.length,
+                        itemBuilder: (context, index) {
+                          final short = section.shorts[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 10),
+                            child: SizedBox(
+                              width: cardWidth,
+                              child: _shortCard(context, short),
+                            ),
+                          );
+                        },
                       ),
-
-                      // Bottom gradient
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.black.withOpacity(0.55),
-                              Colors.transparent,
-                            ],
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.center,
-                          ),
-                        ),
-                      ),
-
-                      // Trending badge
-                      if (short.isTrending)
-                        Positioned(
-                          top: 8,
-                          left: 8,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: theme.primaryColor,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              "TRENDING",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                      // Title & meta
-                      Positioned(
-                        left: 10,
-                        right: 10,
-                        bottom: 14,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              short.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              "@${short.creatorName} · ${short.category}",
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.play_arrow_outlined,
-                                  color: Colors.white70,
-                                  size: 14,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  "${short.totalParts} Parts",
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      Positioned(
-                        right: 8,
-                        bottom: 5,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Icon(
-                              Icons.remove_red_eye,
-                              color: Colors.white70,
-                              size: 13,
-                            ),
-                            SizedBox(
-                              width: 4,
-                            ),
-                            Text(
-                              "${short.viewCount}",
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            )
-                          ],
-                        ),
-                      ),
-                      _optionButton(context, short),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },
           ),
         );
       },
+    );
+  }
+
+  Widget _shortCard(BuildContext context, ShortModel short) {
+    final theme = Theme.of(context);
+
+    return GestureDetector(
+      onTap: () async {
+        final user =
+            await LocalSharePreferences.localSharePreferences.getUser();
+        await context
+            .read<ShortProvider>()
+            .fetchShortDetail(short.id, user?.id ?? 1);
+
+        if (mounted && context.read<ShortProvider>().shortDetail != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ShortsPlayerPage(
+                short: context.read<ShortProvider>().shortDetail!,
+              ),
+            ),
+          );
+        }
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              short.posterUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Center(
+                child: Icon(Icons.broken_image, color: Colors.grey),
+              ),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black.withOpacity(0.55),
+                    Colors.transparent,
+                  ],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.center,
+                ),
+              ),
+            ),
+            if (short.isTrending)
+              Positioned(
+                top: 4,
+                left: 4,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: theme.primaryColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    "TRENDING",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            Positioned(
+              left: 8,
+              right: 8,
+              bottom: 14,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    short.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    "@${short.creatorName} · ${short.category}",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.7),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    "₹ ${short.coinsPerPart} /part | ${(short.languageList.map((e) => e.language)).join(', ')}",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.play_arrow_outlined,
+                        color: Colors.white70,
+                        size: 14,
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        "${short.totalParts} Parts",
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              right: 8,
+              bottom: 5,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Icon(
+                    Icons.remove_red_eye,
+                    color: Colors.white70,
+                    size: 13,
+                  ),
+                  SizedBox(
+                    width: 4,
+                  ),
+                  Text(
+                    "${short.viewCount}",
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  )
+                ],
+              ),
+            ),
+            _optionButton(context, short),
+          ],
+        ),
+      ),
     );
   }
 
@@ -256,8 +340,8 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
     final TextEditingController countController = TextEditingController();
 
     return Positioned(
-      top: 5,
-      right: 5,
+      top: 4,
+      right: 4,
       child: SpeedDial(
         openCloseDial: isDialOpen,
         onPress: () => isDialOpen.value = !isDialOpen.value,

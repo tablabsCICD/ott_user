@@ -8,28 +8,100 @@ import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/data/models/user.dart';
 
+class ShortsSectionData {
+  final String language;
+  final String category;
+  final List<ShortModel> shorts;
+
+  const ShortsSectionData({
+    required this.language,
+    required this.category,
+    required this.shorts,
+  });
+}
+
 class ShortProvider extends ChangeNotifier {
   List<ShortModel> shorts = [];
+  List<ShortsSectionData> _shortSections = [];
+  List<ShortsSectionData> get shortSections => _shortSections;
   ShortDetailModel? shortDetail;
   bool isLoading = false;
 
   Future<void> fetchShorts() async {
+    await fetchShortsByLanguages(const ["English"]);
+  }
+
+  Future<void> fetchShortsByLanguages(List<String> languages) async {
+    final effectiveLanguages = languages
+        .where((lang) => lang.trim().isNotEmpty)
+        .map((lang) => lang.trim())
+        .toList();
+
+    if (effectiveLanguages.isEmpty) {
+      effectiveLanguages.add("English");
+    }
+
     try {
       isLoading = true;
       notifyListeners();
 
-      var url = Uri.parse(ApiConstant.shortsMaster);
-      var response = await http.get(url);
-      final data = jsonDecode(response.body);
+      final sections = <ShortsSectionData>[];
 
-      shorts =
-          (data["data"] as List).map((e) => ShortModel.fromJson(e)).toList();
+      for (final lang in effectiveLanguages) {
+        final trending = await _fetchShortsByType(
+          type: "trending",
+          lang: lang,
+          page: 0,
+        );
+        final latest = await _fetchShortsByType(
+          type: "latest",
+          lang: lang,
+          page: 0,
+        );
+
+        sections.add(
+          ShortsSectionData(
+            language: lang,
+            category: "Trending Shorts",
+            shorts: trending,
+          ),
+        );
+        sections.add(
+          ShortsSectionData(
+            language: lang,
+            category: "Latest Shorts",
+            shorts: latest,
+          ),
+        );
+      }
+
+      _shortSections = sections;
+      shorts = sections.expand((row) => row.shorts).toList();
     } catch (e) {
       print("Shorts Fetch Error → $e");
+      _shortSections = [];
+      shorts = [];
     }
 
     isLoading = false;
     notifyListeners();
+  }
+
+  Future<List<ShortModel>> _fetchShortsByType({
+    required String type,
+    required String lang,
+    int page = 0,
+  }) async {
+    final url =
+        Uri.parse(ApiConstant.getShortsByTypeLang(type, lang.toLowerCase(), page));
+    final response = await http.get(url);
+
+    if (response.statusCode != 200) return [];
+
+    final data = jsonDecode(response.body);
+    final content = (data["data"]?["content"] as List?) ?? [];
+
+    return content.map((e) => ShortModel.fromJson(e)).toList();
   }
 
   Future<void> fetchShortDetail(int id, int userId) async {

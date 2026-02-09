@@ -20,9 +20,22 @@ class _MadiooPageState extends State<MadiooPage> {
       child: Column(
         children: [
           SizedBox(
-            height: 300,
+            height: 200,
           ),
-          Text("This feature is under development"),
+          Icon(
+            Icons.construction,
+            size: 90,
+            color: theme.canvasColor.withOpacity(0.7),
+          ),
+          SizedBox(
+            height: 50,
+          ),
+          Text(
+            "This feature is under development",
+            style: TextStyle(
+              color: theme.canvasColor.withOpacity(0.7),
+            ),
+          ),
         ],
       ),
     );

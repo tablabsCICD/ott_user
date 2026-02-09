@@ -696,13 +696,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     fontSize: 14,
                   ),
                 ),
-                Text(
-                  "${userProvider.userObj.id}",
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
-                ),
                 const SizedBox(height: 10),
                 ElevatedButton(
                   onPressed: () {

@@ -174,9 +174,9 @@ class UserProvider extends BaseProvider {
     ApiHelper apiHelper = ApiHelper();
     Map<String, dynamic> data = {
       "id": user!.id,
-      "emailId": emailController.text,
-      "firstName": firstNameController.text,
-      "lastName": lastNameController.text,
+      "emailId": emailController.text.trim(),
+      "firstName": firstNameController.text.trim(),
+      "lastName": lastNameController.text.trim(),
       //"dob": dobController.text,
       "mobileNumber": user.mobileNumber, // mobileController.text,
       "profilePhoto": profileController.text,
