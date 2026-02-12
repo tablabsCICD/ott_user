@@ -12,6 +12,7 @@ import 'package:ott/app/pages/search%20page/SearchPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
+import 'package:ott/app/widgets/continueWatchMovieCard.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/shimmer%20loader/home_shimmer.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -555,7 +556,7 @@ class _HomePageState extends State<HomePage> {
 
           // 🎬 HORIZONTAL LIST
           SizedBox(
-            height: 270,
+            height: 220, //270,
             child: ListView.builder(
               controller: _continueWatchController,
               scrollDirection: Axis.horizontal,
@@ -564,9 +565,17 @@ class _HomePageState extends State<HomePage> {
               itemBuilder: (context, index) {
                 final item = items[index];
 
+                // return SizedBox(
+                //   width: MovieCard.itemExtent,
+                //   child: MovieCard(
+                //     movie: item,
+                //     index: index,
+                //     activeIndexListenable: _continueWatchActiveIndex,
+                //   ),
+                // );
                 return SizedBox(
-                  width: MovieCard.itemExtent,
-                  child: MovieCard(
+                  width: ContinueWatchMovieCard.itemExtent,
+                  child: ContinueWatchMovieCard(
                     movie: item,
                     index: index,
                     activeIndexListenable: _continueWatchActiveIndex,
