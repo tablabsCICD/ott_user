@@ -13,6 +13,7 @@ import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -50,8 +51,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   }
 
   Future<void> _fetchData() async {
-    await Provider.of<DashboardProvider>(context, listen: false)
-        .getContentById(widget.movieId);
+    final dashboardProvider =
+        Provider.of<DashboardProvider>(context, listen: false);
+    await dashboardProvider.getContentById(widget.movieId);
+    await dashboardProvider.getCastByContentId(widget.movieId);
     await Provider.of<VideoProvider>(context, listen: false)
         .getRatingReview(widget.movieId);
   }
@@ -243,6 +246,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                       ],
                     ),
                     const SizedBox(height: 16),
+                    _buildCastSection(context, content),
+                    const SizedBox(height: 16),
                     Text(
                       "  ${content.description ?? 'N/A'}",
                       textAlign: TextAlign.left,
@@ -398,6 +403,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               ),
               const SizedBox(height: 8),
               _buildButtons(context, content),
+              const SizedBox(height: 12),
+              _buildCastSection(context, content),
               const SizedBox(height: 10),
               _buildDetailsSection(context, content),
               const SizedBox(height: 16),
@@ -670,6 +677,136 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     );
   }
 
+  Widget _buildCastSection(BuildContext context, Content content) {
+    final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
+    final provider = Provider.of<DashboardProvider>(context);
+    final apiCastList = provider.castList;
+    final fallbackCastList = (content.castList ?? const [])
+        .where((name) => name.trim().isNotEmpty)
+        .map((name) => CastMember(name: name.trim()))
+        .toList();
+    final castList = apiCastList.isNotEmpty ? apiCastList : fallbackCastList;
+
+    if (provider.isLoadingCast) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: SizedBox(
+            height: 24,
+            width: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: theme.primaryColor,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (castList.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          lang.cast,
+          style: TextStyle(
+            color: theme.primaryColor,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 110,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: castList.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final cast = castList[index];
+              return _buildCastCard(context, cast);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCastCard(BuildContext context, CastMember cast) {
+    final theme = Theme.of(context);
+    final imageUrl = cast.image?.trim() ?? '';
+    final displayName =
+        (cast.name?.trim().isNotEmpty ?? false) ? cast.name!.trim() : 'N/A';
+    final role =
+        (cast.role?.trim().isNotEmpty ?? false) ? cast.role!.trim() : '';
+
+    return SizedBox(
+      width: 84,
+      child: Column(
+        children: [
+          Container(
+            height: 60,
+            width: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: theme.primaryColor.withOpacity(0.15),
+            ),
+            child: ClipOval(
+              child: imageUrl.isNotEmpty
+                  ? Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          _buildCastInitial(theme, displayName),
+                    )
+                  : _buildCastInitial(theme, displayName),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            displayName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+          if (role.isNotEmpty)
+            Text(
+              role,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.65),
+                fontSize: 11,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCastInitial(ThemeData theme, String displayName) {
+    return Center(
+      child: Text(
+        displayName[0].toUpperCase(),
+        style: TextStyle(
+          color: theme.primaryColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 22,
+        ),
+      ),
+    );
+  }
+
   // Widget _buildShareButton(BuildContext context, Content movie) {
   //   return ActionButtonWidget(
   //     label: "Share",
@@ -831,13 +968,13 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
                   : 'Unknown',
               titleStyle,
               contentStyle),
-          _buildTableRow(
+          /*    _buildTableRow(
               lang.cast,
               (movie.castList != null && movie.castList!.isNotEmpty)
                   ? movie.castList!.join(', ')
                   : 'N/A',
               titleStyle,
-              contentStyle),
+              contentStyle), */
           _buildTableRow(
               lang.genres,
               (movie.genreList != null && movie.genreList!.isNotEmpty)

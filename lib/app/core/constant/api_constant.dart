@@ -30,6 +30,10 @@ class ApiConstant {
   // content
   static String getVideoById(id, userId) =>
       "${baseUrl}api/ContentList/getContentByIdAndUserId?id=$id&userId=$userId";
+  static String getCastByContentId(contentId) =>
+      "${baseUrl}api/Cast/getByContentId?contentId=$contentId";
+  static String getCastByContentIdAndSeasonId(contentId, seasonId) =>
+      "${baseUrl}api/Cast/getByContentIdAndSeasonId?contentId=$contentId&seasonId=$seasonId";
   static String getUpcomingVideo =
       "${baseUrl}api/foruser/upcomingmovie?isFeatured=true";
   static String searchContent(id, char) =>

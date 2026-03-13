@@ -18,6 +18,7 @@ class ChangeLanguage extends StatefulWidget {
 
 class _ChangeLanguageState extends State<ChangeLanguage> {
   bool _saving = false;
+  int _selectedTabIndex = 0;
 
   @override
   void initState() {
@@ -94,17 +95,6 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5),
-          child: Text(
-            title,
-            style: TextStyle(
-              color: theme.canvasColor,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
-        ),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -161,6 +151,47 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
     );
   }
 
+  Widget _buildLanguageTab(
+    String title,
+    int index,
+    ThemeData theme,
+  ) {
+    final isSelected = _selectedTabIndex == index;
+
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          setState(() {
+            _selectedTabIndex = index;
+          });
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? theme.primaryColor : theme.cardColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected
+                  ? theme.primaryColor
+                  : theme.canvasColor.withOpacity(0.2),
+            ),
+          ),
+          child: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isSelected ? Colors.white : theme.canvasColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final lang = AppLocalizations.of(context)!;
@@ -202,36 +233,56 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
               );
             }
 
+            final languageSections = [
+              {
+                'title': 'Major Indian Languages',
+                'items': provider.majorIndianLanguages,
+              },
+              {
+                'title': 'Other Indian Languages',
+                'items': provider.otherIndianLanguages,
+              },
+              {
+                'title': 'Foreign Languages',
+                'items': provider.foreignLanguages,
+              },
+            ];
+            final currentSection = languageSections[_selectedTabIndex];
+
             return Stack(
               children: [
                 SingleChildScrollView(
                   child: Column(
                     children: [
-                      _buildSection(
-                        'Major Indian Languages',
-                        provider.majorIndianLanguages,
-                        provider,
-                        theme,
+                      Row(
+                        children: [
+                          _buildLanguageTab(
+                            'Indian Languages',
+                            0,
+                            theme,
+                          ),
+                          _buildLanguageTab(
+                            'Other Languages',
+                            1,
+                            theme,
+                          ),
+                          _buildLanguageTab(
+                            'Foreign Languages',
+                            2,
+                            theme,
+                          ),
+                        ],
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 10,
                       ),
                       _buildSection(
-                        'Other Indian Languages',
-                        provider.otherIndianLanguages,
+                        currentSection['title'] as String,
+                        currentSection['items'] as List,
                         provider,
                         theme,
                       ),
-                      SizedBox(
-                        height: 10,
-                      ),
-                      _buildSection(
-                        'Foreign Languages',
-                        provider.foreignLanguages,
-                        provider,
-                        theme,
-                      ),
-                      SizedBox(
+                      const SizedBox(
                         height: 80,
                       ),
                     ],

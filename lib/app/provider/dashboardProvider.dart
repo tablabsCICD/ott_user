@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
+import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/response/continueWatchedResponse.dart';
 import 'package:ott/data/models/response/getContentResponse.dart';
@@ -20,11 +21,15 @@ class DashboardProvider extends BaseProvider {
 
   Content _content = Content();
   Content get content => _content;
+  List<CastMember> _castList = [];
+  List<CastMember> get castList => _castList;
 
   TextEditingController searchContentController = TextEditingController();
 
   bool _isLoadingDashboard = false;
   bool get isLoading => _isLoadingDashboard;
+  bool _isLoadingCast = false;
+  bool get isLoadingCast => _isLoadingCast;
 
   List<Content> _continueWatchedMovies = [];
   List<Content> get continueWatchedMovies => _continueWatchedMovies;
@@ -214,6 +219,36 @@ class DashboardProvider extends BaseProvider {
     }
   }
 
+  Future<void> getCastByContentId(int contentId) async {
+    _isLoadingCast = true;
+    notifyListeners();
+
+    final apiUrl = ApiConstant.getCastByContentId(contentId);
+    final apiHelper = ApiHelper();
+
+    try {
+      final response = await apiHelper.getApi(apiUrl);
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
+        final castData = responseBody['data']?['cast'] as List?;
+
+        _castList = castData == null
+            ? []
+            : castData
+                .map((item) => CastMember.fromJson(item))
+                .toList();
+      } else {
+        _castList = [];
+      }
+    } catch (error) {
+      debugPrint("cast fetch error: $error");
+      _castList = [];
+    } finally {
+      _isLoadingCast = false;
+      notifyListeners();
+    }
+  }
+
   getContinueWatchedMovieList(String type) async {
     final localSharePreferences = LocalSharePreferences();
     final user = await localSharePreferences.getUser();
@@ -246,6 +281,7 @@ class DashboardProvider extends BaseProvider {
   void clear() {
     _dashboardData.clear();
     _continueWatchedMovies.clear();
+    _castList.clear();
     notifyListeners();
   }
 }

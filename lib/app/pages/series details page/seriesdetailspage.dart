@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/constant/api_constant.dart';
+import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/wallet%20page/SeriesBillingPage.dart';
 import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
@@ -7,6 +11,7 @@ import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/series_provider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/seriesModel.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -33,12 +38,16 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   int _selectedSeasonIndex = 0;
   final TrailerPreviewController _trailerController =
       TrailerPreviewController();
+  final ApiHelper _apiHelper = ApiHelper();
+  List<CastMember> _seasonCastList = [];
+  bool _isLoadingSeasonCast = false;
+  int? _loadedSeasonId;
 
   @override
   void initState() {
     super.initState();
     Future.microtask(() {
-      context.read<SeriesProvider>().fetchSeriesDetails(widget.seriesId);
+      _loadInitialData();
       context.read<PlayMediaProvider>().loadLocalResumes();
     });
   }
@@ -47,6 +56,69 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   void dispose() {
     _trailerController.pause?.call();
     super.dispose();
+  }
+
+  Future<void> _loadInitialData() async {
+    final provider = context.read<SeriesProvider>();
+    await provider.fetchSeriesDetails(widget.seriesId);
+
+    if (!mounted) return;
+
+    final seasons = provider.series?.seasons ?? [];
+    if (seasons.isNotEmpty) {
+      await _loadSeasonCast(seasons[_selectedSeasonIndex].seasonId);
+    }
+  }
+
+  Future<void> _loadSeasonCast(int seasonId) async {
+    if (_isLoadingSeasonCast && _loadedSeasonId == seasonId) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingSeasonCast = true;
+      _loadedSeasonId = seasonId;
+    });
+
+    try {
+      final response = await _apiHelper.getApi(
+        ApiConstant.getCastByContentIdAndSeasonId(widget.seriesId, seasonId),
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = jsonDecode(response.body) as Map<String, dynamic>;
+        final castData = responseBody['data']?['cast'] as List?;
+
+        final castList = castData == null
+            ? <CastMember>[]
+            : castData
+                .map(
+                    (item) => CastMember.fromJson(item as Map<String, dynamic>))
+                .where((cast) =>
+                    cast.seasonId == null || cast.seasonId == seasonId)
+                .toList();
+
+        if (!mounted) return;
+        setState(() {
+          _seasonCastList = castList;
+        });
+      } else {
+        if (!mounted) return;
+        setState(() {
+          _seasonCastList = [];
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _seasonCastList = [];
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingSeasonCast = false;
+      });
+    }
   }
 
   @override
@@ -77,6 +149,14 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
 
           SeasonEntity season = seasons[_selectedSeasonIndex];
 
+          if (_loadedSeasonId != season.seasonId && !_isLoadingSeasonCast) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _loadSeasonCast(season.seasonId);
+              }
+            });
+          }
+
           return CustomScrollView(
             slivers: [
               _buildHero(series, theme),
@@ -94,6 +174,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                       _buildSeasonSelector(seasons, theme),
                       const SizedBox(height: 20),
                       _buildSeasonInfo(context, season, theme),
+                      const SizedBox(height: 16),
+                      _buildCastSection(context, season, theme),
                       const SizedBox(height: 16),
                       ...season.episodes
                           .map((e) => _episodeTile(context, season, e, theme)),
@@ -274,6 +356,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           return GestureDetector(
             onTap: () {
               setState(() => _selectedSeasonIndex = i);
+              _loadSeasonCast(seasons[i].seasonId);
             },
             child: Container(
               margin: const EdgeInsets.only(right: 12),
@@ -383,6 +466,137 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCastSection(
+    BuildContext context,
+    SeasonEntity season,
+    ThemeData theme,
+  ) {
+    final lang = AppLocalizations.of(context)!;
+    final fallbackCast = (widget.content.castList ?? const [])
+        .where((name) => name.trim().isNotEmpty)
+        .map((name) => CastMember(name: name.trim()))
+        .toList();
+    final castList =
+        _seasonCastList.isNotEmpty ? _seasonCastList : fallbackCast;
+
+    if (_isLoadingSeasonCast && _loadedSeasonId == season.seasonId) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: SizedBox(
+            height: 24,
+            width: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: theme.primaryColor,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (castList.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          lang.cast,
+          style: TextStyle(
+            color: theme.canvasColor,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 110,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: castList.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              return _buildCastCard(context, castList[index]);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCastCard(BuildContext context, CastMember cast) {
+    final theme = Theme.of(context);
+    final imageUrl = cast.image?.trim() ?? '';
+    final displayName =
+        (cast.name?.trim().isNotEmpty ?? false) ? cast.name!.trim() : 'N/A';
+    final role =
+        (cast.role?.trim().isNotEmpty ?? false) ? cast.role!.trim() : '';
+
+    return SizedBox(
+      width: 84,
+      child: Column(
+        children: [
+          Container(
+            height: 60,
+            width: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: theme.primaryColor.withOpacity(0.15),
+            ),
+            child: ClipOval(
+              child: imageUrl.isNotEmpty
+                  ? Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          _buildCastInitial(theme, displayName),
+                    )
+                  : _buildCastInitial(theme, displayName),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            displayName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+          if (role.isNotEmpty)
+            Text(
+              role,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.65),
+                fontSize: 11,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCastInitial(ThemeData theme, String displayName) {
+    return Center(
+      child: Text(
+        displayName[0].toUpperCase(),
+        style: TextStyle(
+          color: theme.primaryColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 22,
+        ),
+      ),
     );
   }
 
@@ -615,13 +829,13 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                   : 'Unknown',
               titleStyle,
               contentStyle),
-          _buildTableRow(
+          /*   _buildTableRow(
               lang.cast,
               (movie.castList != null && movie.castList!.isNotEmpty)
                   ? movie.castList!.join(', ')
                   : 'N/A',
               titleStyle,
-              contentStyle),
+              contentStyle), */
           _buildTableRow(
               lang.genres,
               (movie.genreList != null && movie.genreList!.isNotEmpty)
