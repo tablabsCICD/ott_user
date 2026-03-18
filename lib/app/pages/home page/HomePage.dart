@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
+import 'package:ott/app/pages/home%20page/category_content_page.dart';
 import 'package:ott/app/pages/madioo%20page/MadiooPage.dart';
 import 'package:ott/app/pages/profile%20page/component/change_language.dart';
 import 'package:ott/app/pages/shorts%20page/component/shortsLibraryPage.dart';
@@ -426,21 +427,60 @@ class _HomePageState extends State<HomePage> {
                                                       dashboardData
                                                           .movies!.isEmpty)
                                                   ? SizedBox.shrink()
-                                                  : Text(
-                                                      "${dashboardData.language} - ${dashboardData.category}",
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      style: GoogleFonts.inter(
-                                                        fontSize:
-                                                            ResponsiveWidget
-                                                                    .isMobile(
-                                                                        context)
-                                                                ? 18
-                                                                : 20,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: selectedThemeData
-                                                            .canvasColor,
+                                                  : InkWell(
+                                                      splashColor:
+                                                          Colors.transparent,
+                                                      onTap: () {
+                                                        Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                            builder: (_) =>
+                                                                CategoryContentPage(
+                                                              categoryTitle:
+                                                                  "${dashboardData.language} - ${dashboardData.category}",
+                                                              contents:
+                                                                  dashboardData
+                                                                          .movies ??
+                                                                      [],
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
+                                                      child: Row(
+                                                        children: [
+                                                          Expanded(
+                                                            child: Text(
+                                                              "${dashboardData.language} - ${dashboardData.category}",
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                              style: GoogleFonts
+                                                                  .inter(
+                                                                fontSize: ResponsiveWidget
+                                                                        .isMobile(
+                                                                            context)
+                                                                    ? 18
+                                                                    : 20,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                color: selectedThemeData
+                                                                    .canvasColor,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          Icon(
+                                                            Icons
+                                                                .arrow_forward_ios,
+                                                            size: 18,
+                                                            color:
+                                                                selectedThemeData
+                                                                    .primaryColor,
+                                                          ),
+                                                          SizedBox(
+                                                            width: 3,
+                                                          )
+                                                        ],
                                                       ),
                                                     ),
                                               (dashboardData.movies == null ||

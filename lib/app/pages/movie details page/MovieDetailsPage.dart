@@ -753,7 +753,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
             width: 60,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: theme.primaryColor.withOpacity(0.15),
+              color: theme.cardColor,
             ),
             child: ClipOval(
               child: imageUrl.isNotEmpty
@@ -769,22 +769,22 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           const SizedBox(height: 8),
           Text(
             displayName,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontWeight: FontWeight.w600,
-              fontSize: 13,
+              fontSize: 11,
             ),
           ),
           if (role.isNotEmpty)
             Text(
-              role,
+              "($role)",
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10,
               ),
             ),
         ],

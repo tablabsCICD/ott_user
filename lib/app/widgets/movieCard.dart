@@ -374,6 +374,9 @@ class _MovieCardState extends State<MovieCard> {
               decoration: BoxDecoration(
                 color: theme.cardColor,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: theme.canvasColor.withOpacity(0.2),
+                ),
               ),
               child: Column(
                 children: [
@@ -458,16 +461,18 @@ class _MovieCardState extends State<MovieCard> {
                 fit: BoxFit.cover,
                 width: double.infinity,
                 height: double.infinity,
-                errorBuilder: (_, __, ___) => Icon(
-                  Icons.broken_image,
-                  color: theme.canvasColor.withOpacity(0.3),
-                  size: 40,
+                errorBuilder: (_, __, ___) => Center(
+                  child: Icon(
+                    Icons.broken_image,
+                    color: theme.canvasColor.withOpacity(0.3),
+                    size: 60,
+                  ),
                 ),
               )
             : Icon(
                 Icons.broken_image,
                 color: theme.canvasColor.withOpacity(0.3),
-                size: 40,
+                size: 60,
               ),
 
         /// 🔥 CONTINUE WATCHING BAR
