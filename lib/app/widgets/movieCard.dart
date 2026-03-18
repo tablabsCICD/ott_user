@@ -33,12 +33,16 @@ class MovieCard extends StatefulWidget {
   final Content movie;
   final ValueListenable<int?>? activeIndexListenable;
   final int? index;
+  final double? cardWidth;
+  final double? cardMargin;
 
   const MovieCard({
     super.key,
     required this.movie,
     this.activeIndexListenable,
     this.index,
+    this.cardWidth,
+    this.cardMargin,
   });
 
   @override
@@ -360,6 +364,8 @@ class _MovieCardState extends State<MovieCard> {
         ? widget.movie.posterUrlList!.first
         : null;
     final showPreview = _isPreviewPlaying;
+    final cardWidth = widget.cardWidth ?? MovieCard.itemWidth;
+    final cardMargin = widget.cardMargin ?? MovieCard.itemMargin;
 
     return Stack(
       children: [
@@ -369,8 +375,8 @@ class _MovieCardState extends State<MovieCard> {
           child: GestureDetector(
             onTap: _openDetails,
             child: Container(
-              width: MovieCard.itemWidth,
-              margin: const EdgeInsets.all(MovieCard.itemMargin),
+              width: cardWidth,
+              margin: EdgeInsets.all(cardMargin),
               decoration: BoxDecoration(
                 color: theme.cardColor,
                 borderRadius: BorderRadius.circular(12),
@@ -733,6 +739,12 @@ class _MovieCardState extends State<MovieCard> {
   Widget _optionButton(BuildContext context, Content movie) {
     final theme = Theme.of(context);
     final bool isSeries = movie.type?.toLowerCase() == "series";
+    final double cardWidth = widget.cardWidth ?? MovieCard.itemWidth;
+    final bool compactOverlay =
+        ResponsiveWidget.isMobile(context) || cardWidth <= MovieCard.itemWidth;
+    final double buttonSize = compactOverlay ? 28 : 30;
+    final double verticalInset = compactOverlay ? 8 : 12;
+    final double horizontalInset = compactOverlay ? 8 : 12;
 
     final bookmarkProvider = context.watch<BookmarkProvider>();
     final bool isBookmarked =
@@ -742,8 +754,8 @@ class _MovieCardState extends State<MovieCard> {
     final TextEditingController countController = TextEditingController();
 
     return Positioned(
-      top: 12,
-      right: 12,
+      top: verticalInset,
+      right: horizontalInset,
       child: SpeedDial(
         openCloseDial: isDialOpen,
         onPress: () => isDialOpen.value = !isDialOpen.value,
@@ -755,8 +767,8 @@ class _MovieCardState extends State<MovieCard> {
         overlayOpacity: 0.3,
         elevation: 2,
         direction: SpeedDialDirection.down,
-        buttonSize: const Size(30, 30),
-        childrenButtonSize: const Size(30, 35),
+        buttonSize: Size(buttonSize, buttonSize),
+        childrenButtonSize: Size(buttonSize, compactOverlay ? 32 : 35),
         spacing: 2,
         children: [
           movie.isRental!

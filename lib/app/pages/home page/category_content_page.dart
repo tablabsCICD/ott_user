@@ -19,7 +19,7 @@ class CategoryContentPage extends StatefulWidget {
 
 class _CategoryContentPageState extends State<CategoryContentPage> {
   static const double _cardHeight = 270;
-  static const double _gap = 12;
+  static const double _gap = 8;
 
   final ScrollController _scrollController = ScrollController();
   final ValueNotifier<int?> _activeIndex = ValueNotifier<int?>(0);
@@ -89,76 +89,185 @@ class _CategoryContentPageState extends State<CategoryContentPage> {
             )
           : LayoutBuilder(
               builder: (context, constraints) {
-                final horizontalPadding = ResponsiveWidget.isDesktop(context)
-                    ? 20.0
+                final isDesktop = ResponsiveWidget.isDesktop(context);
+                final isTablet = ResponsiveWidget.isTablet(context);
+                final isMobile = ResponsiveWidget.isMobile(context);
+                final horizontalPadding = isDesktop
+                    ? 18.0
                     : ResponsiveWidget.isTablet(context)
-                        ? 16.0
-                        : 8.0;
+                        ? 14.0
+                        : 10.0;
+                final availableWidth =
+                    constraints.maxWidth - (horizontalPadding * 2);
 
-                if (ResponsiveWidget.isMobile(context)) {
-                  return ListView.separated(
-                    controller: _scrollController,
-                    padding: EdgeInsets.fromLTRB(
-                      horizontalPadding,
-                      10,
-                      horizontalPadding,
-                      20,
+                final header = Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        theme.primaryColor.withValues(alpha: 0.12),
+                        theme.cardColor,
+                      ],
                     ),
-                    itemCount: widget.contents.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: _gap),
-                    itemBuilder: (context, index) {
-                      return Center(
-                        child: SizedBox(
-                          width: MovieCard.itemExtent,
-                          height: _cardHeight,
-                          child: MovieCard(
-                            movie: widget.contents[index],
-                            index: index,
-                            activeIndexListenable: _activeIndex,
-                          ),
+                    border: Border.all(
+                      color: theme.canvasColor.withValues(alpha: 0.08),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      );
-                    },
+                        child: Icon(
+                          Icons.play_circle_fill_rounded,
+                          color: theme.primaryColor,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              widget.categoryTitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: theme.canvasColor,
+                                fontSize: isMobile ? 17 : 19,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Browse the full collection',
+                              style: TextStyle(
+                                color:
+                                    theme.canvasColor.withValues(alpha: 0.64),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (isMobile) {
+                  final cardWidth = availableWidth.toDouble();
+
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          horizontalPadding,
+                          8,
+                          horizontalPadding,
+                          10,
+                        ),
+                        child: header,
+                      ),
+                      Expanded(
+                        child: ListView.separated(
+                          controller: _scrollController,
+                          padding: EdgeInsets.fromLTRB(
+                            horizontalPadding,
+                            0,
+                            horizontalPadding,
+                            16,
+                          ),
+                          itemCount: widget.contents.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: _gap),
+                          itemBuilder: (context, index) {
+                            return SizedBox(
+                              width: cardWidth,
+                              height: _cardHeight,
+                              child: MovieCard(
+                                movie: widget.contents[index],
+                                index: index,
+                                activeIndexListenable: _activeIndex,
+                                cardWidth: cardWidth,
+                                cardMargin: 0,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   );
                 }
 
-                final usableWidth =
-                    constraints.maxWidth - (horizontalPadding * 2);
-                int maxColumns = (usableWidth / MovieCard.itemExtent).floor();
-                if (maxColumns < 1) maxColumns = 1;
+                final targetCardWidth = isDesktop ? 312.0 : 296.0;
+                int crossAxisCount =
+                    ((availableWidth + _gap) / (targetCardWidth + _gap))
+                        .floor();
+                if (crossAxisCount < 1) crossAxisCount = 1;
+                if (isTablet && crossAxisCount > 3) crossAxisCount = 3;
+                if (isDesktop && crossAxisCount > 4) crossAxisCount = 4;
 
-                final targetColumns =
-                    ResponsiveWidget.isDesktop(context) ? 4 : 3;
-                final crossAxisCount =
-                    maxColumns > targetColumns ? targetColumns : maxColumns;
+                final cardWidth =
+                    (availableWidth - ((crossAxisCount - 1) * _gap)) /
+                        crossAxisCount;
 
-                return GridView.builder(
+                return CustomScrollView(
                   controller: _scrollController,
-                  padding: EdgeInsets.fromLTRB(
-                    horizontalPadding,
-                    10,
-                    horizontalPadding,
-                    20,
-                  ),
-                  itemCount: widget.contents.length,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    mainAxisSpacing: _gap,
-                    crossAxisSpacing: _gap,
-                    mainAxisExtent: _cardHeight,
-                  ),
-                  itemBuilder: (context, index) {
-                    return Align(
-                      alignment: Alignment.topCenter,
-                      child: SizedBox(
-                        width: MovieCard.itemExtent,
-                        height: _cardHeight,
-                        child: MovieCard(
-                          movie: widget.contents[index],
+                  slivers: [
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                        horizontalPadding,
+                        8,
+                        horizontalPadding,
+                        10,
+                      ),
+                      sliver: SliverToBoxAdapter(
+                        child: header,
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                        horizontalPadding,
+                        0,
+                        horizontalPadding,
+                        18,
+                      ),
+                      sliver: SliverGrid(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            return SizedBox(
+                              height: _cardHeight,
+                              child: MovieCard(
+                                movie: widget.contents[index],
+                                cardWidth: cardWidth,
+                                cardMargin: 0,
+                              ),
+                            );
+                          },
+                          childCount: widget.contents.length,
+                        ),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          mainAxisSpacing: _gap,
+                          crossAxisSpacing: _gap,
+                          mainAxisExtent: _cardHeight,
                         ),
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 );
               },
             ),
