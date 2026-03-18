@@ -566,7 +566,6 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: Colors.white,
               fontWeight: FontWeight.w600,
               fontSize: 13,
             ),
@@ -578,7 +577,6 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.65),
                 fontSize: 11,
               ),
             ),

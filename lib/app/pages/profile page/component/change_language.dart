@@ -257,12 +257,12 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
                       Row(
                         children: [
                           _buildLanguageTab(
-                            'Indian Languages',
+                            'Major Indian Languages',
                             0,
                             theme,
                           ),
                           _buildLanguageTab(
-                            'Other Languages',
+                            'Other Indian Languages',
                             1,
                             theme,
                           ),

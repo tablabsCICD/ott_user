@@ -714,7 +714,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
         Text(
           lang.cast,
           style: TextStyle(
-            color: theme.primaryColor,
+            color: theme.canvasColor,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -773,7 +773,6 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: Colors.white,
               fontWeight: FontWeight.w600,
               fontSize: 13,
             ),
@@ -785,7 +784,6 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.65),
                 fontSize: 11,
               ),
             ),
@@ -1110,7 +1108,8 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Text("Submit Review"),
+              child:
+                  Text("Submit Review", style: TextStyle(color: Colors.white)),
             ),
           ),
           Row(
