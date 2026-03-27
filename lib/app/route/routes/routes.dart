@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:ott/app/pages/news%20page/NewsScreen.dart';
+import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/app/pages/sign%20in%20page/SignInPage.dart';
 
 import '../../pages/onboarding pages/SplashScreen.dart';
@@ -12,6 +14,19 @@ class RouteGenerator {
 
       case AppRoutes.entry:
         return buildRoute(SplashScreen(), settings: settings);
+
+      case AppRoutes.news:
+        final args = settings.arguments is NewsScreenArgs
+            ? settings.arguments as NewsScreenArgs
+            : const NewsScreenArgs(
+                title: 'News',
+                body: 'Opened from notification',
+                payload: <String, dynamic>{},
+              );
+        return buildRoute(NewsScreen(args: args), settings: settings);
+
+      case AppRoutes.notificationPage:
+        return buildRoute(const NotificationPage(), settings: settings);
 
       /*  case AppRoutes.home:
          return buildRoute(DashboardPage(), settings: settings);

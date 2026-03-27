@@ -627,14 +627,16 @@ class _MovieCardState extends State<MovieCard> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => movie.isFeatured == true
+        builder:
+            (_) => /* movie.isFeatured == true
             ? TrailerPage(
                 trailerUrl: movie.trailerUrl ?? "",
                 isTrailerUrl: true,
                 content: movie)
-            : movie.type!.toLowerCase() == 'movie'
-                ? MovieDetailsPage(movieId: movie.id!)
-                : SeriesDetailsPage(seriesId: movie.id!, content: movie),
+            :  */
+                movie.type!.toLowerCase() == 'movie'
+                    ? MovieDetailsPage(movieId: movie.id!)
+                    : SeriesDetailsPage(seriesId: movie.id!, content: movie),
       ),
     );
   }

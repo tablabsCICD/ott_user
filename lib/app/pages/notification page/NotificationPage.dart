@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
-import 'package:ott/app/provider/ThemeProvider.dart';
+import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';

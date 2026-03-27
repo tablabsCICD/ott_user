@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
-import 'package:ott/app/provider/ThemeProvider.dart';
+import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';

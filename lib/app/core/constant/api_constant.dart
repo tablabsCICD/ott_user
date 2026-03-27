@@ -29,7 +29,7 @@ class ApiConstant {
 
   // content
   static String getVideoById(id, userId) =>
-      "${baseUrl}api/ContentList/getContentByIdAndUserId?id=$id&userId=$userId";
+      "${baseUrl}api/ContentList/getById?id=$id";
   static String getCastByContentId(contentId) =>
       "${baseUrl}api/Cast/getByContentId?contentId=$contentId";
   static String getCastByContentIdAndSeasonId(contentId, seasonId) =>

@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "573981988871",
-    "project_id": "netflix-ott-1198d",
-    "storage_bucket": "netflix-ott-1198d.firebasestorage.app"
+    "project_number": "244052932353",
+    "project_id": "fimlytell",
+    "storage_bucket": "fimlytell.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:573981988871:android:98cdb02531fc654a2072a2",
+        "mobilesdk_app_id": "1:244052932353:android:ec31ccf2f925bac8f6cd00",
         "android_client_info": {
-          "package_name": "com.example.ott"
+          "package_name": "com.filmytell.ott"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAWxw9MKiNZbzZgrZyxqak2BMq9uzBAjrM"
+          "current_key": "AIzaSyCoRIntuHNkS2CuYZsoCjWmEMN4lYcg_Ug"
         }
       ],
       "services": {

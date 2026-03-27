@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:ott/app/provider/ThemeProvider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
+import 'package:ott/app/core/services/notification_service.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/provider/language_provider.dart';
@@ -19,11 +24,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app/core/constant/prefrense_constant.dart';
 import 'app/core/utils/sharepreferences.dart';
 import 'app/provider/userProvider.dart';
+import 'app/route/navigation_service.dart';
 import 'app/route/routes/routes.dart';
+import 'firebase_options.dart';
 
-GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();
@@ -86,15 +96,39 @@ Future<void> main() async {
       ),
     ),
   );
+
+  unawaited(_initializeNotificationsSafely());
 }
 
-class MyApp extends StatelessWidget {
+Future<void> _initializeNotificationsSafely() async {
+  try {
+    await NotificationService.instance.init();
+  } catch (error, stackTrace) {
+    debugPrint('Notification initialization failed: $error');
+    debugPrintStack(stackTrace: stackTrace);
+  }
+}
+
+class MyApp extends StatefulWidget {
   final bool isLoggedIn;
 
   const MyApp({
     super.key,
     required this.isLoggedIn,
   });
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.instance.consumePendingNavigation();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -132,8 +166,9 @@ class MyApp extends StatelessWidget {
       // Navigate based on login state
       initialRoute: "/",
       onGenerateRoute: RouteGenerator.generateRoute,
+      builder: (context, child) => child ?? const SizedBox.shrink(),
       /* home: SplashScreen(
-        isLoggedIn: isLoggedIn,
+        isLoggedIn: widget.isLoggedIn,
       ),*/
     );
   }

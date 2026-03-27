@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
-import 'package:ott/app/provider/ThemeProvider.dart';
+import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/shimmer%20loader/search_shimmer.dart';

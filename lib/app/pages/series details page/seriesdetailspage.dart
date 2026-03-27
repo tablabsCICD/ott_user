@@ -6,7 +6,7 @@ import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/wallet%20page/SeriesBillingPage.dart';
 import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
-import 'package:ott/app/provider/ThemeProvider.dart';
+import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/series_provider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
@@ -413,59 +413,101 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 style: TextStyle(color: theme.canvasColor.withOpacity(0.7)),
               ),
               const SizedBox(height: 6),
-              !season.isSeasonPurchased && canPurchaseSeason
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.primaryColor,
-                            disabledBackgroundColor:
-                                theme.canvasColor.withOpacity(0.2),
-                            disabledForegroundColor:
-                                theme.canvasColor.withOpacity(0.6),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          onPressed: () async {
-                            _trailerController.pause?.call();
-                            final result = await Navigator.push<bool>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => SeriesBillingPage(
-                                  seriesId: widget.seriesId,
-                                  seasonId: season.seasonId,
-                                  amount: season.price.toDouble(),
-                                  isSeason: true,
+              season.isFeatured == true
+                  ? _buildReleaseDateHighlight(context, season)
+                  : !season.isSeasonPurchased && canPurchaseSeason
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: theme.primaryColor,
+                                disabledBackgroundColor:
+                                    theme.canvasColor.withOpacity(0.2),
+                                disabledForegroundColor:
+                                    theme.canvasColor.withOpacity(0.6),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                               ),
-                            );
+                              onPressed: () async {
+                                _trailerController.pause?.call();
+                                final result = await Navigator.push<bool>(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => SeriesBillingPage(
+                                      seriesId: widget.seriesId,
+                                      seasonId: season.seasonId,
+                                      amount: season.price.toDouble(),
+                                      isSeason: true,
+                                    ),
+                                  ),
+                                );
 
-                            if (result == true && mounted) {
-                              CustomToast.show(
-                                context,
-                                "Season unlocked! Enjoy watching 🎬",
-                                isSuccess: true,
-                              );
-                            }
-                          },
-                          child: Text(
-                            "Rent complete Season ₹${season.price}",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                                if (result == true && mounted) {
+                                  CustomToast.show(
+                                    context,
+                                    "Season unlocked! Enjoy watching 🎬",
+                                    isSuccess: true,
+                                  );
+                                }
+                              },
+                              child: Text(
+                                "Rent complete Season ₹${season.price}",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : const SizedBox()
+                          ],
+                        )
+                      : const SizedBox()
               //: SizedBox(),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildReleaseDateHighlight(
+    BuildContext context,
+    Content content, {
+    bool centered = false,
+  }) {
+    final theme = Theme.of(context);
+    final releaseDateText = content.releaseDate?.toString().trim();
+    final displayText = (releaseDateText != null && releaseDateText.isNotEmpty)
+        ? 'Release On: $releaseDateText'
+        : 'Release On: Coming Soon';
+
+    final child = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.primaryColor.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.primaryColor.withOpacity(0.65),
+        ),
+      ),
+      child: Text(
+        displayText,
+        style: TextStyle(
+          color: theme.primaryColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+        ),
+      ),
+    );
+
+    if (!centered) {
+      return child;
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [child],
     );
   }
 
@@ -498,15 +540,11 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
       );
     }
 
-    if (castList.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          lang.cast,
+          "Cast and Crew",
           style: TextStyle(
             color: theme.canvasColor,
             fontSize: 18,
@@ -514,17 +552,22 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           ),
         ),
         const SizedBox(height: 10),
-        SizedBox(
-          height: 120,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: castList.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              return _buildCastCard(context, castList[index]);
-            },
-          ),
-        ),
+        castList.isEmpty
+            ? SizedBox.shrink()
+            : SizedBox(
+                height: 120,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: castList.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) {
+                    if (castList.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return _buildCastCard(context, castList[index]);
+                  },
+                ),
+              ),
       ],
     );
   }

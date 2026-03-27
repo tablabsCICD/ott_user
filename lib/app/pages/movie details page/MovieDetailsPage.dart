@@ -8,7 +8,7 @@ import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
 import 'package:ott/app/pages/movie%20details%20page/component/actionButtonWidget.dart';
-import 'package:ott/app/provider/ThemeProvider.dart';
+import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
@@ -44,6 +44,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     super.initState();
     _fetchData();
     Future.delayed(const Duration(seconds: 2), () {
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
@@ -109,8 +110,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                       textSize: 16,
                     ),
               actions: [
-                _ageRating(
-                    Provider.of<DashboardProvider>(context).content.ageRating),
+                _ageRating(movieContent.ageRating),
                 SizedBox(
                   width: 5,
                 )
@@ -239,12 +239,18 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                     ),
                     const SizedBox(height: 10),
                     const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildButtons(context, content),
-                      ],
-                    ),
+                    content.isFeatured == true
+                        ? _buildReleaseDateHighlight(
+                            context,
+                            content,
+                            centered: true,
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildButtons(context, content),
+                            ],
+                          ),
                     const SizedBox(height: 16),
                     _buildCastSection(context, content),
                     const SizedBox(height: 16),
@@ -288,7 +294,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                         ),
                       ),
                     ),
-                    SizedBox(
+                    /*  SizedBox(
                       height: 100,
                     ),
                     if (content.posterUrlList != null &&
@@ -321,7 +327,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                           },
                         ),
                       ),
-                    ],
+                    ], */
                   ],
                 ),
               ),
@@ -334,10 +340,15 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
 
   Widget _buildMobileView(Content content, ThemeData selectedThemeData,
       YoutubePlayerController controller) {
+    final backgroundImage =
+        content.posterUrlList != null && content.posterUrlList!.isNotEmpty
+            ? content.posterUrlList!.first
+            : null;
+
     return Stack(
       fit: StackFit.expand,
       children: [
-        _buildBackground(content.posterUrlList![0]),
+        _buildBackground(backgroundImage),
         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -402,12 +413,18 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 ),
               ),
               const SizedBox(height: 8),
-              _buildButtons(context, content),
+              content.isFeatured == true
+                  ? _buildReleaseDateHighlight(context, content)
+                  : _buildButtons(context, content),
               const SizedBox(height: 12),
               _buildCastSection(context, content),
               const SizedBox(height: 10),
               _buildDetailsSection(context, content),
               const SizedBox(height: 16),
+              content.isRental == true
+                  ? _buildRatingReviewSection(context, content)
+                  : SizedBox.shrink(),
+              /*   const SizedBox(height: 35),
               if (content.posterUrlList != null &&
                   content.posterUrlList!.isNotEmpty) ...[
                 Text(
@@ -442,7 +459,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                     ? _buildRatingReviewSection(context, content)
                     : SizedBox.shrink(),
                 const SizedBox(height: 35),
-              ],
+              ], */
             ],
           ),
         ),
@@ -459,6 +476,46 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 Container(color: Colors.grey),
           )
         : Container(color: Colors.black);
+  }
+
+  Widget _buildReleaseDateHighlight(
+    BuildContext context,
+    Content content, {
+    bool centered = false,
+  }) {
+    final theme = Theme.of(context);
+    final releaseDateText = content.releaseDate?.toString().trim();
+    final displayText = (releaseDateText != null && releaseDateText.isNotEmpty)
+        ? 'Release On: $releaseDateText'
+        : 'Release On: Coming Soon';
+
+    final child = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.primaryColor.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.primaryColor.withOpacity(0.65),
+        ),
+      ),
+      child: Text(
+        displayText,
+        style: TextStyle(
+          color: theme.primaryColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+        ),
+      ),
+    );
+
+    if (!centered) {
+      return child;
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [child],
+    );
   }
 
   Widget _ageRating(String? ageRating) {
@@ -634,6 +691,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
 
   Widget _buildButtons(BuildContext context, Content movie) {
     final lang = AppLocalizations.of(context)!;
+    final contentType = (movie.type ?? '').toLowerCase();
+    final canPlay =
+        movie.contentUrl?.isNotEmpty == true && contentType.isNotEmpty;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -653,11 +714,16 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 },
               )
             : ActionButtonWidget(
-                label: movie.type!.toLowerCase() == "movie"
-                    ? lang.watchMovie
-                    : lang.watchSeries,
+                label:
+                    contentType == "movie" ? lang.watchMovie : lang.watchSeries,
                 icon: Icons.play_circle_fill,
                 onTap: () {
+                  if (!canPlay) {
+                    CustomToast.show(context, "Video is not available",
+                        isSuccess: false);
+                    return;
+                  }
+
                   _trailerController.pause?.call();
                   Navigator.push(
                     context,
@@ -679,7 +745,6 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
 
   Widget _buildCastSection(BuildContext context, Content content) {
     final theme = Theme.of(context);
-    final lang = AppLocalizations.of(context)!;
     final provider = Provider.of<DashboardProvider>(context);
     final apiCastList = provider.castList;
     final fallbackCastList = (content.castList ?? const [])
@@ -704,15 +769,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
       );
     }
 
-    if (castList.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          lang.cast,
+          "Cast and Crew",
           style: TextStyle(
             color: theme.canvasColor,
             fontSize: 18,
@@ -720,18 +781,24 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           ),
         ),
         const SizedBox(height: 10),
-        SizedBox(
-          height: 110,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: castList.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              final cast = castList[index];
-              return _buildCastCard(context, cast);
-            },
-          ),
-        ),
+        castList.isEmpty
+            ? SizedBox.shrink()
+            : SizedBox(
+                height: 110,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: castList.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) {
+                    if (castList.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+
+                    final cast = castList[index];
+                    return _buildCastCard(context, cast);
+                  },
+                ),
+              ),
       ],
     );
   }
@@ -935,6 +1002,11 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
 
   Widget _buildDetailsSection(BuildContext context, Content movie) {
     final lang = AppLocalizations.of(context)!;
+    final languages = (movie.languageList ?? const [])
+        .map((e) => e.language?.trim())
+        .where((language) => language != null && language.isNotEmpty)
+        .cast<String>()
+        .join(', ');
     TextStyle titleStyle = const TextStyle(
       color: Colors.white,
       fontWeight: FontWeight.bold,
@@ -998,7 +1070,7 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
               titleStyle, contentStyle),
           _buildTableRow(
               lang.languages,
-              (movie.languageList!.map((e) => e.language)).join(', '),
+              languages.isNotEmpty ? languages : 'N/A',
               titleStyle,
               contentStyle),
           _buildTableRow(
@@ -1084,6 +1156,12 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
               ),
             ),
             onPressed: () async {
+              if (content.id == null) {
+                CustomToast.show(context, "Movie details are not available yet",
+                    isSuccess: false);
+                return;
+              }
+
               if (provider.reviewController.text.isNotEmpty) {
                 if (provider.rating == 0) {
                   CustomToast.show(context, "Please select rating..",

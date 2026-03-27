@@ -15,7 +15,7 @@ import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/pages/upcoming%20movies%20page/UpcomingPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/pages/watchlist%20page/WatchlistPage.dart';
-import 'package:ott/app/provider/ThemeProvider.dart';
+import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/giftProvider.dart';

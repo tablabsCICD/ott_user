@@ -2,6 +2,7 @@ class AppRoutes {
   static const login = '/login';
   static const entry = '/splash';
   static const home = '/home';
+  static const news = '/news';
 
   static const forgotPassword = '/forgot_password';
   static const newPassword = '/new_password';

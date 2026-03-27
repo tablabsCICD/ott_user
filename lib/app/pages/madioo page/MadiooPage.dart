@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ott/app/core/constant/image_constant.dart';
 
 class MadiooPage extends StatefulWidget {
   const MadiooPage({super.key, this.useParentScroll = false});
@@ -75,14 +76,21 @@ class _MadiooPageState extends State<MadiooPage>
           /// 📻 Radio Icon with glow
           Container(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: theme.canvasColor.withOpacity(0.1),
-            ),
-            child: Icon(
-              Icons.radio,
-              size: 50,
-              color: theme.primaryColor,
+            child: Hero(
+              tag: "logo",
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () {},
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.asset(
+                    ImageConstant.madiooLogo,
+                    width: 75,
+                    height: 75,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
             ),
           ),
 
@@ -90,7 +98,7 @@ class _MadiooPageState extends State<MadiooPage>
 
           /// 🎧 Title
           Text(
-            "Madio is Coming Soon",
+            "Madioo is Coming Soon",
             style: GoogleFonts.poppins(
               fontSize: 22,
               fontWeight: FontWeight.w600,
@@ -101,7 +109,7 @@ class _MadiooPageState extends State<MadiooPage>
 
           /// 📄 Subtitle
           Text(
-            "Stream music, podcasts & live stations.\nYour vibe, anytime 🎶",
+            "Streaming Hindi songs...\nYour vibe, anytime 🎶",
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
               fontSize: 14,

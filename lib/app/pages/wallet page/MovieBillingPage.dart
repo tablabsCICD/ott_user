@@ -10,7 +10,7 @@ import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
-import '../../provider/ThemeProvider.dart';
+import '../../provider/themeProvider.dart';
 import '../../provider/dashboardProvider.dart';
 import '../../widgets/show_toast.dart';
 

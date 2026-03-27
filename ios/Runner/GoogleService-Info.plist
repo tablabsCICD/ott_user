@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.ott</string>
+	<string>com.filmytell.ott</string>
 	<key>PROJECT_ID</key>
 	<string>netflix-ott-1198d</string>
 	<key>STORAGE_BUCKET</key>

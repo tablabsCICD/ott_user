@@ -7,7 +7,7 @@ import 'package:ott/app/pages/upcoming%20movies%20page/UpcomingPage.dart';
 import 'package:ott/app/pages/home%20page/HomePage.dart';
 import 'package:ott/app/pages/profile%20page/ProfilePage.dart';
 import 'package:ott/app/pages/search%20page/SearchPage.dart';
-import 'package:ott/app/provider/ThemeProvider.dart';
+import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';

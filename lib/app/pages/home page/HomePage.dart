@@ -23,7 +23,7 @@ import 'package:ott/data/models/response/get_dashboard_data.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
-import 'package:ott/app/provider/ThemeProvider.dart';
+import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/movieCard.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -368,13 +368,13 @@ class _HomePageState extends State<HomePage> {
                               : Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    selectedType == 'SHORTS' ||
+                                    selectedType == 'MINI SERIES' ||
                                             selectedType == 'MADIOO'
                                         ? SizedBox.shrink()
                                         : continueWatchWidget(
                                             continueWatchList: dashboardProvider
                                                 .continueWatchedMovies),
-                                    selectedType == 'SHORTS'
+                                    selectedType == 'MINI SERIES'
                                         ? ShortsLibraryPage(
                                             useParentScroll: true)
                                         : selectedType == 'MADIOO'
@@ -697,10 +697,10 @@ class _HomePageState extends State<HomePage> {
           : Container(
               width: 50,
               height: 50,
-              decoration: BoxDecoration(
+              /*   decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.white),
-              ),
+              ), */
               child: Hero(
                 tag: "logo",
                 child: InkWell(
@@ -719,9 +719,9 @@ class _HomePageState extends State<HomePage> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: Image.asset(
-                      ImageConstant.logo,
-                      width: 65,
-                      height: 65,
+                      ImageConstant.inAppLogo,
+                      width: 75,
+                      height: 75,
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -1133,7 +1133,7 @@ class _HomePageState extends State<HomePage> {
       children: [
         "MOVIE",
         "SERIES",
-        "SHORTS",
+        "MINI SERIES",
         "MADIOO",
       ].map((type) {
         return Padding(
@@ -1150,7 +1150,7 @@ class _HomePageState extends State<HomePage> {
                       []; // Ensure it doesn't throw null
 
               print(selectedLanguages);
-              if (selectedType == 'SHORTS') {
+              if (selectedType == 'MINI SERIES') {
                 return;
               }
               if (selectedType == 'MADIOO') {
@@ -1185,8 +1185,8 @@ class _HomePageState extends State<HomePage> {
                       ? lang.movie
                       : type == 'SERIES'
                           ? lang.series
-                          : type == 'SHORTS'
-                              ? 'Shorts'
+                          : type == 'MINI SERIES'
+                              ? 'Mini Series'
                               : 'Madioo',
                   style: TextStyle(
                     color: selectedType == type

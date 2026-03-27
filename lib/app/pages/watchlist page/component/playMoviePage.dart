@@ -7,7 +7,7 @@ import 'package:chewie/chewie.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:provider/provider.dart';
 
-import 'package:ott/app/provider/ThemeProvider.dart';
+import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/data/models/content.dart';
 import '../../../provider/playMediaProvider.dart';

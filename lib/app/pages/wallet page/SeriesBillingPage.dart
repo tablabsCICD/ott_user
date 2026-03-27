@@ -4,7 +4,7 @@ import 'package:ott/app/provider/series_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
-import '../../provider/ThemeProvider.dart';
+import '../../provider/themeProvider.dart';
 import '../../widgets/show_toast.dart';
 
 class SeriesBillingPage extends StatefulWidget {

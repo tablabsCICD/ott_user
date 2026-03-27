@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ott/app/provider/ThemeProvider.dart';
+import 'package:ott/app/provider/themeProvider.dart';
 import 'package:provider/provider.dart';
 
 // ignore: must_be_immutable
