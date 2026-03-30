@@ -53,11 +53,13 @@ class _HomePageState extends State<HomePage> {
   final Map<int, ScrollController> _rowControllers = {};
   final Map<int, ValueNotifier<int?>> _rowActiveIndexes = {};
   final Map<int, int> _rowItemCounts = {};
+  final Map<int, List<Content>> _rowItems = {};
   final Map<int, GlobalKey> _rowKeys = {};
   final ScrollController _verticalController = ScrollController();
   final ScrollController _continueWatchController = ScrollController();
   final ValueNotifier<int?> _continueWatchActiveIndex = ValueNotifier<int?>(0);
   int _continueWatchItemCount = 0;
+  List<Content> _continueWatchItems = const <Content>[];
   bool _continueWatchListenerAttached = false;
   final GlobalKey _continueWatchKey = GlobalKey();
   bool _visibleUpdateScheduled = false;
@@ -90,6 +92,7 @@ class _HomePageState extends State<HomePage> {
     _rowControllers.clear();
     _rowActiveIndexes.clear();
     _rowItemCounts.clear();
+    _rowItems.clear();
     _rowKeys.clear();
 
     _verticalController.dispose();
@@ -184,6 +187,7 @@ class _HomePageState extends State<HomePage> {
     ValueNotifier<int?> notifier,
     ScrollController controller,
     int itemCount,
+    List<Content>? items,
   ) {
     if (!controller.hasClients || itemCount <= 0) {
       if (notifier.value != null) {
@@ -202,28 +206,50 @@ class _HomePageState extends State<HomePage> {
 
     final viewStart = controller.offset;
     final viewEnd = viewStart + viewport;
-    final viewCenter = viewStart + (viewport / 2);
+    final firstCandidate = math.max(
+      0,
+      (viewStart / MovieCard.itemExtent).floor(),
+    );
+    final lastCandidate = math.min(
+      itemCount - 1,
+      ((viewEnd - 0.001) / MovieCard.itemExtent).floor(),
+    );
 
-    int baseIndex = (viewCenter / MovieCard.itemExtent).floor();
-    if (baseIndex < 0) baseIndex = 0;
-    if (baseIndex > itemCount - 1) baseIndex = itemCount - 1;
+    int? bestIndex;
+    int? fallbackIndex;
+    double bestOverlap = 0;
 
-    int bestIndex = baseIndex;
-    double bestOverlap = _visibleOverlap(viewStart, viewEnd, bestIndex);
-
-    final candidates = <int>[
-      baseIndex - 1,
-      baseIndex,
-      baseIndex + 1,
-    ];
-
-    for (final candidate in candidates) {
-      if (candidate < 0 || candidate > itemCount - 1) continue;
+    for (int candidate = firstCandidate;
+        candidate <= lastCandidate;
+        candidate++) {
       final overlap = _visibleOverlap(viewStart, viewEnd, candidate);
-      if (overlap > bestOverlap) {
+      if (overlap <= 0) continue;
+
+      fallbackIndex = candidate;
+      final hasTrailer = items != null &&
+          candidate < items.length &&
+          (items[candidate].trailerUrl?.trim().isNotEmpty ?? false);
+      if (!hasTrailer) {
+        continue;
+      }
+
+      if (bestIndex == null ||
+          overlap > bestOverlap ||
+          (overlap == bestOverlap && candidate > bestIndex)) {
         bestOverlap = overlap;
         bestIndex = candidate;
       }
+    }
+
+    if (bestIndex == null) {
+      bestIndex = fallbackIndex;
+    }
+
+    if (bestIndex == null) {
+      if (notifier.value != null) {
+        notifier.value = null;
+      }
+      return;
     }
 
     if (notifier.value != bestIndex) {
@@ -292,6 +318,7 @@ class _HomePageState extends State<HomePage> {
       final notifier = entry.value;
       final controller = _rowControllers[rowIndex];
       final itemCount = _rowItemCounts[rowIndex] ?? 0;
+      final items = _rowItems[rowIndex];
 
       if (rowIndex != bestRowIndex || controller == null) {
         if (notifier.value != null) {
@@ -300,7 +327,7 @@ class _HomePageState extends State<HomePage> {
         continue;
       }
 
-      _updateActiveIndex(notifier, controller, itemCount);
+      _updateActiveIndex(notifier, controller, itemCount, items);
     }
 
     if (_continueWatchItemCount > 0) {
@@ -309,6 +336,7 @@ class _HomePageState extends State<HomePage> {
           _continueWatchActiveIndex,
           _continueWatchController,
           _continueWatchItemCount,
+          _continueWatchItems,
         );
       } else if (_continueWatchActiveIndex.value != null) {
         _continueWatchActiveIndex.value = null;
@@ -403,6 +431,9 @@ class _HomePageState extends State<HomePage> {
                                                       dashboardData
                                                               .movies?.length ??
                                                           0;
+                                                  _rowItems[index] =
+                                                      dashboardData.movies ??
+                                                          const <Content>[];
                                                   _rowKeys.putIfAbsent(
                                                       index, () => GlobalKey());
 
@@ -600,6 +631,7 @@ class _HomePageState extends State<HomePage> {
     var theme = Theme.of(context);
 
     _continueWatchItemCount = items.length;
+    _continueWatchItems = items;
     if (!_continueWatchListenerAttached) {
       _continueWatchListenerAttached = true;
       _continueWatchController.addListener(() {

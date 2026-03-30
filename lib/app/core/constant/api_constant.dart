@@ -29,7 +29,7 @@ class ApiConstant {
 
   // content
   static String getVideoById(id, userId) =>
-      "${baseUrl}api/ContentList/getById?id=$id";
+      "${baseUrl}api/ContentList/getContentByIdAndUserId?id=$id&userId=$userId";
   static String getCastByContentId(contentId) =>
       "${baseUrl}api/Cast/getByContentId?contentId=$contentId";
   static String getCastByContentIdAndSeasonId(contentId, seasonId) =>
@@ -50,6 +50,12 @@ class ApiConstant {
   static String fetchGroupedLang = "${baseUrl}api/all/withGrouping";
 
   static String addMoneyToWallet = "${baseUrl}add-amount";
+  static String createWalletOrder(double amount, int userId) {
+    final normalizedAmount =
+        amount == amount.truncateToDouble() ? amount.toInt() : amount;
+    return "${baseUrl}api/razorpay/create-order?amount=$normalizedAmount&customerId=$userId";
+  }
+  static String verifyWalletPayment = "${baseUrl}api/razorpay/verify-payment";
   static String withdrawMoneyFromWallet(userId, amount, contentId) =>
       "${baseUrl}deduct?userId=$userId&amount=$amount&contentId=$contentId";
   static String getWalletBalanceByUserId(userId) =>

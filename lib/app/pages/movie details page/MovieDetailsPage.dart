@@ -982,10 +982,10 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
               borderRadius: BorderRadius.circular(12),
             ),
           ),
-          onPressed: () {
+          onPressed: () async {
             _trailerController.pause?.call();
             Navigator.of(context).pop(); // Close the dialog
-            Navigator.push(
+            final result = await Navigator.push<bool>(
               context,
               MaterialPageRoute(
                 builder: (context) => MovieBillingPage(
@@ -993,6 +993,10 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
                 ),
               ),
             );
+
+            if (result == true && mounted) {
+              await _fetchData();
+            }
           },
           child: Text("Continue"),
         ),

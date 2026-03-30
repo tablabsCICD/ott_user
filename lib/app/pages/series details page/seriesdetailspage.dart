@@ -413,7 +413,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 style: TextStyle(color: theme.canvasColor.withOpacity(0.7)),
               ),
               const SizedBox(height: 6),
-              season.isFeatured == true
+              widget.content.isFeatured == true
                   ? _buildReleaseDateHighlight(context, season)
                   : !season.isSeasonPurchased && canPurchaseSeason
                       ? Row(

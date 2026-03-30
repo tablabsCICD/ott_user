@@ -33,6 +33,75 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script>
+    window.openRazorpayCheckout = function (options) {
+      return new Promise(function (resolve) {
+        if (typeof Razorpay === "undefined") {
+          resolve({
+            success: false,
+            message: "Razorpay checkout failed to load in the browser."
+          });
+          return;
+        }
+
+        var settled = false;
+        var existingModal = options.modal || {};
+
+        var razorpay = new Razorpay(Object.assign({}, options, {
+          handler: function (response) {
+            if (settled) return;
+            settled = true;
+            resolve({
+              success: true,
+              orderId: response.razorpay_order_id,
+              paymentId: response.razorpay_payment_id,
+              signature: response.razorpay_signature
+            });
+          },
+          modal: Object.assign({}, existingModal, {
+            ondismiss: function () {
+              if (settled) return;
+              settled = true;
+              resolve({
+                success: false,
+                message: "Payment cancelled or closed by user."
+              });
+            }
+          })
+        }));
+
+        razorpay.on("payment.failed", function (response) {
+          if (settled) return;
+          settled = true;
+
+          var error = (response && response.error) || {};
+          var metadata = error.metadata || {};
+
+          resolve({
+            success: false,
+            message: error.description || "Payment cancelled or failed.",
+            errorCode: error.code || null,
+            orderId: metadata.order_id || null,
+            paymentId: metadata.payment_id || null
+          });
+        });
+
+        try {
+          razorpay.open();
+        } catch (error) {
+          if (settled) return;
+          settled = true;
+          resolve({
+            success: false,
+            message: error && error.message
+                ? error.message
+                : "Unable to open Razorpay checkout."
+          });
+        }
+      });
+    };
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

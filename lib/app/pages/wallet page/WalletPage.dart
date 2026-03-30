@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/pages/wallet page/PaymentPage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -363,23 +363,35 @@ class _WalletPageState extends State<WalletPage> {
                               }
 
                               setState(() => isProcessing = true);
-                              final result = await provider.addBalance(amt);
+                              Navigator.pop(dialogContext);
+
+                              final paymentResult = await Navigator.push(
+                                pageContext,
+                                MaterialPageRoute(
+                                  builder: (_) => PaymentPage(amount: amt),
+                                ),
+                              );
 
                               if (!mounted) return;
-                              if (result['success'] == true) {
+                              if (paymentResult is Map &&
+                                  paymentResult['success'] == true) {
+                                final result = await provider.addBalance(amt);
+                                if (result['success'] == true) {
+                                  await provider.onPaymentVerified();
+                                }
                                 CustomToast.show(
                                   pageContext,
                                   result['message']?.toString() ??
                                       "Wallet recharged successfully.",
-                                  isSuccess: true,
+                                  isSuccess: result['success'] == true,
                                 );
-                                Navigator.pop(dialogContext);
                               } else {
-                                setState(() => isProcessing = false);
                                 CustomToast.show(
                                   pageContext,
-                                  result['message']?.toString() ??
-                                      "Recharge failed. Please try again.",
+                                  paymentResult is Map
+                                      ? paymentResult['message']?.toString() ??
+                                          "Recharge failed. Please try again."
+                                      : "Recharge failed. Please try again.",
                                   isSuccess: false,
                                 );
                               }

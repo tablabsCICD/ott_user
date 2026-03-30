@@ -1,116 +1,132 @@
 import 'package:flutter/material.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
-import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/core/services/PaymentService.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
 
 class PaymentPage extends StatefulWidget {
-  final double amount;
+  const PaymentPage({
+    super.key,
+    required this.amount,
+    this.description = 'Add Money to Wallet',
+    this.plan = 0,
+  });
 
-  const PaymentPage({super.key, required this.amount});
+  final double amount;
+  final String description;
+  final int plan;
 
   @override
   State<PaymentPage> createState() => _PaymentPageState();
 }
 
 class _PaymentPageState extends State<PaymentPage> {
-  late Razorpay _razorpay;
+  final PaymentService _paymentService = PaymentService();
+  bool _isLoading = true;
+  String _status = 'Preparing secure checkout...';
 
   @override
   void initState() {
     super.initState();
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
-
-    _openCheckout();
+    _startPaymentFlow();
   }
 
-  void _openCheckout() {
-    var options = {
-      // ✅ Required fields
-      'key': 'rzp_test_XXXXXX', // replace with your Test Key ID
-      'amount': (widget.amount * 100).toInt(), // Razorpay expects paise
-      'currency': 'INR',
-      'name': 'Filmytell',
-      'description': 'Wallet Recharge',
-
-      // ✅ Must be a URL, NOT an asset constant
-      'image': 'https://yourdomain.com/logo.png',
-
-      // ✅ Use this only if creating orders from backend
-      // 'order_id': 'order_DBJOWzybf0sJbb',
-
-      // ✅ Prefill details
-      'prefill': {
-        'name': 'Test User',
-        'email': 'test.user@example.com',
-        'contact': '9876543210',
-      },
-
-      // ✅ Theme customization
-      'theme': {
-        'color': '#E50914',
-      },
-
-      // ✅ Retry handling
-      'retry': {
-        'enabled': true,
-        'max_count': 3,
-      },
-
-      // ✅ Allowed methods
-      'method': {
-        'upi': true,
-        'netbanking': true,
-        'wallet': true,
-        'card': true,
-      },
-
-      // ✅ Extra metadata
-      'notes': {
-        'user_id': '12345',
-        'subscription_plan': 'Gold',
-        'duration': '1 Month',
-      },
-
-      // ✅ External wallets
-      'external': {
-        'wallets': ['paytm', 'phonepe']
-      },
-
-      // ✅ Auto close checkout after 15 mins
-      'timeout': 900,
-    };
-
+  Future<void> _startPaymentFlow() async {
     try {
-      _razorpay.open(options);
-    } catch (e) {
-      Navigator.pop(context, false);
+      if (!PaymentService.isSupportedPlatform) {
+        _finish(
+          PaymentResult(
+            success: false,
+            message:
+                'Razorpay checkout is only available on web, Android, and iOS.',
+          ),
+        );
+        return;
+      }
+
+      final user = await LocalSharePreferences.localSharePreferences.getUser();
+      if (user?.id == null) {
+        _finish(
+          PaymentResult(
+            success: false,
+            message: 'Please log in again to continue payment.',
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _status = 'Creating Razorpay order...';
+      });
+
+      final order = await _paymentService.createOrder(
+        amount: widget.amount,
+        userId: user!.id!,
+      );
+
+      debugPrint(order.orderId);
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _status = 'Opening Razorpay checkout...';
+      });
+
+      final result = await _paymentService.openCheckout(
+        order: order,
+        amount: widget.amount,
+        description: widget.description,
+        plan: widget.plan,
+      );
+
+      _finish(result);
+    } catch (error) {
+      _finish(
+        PaymentResult(
+          success: false,
+          message: error.toString(),
+        ),
+      );
     }
   }
 
-  void _handlePaymentSuccess(PaymentSuccessResponse response) {
-    Navigator.pop(context, true);
-  }
+  void _finish(PaymentResult result) {
+    if (!mounted) {
+      return;
+    }
 
-  void _handlePaymentError(PaymentFailureResponse response) {
-    Navigator.pop(context, false);
-  }
+    setState(() {
+      _isLoading = false;
+      _status = result.message;
+    });
 
-  void _handleExternalWallet(ExternalWalletResponse response) {
-    Navigator.pop(context, true);
+    Navigator.pop(context, result.toMap());
   }
 
   @override
   void dispose() {
-    _razorpay.clear();
+    _paymentService.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_isLoading) const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                _status,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

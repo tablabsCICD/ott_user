@@ -12,8 +12,8 @@ class DefaultFirebaseOptions {
         return android;
       case TargetPlatform.iOS:
         return ios;
-      case TargetPlatform.macOS:
-        return macos;
+      case TargetPlatform.windows:
+        return web;
       default:
         throw UnsupportedError(
           'DefaultFirebaseOptions are not configured for this platform.',
@@ -33,16 +33,16 @@ class DefaultFirebaseOptions {
     apiKey: 'AIzaSyAXj3ySHGWSkyox8MEqVsGas_hEeOG4-38',
     appId: '1:573981988871:ios:6de664bc7f6355642072a2',
     messagingSenderId: '573981988871',
-    projectId: 'netflix-ott-1198d',
+    projectId: 'fimlytell',
     storageBucket: 'netflix-ott-1198d.firebasestorage.app',
     iosBundleId: 'com.filmytell.ott',
   );
 
-  static const FirebaseOptions macos = FirebaseOptions(
+  static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyAXj3ySHGWSkyox8MEqVsGas_hEeOG4-38',
     appId: '1:573981988871:ios:6de664bc7f6355642072a2',
     messagingSenderId: '573981988871',
-    projectId: 'netflix-ott-1198d',
+    projectId: 'fimlytell',
     storageBucket: 'netflix-ott-1198d.firebasestorage.app',
     iosBundleId: 'com.filmytell.ott',
   );

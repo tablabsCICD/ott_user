@@ -218,13 +218,17 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   }
 
   bool get _isAutoPlayDevice {
+    if (kIsWeb) {
+      return true;
+    }
+
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
       case TargetPlatform.iOS:
-        return true;
       case TargetPlatform.macOS:
       case TargetPlatform.windows:
       case TargetPlatform.linux:
+        return true;
       case TargetPlatform.fuchsia:
         return false;
     }

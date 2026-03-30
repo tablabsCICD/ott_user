@@ -360,9 +360,10 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                               );
 
                               if (!mounted) return;
-                              if (result == true) {
+                              if (result is Map &&
+                                  result['success'] == true) {
                                 final addResult =
-                                    await walletProvider.addBalance(amount);
+                                    await walletProvider.onPaymentVerified();
 
                                 if (!mounted) return;
                                 if (addResult['success'] == true) {

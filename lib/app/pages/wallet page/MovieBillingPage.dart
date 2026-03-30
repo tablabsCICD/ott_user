@@ -1,3 +1,5 @@
+// ignore: file_names
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -474,8 +476,6 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                     walletProvider.isDeductingBalance ||
                     giftProvider.isSavingGift ||
                     purchaseProvider.isSavingContent;
-                bool isSuccess = false;
-
                 return AlertDialog(
                   backgroundColor: theme.cardColor,
                   shape: RoundedRectangleBorder(
@@ -498,23 +498,54 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                               Navigator.pop(dialogContext);
 
                               try {
-                                if (giftCount > 0) {
-                                  await Provider.of<GiftProvider>(pageContext,
-                                          listen: false)
-                                      .saveUserGift(widget.movie, giftCount);
-                                } else {
-                                  await Provider.of<PurchaseContentProvider>(
-                                          pageContext,
-                                          listen: false)
-                                      .saveUserContent(widget.movie);
+                                final walletResult =
+                                    await provider.deductBalance(
+                                  coins,
+                                  movieID,
+                                );
+                                if (walletResult['success'] != true) {
+                                  throw Exception(
+                                    walletResult['message']?.toString() ??
+                                        'Wallet deduction failed.',
+                                  );
                                 }
 
-                                await provider.deductBalance(coins, movieID);
+                                if (giftCount > 0) {
+                                  final giftResult =
+                                      await Provider.of<GiftProvider>(
+                                    pageContext,
+                                    listen: false,
+                                  ).saveUserGift(widget.movie, giftCount);
+                                  if (giftResult['success'] != true) {
+                                    throw Exception(
+                                      giftResult['message']?.toString() ??
+                                          'Gift purchase failed.',
+                                    );
+                                  }
+                                } else {
+                                  final purchaseResult = await Provider.of<
+                                      PurchaseContentProvider>(
+                                    pageContext,
+                                    listen: false,
+                                  ).saveUserContent(widget.movie);
+                                  if (purchaseResult['success'] != true) {
+                                    throw Exception(
+                                      purchaseResult['message']?.toString() ??
+                                          'Unable to grant movie access.',
+                                    );
+                                  }
+                                }
 
-                                await Provider.of<DashboardProvider>(
-                                        pageContext,
-                                        listen: false)
-                                    .getContentById(widget.movie.id!);
+                                Provider.of<DashboardProvider>(
+                                  pageContext,
+                                  listen: false,
+                                ).getContentById(widget.movie.id!).catchError((
+                                  error,
+                                ) {
+                                  debugPrint(
+                                    'Dashboard refresh failed after purchase: $error',
+                                  );
+                                });
 
                                 if (!mounted) return;
                                 CustomToast.show(
@@ -533,11 +564,14 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                 } else {
                                   Navigator.pop(pageContext, true);
                                 }
-                              } catch (_) {
+                              } catch (error) {
                                 if (!mounted) return;
                                 CustomToast.show(
                                   pageContext,
-                                  "Payment failed. Please try again.",
+                                  error.toString().replaceFirst(
+                                        'Exception: ',
+                                        '',
+                                      ),
                                   isSuccess: false,
                                 );
                               }
@@ -621,9 +655,9 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                               );
 
                               if (!mounted) return;
-                              if (result == true) {
+                              if (result is Map && result['success'] == true) {
                                 final addResult =
-                                    await provider.addBalance(amount);
+                                    await provider.onPaymentVerified();
 
                                 if (!mounted) return;
                                 if (addResult['success'] == true) {

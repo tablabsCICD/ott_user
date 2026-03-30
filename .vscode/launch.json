@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter Chrome (local defines)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "chrome",
+      "toolArgs": [
+        "--dart-define-from-file=.vscode/dart_defines.json"
+      ]
+    },
+    {
+      "name": "Flutter Windows (local defines)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "windows",
+      "toolArgs": [
+        "--dart-define-from-file=.vscode/dart_defines.json"
+      ]
+    }
+  ]
+}
