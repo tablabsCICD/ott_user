@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/core/services/notification_service.dart';
@@ -11,6 +13,7 @@ import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/provider/language_provider.dart';
 import 'package:ott/app/provider/localeLanguageProvider.dart';
+import 'package:ott/app/provider/offline_download_provider.dart';
 import 'package:ott/app/provider/playMediaProvider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
 import 'package:ott/app/provider/series_provider.dart';
@@ -30,10 +33,13 @@ import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  if (!kIsWeb) {
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  }
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await DeepLinkService.instance.init();
 
   // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();
@@ -88,6 +94,9 @@ Future<void> main() async {
           create: (_) => PlayMediaProvider(),
         ),
         ChangeNotifierProvider(
+          create: (_) => OfflineDownloadProvider(),
+        ),
+        ChangeNotifierProvider(
           create: (_) => BookmarkProvider(),
         ),
       ],
@@ -97,7 +106,9 @@ Future<void> main() async {
     ),
   );
 
-  unawaited(_initializeNotificationsSafely());
+  if (!kIsWeb) {
+    unawaited(_initializeNotificationsSafely());
+  }
 }
 
 Future<void> _initializeNotificationsSafely() async {
@@ -125,7 +136,9 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    sendNotification();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      DeepLinkService.instance.consumePendingNavigation();
       NotificationService.instance.consumePendingNavigation();
     });
   }
@@ -171,5 +184,9 @@ class _MyAppState extends State<MyApp> {
         isLoggedIn: widget.isLoggedIn,
       ),*/
     );
+  }
+
+  sendNotification() async {
+    await FirebaseMessaging.instance.subscribeToTopic('all');
   }
 }

@@ -162,3 +162,34 @@ class ShortPart {
     );
   }
 }
+
+extension ShortModelShareContent on ShortModel {
+  Content toShareContent() {
+    return Content(
+      id: id,
+      title: title,
+      description: description,
+      price: coinsPerPart.toDouble(),
+      languageList: languageList,
+      posterUrlList: posterUrl.isNotEmpty ? <String>[posterUrl] : <String>[],
+      type: 'short',
+      mediaHouseId: mediaHouseId,
+      rentlDuration: rentlDuration,
+      views: viewCount,
+    );
+  }
+}
+
+extension ShortDetailModelShareContent on ShortDetailModel {
+  Content toShareContent() {
+    return Content(
+      id: id,
+      title: title,
+      description: description,
+      price: coinsPerPart.toDouble(),
+      posterUrlList: poster.isNotEmpty ? <String>[poster] : <String>[],
+      type: 'short',
+      views: viewCount,
+    );
+  }
+}

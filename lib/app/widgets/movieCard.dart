@@ -1,10 +1,11 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
@@ -20,7 +21,6 @@ import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:ott/data/models/content.dart';
@@ -57,7 +57,6 @@ class _MovieCardState extends State<MovieCard> {
   bool _isVideoInitialized = false;
   bool _isPreviewPlaying = false;
   bool _isAutoPlayActive = false;
-  bool _hasPlayedOnce = false;
   bool _isStartingPreview = false;
   bool _hasVideoListener = false;
   Timer? _playDelayTimer;
@@ -123,7 +122,7 @@ class _MovieCardState extends State<MovieCard> {
     try {
       await _videoController!.initialize();
       _videoController!
-        ..setLooping(false)
+        ..setLooping(true)
         ..setVolume(_isMuted ? 0.0 : 1.0);
 
       if (!_hasVideoListener) {
@@ -167,7 +166,6 @@ class _MovieCardState extends State<MovieCard> {
 
     if (oldWidget.movie.trailerUrl != widget.movie.trailerUrl) {
       _playDelayTimer?.cancel();
-      _hasPlayedOnce = false;
       _stopPreview();
       _disposeVideoController();
     }
@@ -191,7 +189,6 @@ class _MovieCardState extends State<MovieCard> {
       _schedulePreview();
     } else {
       _playDelayTimer?.cancel();
-      _hasPlayedOnce = false;
       _stopPreview();
       if (_activePreviewState == this) {
         _activePreviewState = null;
@@ -213,7 +210,6 @@ class _MovieCardState extends State<MovieCard> {
       _schedulePreview();
     } else {
       _playDelayTimer?.cancel();
-      _hasPlayedOnce = false;
       _stopPreview();
       if (_activePreviewState == this) {
         _activePreviewState = null;
@@ -246,32 +242,25 @@ class _MovieCardState extends State<MovieCard> {
     final value = controller.value;
     if (value.hasError) {
       debugPrint("Trailer playback error: ${value.errorDescription}");
-      _stopPreview(markPlayed: true);
+      _stopPreview();
       if (_activePreviewState == this) {
         _activePreviewState = null;
       }
       return;
     }
-
-    if (!_isPreviewPlaying) return;
-    if (!value.isInitialized || value.duration == Duration.zero) return;
-
-    final nearlyDone =
-        value.position >= value.duration - const Duration(milliseconds: 200);
-    if (nearlyDone) {
-      _stopPreview(markPlayed: true);
-      if (_activePreviewState == this) {
-        _activePreviewState = null;
-      }
-    }
   }
 
   void _schedulePreview() {
-    if (_hasPlayedOnce || _playDelayTimer != null) return;
+    if (_playDelayTimer != null) return;
     if (_isStartingPreview || _isPreviewPlaying) return;
     if (!_isPlayTriggerActive) return;
 
-    _playDelayTimer = Timer(const Duration(seconds: 1), () {
+    if (_isAutoPlayActive && !_isHovered) {
+      _startPreviewIfEligible();
+      return;
+    }
+
+    _playDelayTimer = Timer(const Duration(milliseconds: 250), () {
       _playDelayTimer = null;
       _startPreviewIfEligible();
     });
@@ -283,24 +272,19 @@ class _MovieCardState extends State<MovieCard> {
 
   Future<void> _startPreviewIfEligible() async {
     if (!mounted) return;
-    if (_hasPlayedOnce || !_isPlayTriggerActive) return;
+    if (!_isPlayTriggerActive) return;
     if (_isStartingPreview || _isPreviewPlaying) return;
-
-    if (!_isHovered &&
-        _activePreviewState != null &&
-        _activePreviewState != this &&
-        _activePreviewState!._isPreviewPlaying) {
-      return;
-    }
 
     _isStartingPreview = true;
     try {
+      _activatePreview();
+
       final ready = await _ensureVideoInitialized();
       if (!ready || !mounted) {
         if (_activePreviewState == this) {
           _activePreviewState = null;
         }
-        _stopPreview(markPlayed: true);
+        _stopPreview();
         return;
       }
 
@@ -309,7 +293,6 @@ class _MovieCardState extends State<MovieCard> {
         return;
       }
 
-      _activatePreview();
       _ensureMuted();
 
       await _videoController!.play();
@@ -317,7 +300,7 @@ class _MovieCardState extends State<MovieCard> {
       setState(() => _isPreviewPlaying = true);
     } catch (e) {
       debugPrint("Trailer play failed: $e");
-      _stopPreview(markPlayed: true);
+      _stopPreview();
       if (_activePreviewState == this) {
         _activePreviewState = null;
       }
@@ -342,7 +325,7 @@ class _MovieCardState extends State<MovieCard> {
     controller.setVolume(0.0);
   }
 
-  void _stopPreview({bool external = false, bool markPlayed = false}) {
+  void _stopPreview({bool external = false}) {
     final controller = _videoController;
     if (controller == null || !_isVideoInitialized) return;
 
@@ -356,7 +339,6 @@ class _MovieCardState extends State<MovieCard> {
     if (!mounted) return;
     setState(() {
       _isPreviewPlaying = false;
-      if (markPlayed) _hasPlayedOnce = true;
     });
   }
 
@@ -497,90 +479,89 @@ class _MovieCardState extends State<MovieCard> {
     final rating = movie.ratings ?? 0.0;
     final price = movie.price ?? 0;
 
-    return Stack(
+    return Row(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  StarRatingWidget(
-                    rating: rating,
-                  ),
-                  Text(
-                    " (${movie.ratingCount ?? 0})",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.canvasColor.withOpacity(0.7),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                movie.title ?? 'No Title',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: theme.canvasColor,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text.rich(
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                TextSpan(
-                  style: TextStyle(
-                    color: theme.canvasColor.withOpacity(0.7),
-                    fontSize: 12,
-                  ),
+        Flexible(
+          flex: 7,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    TextSpan(text: movie.releaseDate ?? ''),
-                    const TextSpan(text: ' | '),
-                    TextSpan(
-                      text: movie.genreList?.join(', ') ?? 'N/A',
+                    StarRatingWidget(
+                      rating: rating,
+                    ),
+                    Text(
+                      " (${movie.ratingCount ?? 0})",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.canvasColor.withOpacity(0.7),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  movie.title ?? 'No Title',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: theme.canvasColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text.rich(
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  TextSpan(
+                    style: TextStyle(
+                      color: theme.canvasColor.withOpacity(0.7),
+                      fontSize: 12,
+                    ),
+                    children: [
+                      TextSpan(text: movie.releaseDate ?? ''),
+                      const TextSpan(text: ' | '),
+                      TextSpan(
+                        text: movie.genreList?.join(', ') ?? 'N/A',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        Positioned(
-          right: 6,
-          top: 6,
-          child: Row(
-            children: [
-              // _optionButton(context, movie),
-              // SizedBox(
-              //   width: 5,
-              // ),
-              movie.isFeatured == true
-                  ? Container(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 6, horizontal: 10),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        color: theme.primaryColor.withOpacity(0.9),
+        Row(
+          children: [
+            // _optionButton(context, movie),
+            // SizedBox(
+            //   width: 5,
+            // ),
+            movie.isFeatured == true
+                ? Container(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: theme.primaryColor.withOpacity(0.9),
+                    ),
+                    child: Text(
+                      "Watch Trailer",
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
-                      child: Text(
-                        "Watch Trailer",
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    )
-                  : _buildPriceButton(theme, lang, price),
-            ],
-          ),
+                    ),
+                  )
+                : _buildPriceButton(theme, lang, price),
+          ],
         ),
       ],
     );
@@ -822,7 +803,12 @@ class _MovieCardState extends State<MovieCard> {
             backgroundColor: theme.primaryColor,
             onTap: () {
               isDialOpen.value = false;
-              _shareMovie(context, movie);
+              showContentShareSheet(
+                context,
+                movie,
+                contentType: _shareContentTypeFor(movie),
+                unavailableMessage: "Content details are not available yet",
+              );
             },
           ),
 
@@ -846,37 +832,6 @@ class _MovieCardState extends State<MovieCard> {
         ],
       ),
     );
-  }
-
-  void _shareMovie(BuildContext context, Content movie) async {
-    final String shareText = '''
-🎬 ${movie.title ?? ''}
-
-${movie.description ?? ''}
-
-▶️ Watch here:
-${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? ''}
-
-📲 Download Filmytell App now!
-'''
-        .trim();
-
-    if (kIsWeb) {
-      // Flutter Web fallback → Copy to Clipboard
-      await Clipboard.setData(ClipboardData(text: shareText));
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Share text copied to clipboard"),
-        ),
-      );
-    } else {
-      // Android / iOS / Desktop
-      await Share.share(
-        shareText,
-        subject: movie.title ?? "Movie",
-      );
-    }
   }
 
   void _showGiftDialog(
@@ -987,5 +942,16 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
         );
       },
     );
+  }
+}
+
+DeepLinkContentType _shareContentTypeFor(Content movie) {
+  switch ((movie.type ?? '').trim().toLowerCase()) {
+    case 'series':
+      return DeepLinkContentType.series;
+    case 'short':
+      return DeepLinkContentType.short;
+    default:
+      return DeepLinkContentType.movie;
   }
 }

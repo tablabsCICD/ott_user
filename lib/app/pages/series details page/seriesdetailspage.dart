@@ -3,9 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/wallet%20page/SeriesBillingPage.dart';
 import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
+import 'package:ott/app/pages/movie%20details%20page/component/actionButtonWidget.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/series_provider.dart';
@@ -339,6 +342,23 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           style:
               TextStyle(color: theme.canvasColor.withOpacity(0.7), height: 1.4),
         ),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            ActionButtonWidget(
+              label: 'Share',
+              icon: Icons.qr_code_2_rounded,
+              onTap: () => showContentShareSheet(
+                context,
+                widget.content,
+                contentType: DeepLinkContentType.series,
+                unavailableMessage: "Series details are not available yet",
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -440,6 +460,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                                       seasonId: season.seasonId,
                                       amount: season.price.toDouble(),
                                       isSeason: true,
+                                      seriesTitle: widget.content.title,
+                                      itemTitle: season.title,
+                                      rentalDuration: widget.content.rentlDuration,
                                     ),
                                   ),
                                 );
@@ -793,6 +816,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                                 episodeId: ep.episodeId,
                                 amount: ep.price.toDouble(),
                                 isSeason: false,
+                                seriesTitle: widget.content.title,
+                                itemTitle: ep.title,
+                                rentalDuration: widget.content.rentlDuration,
                               ),
                             ),
                           );

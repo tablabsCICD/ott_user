@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   static final ThemeData lightTheme = ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      textTheme: GoogleFonts.interTextTheme(),
+      primaryTextTheme: GoogleFonts.interTextTheme(),
       primaryColor: const Color(0xFFE50914), // Netflix Red
       scaffoldBackgroundColor:
           const Color(0xFFFFFFFF), // Dark background for light mode
@@ -14,6 +17,8 @@ class AppTheme {
   static final ThemeData darkTheme = ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+      primaryTextTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
       primaryColor: const Color(0xFFE50914), // Netflix Red
       scaffoldBackgroundColor:
           const Color(0xFF000000), // Dark background for dark mode

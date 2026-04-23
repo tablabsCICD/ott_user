@@ -32,7 +32,8 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void onDidReceiveBackgroundNotificationResponse(
   NotificationResponse notificationResponse,
 ) {
-  NotificationService.instance.handleNotificationTap(notificationResponse.payload);
+  NotificationService.instance
+      .handleNotificationTap(notificationResponse.payload);
 }
 
 class NotificationService {
@@ -79,7 +80,7 @@ class NotificationService {
     const iosSettings = DarwinInitializationSettings();
 
     await _localNotifications.initialize(
-      const InitializationSettings(
+      settings: const InitializationSettings(
         android: androidSettings,
         iOS: iosSettings,
       ),
@@ -90,8 +91,8 @@ class NotificationService {
           onDidReceiveBackgroundNotificationResponse,
     );
 
-    final androidPlugin = _localNotifications
-        .resolvePlatformSpecificImplementation<
+    final androidPlugin =
+        _localNotifications.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.createNotificationChannel(_highImportanceChannel);
   }
@@ -108,11 +109,12 @@ class NotificationService {
     );
 
     if (kDebugMode) {
-      debugPrint('Notification permission status: ${settings.authorizationStatus}');
+      debugPrint(
+          'Notification permission status: ${settings.authorizationStatus}');
     }
 
-    final androidPlugin = _localNotifications
-        .resolvePlatformSpecificImplementation<
+    final androidPlugin =
+        _localNotifications.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.requestNotificationsPermission();
   }
@@ -128,6 +130,7 @@ class NotificationService {
   Future<void> _setupTokenHandlers() async {
     try {
       final token = await _messaging.getToken();
+      debugPrint("******FCM Token******** $token");
       await _persistToken(token);
     } catch (error, stackTrace) {
       if (kDebugMode) {
@@ -206,10 +209,10 @@ class NotificationService {
     }
 
     await _localNotifications.show(
-      notification.hashCode,
-      notification.title ?? 'Notification',
-      notification.body ?? '',
-      NotificationDetails(
+      id: notification.hashCode,
+      title: notification.title ?? 'Notification',
+      body: notification.body ?? '',
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _highImportanceChannel.id,
           _highImportanceChannel.name,
@@ -244,7 +247,7 @@ class NotificationService {
   Map<String, dynamic> _buildNavigationPayload(RemoteMessage message) {
     return <String, dynamic>{
       'screen': message.data['screen'] ?? 'news',
-      'title': message.notification?.title ?? message.data['title'] ?? 'News',
+      'title': message.notification?.title ?? message.data['title'] ?? 'Ott',
       'body': message.notification?.body ?? message.data['body'] ?? '',
       'payload': message.data,
     };
@@ -266,9 +269,9 @@ class NotificationService {
     }
 
     final screen = payload['screen']?.toString().toLowerCase();
-    if (screen == 'news') {
+    if (screen == 'login') {
       navigator.pushNamed(
-        AppRoutes.news,
+        AppRoutes.login,
         arguments: NewsScreenArgs.fromMap(payload),
       );
       return;

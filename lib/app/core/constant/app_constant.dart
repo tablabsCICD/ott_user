@@ -10,6 +10,10 @@ class AppConstant {
     'RAZORPAY_LOGO_URL',
     defaultValue: '',
   );
+  static const playStoreLink =
+      "https://play.google.com/store/apps/details?id=com.filmytell.com";
+  static const webAppLink = "https://filmytell.in";
+
   final List<String> availableLanguages = [
     'Hindi',
     'English',

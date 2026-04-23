@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ott/data/models/seriesModel.dart';
@@ -10,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/data/models/content.dart';
+import '../../../provider/offline_download_provider.dart';
 import '../../../provider/playMediaProvider.dart';
 
 class PlayMediaPage extends StatefulWidget {
@@ -44,6 +46,7 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
   bool _isDisposed = false;
   bool _isExiting = false;
   int _setupToken = 0;
+  bool _isOfflinePlayback = false;
 
   bool get _isSeries =>
       widget.content?.type?.toLowerCase() == "series" &&
@@ -53,7 +56,7 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
   @override
   void initState() {
     super.initState();
-    _setupPlayer(widget.videoUrl);
+    _preparePlayback();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _addView();
@@ -71,9 +74,28 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
         );
   }
 
+  Future<void> _preparePlayback() async {
+    String sourceUrl = widget.videoUrl;
+
+    final content = widget.content;
+    if (content != null) {
+      final offlinePath = await context
+          .read<OfflineDownloadProvider>()
+          .getOfflinePath(content);
+      if (offlinePath != null && offlinePath.isNotEmpty) {
+        sourceUrl = offlinePath;
+        _isOfflinePlayback = true;
+      } else {
+        _isOfflinePlayback = false;
+      }
+    }
+
+    await _setupPlayer(sourceUrl, playFromFile: _isOfflinePlayback);
+  }
+
   // ================= PLAYER SETUP =================
 
-  Future<void> _setupPlayer(String url) async {
+  Future<void> _setupPlayer(String url, {bool playFromFile = false}) async {
     final token = ++_setupToken;
 
     if (mounted) {
@@ -88,9 +110,11 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     await Future.delayed(const Duration(milliseconds: 500));
     if (_isDisposed || !mounted || token != _setupToken) return;
 
-    debugPrint("VIDEO URL => $url");
+    debugPrint("VIDEO SOURCE => $url");
 
-    final controller = VideoPlayerController.networkUrl(Uri.parse(url));
+    final controller = playFromFile
+        ? VideoPlayerController.file(File(url))
+        : VideoPlayerController.networkUrl(Uri.parse(url));
     try {
       await controller.initialize();
     } catch (e) {
@@ -358,7 +382,9 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
                 backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
                 title: Text(
-                  widget.content?.title ?? "",
+                  _isOfflinePlayback
+                      ? '${widget.content?.title ?? ""} (Offline)'
+                      : widget.content?.title ?? "",
                   style: const TextStyle(color: Colors.white),
                 ),
                 leading: IconButton(

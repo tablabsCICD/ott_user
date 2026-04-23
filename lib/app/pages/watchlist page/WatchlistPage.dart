@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
+import 'package:ott/app/provider/offline_download_provider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
 import 'package:ott/app/widgets/shimmer%20loader/comming_soon_shimmer.dart';
+import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
-enum WatchlistFilter { available, gifted, expired }
+enum WatchlistFilter { available, gifted, expired, downloaded }
 
 class WatchlistPage extends StatefulWidget {
-  const WatchlistPage({super.key});
+  const WatchlistPage({
+    super.key,
+    this.initialFilter = WatchlistFilter.available,
+  });
+
+  final WatchlistFilter initialFilter;
 
   @override
   State<WatchlistPage> createState() => _WatchlistPageState();
@@ -17,19 +25,59 @@ class WatchlistPage extends StatefulWidget {
 
 class _WatchlistPageState extends State<WatchlistPage> {
   bool isLoading = true;
-  WatchlistFilter selectedFilter = WatchlistFilter.available;
+  bool isOffline = false;
+  late WatchlistFilter selectedFilter;
 
   @override
   void initState() {
     super.initState();
+    selectedFilter = widget.initialFilter;
     _load();
   }
 
   Future<void> _load() async {
-    final provider =
+    final purchaseProvider =
         Provider.of<PurchaseContentProvider>(context, listen: false);
-    await provider.getPurchaseContent();
+    final offlineProvider =
+        Provider.of<OfflineDownloadProvider>(context, listen: false);
+    final connectivityResults = await Connectivity().checkConnectivity();
+    isOffline = !connectivityResults.any(
+      (result) => result != ConnectivityResult.none,
+    );
+    await offlineProvider.loadDownloadedContents();
+    await _fetchWatchlistContent(purchaseProvider, selectedFilter);
+    if (mounted) {
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _onFilterSelected(WatchlistFilter filter) async {
+    if (selectedFilter == filter) return;
+
+    setState(() {
+      selectedFilter = filter;
+      isLoading = true;
+    });
+
+    final purchaseProvider =
+        Provider.of<PurchaseContentProvider>(context, listen: false);
+    await _fetchWatchlistContent(purchaseProvider, filter);
+
+    if (!mounted) return;
     setState(() => isLoading = false);
+  }
+
+  Future<void> _fetchWatchlistContent(
+    PurchaseContentProvider purchaseProvider,
+    WatchlistFilter filter,
+  ) {
+    final isGifted = filter == WatchlistFilter.gifted;
+    final isExpired = filter == WatchlistFilter.expired;
+
+    return purchaseProvider.getPurchaseContent(
+      isGifted: isGifted,
+      isExpired: isExpired,
+    );
   }
 
   @override
@@ -51,36 +99,27 @@ class _WatchlistPageState extends State<WatchlistPage> {
           ),
         ),
       ),
-      body: isLoading
-          ? const ComingSoonShimmer(
-              showSegmentedToggle: true,
-              showActionButton: false,
-            )
-          : Consumer<PurchaseContentProvider>(
-              builder: (_, provider, __) {
-                final items = provider.userContentList.where((e) {
-                  final isActive = e.active ?? false;
-                  final isGifted = e.isGifted ?? false;
+      body: Column(
+        children: [
+          _segmentedToggle(theme),
+          Expanded(
+            child: isLoading
+                ? const ComingSoonShimmer(
+                    showSegmentedToggle: false,
+                    showActionButton: false,
+                  )
+                : Consumer2<PurchaseContentProvider, OfflineDownloadProvider>(
+                    builder: (_, purchaseProvider, offlineProvider, __) {
+                      final items = _buildEntries(
+                        purchaseProvider: purchaseProvider,
+                        offlineProvider: offlineProvider,
+                      );
 
-                  switch (selectedFilter) {
-                    case WatchlistFilter.available:
-                      return isActive;
-                    case WatchlistFilter.gifted:
-                      return isGifted;
-                    case WatchlistFilter.expired:
-                      return !isActive;
-                  }
-                }).toList();
+                      if (items.isEmpty) {
+                        return _emptyState(theme, showSegmentedToggle: false);
+                      }
 
-                if (items.isEmpty) {
-                  return _emptyState(theme);
-                }
-
-                return Column(
-                  children: [
-                    _segmentedToggle(theme),
-                    Expanded(
-                      child: GridView.builder(
+                      return GridView.builder(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
                         itemCount: items.length,
@@ -92,71 +131,140 @@ class _WatchlistPageState extends State<WatchlistPage> {
                           childAspectRatio: 16 / 9,
                         ),
                         itemBuilder: (_, i) => _netflixCard(context, items[i]),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
   // 🔁 Segmented Toggle
   Widget _segmentedToggle(ThemeData theme) {
+    final items = <({WatchlistFilter value, String label})>[
+      (value: WatchlistFilter.available, label: "Available"),
+      (value: WatchlistFilter.downloaded, label: "Downloaded"),
+      (value: WatchlistFilter.gifted, label: "Gifted"),
+      (value: WatchlistFilter.expired, label: "Expired"),
+    ];
+
     return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Container(
-        height: 40,
-        width: ResponsiveWidget.isMobile(context) ? double.infinity : 520,
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Row(
-          children: [
-            _segment(theme, WatchlistFilter.available, "Available"),
-            _segment(theme, WatchlistFilter.gifted, "Gifted"),
-            _segment(theme, WatchlistFilter.expired, "Expired"),
-          ],
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: SizedBox(
+        height: 35,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: items.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 7),
+          itemBuilder: (_, index) {
+            final item = items[index];
+            return _filterChip(
+              theme,
+              item.value,
+              item.label,
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _segment(
+  Widget _filterChip(
     ThemeData theme,
     WatchlistFilter value,
     String label,
   ) {
     final selected = selectedFilter == value;
 
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => selectedFilter = value),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          decoration: BoxDecoration(
-            color: selected ? theme.primaryColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(30),
+    return GestureDetector(
+      onTap: () => _onFilterSelected(value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+
+          // ✅ Selected state (like your image)
+          color: selected ? theme.primaryColor : Colors.transparent,
+
+          border: Border.all(
+            color: selected ? theme.primaryColor : Colors.grey.shade400,
           ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected ? Colors.white : theme.canvasColor,
-              fontWeight: FontWeight.w600,
-            ),
+
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: theme.primaryColor.withOpacity(0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  )
+                ]
+              : [],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : theme.primaryColor,
           ),
         ),
       ),
     );
   }
 
-  // 🎬 Card
-  Widget _netflixCard(BuildContext context, dynamic content) {
+  List<_WatchlistEntry> _buildEntries({
+    required PurchaseContentProvider purchaseProvider,
+    required OfflineDownloadProvider offlineProvider,
+  }) {
+    final entriesById = <int, _WatchlistEntry>{};
+
+    for (final userContent in purchaseProvider.userContentList) {
+      final movie = userContent.movie;
+      final movieId = movie?.id;
+      if (movie == null || movieId == null) continue;
+
+      entriesById[movieId] = _WatchlistEntry(
+        movie: movie,
+        isActive: userContent.active ?? false,
+        isGifted: userContent.isGifted ?? false,
+        isDownloaded: offlineProvider.isDownloaded(movieId),
+      );
+    }
+
+    if (selectedFilter == WatchlistFilter.downloaded) {
+      for (final movie in offlineProvider.downloadedContents) {
+        final movieId = movie.id;
+        if (movieId == null) continue;
+
+        entriesById[movieId] = _WatchlistEntry(
+          movie: movie,
+          isActive: true,
+          isGifted: entriesById[movieId]?.isGifted ?? false,
+          isDownloaded: true,
+        );
+      }
+    }
+
+    return entriesById.values.where((entry) {
+      switch (selectedFilter) {
+        case WatchlistFilter.available:
+          return !(isOffline && entry.isDownloaded);
+        case WatchlistFilter.downloaded:
+          return entry.isDownloaded;
+        case WatchlistFilter.gifted:
+          return true;
+        case WatchlistFilter.expired:
+          return true;
+      }
+    }).toList();
+  }
+
+  Widget _netflixCard(BuildContext context, _WatchlistEntry content) {
     final theme = Theme.of(context);
     final item = content.movie;
-    if (item == null) return const SizedBox();
 
     return GestureDetector(
       onTap: content.active == true
@@ -180,11 +288,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
         child: Stack(
           children: [
             Positioned.fill(
-              child: Image.network(
-                item.posterUrlList?.first ?? '',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(color: Colors.black26),
-              ),
+              child: _posterBackground(item),
             ),
             Positioned.fill(
               child: Container(
@@ -276,22 +380,95 @@ class _WatchlistPageState extends State<WatchlistPage> {
                   ),
                 ),
               ),
+            if (content.isDownloaded)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black87,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.download_done_rounded,
+                          color: Colors.white, size: 12),
+                      SizedBox(width: 4),
+                      Text(
+                        'Offline',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _emptyState(ThemeData theme) {
+  Widget _posterBackground(Content item) {
+    final posterUrl =
+        item.posterUrlList?.isNotEmpty == true ? item.posterUrlList!.first : '';
+    if (posterUrl.isEmpty) {
+      return _offlinePosterFallback(item);
+    }
+
+    return Image.network(
+      posterUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => _offlinePosterFallback(item),
+    );
+  }
+
+  Widget _offlinePosterFallback(Content item) {
+    return Container(
+      color: Colors.black26,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.movie_creation_outlined,
+              color: Colors.white70, size: 42),
+          const SizedBox(height: 10),
+          Text(
+            item.title ?? 'Movie',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyState(ThemeData theme, {bool showSegmentedToggle = true}) {
+    final emptyTitle = selectedFilter == WatchlistFilter.downloaded
+        ? "No downloaded content found"
+        : "No content found";
     return Column(
       children: [
-        _segmentedToggle(theme),
+        if (showSegmentedToggle) _segmentedToggle(theme),
         const Spacer(),
         Icon(Icons.video_library_outlined,
             size: 80, color: theme.canvasColor.withOpacity(0.6)),
         const SizedBox(height: 12),
         Text(
-          "No content found",
+          emptyTitle,
           style: TextStyle(
             color: theme.canvasColor,
             fontSize: 16,
@@ -301,4 +478,20 @@ class _WatchlistPageState extends State<WatchlistPage> {
       ],
     );
   }
+}
+
+class _WatchlistEntry {
+  const _WatchlistEntry({
+    required this.movie,
+    required this.isActive,
+    required this.isGifted,
+    required this.isDownloaded,
+  });
+
+  final Content movie;
+  final bool isActive;
+  final bool isGifted;
+  final bool isDownloaded;
+
+  bool get active => isActive;
 }

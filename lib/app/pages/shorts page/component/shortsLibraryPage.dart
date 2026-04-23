@@ -2,12 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/shorts%20page/component/ShortsPlayerPage.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/provider/userProvider.dart';
+import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -400,7 +401,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
             backgroundColor: theme.primaryColor,
             onTap: () {
               isDialOpen.value = false;
-              _shareMovie(context, short);
+              _shareShortContent(context, short);
             },
           ),
         ],
@@ -408,34 +409,13 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
     );
   }
 
-  void _shareMovie(BuildContext context, ShortModel short) async {
-    final String shareText = '''
-🎬 ${short.title ?? ''}
-
-${short.description ?? ''}
-
-▶️ Watch here:
-
-
-📲 Download Filmytell App now!
-'''
-        .trim();
-
-    if (kIsWeb) {
-      // Flutter Web fallback → Copy to Clipboard
-      await Clipboard.setData(ClipboardData(text: shareText));
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Share text copied to clipboard"),
-        ),
-      );
-    } else {
-      // Android / iOS / Desktop
-      await Share.share(
-        shareText,
-        subject: short.title ?? "",
-      );
-    }
+  Future<void> _shareShortContent(BuildContext context, ShortModel short) {
+    return showContentShareSheet(
+      context,
+      short.toShareContent(),
+      contentType: DeepLinkContentType.short,
+      unavailableMessage: "Mini series details are not available yet",
+    );
   }
+
 }

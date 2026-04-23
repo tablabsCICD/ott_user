@@ -29,9 +29,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Future<void> getData() async {
     final localSharePreferences = LocalSharePreferences();
     final user = await localSharePreferences.getUser();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    await userProvider.hydrateFromCache();
     if (user != null && mounted) {
-      await Provider.of<UserProvider>(context, listen: false)
-          .getUserById(user.id!);
+      await userProvider.getUserById(user.id!);
     }
   }
 
@@ -40,6 +41,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
     var themeProvider = Provider.of<ThemeProvider>(context);
     var selectedThemeData = themeProvider.getTheme;
     UserProvider userProvider = Provider.of<UserProvider>(context);
+    final cachedPhoto = userProvider.userObj.profilePhoto ?? '';
+    final ImageProvider avatarImage = userProvider.profileController.text.isNotEmpty
+        ? NetworkImage(userProvider.profileController.text)
+        : cachedPhoto.isNotEmpty
+            ? NetworkImage(cachedPhoto)
+            : AssetImage(ImageConstant.profile);
 
     return Scaffold(
       backgroundColor: selectedThemeData.scaffoldBackgroundColor,
@@ -109,19 +116,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         Hero(
                           tag: 'profile',
                           child: CircleAvatar(
-                              radius: 50,
-                              backgroundColor: selectedThemeData.cardColor,
-                              backgroundImage: userProvider
-                                      .profileController.text.isNotEmpty
-                                  ? NetworkImage(
-                                      userProvider.profileController.text)
-                                  : userProvider.userObj.profilePhoto != null
-                                      ? userProvider
-                                              .userObj.profilePhoto!.isNotEmpty
-                                          ? NetworkImage(userProvider
-                                              .userObj.profilePhoto!)
-                                          : AssetImage(ImageConstant.profile)
-                                      : AssetImage(ImageConstant.profile)),
+                            radius: 50,
+                            backgroundColor: selectedThemeData.cardColor,
+                            backgroundImage: avatarImage,
+                          ),
                         ),
                         InkWell(
                           onTap: () => userProvider.pickImage(),
@@ -189,19 +187,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       onPressed: () async {
                         if (userProvider.profileController.text.isEmpty) {
                           userProvider.profileController.text =
-                              userProvider.userObj.profilePhoto!;
+                              userProvider.userObj.profilePhoto ?? '';
                         }
                         if (userProvider.emailController.text.isEmpty) {
                           userProvider.emailController.text =
-                              userProvider.userObj.emailId!;
+                              userProvider.userObj.emailId ?? '';
                         }
                         if (userProvider.firstNameController.text.isEmpty) {
                           userProvider.firstNameController.text =
-                              userProvider.userObj.firstName!;
+                              userProvider.userObj.firstName ?? '';
                         }
                         if (userProvider.lastNameController.text.isEmpty) {
                           userProvider.lastNameController.text =
-                              userProvider.userObj.lastName!;
+                              userProvider.userObj.lastName ?? '';
                         }
                         var result = await userProvider.updateUser();
                         if (result['success'] == true) {

@@ -198,7 +198,7 @@ class DashboardProvider extends BaseProvider {
 
   getContentById(int id) async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
-    String apiUrl = ApiConstant.getVideoById(id, user!.id);
+    String apiUrl = ApiConstant.getVideoById(id, user?.id ?? 1);
     ApiHelper apiHelper = ApiHelper();
 
     try {

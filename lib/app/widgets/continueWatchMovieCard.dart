@@ -53,7 +53,6 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   bool _isVideoInitialized = false;
   bool _isPreviewPlaying = false;
   bool _isAutoPlayActive = false;
-  bool _hasPlayedOnce = false;
   bool _isStartingPreview = false;
   bool _hasVideoListener = false;
   Timer? _playDelayTimer;
@@ -119,7 +118,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     try {
       await _videoController!.initialize();
       _videoController!
-        ..setLooping(false)
+        ..setLooping(true)
         ..setVolume(_isMuted ? 0.0 : 1.0);
 
       if (!_hasVideoListener) {
@@ -163,7 +162,6 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
 
     if (oldWidget.movie.trailerUrl != widget.movie.trailerUrl) {
       _playDelayTimer?.cancel();
-      _hasPlayedOnce = false;
       _stopPreview();
       _disposeVideoController();
     }
@@ -187,7 +185,6 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       _schedulePreview();
     } else {
       _playDelayTimer?.cancel();
-      _hasPlayedOnce = false;
       _stopPreview();
       if (_activePreviewState == this) {
         _activePreviewState = null;
@@ -209,7 +206,6 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       _schedulePreview();
     } else {
       _playDelayTimer?.cancel();
-      _hasPlayedOnce = false;
       _stopPreview();
       if (_activePreviewState == this) {
         _activePreviewState = null;
@@ -242,32 +238,25 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     final value = controller.value;
     if (value.hasError) {
       debugPrint("Trailer playback error: ${value.errorDescription}");
-      _stopPreview(markPlayed: true);
+      _stopPreview();
       if (_activePreviewState == this) {
         _activePreviewState = null;
       }
       return;
     }
-
-    if (!_isPreviewPlaying) return;
-    if (!value.isInitialized || value.duration == Duration.zero) return;
-
-    final nearlyDone =
-        value.position >= value.duration - const Duration(milliseconds: 200);
-    if (nearlyDone) {
-      _stopPreview(markPlayed: true);
-      if (_activePreviewState == this) {
-        _activePreviewState = null;
-      }
-    }
   }
 
   void _schedulePreview() {
-    if (_hasPlayedOnce || _playDelayTimer != null) return;
+    if (_playDelayTimer != null) return;
     if (_isStartingPreview || _isPreviewPlaying) return;
     if (!_isPlayTriggerActive) return;
 
-    _playDelayTimer = Timer(const Duration(seconds: 1), () {
+    if (_isAutoPlayActive && !_isHovered) {
+      _startPreviewIfEligible();
+      return;
+    }
+
+    _playDelayTimer = Timer(const Duration(milliseconds: 250), () {
       _playDelayTimer = null;
       _startPreviewIfEligible();
     });
@@ -279,24 +268,19 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
 
   Future<void> _startPreviewIfEligible() async {
     if (!mounted) return;
-    if (_hasPlayedOnce || !_isPlayTriggerActive) return;
+    if (!_isPlayTriggerActive) return;
     if (_isStartingPreview || _isPreviewPlaying) return;
-
-    if (!_isHovered &&
-        _activePreviewState != null &&
-        _activePreviewState != this &&
-        _activePreviewState!._isPreviewPlaying) {
-      return;
-    }
 
     _isStartingPreview = true;
     try {
+      _activatePreview();
+
       final ready = await _ensureVideoInitialized();
       if (!ready || !mounted) {
         if (_activePreviewState == this) {
           _activePreviewState = null;
         }
-        _stopPreview(markPlayed: true);
+        _stopPreview();
         return;
       }
 
@@ -305,7 +289,6 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
         return;
       }
 
-      _activatePreview();
       _ensureMuted();
 
       await _videoController!.play();
@@ -313,7 +296,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       setState(() => _isPreviewPlaying = true);
     } catch (e) {
       debugPrint("Trailer play failed: $e");
-      _stopPreview(markPlayed: true);
+      _stopPreview();
       if (_activePreviewState == this) {
         _activePreviewState = null;
       }
@@ -338,7 +321,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     controller.setVolume(0.0);
   }
 
-  void _stopPreview({bool external = false, bool markPlayed = false}) {
+  void _stopPreview({bool external = false}) {
     final controller = _videoController;
     if (controller == null || !_isVideoInitialized) return;
 
@@ -352,7 +335,6 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     if (!mounted) return;
     setState(() {
       _isPreviewPlaying = false;
-      if (markPlayed) _hasPlayedOnce = true;
     });
   }
 

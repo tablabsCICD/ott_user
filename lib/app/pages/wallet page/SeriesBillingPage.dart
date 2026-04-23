@@ -4,8 +4,10 @@ import 'package:ott/app/provider/series_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../provider/themeProvider.dart';
 import '../../widgets/show_toast.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SeriesBillingPage extends StatefulWidget {
   final int seriesId;
@@ -13,12 +15,18 @@ class SeriesBillingPage extends StatefulWidget {
   final int? episodeId;
   final double amount;
   final bool isSeason;
+  final String? seriesTitle;
+  final String? itemTitle;
+  final String? rentalDuration;
 
   const SeriesBillingPage({
     super.key,
     required this.seriesId,
     required this.amount,
     required this.isSeason,
+    this.seriesTitle,
+    this.itemTitle,
+    this.rentalDuration,
     this.seasonId,
     this.episodeId,
   });
@@ -257,14 +265,14 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                           : () async {
                               setState(() => isProcessing = true);
 
-                              bool ok = false;
+                              SeriesPurchaseResult result;
                               if (widget.isSeason) {
-                                ok = await provider.purchaseSeason(
+                                result = await provider.purchaseSeason(
                                   widget.seasonId!,
                                   widget.seriesId,
                                 );
                               } else {
-                                ok = await provider.purchaseEpisode(
+                                result = await provider.purchaseEpisode(
                                   widget.episodeId!,
                                   widget.seriesId,
                                 );
@@ -273,11 +281,18 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                               if (!mounted) return;
                               Navigator.pop(dialogContext);
 
-                              if (ok) {
+                              if (result.success) {
+                                /*  await _handlePostPurchaseInvoice(
+                                  pageContext,
+                                  result,
+                                ); */
+                                if (!mounted) return;
                                 Navigator.pop(pageContext, true);
                               } else {
-                                final msg = provider.error ??
-                                    "Purchase failed. Please try again.";
+                                final msg = result.message.isNotEmpty
+                                    ? result.message
+                                    : (provider.error ??
+                                        "Purchase failed. Please try again.");
                                 CustomToast.show(pageContext, msg,
                                     isSuccess: false);
                               }
@@ -360,8 +375,7 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                               );
 
                               if (!mounted) return;
-                              if (result is Map &&
-                                  result['success'] == true) {
+                              if (result is Map && result['success'] == true) {
                                 final addResult =
                                     await walletProvider.onPaymentVerified();
 
@@ -402,6 +416,231 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
           },
         );
       },
+    );
+  }
+
+  Future<void> _handlePostPurchaseInvoice(
+    BuildContext pageContext,
+    SeriesPurchaseResult result,
+  ) async {
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: pageContext,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+        final invoiceUrl = result.invoiceUrl?.trim() ?? '';
+        final hasInvoiceUrl = invoiceUrl.isNotEmpty;
+        final purchasedItem = widget.itemTitle ??
+            (widget.isSeason
+                    ? 'Season ${result.seasonId ?? ''}'
+                    : 'Episode ${result.episodeId ?? ''}')
+                .trim();
+
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              20 + MediaQuery.of(sheetContext).viewInsets.bottom,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: Colors.green.shade100,
+                        child: Icon(
+                          Icons.check_circle,
+                          color: Colors.green.shade700,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Purchase successful',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              result.message,
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildInvoiceRow(
+                          'Series',
+                          widget.seriesTitle ?? 'Series',
+                        ),
+                        _buildInvoiceRow(
+                          'Item',
+                          purchasedItem.isEmpty
+                              ? (widget.isSeason
+                                  ? 'Season Purchase'
+                                  : 'Episode Purchase')
+                              : purchasedItem,
+                        ),
+                        _buildInvoiceRow(
+                          'Coins Deducted',
+                          '${result.coinsDeducted ?? widget.amount.toInt()}',
+                        ),
+                        _buildInvoiceRow(
+                          'New Balance',
+                          '${result.newBalance ?? 'N/A'}',
+                        ),
+                        _buildInvoiceRow(
+                          'Invoice',
+                          hasInvoiceUrl ? 'Available' : 'Not available',
+                          isLast: !hasInvoiceUrl,
+                        ),
+                        if (hasInvoiceUrl)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 10),
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                final Uri url = Uri.parse(invoiceUrl);
+                                if (await canLaunchUrl(url)) {
+                                  await launchUrl(url,
+                                      mode: LaunchMode.externalApplication);
+                                }
+                              },
+                              child: Text("View Invoice"),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  if (hasInvoiceUrl)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primaryColor,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        onPressed: () async {
+                          await SharePlus.instance.share(
+                            ShareParams(
+                              title: 'Purchase Invoice',
+                              subject: 'Purchase Invoice',
+                              text:
+                                  'Here is your invoice for ${widget.seriesTitle ?? 'Series'}.\n$invoiceUrl',
+                            ),
+                          );
+                        },
+                        icon: const Icon(
+                          Icons.share_outlined,
+                          color: Colors.white,
+                        ),
+                        label: const Text(
+                          'Share Invoice',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (hasInvoiceUrl) const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(sheetContext),
+                      child: const Text('Done'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInvoiceRow(
+    String label,
+    String value, {
+    bool isLast = false,
+  }) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

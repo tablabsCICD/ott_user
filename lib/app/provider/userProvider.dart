@@ -77,6 +77,20 @@ class UserProvider extends BaseProvider {
 
   User get userObj => userObject;
 
+  Future<void> hydrateFromCache() async {
+    final cachedUser = await LocalSharePreferences.localSharePreferences.getUser();
+    if (cachedUser == null) return;
+
+    userObject = cachedUser;
+    firstNameController.text = cachedUser.firstName ?? "";
+    lastNameController.text = cachedUser.lastName ?? "";
+    mobileController.text = cachedUser.mobileNumber ?? "";
+    emailController.text = cachedUser.emailId ?? "";
+    dobController.text = cachedUser.dob ?? "";
+    profileController.text = cachedUser.profilePhoto ?? "";
+    notifyListeners();
+  }
+
   // Create a new user
   Future<Map<String, dynamic>> createUser() async {
     String apiUrl = ApiConstant.registration;
@@ -627,6 +641,11 @@ class UserProvider extends BaseProvider {
   }
 
   Future<void> getUserById(int id) async {
+    if (id <= 0) {
+      await hydrateFromCache();
+      return;
+    }
+
     String apiUrl = ApiConstant.getUserById(id);
     ApiHelper apiHelper = ApiHelper();
     try {
@@ -639,20 +658,26 @@ class UserProvider extends BaseProvider {
           if (addUserResponse.data != null &&
               addUserResponse.data!.user != null) {
             userObject = addUserResponse.data!.user!;
+            final localSharePreferences = LocalSharePreferences();
+            localSharePreferences.setString(
+              SharedPreferencesConstant.currentUser,
+              jsonEncode(addUserResponse.data!.user),
+            );
             notifyListeners();
           } else {
             debugPrint("empty data: ${addUserResponse.message}");
+            await hydrateFromCache();
           }
         } else {
           debugPrint("Error: ${addUserResponse.message}");
+          await hydrateFromCache();
         }
       } else {
-        throw Exception(
-            'Failed to delete user. Status code: ${response.statusCode}');
+        await hydrateFromCache();
       }
     } catch (error) {
       debugPrint("Error: $error");
-      throw Exception('An error occurred while delete user.');
+      await hydrateFromCache();
     }
   }
 

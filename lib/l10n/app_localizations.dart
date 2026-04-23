@@ -209,7 +209,7 @@ abstract class AppLocalizations {
   /// No description provided for @movie.
   ///
   /// In en, this message translates to:
-  /// **'Movie'**
+  /// **'Movies'**
   String get movie;
 
   /// No description provided for @series.

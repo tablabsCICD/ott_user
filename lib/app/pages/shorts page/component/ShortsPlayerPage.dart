@@ -1,10 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/services/invoice_service.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
+import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/widgets/shimmer%20loader/shimmer_loader.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -86,6 +89,32 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     });
   }
 
+  Future<void> _handleShortPurchaseInvoice(ShortPart part) async {
+    final user = await LocalSharePreferences.localSharePreferences.getUser();
+    if (!mounted || user == null) return;
+
+    try {
+      final invoice = await InvoiceService.instance.generatePurchaseInvoice(
+        PurchaseInvoiceData(
+          user: user,
+          contentTitle: widget.short.title,
+          contentType: 'MINI SERIES',
+          amount: part.coins.toDouble(),
+          purchaseDate: DateTime.now(),
+          itemTitle: part.title,
+          itemSubtitle: 'Part ${part.partNumber}',
+          rentalDuration: "3", //widget.short.rentlDuration,
+        ),
+      );
+
+      if (!mounted) return;
+      await InvoiceService.instance.showShareOptions(context, invoice);
+    } catch (error) {
+      if (!mounted) return;
+      debugPrint('Short invoice generation error: $error');
+    }
+  }
+
   Future<void> _loadPart(int index) async {
     if (_isLoadingPart || index < 0 || index >= _parts.length) return;
     _isLoadingPart = true;
@@ -125,7 +154,14 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
           return;
         }
 
-        await context.read<ShortProvider>().purchaseShortPart(partId: partId);
+        final purchaseResult = await context
+            .read<ShortProvider>()
+            .purchaseShortPart(partId: partId);
+
+        /*  if (purchaseResult != null &&
+            purchaseResult['alreadyPurchased'] != true) {
+          await _handleShortPurchaseInvoice(part);
+        } */
 
         await _refreshFromBackend();
       }
@@ -569,7 +605,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
           ),
           const SizedBox(height: 18),
           _actionBtn(Icons.telegram_outlined, "share", () {
-            _shareShort(context, part);
+            _shareShortContent(context);
           }),
           //const SizedBox(height: 18),
           // _actionBtn(Icons.visibility_outlined, "${part.views}", null),
@@ -613,6 +649,15 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _shareShortContent(BuildContext context) {
+    return showContentShareSheet(
+      context,
+      widget.short.toShareContent(),
+      contentType: DeepLinkContentType.short,
+      unavailableMessage: "Mini series details are not available yet",
     );
   }
 

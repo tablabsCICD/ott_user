@@ -1,24 +1,24 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
 import 'package:ott/app/pages/movie%20details%20page/component/actionButtonWidget.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
+import 'package:ott/app/provider/offline_download_provider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
+import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../widgets/show_toast.dart';
 import '../watchlist page/component/playMoviePage.dart';
@@ -58,6 +58,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     await dashboardProvider.getCastByContentId(widget.movieId);
     await Provider.of<VideoProvider>(context, listen: false)
         .getRatingReview(widget.movieId);
+    final content = dashboardProvider.content;
+    if (content.id != null && mounted) {
+      await Provider.of<OfflineDownloadProvider>(context, listen: false)
+          .refreshStatus(content);
+    }
   }
 
   @override
@@ -130,21 +135,6 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                             content, selectedThemeData, controller)
                         : _buildMobileView(
                             content, selectedThemeData, controller),
-                    Positioned(
-                      bottom: 50,
-                      right: 10,
-                      child: IconButton(
-                        tooltip: 'Share Movie',
-                        style: IconButton.styleFrom(
-                          backgroundColor: selectedThemeData.primaryColor,
-                        ),
-                        icon: Icon(
-                          Icons.share,
-                          color: Colors.white,
-                        ),
-                        onPressed: () => _shareMovie(context, content),
-                      ),
-                    )
                   ],
                 );
               },
@@ -245,10 +235,13 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                             content,
                             centered: true,
                           )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        : Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 12,
+                            runSpacing: 12,
                             children: [
                               _buildButtons(context, content),
+                              _buildShareActionButton(context, content),
                             ],
                           ),
                     const SizedBox(height: 16),
@@ -415,7 +408,15 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               const SizedBox(height: 8),
               content.isFeatured == true
                   ? _buildReleaseDateHighlight(context, content)
-                  : _buildButtons(context, content),
+                  : Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        _buildButtons(context, content),
+                        _buildShareActionButton(context, content),
+                      ],
+                    ),
               const SizedBox(height: 12),
               _buildCastSection(context, content),
               const SizedBox(height: 10),
@@ -695,11 +696,14 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     final canPlay =
         movie.contentUrl?.isNotEmpty == true && contentType.isNotEmpty;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    final canDownloadOffline = _canDownloadOffline(movie);
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      alignment: WrapAlignment.center,
       children: [
         _buildGifting(context, movie),
-        const SizedBox(width: 20),
         movie.isRental == false
             ? ActionButtonWidget(
                 label: '${lang.rent} ₹${movie.price}',
@@ -739,7 +743,54 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                   );
                 },
               ),
+        if (canDownloadOffline) _buildDownloadActionButton(context, movie),
       ],
+    );
+  }
+
+  bool _canDownloadOffline(Content movie) {
+    final contentType = (movie.type ?? '').toLowerCase();
+    return movie.isRental == true &&
+        movie.isDownloadable == true &&
+        (contentType == 'movie' || contentType == 'series') &&
+        (movie.contentUrl?.trim().isNotEmpty ?? false);
+  }
+
+  Widget _buildDownloadActionButton(BuildContext context, Content movie) {
+    final contentId = movie.id;
+    if (contentId == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Consumer<OfflineDownloadProvider>(
+      builder: (context, offlineProvider, _) {
+        final isDownloading = offlineProvider.isDownloading(contentId);
+        final isDownloaded = offlineProvider.isDownloaded(contentId);
+        final progress = offlineProvider.progressFor(contentId);
+
+        return ActionButtonWidget(
+          label: isDownloading
+              ? 'Downloading ${(progress * 100).clamp(0, 100).toStringAsFixed(0)}%'
+              : isDownloaded
+                  ? 'Remove Offline'
+                  : 'Download',
+          icon: isDownloaded ? Icons.delete_outline : Icons.download_rounded,
+          onTap: () async {
+            if (isDownloading) return;
+
+            final result = isDownloaded
+                ? await offlineProvider.deleteContent(movie)
+                : await offlineProvider.downloadContent(movie);
+
+            if (!mounted) return;
+            CustomToast.show(
+              context,
+              result['message']?.toString() ?? 'Action completed.',
+              isSuccess: result['success'] == true,
+            );
+          },
+        );
+      },
     );
   }
 
@@ -880,35 +931,17 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   //   );
   // }
 
-  void _shareMovie(BuildContext context, Content movie) async {
-    final String shareText = '''
-🎬 ${movie.title ?? ''}
-
-${movie.description ?? ''}
-
-▶️ Watch here:
-${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? ''}
-
-📲 Download OTT Media House App now!
-'''
-        .trim();
-
-    if (kIsWeb) {
-      // Flutter Web fallback → Copy to Clipboard
-      await Clipboard.setData(ClipboardData(text: shareText));
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Share text copied to clipboard"),
-        ),
-      );
-    } else {
-      // Android / iOS / Desktop
-      await Share.share(
-        shareText,
-        subject: movie.title ?? "Movie",
-      );
-    }
+  Widget _buildShareActionButton(BuildContext context, Content movie) {
+    return ActionButtonWidget(
+      label: 'Share',
+      icon: Icons.qr_code_2_rounded,
+      onTap: () => showContentShareSheet(
+        context,
+        movie,
+        contentType: DeepLinkContentType.movie,
+        unavailableMessage: "Movie details are not available yet",
+      ),
+    );
   }
 
   Widget _buildConfirmationBox(BuildContext context, Content movie) {

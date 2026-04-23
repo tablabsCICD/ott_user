@@ -204,6 +204,26 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
+    final maxScrollExtent = controller.position.maxScrollExtent;
+    if (maxScrollExtent - controller.offset <= 1.0) {
+      int bestLastIndex = itemCount - 1;
+
+      if (items != null && items.isNotEmpty) {
+        for (int i = itemCount - 1; i >= 0; i--) {
+          if (i < items.length &&
+              (items[i].trailerUrl?.trim().isNotEmpty ?? false)) {
+            bestLastIndex = i;
+            break;
+          }
+        }
+      }
+
+      if (notifier.value != bestLastIndex) {
+        notifier.value = bestLastIndex;
+      }
+      return;
+    }
+
     final viewStart = controller.offset;
     final viewEnd = viewStart + viewport;
     final firstCandidate = math.max(
@@ -282,45 +302,18 @@ class _HomePageState extends State<HomePage> {
     if (!mounted) return;
 
     final screenHeight = MediaQuery.of(context).size.height;
-    final viewportCenter = screenHeight / 2;
-
-    double? bestDistance;
-    int? bestRowIndex;
-    bool bestIsContinueWatch = false;
-
-    if (_continueWatchItemCount > 0) {
-      final centerY = _rowCenterY(_continueWatchKey);
-      if (centerY != null && centerY >= 0 && centerY <= screenHeight) {
-        bestDistance = (centerY - viewportCenter).abs();
-        bestIsContinueWatch = true;
-      }
-    }
-
-    for (final entry in _rowActiveIndexes.entries) {
-      final rowIndex = entry.key;
-      final key = _rowKeys[rowIndex];
-      if (key == null) continue;
-      final centerY = _rowCenterY(key);
-      if (centerY == null || centerY < 0 || centerY > screenHeight) {
-        continue;
-      }
-
-      final distance = (centerY - viewportCenter).abs();
-      if (bestDistance == null || distance < bestDistance) {
-        bestDistance = distance;
-        bestRowIndex = rowIndex;
-        bestIsContinueWatch = false;
-      }
-    }
-
     for (final entry in _rowActiveIndexes.entries) {
       final rowIndex = entry.key;
       final notifier = entry.value;
       final controller = _rowControllers[rowIndex];
       final itemCount = _rowItemCounts[rowIndex] ?? 0;
       final items = _rowItems[rowIndex];
+      final key = _rowKeys[rowIndex];
+      final centerY = key == null ? null : _rowCenterY(key);
+      final isVisible =
+          centerY != null && centerY >= 0 && centerY <= screenHeight;
 
-      if (rowIndex != bestRowIndex || controller == null) {
+      if (!isVisible || controller == null) {
         if (notifier.value != null) {
           notifier.value = null;
         }
@@ -331,7 +324,9 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (_continueWatchItemCount > 0) {
-      if (bestIsContinueWatch) {
+      final centerY = _rowCenterY(_continueWatchKey);
+      final isVisible = centerY != null && centerY >= 0 && centerY <= screenHeight;
+      if (isVisible) {
         _updateActiveIndex(
           _continueWatchActiveIndex,
           _continueWatchController,
@@ -443,11 +438,36 @@ class _HomePageState extends State<HomePage> {
                                                       _rowActiveIndexes[index]!;
                                                   final rowKey =
                                                       _rowKeys[index]!;
+                                                  final rowIndex = index;
 
                                                   // 🔥 Attach listener ONLY once
                                                   if (!controller
                                                       .hasListeners) {
                                                     controller.addListener(() {
+                                                      final rowNotifier =
+                                                          _rowActiveIndexes[
+                                                              rowIndex];
+                                                      final rowController =
+                                                          _rowControllers[
+                                                              rowIndex];
+                                                      final rowItemCount =
+                                                          _rowItemCounts[
+                                                                  rowIndex] ??
+                                                              0;
+                                                      final rowItems =
+                                                          _rowItems[rowIndex];
+
+                                                      if (rowNotifier != null &&
+                                                          rowController !=
+                                                              null) {
+                                                        _updateActiveIndex(
+                                                          rowNotifier,
+                                                          rowController,
+                                                          rowItemCount,
+                                                          rowItems,
+                                                        );
+                                                      }
+
                                                       _scheduleVisibleUpdate();
 
                                                       if (controller.position

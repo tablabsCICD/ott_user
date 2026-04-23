@@ -1,12 +1,13 @@
 class ApiConstant {
-  static const String baseUrl =
-      "http://ec2-13-201-5-93.ap-south-1.compute.amazonaws.com:8080/ott/";
+  static const String baseUrl = "https://filmytell.in/ott/";
+
+  /* static const String baseUrl =
+      "http://ec2-43-205-217-79.ap-south-1.compute.amazonaws.com:8080/ott/"; */
 
   static String login = "${baseUrl}user/email/login2";
   static String registration = '${baseUrl}user/RegisterUser';
 
   //otp login
-
   static String sendOTP(mobileNum) =>
       "${baseUrl}userNew/SendOTPOnMobileWithRegistration?mobileNumber=$mobileNum";
   static String verifyOTP(mobileNum, otp) =>
@@ -55,6 +56,7 @@ class ApiConstant {
         amount == amount.truncateToDouble() ? amount.toInt() : amount;
     return "${baseUrl}api/razorpay/create-order?amount=$normalizedAmount&customerId=$userId";
   }
+
   static String verifyWalletPayment = "${baseUrl}api/razorpay/verify-payment";
   static String withdrawMoneyFromWallet(userId, amount, contentId) =>
       "${baseUrl}deduct?userId=$userId&amount=$amount&contentId=$contentId";
@@ -76,7 +78,14 @@ class ApiConstant {
       "${baseUrl}api/TicketRaised/user/$userId";
 
   static String saveUserContent = "${baseUrl}api/save";
-  static String getUserContent(id) => "${baseUrl}api/filter/remainingDays/$id";
+  static String getUserContent(
+    id, {
+    bool isGifted = false,
+    bool isExpired = false,
+  }) =>
+      "${baseUrl}api/filter/remainingDays/$id?isGifted=$isGifted&isExpired=$isExpired";
+  static String purchaseHistory(userId, fromDate, toDate, selectedType) =>
+      "${baseUrl}api/purchase-history?userId=$userId&fromDate=$fromDate&toDate=$toDate&type=$selectedType";
 
   static String saveViewHistory = "${baseUrl}api/saveOrUpdate";
 

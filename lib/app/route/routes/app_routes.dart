@@ -2,7 +2,10 @@ class AppRoutes {
   static const login = '/login';
   static const entry = '/splash';
   static const home = '/home';
-  static const news = '/news';
+  static const news = '/home';
+  static const movieDetails = '/movie';
+  static const seriesDetails = '/series';
+  static const shortDetails = '/short';
 
   static const forgotPassword = '/forgot_password';
   static const newPassword = '/new_password';

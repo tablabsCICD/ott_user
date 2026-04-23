@@ -46,6 +46,22 @@ class _CategoryContentPageState extends State<CategoryContentPage> {
     final viewport = _scrollController.position.viewportDimension;
     if (viewport <= 0) return;
 
+    final maxScrollExtent = _scrollController.position.maxScrollExtent;
+    if (maxScrollExtent - _scrollController.offset <= 1.0) {
+      int lastIndex = widget.contents.length - 1;
+      for (int i = widget.contents.length - 1; i >= 0; i--) {
+        if (widget.contents[i].trailerUrl?.trim().isNotEmpty ?? false) {
+          lastIndex = i;
+          break;
+        }
+      }
+
+      if (_activeIndex.value != lastIndex) {
+        _activeIndex.value = lastIndex;
+      }
+      return;
+    }
+
     final rowExtent = _cardHeight + _gap;
     final center = _scrollController.offset + (viewport / 2);
     int index = (center / rowExtent).floor();

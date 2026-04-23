@@ -190,7 +190,7 @@ class _BookmarkPageState extends State<BookmarkPage> {
           children: [
             _segment(theme, BookmarkFilter.movies, "Movies"),
             _segment(theme, BookmarkFilter.series, "Series"),
-            _segment(theme, BookmarkFilter.shorts, "Shorts"),
+            _segment(theme, BookmarkFilter.shorts, "Mini Series"),
           ],
         ),
       ),

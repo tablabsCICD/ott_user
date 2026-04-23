@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/onboarding pages/selectLanguagePage.dart';
-import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 import '../../core/constant/prefrense_constant.dart';
 import '../../core/utils/sharepreferences.dart';
@@ -29,12 +28,16 @@ class _SplashScreenState extends State<SplashScreen> {
     final loggedIn =
         await _prefs.getBool(SharedPreferencesConstant.isUserLoggedIn);
 
-    _isLoggedIn = loggedIn ?? false;
+    _isLoggedIn = loggedIn;
 
     // Splash delay
     await Future.delayed(const Duration(seconds: 2));
 
     if (!mounted) return;
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) {
+      return;
+    }
 
     Navigator.pushReplacement(
       context,
@@ -43,21 +46,12 @@ class _SplashScreenState extends State<SplashScreen> {
             _isLoggedIn ? NavigationPage() : const SelectLocaleLanguagePage(),
       ),
     );
+
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    /// Responsive text size
-    double textSize;
-    if (ResponsiveWidget.isMobile(context)) {
-      textSize = 16;
-    } else if (ResponsiveWidget.isTablet(context)) {
-      textSize = 20;
-    } else {
-      textSize = 22;
-    }
 
     return Scaffold(
       backgroundColor: theme.primaryColor,

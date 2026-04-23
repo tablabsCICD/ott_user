@@ -4,15 +4,18 @@ import 'dart:developer';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ott/data/models/response/saveUserContent.dart';
 import 'package:ott/data/models/user.dart';
 
 import '../../data/models/content.dart';
 import '../../data/models/response/purchesContentListResponse.dart';
 import '../core/network/api_helper.dart';
+import '../core/constant/prefrense_constant.dart';
 import '../core/utils/sharepreferences.dart';
 
 class PurchaseContentProvider extends ChangeNotifier {
+  static const String _purchaseCacheKey = 'cached_purchase_content';
   List<UserContent> _userContentList = [];
   bool _isSavingContent = false;
 
@@ -64,6 +67,7 @@ class PurchaseContentProvider extends ChangeNotifier {
         if (addUserResponse.success == true) {
           if (addUserResponse.data != null) {
             _userContentList.add(addUserResponse.data!.userContentPurchase!);
+            await _persistPurchaseContentCache();
             notifyListeners();
             return {'success': true, 'message': addUserResponse.message!};
           } else {
@@ -96,9 +100,24 @@ class PurchaseContentProvider extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, Object>> getPurchaseContent() async {
+  Future<Map<String, Object>> getPurchaseContent({
+    bool isGifted = false,
+    bool isExpired = false,
+  }) async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
-    String apiUrl = ApiConstant.getUserContent(user!.id!);
+    if (user?.id == null) {
+      await _loadPurchaseContentCache();
+      return {
+        'success': false,
+        'message': 'User data is not available.',
+      };
+    }
+
+    String apiUrl = ApiConstant.getUserContent(
+      user!.id!,
+      isGifted: isGifted,
+      isExpired: isExpired,
+    );
     print("API URL: $apiUrl");
 
     ApiHelper apiHelper = ApiHelper();
@@ -121,6 +140,9 @@ class PurchaseContentProvider extends ChangeNotifier {
                 parsedResponse.data!.userContent != null) {
               _userContentList.clear();
               _userContentList.addAll(parsedResponse.data!.userContent!);
+              if (!isGifted && !isExpired) {
+                await _persistPurchaseContentCache();
+              }
               notifyListeners();
 
               return {
@@ -146,14 +168,60 @@ class PurchaseContentProvider extends ChangeNotifier {
           return {'success': false, 'message': 'Error while parsing data: $e'};
         }
       } else {
-        return {'success': false, 'message': 'Something went wrong!'};
+        await _loadPurchaseContentCache();
+        return {
+          'success': _userContentList.isNotEmpty,
+          'message': _userContentList.isNotEmpty
+              ? 'Loaded cached purchase content.'
+              : 'Something went wrong!',
+        };
       }
     } catch (error) {
       debugPrint("Network error: $error");
+      await _loadPurchaseContentCache();
       return {
-        'success': false,
-        'message': 'An error occurred while fetching content: $error'
+        'success': _userContentList.isNotEmpty,
+        'message': _userContentList.isNotEmpty
+            ? 'Loaded cached purchase content.'
+            : 'An error occurred while fetching content: $error'
       };
     }
+  }
+
+  Future<void> _persistPurchaseContentCache() async {
+    final user = await LocalSharePreferences.localSharePreferences.getUser();
+    if (user?.id == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = _userContentList
+        .map((item) => jsonEncode(item.toJson()))
+        .toList(growable: false);
+    await prefs.setStringList(
+      '${SharedPreferencesConstant.currentUser}_${_purchaseCacheKey}_${user!.id}',
+      encoded,
+    );
+  }
+
+  Future<void> _loadPurchaseContentCache() async {
+    final user = await LocalSharePreferences.localSharePreferences.getUser();
+    if (user?.id == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final rawList = prefs.getStringList(
+          '${SharedPreferencesConstant.currentUser}_${_purchaseCacheKey}_${user!.id}',
+        ) ??
+        const <String>[];
+
+    final cachedItems = <UserContent>[];
+    for (final raw in rawList) {
+      try {
+        cachedItems.add(UserContent.fromJson(jsonDecode(raw)));
+      } catch (_) {}
+    }
+
+    _userContentList
+      ..clear()
+      ..addAll(cachedItems);
+    notifyListeners();
   }
 }

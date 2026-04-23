@@ -8,6 +8,7 @@ import 'package:ott/app/pages/gifted%20movies%20page/GiftedMoviesPage.dart';
 import 'package:ott/app/pages/help%20support%20page/HelpSupportPage.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/app/pages/profile%20page/component/EditProfilePage.dart';
+import 'package:ott/app/pages/profile%20page/PurchaseHistoryPage.dart';
 import 'package:ott/app/pages/profile%20page/component/about_filmytell_dialog.dart';
 import 'package:ott/app/pages/profile%20page/component/change_language.dart';
 import 'package:ott/app/pages/profile%20page/component/terms_codition_page.dart';
@@ -19,6 +20,7 @@ import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/giftProvider.dart';
+import 'package:ott/app/provider/purchase_history_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/LanguageDropdown.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
@@ -56,10 +58,12 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _fetchUserData() async {
     final localSharePreferences = LocalSharePreferences();
     final user = await localSharePreferences.getUser();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    await userProvider.hydrateFromCache();
+
     if (user != null) {
       if (mounted) {
-        await Provider.of<UserProvider>(context, listen: false)
-            .getUserById(user.id ?? 0);
+        await userProvider.getUserById(user.id ?? 0);
       }
     }
     await Provider.of<WalletProvider>(context, listen: false).getBalance();
@@ -355,6 +359,34 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                 ),
                                 ProfileOption(
+                                  icon: Icons.receipt_long,
+                                  title: "Purchase History",
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          ChangeNotifierProvider(
+                                        create: (_) =>
+                                            PurchaseHistoryProvider(),
+                                        child: const PurchaseHistoryPage(),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                ProfileOption(
+                                  icon: Icons.download_rounded,
+                                  title: "Downloads",
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const WatchlistPage(
+                                        initialFilter:
+                                            WatchlistFilter.downloaded,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                ProfileOption(
                                   icon: Icons.upcoming,
                                   title: lang.upcoming,
                                   onTap: () => Navigator.push(
@@ -584,6 +616,10 @@ class _ProfilePageState extends State<ProfilePage> {
     final userProvider = Provider.of<UserProvider>(context);
     bool isDark = theme.brightness == Brightness.dark;
     var themeProvider = Provider.of<ThemeProvider>(context, listen: true);
+    final profilePhoto = userProvider.userObj.profilePhoto ?? '';
+    final ImageProvider imageProvider = profilePhoto.isNotEmpty
+        ? NetworkImage(profilePhoto)
+        : AssetImage(ImageConstant.profile);
 
     return SliverAppBar(
       expandedHeight: 280,
@@ -644,16 +680,9 @@ class _ProfilePageState extends State<ProfilePage> {
                       CircleAvatar(
                         radius: 50,
                         backgroundColor: theme.cardColor,
-                        backgroundImage:
-                            userProvider.userObj.profilePhoto == null
-                                ? AssetImage(ImageConstant.profile)
-                                : userProvider.userObj.profilePhoto!.isNotEmpty
-                                    ? NetworkImage(
-                                        userProvider.userObj.profilePhoto!,
-                                      )
-                                    : AssetImage(ImageConstant.profile),
+                        backgroundImage: imageProvider,
                       ),
-                      userProvider.userObj.verified!
+                      (userProvider.userObj.verified ?? false)
                           ? Positioned(
                               bottom: 8,
                               right: 8,

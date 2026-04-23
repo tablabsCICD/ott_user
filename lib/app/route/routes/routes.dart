@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/news%20page/NewsScreen.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
-import 'package:ott/app/pages/sign%20in%20page/SignInPage.dart';
 
 import '../../pages/onboarding pages/SplashScreen.dart';
 import 'app_routes.dart';
@@ -24,6 +25,16 @@ class RouteGenerator {
                 payload: <String, dynamic>{},
               );
         return buildRoute(NewsScreen(args: args), settings: settings);
+
+      case AppRoutes.movieDetails:
+        final movieId = _parseMovieId(settings.arguments);
+        if (movieId == null || movieId <= 0) {
+          return _invalidMovieRoute(settings);
+        }
+        return buildRoute(
+          MovieDetailsPage(movieId: movieId),
+          settings: settings,
+        );
 
       case AppRoutes.notificationPage:
         return buildRoute(const NotificationPage(), settings: settings);
@@ -67,6 +78,52 @@ class RouteGenerator {
       {required RouteSettings settings}) {
     return MaterialPageRoute(
         settings: settings, builder: (BuildContext context) => child);
+  }
+
+  static int? _parseMovieId(Object? arguments) {
+    if (arguments is MovieDetailsRouteArgs) {
+      return arguments.movieId;
+    }
+
+    if (arguments is int) {
+      return arguments;
+    }
+
+    if (arguments is String) {
+      return int.tryParse(arguments);
+    }
+
+    if (arguments is Map<String, dynamic>) {
+      final value = arguments['movieId'] ?? arguments['id'];
+      return int.tryParse('$value');
+    }
+
+    if (arguments is Map) {
+      final value = arguments['movieId'] ?? arguments['id'];
+      return int.tryParse('$value');
+    }
+
+    return null;
+  }
+
+  static Route<dynamic> _invalidMovieRoute(RouteSettings settings) {
+    return MaterialPageRoute(
+      settings: settings,
+      builder: (_) => Scaffold(
+        appBar: AppBar(
+          title: const Text('Movie not found'),
+        ),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'The shared movie link is invalid or incomplete.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   static Route _createRoute(Widget root) {

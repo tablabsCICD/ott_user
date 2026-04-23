@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/pages/shorts%20page/ShortsPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/pages/watchlist%20page/WatchlistPage.dart';
@@ -15,6 +16,8 @@ import 'package:provider/provider.dart';
 import '../provider/userProvider.dart';
 
 class NavigationPage extends StatefulWidget {
+  const NavigationPage({super.key});
+
   @override
   _NavigationPageState createState() => _NavigationPageState();
 }
@@ -32,6 +35,14 @@ class _NavigationPageState extends State<NavigationPage> {
     UpcomingPage(),
     WalletPage(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      DeepLinkService.instance.consumePendingNavigation();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

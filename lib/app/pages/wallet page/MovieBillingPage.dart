@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:ott/app/core/services/invoice_service.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/gifted%20movies%20page/GiftedMoviesPage.dart';
 import 'package:ott/app/pages/wallet%20page/PaymentPage.dart';
 import 'package:ott/app/provider/giftProvider.dart';
@@ -554,6 +556,11 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   isSuccess: true,
                                 );
 
+                                /*  await _handlePostPurchaseInvoice(
+                                  pageContext,
+                                  quantity: giftCount > 0 ? giftCount : 1,
+                                ); */
+
                                 if (giftCount > 0) {
                                   Navigator.pushReplacement(
                                     pageContext,
@@ -697,5 +704,42 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
         );
       },
     );
+  }
+
+  Future<void> _handlePostPurchaseInvoice(
+    BuildContext pageContext, {
+    required int quantity,
+  }) async {
+    final user = await LocalSharePreferences.localSharePreferences.getUser();
+    if (!mounted || user == null) return;
+
+    try {
+      final invoice = await InvoiceService.instance.generatePurchaseInvoice(
+        PurchaseInvoiceData(
+          user: user,
+          contentTitle: widget.movie.title ?? 'Untitled Content',
+          contentType: (widget.movie.type ?? 'Movie').toUpperCase(),
+          amount: moviePrice,
+          purchaseDate: DateTime.now(),
+          itemTitle: widget.giftCount > 0 ? 'Gift Purchase' : null,
+          itemSubtitle: widget.giftCount > 0
+              ? '$quantity recipient${quantity == 1 ? '' : 's'}'
+              : null,
+          rentalDuration: widget.movie.rentlDuration,
+          quantity: quantity,
+        ),
+      );
+
+      if (!mounted) return;
+      await InvoiceService.instance.showShareOptions(pageContext, invoice);
+    } catch (error) {
+      if (!mounted) return;
+      CustomToast.show(
+        pageContext,
+        'Purchase completed, but invoice generation failed.',
+        isSuccess: false,
+      );
+      debugPrint('Invoice generation error: $error');
+    }
   }
 }

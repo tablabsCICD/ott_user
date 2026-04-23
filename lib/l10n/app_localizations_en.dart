@@ -51,7 +51,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeTitle => 'Discover, Watch, Experience...';
 
   @override
-  String get movie => 'Movie';
+  String get movie => 'Movies';
 
   @override
   String get series => 'Series';

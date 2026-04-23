@@ -1,3 +1,5 @@
+import com.android.build.gradle.LibraryExtension
+
 plugins {
   // ...
 
@@ -10,6 +12,28 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+}
+
+subprojects {
+    pluginManager.withPlugin("com.android.library") {
+        extensions.findByType(LibraryExtension::class.java)?.let { androidExt ->
+            if (androidExt.namespace == null) {
+                val manifestFile = file("src/main/AndroidManifest.xml")
+                if (manifestFile.exists()) {
+                    val manifestText = manifestFile.readText()
+                    val packageName =
+                        Regex("""package\s*=\s*"([^"]+)"""")
+                            .find(manifestText)
+                            ?.groupValues
+                            ?.getOrNull(1)
+
+                    if (!packageName.isNullOrBlank()) {
+                        androidExt.namespace = packageName
+                    }
+                }
+            }
+        }
     }
 }
 
