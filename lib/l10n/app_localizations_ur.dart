@@ -345,5 +345,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get editAddress => 'پتہ ترمیم کریں';
 
   @override
+  String get minSeries => 'منی سیریز';
+
+  @override
   String get logout => 'لاگ آؤٹ';
 }

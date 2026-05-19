@@ -346,5 +346,8 @@ class AppLocalizationsBn extends AppLocalizations {
   String get editAddress => 'ঠিকানা সম্পাদনা করুন';
 
   @override
+  String get minSeries => 'মিনি সিরিজ';
+
+  @override
   String get logout => 'লগআউট';
 }

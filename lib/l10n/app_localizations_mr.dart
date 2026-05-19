@@ -346,5 +346,8 @@ class AppLocalizationsMr extends AppLocalizations {
   String get editAddress => 'पत्ता संपादित करा';
 
   @override
+  String get minSeries => 'मिनी सिरीज';
+
+  @override
   String get logout => 'बाहेर पडा';
 }

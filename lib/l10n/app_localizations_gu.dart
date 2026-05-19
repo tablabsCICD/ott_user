@@ -347,5 +347,8 @@ class AppLocalizationsGu extends AppLocalizations {
   String get editAddress => 'સરનામું સંપાદિત કરો';
 
   @override
+  String get minSeries => 'મિની સિરીઝ';
+
+  @override
   String get logout => 'લૉગઆઉટ';
 }

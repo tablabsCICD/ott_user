@@ -345,5 +345,8 @@ class AppLocalizationsPa extends AppLocalizations {
   String get editAddress => 'ਪਤਾ ਸੰਪਾਦਿਤ ਕਰੋ';
 
   @override
+  String get minSeries => 'ਮਿਨੀ ਸੀਰੀਜ਼';
+
+  @override
   String get logout => 'ਲੌਗਆਉਟ';
 }

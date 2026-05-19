@@ -347,5 +347,8 @@ class AppLocalizationsTa extends AppLocalizations {
   String get editAddress => 'முகவரியை திருத்தவும்';
 
   @override
+  String get minSeries => 'மினி தொடர்';
+
+  @override
   String get logout => 'வெளியேறு';
 }

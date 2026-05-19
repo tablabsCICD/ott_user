@@ -346,5 +346,8 @@ class AppLocalizationsKn extends AppLocalizations {
   String get editAddress => 'ವಿಳಾಸ ಸಂಪಾದಿಸಿ';
 
   @override
+  String get minSeries => 'ಮಿನಿ ಸರಣಿ';
+
+  @override
   String get logout => 'ಲಾಗ್ ಔಟ್';
 }

@@ -348,5 +348,8 @@ class AppLocalizationsMl extends AppLocalizations {
   String get editAddress => 'വിലാസം തിരുത്തുക';
 
   @override
+  String get minSeries => 'മിനി സീരീസ്';
+
+  @override
   String get logout => 'ലോഗൗട്ട്';
 }

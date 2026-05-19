@@ -345,5 +345,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editAddress => 'Edit Address';
 
   @override
+  String get minSeries => 'Mini Series';
+
+  @override
   String get logout => 'Logout';
 }

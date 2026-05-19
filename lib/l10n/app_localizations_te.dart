@@ -347,5 +347,8 @@ class AppLocalizationsTe extends AppLocalizations {
   String get editAddress => 'చిరునామా సవరించండి';
 
   @override
+  String get minSeries => 'మినీ సిరీస్';
+
+  @override
   String get logout => 'లాగ్ అవుట్';
 }

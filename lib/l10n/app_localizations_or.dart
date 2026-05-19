@@ -346,5 +346,8 @@ class AppLocalizationsOr extends AppLocalizations {
   String get editAddress => 'ଠିକଣା ସମ୍ପାଦନ କରନ୍ତୁ';
 
   @override
+  String get minSeries => 'ମିନି ସିରିଜ୍';
+
+  @override
   String get logout => 'ଲଗଆଉଟ୍';
 }

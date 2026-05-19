@@ -346,5 +346,8 @@ class AppLocalizationsNe extends AppLocalizations {
   String get editAddress => 'ठेगाना सम्पादन गर्नुहोस्';
 
   @override
+  String get minSeries => 'मिनी सिरिज';
+
+  @override
   String get logout => 'लगआउट';
 }

@@ -794,6 +794,12 @@ abstract class AppLocalizations {
   /// **'Edit Address'**
   String get editAddress;
 
+  /// No description provided for @minSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Mini Series'**
+  String get minSeries;
+
   /// No description provided for @logout.
   ///
   /// In en, this message translates to:
