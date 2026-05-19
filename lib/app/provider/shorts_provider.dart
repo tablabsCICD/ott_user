@@ -92,8 +92,10 @@ class ShortProvider extends ChangeNotifier {
     required String lang,
     int page = 0,
   }) async {
-    final url =
-        Uri.parse(ApiConstant.getShortsByTypeLang(type, lang.toLowerCase(), page));
+    final apiUrl = type.toLowerCase() == 'trending'
+        ? ApiConstant.getTrendingShortsByLang(lang, page)
+        : ApiConstant.getLatestShortsByLang(lang, page);
+    final url = Uri.parse(apiUrl);
     final response = await http.get(url);
 
     if (response.statusCode != 200) return [];

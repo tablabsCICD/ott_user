@@ -123,5 +123,13 @@
   "aboutFilmytell": "فلمی ٹیل کے بارے میں",
   "rateUs": "ہمیں ریٹ کریں",
 
+
+  "purchaseHistory": "خریداری کی تاریخ",
+    "giftedByYou": "آپ کی جانب سے تحفہ دی گئی فلمیں",
+    "receivedGiftedMovies": "موصولہ تحفہ فلمیں",
+    "accountDetails": "اکاؤنٹ کی تفصیلات",
+    "editAddress": "پتہ ترمیم کریں",
+     "minSeries": "منی سیریز",
   "logout": "لاگ آؤٹ"
 }
+

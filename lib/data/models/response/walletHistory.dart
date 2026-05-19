@@ -58,7 +58,7 @@ class Transactions {
 
   factory Transactions.fromJson(Map<String, dynamic> json) => Transactions(
         id: json["id"],
-        amount: json["amount"],
+        amount: _asDouble(json["amount"]),
         status: json["status"],
         userId: json["userId"],
         userName: json["userName"],
@@ -81,4 +81,10 @@ class Transactions {
         "movieEndDate": movieEndDate,
         "action": action,
       };
+}
+
+double? _asDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
 }

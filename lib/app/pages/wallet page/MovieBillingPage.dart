@@ -1,5 +1,4 @@
 // ignore: file_names
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -36,6 +35,11 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
   double moviePrice = 0.0;
   DateTime? _startDate;
   DateTime? _endDate;
+
+  String get _contentLabel {
+    final type = (widget.movie.type ?? '').trim().toLowerCase();
+    return type == 'series' ? 'series' : 'movie';
+  }
 
   @override
   void initState() {
@@ -500,15 +504,10 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                               Navigator.pop(dialogContext);
 
                               try {
-                                final walletResult =
-                                    await provider.deductBalance(
-                                  coins,
-                                  movieID,
-                                );
-                                if (walletResult['success'] != true) {
+                                await provider.getBalance();
+                                if (provider.walletBalance < coins) {
                                   throw Exception(
-                                    walletResult['message']?.toString() ??
-                                        'Wallet deduction failed.',
+                                    'Insufficient wallet balance. Please recharge your wallet.',
                                   );
                                 }
 
@@ -533,9 +532,21 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   if (purchaseResult['success'] != true) {
                                     throw Exception(
                                       purchaseResult['message']?.toString() ??
-                                          'Unable to grant movie access.',
+                                          'Unable to grant $_contentLabel access.',
                                     );
                                   }
+                                }
+
+                                final walletResult =
+                                    await provider.deductBalance(
+                                  coins,
+                                  movieID,
+                                );
+                                if (walletResult['success'] != true) {
+                                  throw Exception(
+                                    walletResult['message']?.toString() ??
+                                        'Wallet deduction failed.',
+                                  );
                                 }
 
                                 Provider.of<DashboardProvider>(
@@ -664,29 +675,25 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                               if (!mounted) return;
                               if (result is Map && result['success'] == true) {
                                 final addResult =
-                                    await provider.onPaymentVerified();
+                                    await provider.onPaymentVerified(
+                                  expectedAmount: amount,
+                                );
 
                                 if (!mounted) return;
-                                if (addResult['success'] == true) {
-                                  CustomToast.show(
-                                    pageContext,
-                                    "Wallet recharged successfully.",
-                                    isSuccess: true,
-                                  );
-                                } else {
-                                  final msg =
-                                      addResult['message']?.toString() ??
-                                          "Recharge failed. Please try again.";
-                                  CustomToast.show(
-                                    pageContext,
-                                    msg,
-                                    isSuccess: false,
-                                  );
-                                }
+                                final msg = addResult['message']?.toString() ??
+                                    "Recharge failed. Please try again.";
+                                CustomToast.show(
+                                  pageContext,
+                                  msg,
+                                  isSuccess: addResult['success'] == true,
+                                );
                               } else {
                                 CustomToast.show(
                                   pageContext,
-                                  "Payment Failed ❌",
+                                  result is Map
+                                      ? result['message']?.toString() ??
+                                          "Payment failed. Please try again."
+                                      : "Payment failed. Please try again.",
                                   isSuccess: false,
                                 );
                               }

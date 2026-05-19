@@ -1,0 +1,594 @@
+<style>
+.insight-section {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 44px 42px;
+    font-family: 'Inter', sans-serif;
+    color: #2d3a5a;
+    background:
+        radial-gradient(circle at top left, rgba(228, 233, 245, 0.85), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(245, 247, 252, 0.95), transparent 32%),
+        linear-gradient(135deg, #fbfcff 0%, #f7f9fd 48%, #f3f6fb 100%);
+    border-radius: 28px;
+    box-shadow: 0 30px 70px rgba(31, 42, 68, 0.10);
+    border: 1px solid rgba(227, 231, 240, 0.9);
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.insight-section::before,
+.insight-section::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.insight-section::before {
+    width: 340px;
+    height: 340px;
+    top: -140px;
+    right: -90px;
+    background: radial-gradient(circle, rgba(117, 138, 185, 0.18) 0%, rgba(117, 138, 185, 0) 72%);
+    filter: blur(6px);
+    animation: floatOrb 10s ease-in-out infinite;
+}
+
+.insight-section::after {
+    width: 280px;
+    height: 280px;
+    bottom: -120px;
+    left: -80px;
+    background: radial-gradient(circle, rgba(215, 223, 242, 0.65) 0%, rgba(215, 223, 242, 0) 72%);
+    filter: blur(6px);
+    animation: floatOrb 12s ease-in-out infinite reverse;
+}
+
+/* HEADLINES */
+.insight-title {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 25px;
+    color: #1f2a44;
+}
+
+/* SUB LABELS */
+.insight-label {
+    font-weight: 600;
+    margin-top: 25px;
+    margin-bottom: 8px;
+    color: #1f2a44;
+}
+
+/* TEXT */
+.insight-text {
+    font-size: 15.5px;
+    line-height: 1.7;
+    margin-bottom: 12px;
+}
+
+/* LIST BOXES */
+.insight-box {
+    background: #f4f6fb;
+    border: 1px solid #e3e7f0;
+    padding: 14px 16px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+
+/* ARROW */
+.arrow {
+    font-weight: 600;
+}
+
+/* INSIGHT HIGHLIGHT */
+.insight-highlight {
+    margin-top: 20px;
+    padding: 20px;
+    background: #f9fafc;
+    border-left: 4px solid #1f2a44;
+    border-radius: 8px;
+    font-size: 15.5px;
+    line-height: 1.8;
+}
+
+/* STRONG LINE */
+.insight-strong {
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.insight-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    margin-bottom: 34px;
+    position: relative;
+    z-index: 1;
+}
+
+.insight-kicker {
+    display: inline-block;
+    margin-bottom: 14px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: rgba(31, 42, 68, 0.06);
+    border: 1px solid rgba(31, 42, 68, 0.08);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: #1f2a44;
+}
+
+.insight-main-title {
+    margin: 0 0 12px;
+    font-size: 40px;
+    line-height: 1.12;
+    letter-spacing: -0.03em;
+    color: #16213d;
+}
+
+.insight-subtitle {
+    max-width: 640px;
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.8;
+    color: #5a6787;
+}
+
+.insight-summary {
+    min-width: 240px;
+    padding: 18px 20px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(227, 231, 240, 0.9);
+    box-shadow: 0 12px 32px rgba(31, 42, 68, 0.07);
+}
+
+.insight-summary-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #7884a3;
+    margin-bottom: 8px;
+}
+
+.insight-summary-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1f2a44;
+    margin-bottom: 4px;
+}
+
+.insight-summary-text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #5a6787;
+}
+
+.insight-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 26px;
+    align-items: start;
+    position: relative;
+    z-index: 1;
+}
+
+.insight-card {
+    position: relative;
+    overflow: hidden;
+    padding: 28px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.80);
+    border: 1px solid rgba(227, 231, 240, 0.95);
+    box-shadow: 0 22px 55px rgba(31, 42, 68, 0.08);
+    transition: transform 0.45s ease, box-shadow 0.45s ease, border-color 0.45s ease;
+}
+
+.insight-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1f2a44, #5b6c95, #dfe5f1);
+}
+
+.insight-card::after {
+    content: "";
+    position: absolute;
+    right: -40px;
+    bottom: -50px;
+    width: 190px;
+    height: 190px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(113, 132, 176, 0.12) 0%, rgba(113, 132, 176, 0) 72%);
+    transition: transform 0.45s ease, opacity 0.45s ease;
+    opacity: 0.85;
+}
+
+.insight-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+.insight-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 30px 64px rgba(31, 42, 68, 0.13);
+    border-color: rgba(201, 211, 232, 1);
+}
+
+.insight-card:hover::after {
+    transform: scale(1.08);
+}
+
+.insight-case-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: #f3f6fb;
+    border: 1px solid #e3e7f0;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #46557a;
+    margin-bottom: 18px;
+}
+
+.insight-media {
+    margin-top: 22px;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(227, 231, 240, 0.9);
+    background: linear-gradient(135deg, #e9edf6 0%, #dce4f2 100%);
+    box-shadow: 0 18px 35px rgba(31, 42, 68, 0.10);
+    transition: transform 0.45s ease, box-shadow 0.45s ease;
+}
+
+.insight-media img {
+    display: block;
+    width: 100%;
+    height: 500px;
+    object-fit: cover;
+    transform: scale(1.01);
+    transition: transform 0.85s ease;
+}
+
+.insight-media:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 24px 48px rgba(31, 42, 68, 0.15);
+}
+
+.insight-media:hover img {
+    transform: scale(1.05);
+}
+
+.insight-media-caption {
+    padding: 16px 18px;
+    background: rgba(255, 255, 255, 0.92);
+    font-size: 14px;
+    line-height: 1.7;
+    color: #4f5e82;
+}
+
+.insight-conclusion {
+    margin-top: 28px;
+    padding: 26px 28px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, #1f2a44 0%, #2f4065 100%);
+    color: #ffffff;
+    box-shadow: 0 24px 50px rgba(31, 42, 68, 0.18);
+    position: relative;
+    overflow: hidden;
+}
+
+.insight-conclusion::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 38%);
+    pointer-events: none;
+}
+
+.insight-conclusion .insight-strong,
+.insight-conclusion .insight-text {
+    color: #ffffff;
+}
+
+.insight-reveal {
+    animation: premiumEntrance 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.insight-reveal-delay-1 {
+    animation-delay: 0.08s;
+}
+
+.insight-reveal-delay-2 {
+    animation-delay: 0.16s;
+}
+
+.insight-reveal-delay-3 {
+    animation-delay: 0.24s;
+}
+
+@keyframes premiumEntrance {
+    from {
+        opacity: 0;
+        transform: translateY(28px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes floatOrb {
+    0%, 100% {
+        transform: translate3d(0, 0, 0);
+    }
+    50% {
+        transform: translate3d(0, 18px, 0);
+    }
+}
+
+@media (max-width: 960px) {
+    .insight-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .insight-hero {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .insight-summary {
+        width: 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    .insight-section {
+        padding: 24px 18px;
+        border-radius: 20px;
+    }
+
+    .insight-main-title {
+        font-size: 30px;
+    }
+
+    .insight-card {
+        padding: 20px;
+        border-radius: 18px;
+    }
+
+    .insight-media img {
+        height: 320px;
+    }
+}
+</style>
+
+<div class="insight-section">
+    <div class="insight-hero insight-reveal">
+        <div>
+            <div class="insight-kicker">Inside-Out Thinking</div>
+            <h1 class="insight-main-title">Insights shaped through strategy, leadership, and reinvention.</h1>
+            <p class="insight-subtitle">
+                Two parallel perspectives that reveal the same deeper truth: the most resilient growth happens when direction is built from inherent strength, not external noise.
+            </p>
+        </div>
+
+        <div class="insight-summary insight-reveal insight-reveal-delay-1">
+            <div class="insight-summary-label">Core Theme</div>
+            <div class="insight-summary-value">Build Within</div>
+            <div class="insight-summary-text">
+                A premium point of view on brands, leadership, and decisions that last longer than trends.
+            </div>
+        </div>
+    </div>
+
+    <div class="insight-grid">
+        <div class="insight-card insight-reveal insight-reveal-delay-1">
+            <div class="insight-case-tag">Case 01 • Brands & Businesses</div>
+
+            <div class="insight-title">
+                An insight from practice – Brands & Businesses
+            </div>
+
+            <div class="insight-label">Context</div>
+            <div class="insight-text">
+                A fashion brand planning to operate in the streetwear category, driven by market trends and short-term design cycles.
+            </div>
+
+            <div class="insight-label">The Problem</div>
+            <div class="insight-box">A crowded market</div>
+            <div class="insight-box">Dependence on trends</div>
+            <div class="insight-box">Weak differentiation</div>
+
+            <div class="insight-label">The Shift</div>
+            <div class="insight-text">
+                Moved from trend-led positioning to a premium fabric-led brand narrative
+            </div>
+
+            <div class="insight-text insight-strong">This involved:</div>
+            <div class="insight-box">Reframing core strength</div>
+            <div class="insight-box">Elevating product storytelling</div>
+            <div class="insight-box">Aligning communication with premium identity</div>
+
+            <div class="insight-label">The Outcome</div>
+            <div class="insight-text">
+                Shifted from competing on trends <span class="arrow">→</span> to competing on substance and positioning
+            </div>
+
+            <div class="insight-media">
+                <img src="https://jitinthapar.com/wp-content/uploads/2026/03/speaking-1-237x300.jpeg" alt="Premium fashion brand insight visual">
+                <div class="insight-media-caption">
+                    Repositioning becomes premium when the story is anchored in what the business can consistently deliver, not just what the market currently rewards.
+                </div>
+            </div>
+
+            <div class="insight-label">The Insight</div>
+            <div class="insight-highlight">
+                <div class="insight-strong">
+                    The strongest position a brand can build is when its business strategy is anchored in the core strength it is inherently equipped to deliver.
+                </div>
+
+                <div class="insight-text">
+                    In many cases, brands shape their strategy by looking outward - responding to market trends, competition and short-term opportunities.
+                </div>
+
+                <div class="insight-text">
+                    However, the most resilient brands operate differently.
+                </div>
+
+                <div class="insight-text insight-strong">
+                    They build inside-out.
+                </div>
+
+                <div class="insight-text">
+                    By aligning their positioning with what they can consistently deliver at a fundamental level, they reduce dependence on market fluctuations and create a more stable, defensible path to growth.
+                </div>
+
+                <div class="insight-text">
+                    Because when a brand operates from its inherent strength, shifts in trends do not disrupt direction, they reinforce it.
+                </div>
+            </div>
+        </div>
+
+        <div class="insight-card insight-reveal insight-reveal-delay-2">
+            <div class="insight-case-tag">Case 02 • Leadership & Reinvention</div>
+
+            <div class="insight-title">
+                An insight shaped through Leadership and Personal Reinvention
+            </div>
+
+            <div class="insight-label">Context</div>
+            <div class="insight-text">
+                Across his leadership roles and career transitions, Jitin Thapar experienced both sides of growth - operating within structured environments and stepping into moments of uncertainty while redefining direction.
+            </div>
+
+            <div class="insight-text">
+                These transitions were not always linear.
+            </div>
+
+            <div class="insight-text">
+                They involved moving across roles, expanding capability, and at times, stepping away from familiarity to build a clearer understanding of where he was headed.
+            </div>
+
+            <div class="insight-label">The Realisation</div>
+
+            <div class="insight-text insight-strong">In organizations:</div>
+            <div class="insight-box">Leadership was often exercised through authority, not clarity</div>
+            <div class="insight-box">Decisions were driven by pressure, not direction</div>
+
+            <div class="insight-text insight-strong" style="margin-top:15px;">And in careers:</div>
+            <div class="insight-box">Growth was happening, but without a defined identity</div>
+            <div class="insight-box">Opportunities were being pursued, without understanding long-term alignment</div>
+
+            <div class="insight-label">The Conflict</div>
+            <div class="insight-text">Capability was not the problem.</div>
+            <div class="insight-text">Effort was not the problem.</div>
+            <div class="insight-text insight-strong">The absence of clarity of identity was.</div>
+
+            <div class="insight-label">The Shift</div>
+            <div class="insight-text">
+                A different approach began to take shape. One that reversed the starting point.
+            </div>
+
+            <div class="insight-text insight-strong">Instead of asking:</div>
+            <div class="insight-box">"What is the next opportunity?"</div>
+
+            <div class="insight-text insight-strong">The question became:</div>
+            <div class="insight-box">"What is the core strength and direction this should be built on?"</div>
+
+            <div class="insight-text insight-strong">This applied equally to:</div>
+            <div class="insight-box">Leadership → defining how one leads before exercising authority</div>
+            <div class="insight-box">Careers → understanding one’s axis before making decisions</div>
+
+            <div class="insight-label">The Outcome</div>
+            <div class="insight-text">Leadership became more consistent and authentic.</div>
+            <div class="insight-text">Decisions became clearer and not reactive.</div>
+            <div class="insight-text">Career moves became intentional and fulfilling.</div>
+
+            <div class="insight-label">The Insight</div>
+            <div class="insight-highlight">
+                <div class="insight-strong">The Insight (Leadership):</div>
+                <div class="insight-text">
+                    The most effective leadership emerges when it is grounded in one’s authentic self, not shaped by borrowed styles or defined by positional authority.
+                </div>
+
+                <div class="insight-text">
+                    Leaders begin to operate under pressure - to perform, to conform, or to replicate.
+                </div>
+
+                <div class="insight-text">
+                    Authentic leadership removes this friction.
+                </div>
+
+                <div class="insight-text">
+                    Because the leader is no longer performing leadership, they are operating from it.
+                </div>
+
+                <br>
+
+                <div class="insight-strong">The Insight (Career):</div>
+                <div class="insight-text">
+                    Career reinvention becomes more stable when it is built inside-out.
+                </div>
+
+                <div class="insight-text">
+                    When individuals align with their inherent strengths:
+                </div>
+
+                <div class="insight-box">Transitions become more intentional</div>
+                <div class="insight-box">Learning becomes faster and more relevant</div>
+                <div class="insight-box">Confidence becomes internal and not situational</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="insight-conclusion insight-highlight insight-reveal insight-reveal-delay-3">
+        <div class="insight-strong">
+            When leadership and careers are built from within,
+        </div>
+        <div class="insight-text">
+            external shifts, whether market changes or technological disruptions, do not weaken direction.
+        </div>
+        <div class="insight-text insight-strong">
+            They strengthen it.
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const elements = document.querySelectorAll(
+        ".insight-card, .insight-box, .insight-text, .insight-label, .insight-highlight, .insight-media, .insight-summary"
+    );
+
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = 1;
+                entry.target.style.transform = "translateY(0)";
+                entry.target.style.filter = "blur(0)";
+            }
+        });
+    }, { threshold: 0.1 });
+
+    elements.forEach((el, index) => {
+        el.style.opacity = 0;
+        el.style.transform = "translateY(24px)";
+        el.style.filter = "blur(8px)";
+        el.style.transition = "all 0.75s cubic-bezier(0.22, 1, 0.36, 1)";
+        el.style.transitionDelay = (index % 6) * 0.05 + "s";
+        observer.observe(el);
+    });
+});
+</script>

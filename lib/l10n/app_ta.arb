@@ -124,5 +124,12 @@
   "aboutFilmytell": "பில்மிடெல் பற்றி",
   "rateUs": "எங்களை மதிப்பிடுங்கள்",
 
+   "purchaseHistory": "கொள்முதல் வரலாறு",
+    "giftedByYou": "நீங்கள் பரிசளித்த திரைப்படங்கள்",
+    "receivedGiftedMovies": "பெற்ற பரிசு திரைப்படங்கள்",
+    "accountDetails": "கணக்கு விவரங்கள்",
+    "editAddress": "முகவரியை திருத்தவும்",
+    "minSeries": "மினி தொடர்",
+
   "logout": "வெளியேறு"
 }

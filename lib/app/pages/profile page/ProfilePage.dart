@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
@@ -8,10 +9,10 @@ import 'package:ott/app/pages/gifted%20movies%20page/GiftedMoviesPage.dart';
 import 'package:ott/app/pages/help%20support%20page/HelpSupportPage.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/app/pages/profile%20page/component/EditProfilePage.dart';
+import 'package:ott/app/pages/profile%20page/component/account_details_page.dart';
 import 'package:ott/app/pages/profile%20page/PurchaseHistoryPage.dart';
 import 'package:ott/app/pages/profile%20page/component/about_filmytell_dialog.dart';
 import 'package:ott/app/pages/profile%20page/component/change_language.dart';
-import 'package:ott/app/pages/profile%20page/component/terms_codition_page.dart';
 import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/pages/upcoming%20movies%20page/UpcomingPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
@@ -19,16 +20,16 @@ import 'package:ott/app/pages/watchlist%20page/WatchlistPage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
-import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/provider/purchase_history_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/LanguageDropdown.dart';
-import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/gift_claim_dialog.dart';
 import 'package:ott/app/widgets/shimmer%20loader/profile_shimmer.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constant/prefrense_constant.dart';
 import '../../core/utils/sharepreferences.dart';
 import '../../provider/userProvider.dart';
@@ -69,6 +70,73 @@ class _ProfilePageState extends State<ProfilePage> {
     await Provider.of<WalletProvider>(context, listen: false).getBalance();
   }
 
+  Future<void> _openPrivacyPolicy() async {
+    try {
+      await launchUrl(
+        Uri.parse(AppConstant.privacyPolicy),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      CustomToast.show(
+        context,
+        'Unable to open privacy policy page right now.',
+        isSuccess: false,
+      );
+    }
+  }
+
+  Future<void> _openTerms() async {
+    try {
+      await launchUrl(
+        Uri.parse(AppConstant.playStoreLink),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      CustomToast.show(
+        context,
+        'Unable to open terms and condition right now.',
+        isSuccess: false,
+      );
+    }
+  }
+
+  Future<void> _openRateUs() async {
+    try {
+      bool launched = false;
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        final marketUri = Uri.parse('market://details?id=com.filmytell.ott');
+        launched = await launchUrl(
+          marketUri,
+          mode: LaunchMode.externalApplication,
+        );
+      }
+
+      if (!launched) {
+        launched = await launchUrl(
+          Uri.parse(AppConstant.playStoreLink),
+          mode: LaunchMode.externalApplication,
+        );
+      }
+
+      if (!launched && mounted) {
+        CustomToast.show(
+          context,
+          'Unable to open rating page right now.',
+          isSuccess: false,
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+      CustomToast.show(
+        context,
+        'Unable to open rating page right now.',
+        isSuccess: false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     var walletProvider = Provider.of<WalletProvider>(context);
@@ -87,9 +155,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 SliverToBoxAdapter(
                   child: Consumer<UserProvider>(
                       builder: (context, userProvider, child) {
-                    TextEditingController couponCodeController =
-                        TextEditingController();
-
                     return SingleChildScrollView(
                       child: Center(
                         child: Column(
@@ -107,232 +172,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                     MaterialPageRoute(
                                         builder: (context) => WalletPage()),
                                   ),
-                                ),
-                              ],
-                            ),
-                            profileCard(
-                              lang.gifts,
-                              [
-                                ProfileOption(
-                                  icon: Icons.history_sharp,
-                                  title: lang.giftedMovies,
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            GiftedMoviesPage()),
-                                  ),
-                                ),
-                                ProfileOption(
-                                  icon: LucideIcons.gift,
-                                  title: lang.claimGiftCard,
-                                  onTap: () {
-                                    showDialog(
-                                      context: context,
-                                      barrierDismissible: false,
-                                      builder: (context) {
-                                        return Dialog(
-                                          backgroundColor: theme.cardColor,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(16),
-                                          ),
-                                          insetPadding:
-                                              const EdgeInsets.symmetric(
-                                                  horizontal: 24, vertical: 24),
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(20),
-                                            child: SizedBox(
-                                              width: ResponsiveWidget.isMobile(
-                                                      context)
-                                                  ? double.infinity
-                                                  : 400,
-                                              child: Stack(
-                                                children: [
-                                                  Positioned(
-                                                    top: 1,
-                                                    left: 1,
-                                                    right: 1,
-                                                    bottom: 1,
-                                                    child: Icon(
-                                                      LucideIcons.gift,
-                                                      size: 200,
-                                                      color: theme.canvasColor
-                                                          .withOpacity(0.1),
-                                                    ),
-                                                  ),
-                                                  Column(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      // Description
-                                                      Text(
-                                                        "Enter Gift Card Number",
-                                                        style: theme.textTheme
-                                                            .bodyMedium
-                                                            ?.copyWith(
-                                                          color:
-                                                              theme.canvasColor,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 4),
-
-                                                      // Input field
-                                                      CustomTextField(
-                                                        backgroundColor: theme
-                                                            .scaffoldBackgroundColor,
-                                                        isDigits: true,
-                                                        controller:
-                                                            couponCodeController,
-                                                        hintText:
-                                                            "Enter 16 Digit Number",
-                                                        textInputType:
-                                                            TextInputType.text,
-                                                      ),
-                                                      const SizedBox(
-                                                          height: 24),
-
-                                                      // Action buttons
-                                                      Row(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .end,
-                                                        children: [
-                                                          TextButton(
-                                                            onPressed: () =>
-                                                                Navigator.pop(
-                                                                    context),
-                                                            child: Text(
-                                                              "Cancel",
-                                                              style: TextStyle(
-                                                                  color: Colors
-                                                                          .grey[
-                                                                      300]),
-                                                            ),
-                                                          ),
-                                                          const SizedBox(
-                                                              width: 12),
-                                                          ElevatedButton(
-                                                            style:
-                                                                ElevatedButton
-                                                                    .styleFrom(
-                                                              backgroundColor: theme
-                                                                  .primaryColor,
-                                                              shape:
-                                                                  RoundedRectangleBorder(
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            12),
-                                                              ),
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .symmetric(
-                                                                horizontal: 24,
-                                                                vertical: 12,
-                                                              ),
-                                                            ),
-                                                            onPressed:
-                                                                () async {
-                                                              final provider =
-                                                                  Provider.of<
-                                                                          GiftProvider>(
-                                                                      context,
-                                                                      listen:
-                                                                          false);
-
-                                                              if (couponCodeController
-                                                                  .text
-                                                                  .trim()
-                                                                  .isEmpty) {
-                                                                ScaffoldMessenger.of(
-                                                                        context)
-                                                                    .showSnackBar(
-                                                                  const SnackBar(
-                                                                      content: Text(
-                                                                          "Please enter a coupon code")),
-                                                                );
-                                                                return;
-                                                              }
-
-                                                              try {
-                                                                final result = await provider
-                                                                    .useGiftByCoupon(
-                                                                        couponCodeController
-                                                                            .text
-                                                                            .trim());
-                                                                if (couponCodeController
-                                                                            .text
-                                                                            .length >
-                                                                        16 ||
-                                                                    couponCodeController
-                                                                            .text
-                                                                            .length <
-                                                                        16) {
-                                                                  CustomToast
-                                                                      .show(
-                                                                    context,
-                                                                    "Coupon code is invalid, try again.",
-                                                                    isSuccess:
-                                                                        false,
-                                                                  );
-                                                                  return;
-                                                                }
-                                                                if (result[
-                                                                        "success"] ==
-                                                                    true) {
-                                                                  CustomToast
-                                                                      .show(
-                                                                    context,
-                                                                    "Coupon applied successfully",
-                                                                    isSuccess:
-                                                                        true,
-                                                                  );
-
-                                                                  Navigator.pop(
-                                                                      context,
-                                                                      true);
-                                                                } else {
-                                                                  CustomToast
-                                                                      .show(
-                                                                    context,
-                                                                    "Failed to apply coupon",
-                                                                    isSuccess:
-                                                                        false,
-                                                                  );
-                                                                }
-                                                              } catch (e) {
-                                                                CustomToast
-                                                                    .show(
-                                                                  context,
-                                                                  "Something went wrong",
-                                                                  isSuccess:
-                                                                      false,
-                                                                );
-                                                              }
-                                                            },
-                                                            child: const Text(
-                                                              "Redeem",
-                                                              style: TextStyle(
-                                                                  color: Colors
-                                                                      .white),
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  },
                                 ),
                               ],
                             ),
@@ -360,7 +199,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 ProfileOption(
                                   icon: Icons.receipt_long,
-                                  title: "Purchase History",
+                                  title: lang.purchaseHistory,
                                   onTap: () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -375,7 +214,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 ProfileOption(
                                   icon: Icons.download_rounded,
-                                  title: "Downloads",
+                                  title: lang.downloads,
                                   onTap: () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -418,8 +257,44 @@ class _ProfilePageState extends State<ProfilePage> {
                                     );
                                   },
                                 ),
+                                ProfileOption(
+                                  icon: Icons.manage_accounts_outlined,
+                                  title: lang.accountDetails,
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const AccountDetailsPage(),
+                                      ),
+                                    );
+                                  },
+                                ),
                               ],
                             ),
+                            profileCard(
+                              lang.gifts,
+                              [
+                                ProfileOption(
+                                  icon: Icons.history_sharp,
+                                  title: lang.giftedByYou,
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            GiftedMoviesPage()),
+                                  ),
+                                ),
+                                ProfileOption(
+                                  icon: LucideIcons.gift,
+                                  title: lang.claimGiftCard,
+                                  onTap: () {
+                                    showGiftClaimDialog(context);
+                                  },
+                                ),
+                              ],
+                            ),
+
                             profileCard(
                               lang.feedbackAndInformation,
                               [
@@ -437,24 +312,26 @@ class _ProfilePageState extends State<ProfilePage> {
                                   icon: Icons.file_copy,
                                   title: lang.termsPoliciesLiscenses,
                                   onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) => const FontDemoPage()),
-                                    );
+                                    _openPrivacyPolicy();
                                   },
                                 ),
                                 ProfileOption(
                                   icon: Icons.info,
                                   title: lang.aboutFilmytell,
                                   onTap: () {
-                                    AboutFilmytellDialog.show(context);
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const AboutFilmytellScreen(),
+                                      ),
+                                    );
                                   },
                                 ),
                                 ProfileOption(
                                   icon: Icons.star,
                                   title: lang.rateUs,
-                                  onTap: () {},
+                                  onTap: _openRateUs,
                                 ),
                               ],
                             ),
@@ -483,8 +360,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               child: CircleAvatar(
                                 backgroundColor: theme.scaffoldBackgroundColor,
                                 foregroundColor: theme.scaffoldBackgroundColor,
-                                foregroundImage:
-                                    AssetImage(ImageConstant.logo2),
+                                foregroundImage: AssetImage(ImageConstant.logo),
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -616,8 +492,12 @@ class _ProfilePageState extends State<ProfilePage> {
     final userProvider = Provider.of<UserProvider>(context);
     bool isDark = theme.brightness == Brightness.dark;
     var themeProvider = Provider.of<ThemeProvider>(context, listen: true);
-    final profilePhoto = userProvider.userObj.profilePhoto ?? '';
-    final ImageProvider imageProvider = profilePhoto.isNotEmpty
+    final profilePhoto = (userProvider.userObj.profilePhoto ?? '').trim();
+    final imageUri = Uri.tryParse(profilePhoto);
+    final hasValidNetworkPhoto = profilePhoto.isNotEmpty &&
+        imageUri != null &&
+        (imageUri.isScheme('http') || imageUri.isScheme('https'));
+    final ImageProvider imageProvider = hasValidNetworkPhoto
         ? NetworkImage(profilePhoto)
         : AssetImage(ImageConstant.profile);
 

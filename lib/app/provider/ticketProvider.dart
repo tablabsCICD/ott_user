@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -17,19 +18,44 @@ import 'package:http/http.dart' as http;
 import 'package:universal_html/html.dart' as html;
 
 class TicketProvider extends ChangeNotifier {
-  List<TicketRaised> _ticketList = [];
+  final List<TicketRaised> _ticketList = [];
   List<TicketRaised> get ticketList => _ticketList;
 
   TextEditingController topicController = TextEditingController();
   String? imgUrl = '';
+  bool _isLoadingTickets = false;
+  bool _isSubmitting = false;
+  int? _deletingTicketId;
+
+  bool get isLoadingTickets => _isLoadingTickets;
+  bool get isSubmitting => _isSubmitting;
+  int? get deletingTicketId => _deletingTicketId;
 
   Future<Map<String, Object>> raiseTicket() async {
+    final topic = topicController.text.trim();
+    if (topic.isEmpty) {
+      return {'success': false, 'message': 'Please enter your query'};
+    }
+    if (topic.length < 10) {
+      return {
+        'success': false,
+        'message': 'Query must be at least 10 characters'
+      };
+    }
+
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
+    if (user == null || user.id == null) {
+      return {'success': false, 'message': 'User details not found'};
+    }
+
+    _isSubmitting = true;
+    notifyListeners();
+
     DateTime now = DateTime.now().toUtc(); // Get current time in UTC
     String formattedDate = now.toIso8601String();
     String apiUrl = ApiConstant.raiseTicket;
     RaiseTicketRequest raiseTicketRequest = RaiseTicketRequest();
-    raiseTicketRequest.userId = user!.id!;
+    raiseTicketRequest.userId = user.id!;
     raiseTicketRequest.mobileNumber =
         user.mobileNumber; //client or admin mobile number
     raiseTicketRequest.email = user.emailId; //client or admin email
@@ -37,7 +63,7 @@ class TicketProvider extends ChangeNotifier {
     raiseTicketRequest.date = formattedDate;
     raiseTicketRequest.feedback = '';
     raiseTicketRequest.tickedId = 0;
-    raiseTicketRequest.topic = topicController.text;
+    raiseTicketRequest.topic = topic;
 
     ApiHelper apiHelper = ApiHelper();
 
@@ -50,11 +76,9 @@ class TicketProvider extends ChangeNotifier {
             RaiseTicketResponse.fromJson(responseBody);
         if (raiseTicketResponse.data != null) {
           if (raiseTicketResponse.data?.ticketRaised != null) {
-            _ticketList.add(raiseTicketResponse.data!.ticketRaised!);
-            imgUrl = null;
-            _uploadedImageUrl = null;
-            topicController
-                .clear(); // Use `clear()` instead of assigning an empty string for text controllers
+            _ticketList.insert(0, raiseTicketResponse.data!.ticketRaised!);
+            clearAttachment(notify: false);
+            topicController.clear();
             notifyListeners();
             return {
               'success': true,
@@ -85,12 +109,22 @@ class TicketProvider extends ChangeNotifier {
         'success': false,
         'message': 'An error occurred while adding user: $error'
       };
+    } finally {
+      _isSubmitting = false;
+      notifyListeners();
     }
   }
 
   Future<Map<String, Object>> getRaisedTicketByUserId() async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
-    String apiUrl = ApiConstant.getRaisedTicketByUserId(user!.id!);
+    if (user == null || user.id == null) {
+      return {'success': false, 'message': 'User details not found'};
+    }
+
+    _isLoadingTickets = true;
+    notifyListeners();
+
+    String apiUrl = ApiConstant.getRaisedTicketByUserId(user.id!);
 
     ApiHelper apiHelper = ApiHelper();
 
@@ -104,6 +138,7 @@ class TicketProvider extends ChangeNotifier {
           if (getRaiseTicketListResponse.data!.ticketRaised != null) {
             _ticketList.clear();
             _ticketList.addAll(getRaiseTicketListResponse.data!.ticketRaised!);
+            _sortTicketsByLatest();
             notifyListeners();
             return {
               'success': true,
@@ -111,6 +146,8 @@ class TicketProvider extends ChangeNotifier {
             };
           } else {
             debugPrint("Empty data: ${getRaiseTicketListResponse.message}");
+            _ticketList.clear();
+            notifyListeners();
             return {
               'success': false,
               'message':
@@ -119,6 +156,8 @@ class TicketProvider extends ChangeNotifier {
           }
         } else {
           debugPrint("Error: ${getRaiseTicketListResponse.message}");
+          _ticketList.clear();
+          notifyListeners();
           return {
             'success': false,
             'message': getRaiseTicketListResponse.message ?? 'Error in response'
@@ -134,6 +173,46 @@ class TicketProvider extends ChangeNotifier {
         'success': false,
         'message': 'An error occurred while adding user: $error'
       };
+    } finally {
+      _isLoadingTickets = false;
+      notifyListeners();
+    }
+  }
+
+  Future<Map<String, Object>> deleteTicket(int ticketId) async {
+    _deletingTicketId = ticketId;
+    notifyListeners();
+
+    final apiUrl = ApiConstant.deleteTicket(ticketId);
+    final apiHelper = ApiHelper();
+
+    try {
+      final response = await apiHelper.deleteApi(apiUrl);
+      if (response.statusCode == 200) {
+        String message = 'Ticket deleted successfully';
+        try {
+          final responseBody = json.decode(response.body);
+          if (responseBody is Map<String, dynamic> &&
+              responseBody['message'] != null) {
+            message = responseBody['message'].toString();
+          }
+        } catch (_) {}
+
+        _ticketList.removeWhere((ticket) => ticket.tickedId == ticketId);
+        notifyListeners();
+        return {'success': true, 'message': message};
+      }
+
+      return {'success': false, 'message': 'Unable to delete ticket'};
+    } catch (error) {
+      debugPrint("Delete ticket error: $error");
+      return {
+        'success': false,
+        'message': 'An error occurred while deleting ticket'
+      };
+    } finally {
+      _deletingTicketId = null;
+      notifyListeners();
     }
   }
 
@@ -173,9 +252,7 @@ class TicketProvider extends ChangeNotifier {
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
       if (pickedFile != null) {
         _imageFile = io.File(pickedFile.path);
-        if (kIsWeb && _webFile != null) {
-          await uploadImage();
-        }
+        await uploadImage();
         notifyListeners();
       }
     }
@@ -201,7 +278,7 @@ class TicketProvider extends ChangeNotifier {
 
         final byteData = reader.result as List<int>;
         final multipartFile = http.MultipartFile.fromBytes(
-          'profilePicture',
+          'file',
           byteData,
           filename: _webFile!.name,
         );
@@ -211,15 +288,14 @@ class TicketProvider extends ChangeNotifier {
 
         if (response.statusCode == 200) {
           final responseBody = await response.stream.bytesToString();
-          _uploadedImageUrl = jsonDecode(responseBody);
-          imgUrl = _uploadedImageUrl!;
+          _setUploadedImageUrl(responseBody);
           notifyListeners();
         }
       } else if (!kIsWeb && _imageFile != null) {
         // Mobile/desktop upload logic
         final request = http.MultipartRequest('POST', url);
         request.files.add(await http.MultipartFile.fromPath(
-          'profilePicture',
+          'file',
           _imageFile!.path,
           //  contentType: MediaType('image', 'jpeg'),
         ));
@@ -227,16 +303,53 @@ class TicketProvider extends ChangeNotifier {
 
         if (response.statusCode == 200) {
           final responseBody = await response.stream.bytesToString();
-          _uploadedImageUrl = jsonDecode(responseBody);
-          imgUrl = _uploadedImageUrl!;
+          _setUploadedImageUrl(responseBody);
           notifyListeners();
         }
       }
     } catch (e) {
-      print('Error uploading image: $e');
+      log('Error uploading image: $e');
     } finally {
       _isUploading = false;
       notifyListeners();
     }
+  }
+
+  void _setUploadedImageUrl(String responseBody) {
+    final decoded = jsonDecode(responseBody);
+    String? fileUrl;
+
+    if (decoded is Map<String, dynamic>) {
+      final data = decoded['data'];
+      if (data is Map<String, dynamic>) {
+        fileUrl = data['fileUrl'] as String?;
+      } else if (data is String) {
+        fileUrl = data;
+      }
+      fileUrl ??= decoded['fileUrl'] as String?;
+    } else if (decoded is String) {
+      fileUrl = decoded;
+    }
+
+    if (fileUrl != null && fileUrl.isNotEmpty) {
+      _uploadedImageUrl = fileUrl;
+      imgUrl = fileUrl;
+    } else {
+      log('Upload success but fileUrl missing: $responseBody');
+    }
+  }
+
+  void clearAttachment({bool notify = true}) {
+    _imageFile = null;
+    _webFile = null;
+    _uploadedImageUrl = null;
+    imgUrl = '';
+    if (notify) {
+      notifyListeners();
+    }
+  }
+
+  void _sortTicketsByLatest() {
+    _ticketList.sort((a, b) => (b.date ?? 0).compareTo(a.date ?? 0));
   }
 }

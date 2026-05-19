@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/pages/shorts%20page/ShortsPage.dart';
@@ -8,6 +9,7 @@ import 'package:ott/app/pages/upcoming%20movies%20page/UpcomingPage.dart';
 import 'package:ott/app/pages/home%20page/HomePage.dart';
 import 'package:ott/app/pages/profile%20page/ProfilePage.dart';
 import 'package:ott/app/pages/search%20page/SearchPage.dart';
+import 'package:ott/app/pages/series%20page/SeriesListPage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -24,10 +26,12 @@ class NavigationPage extends StatefulWidget {
 
 class _NavigationPageState extends State<NavigationPage> {
   int _currentIndex = 0;
+  bool _isExitDialogOpen = false;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   final List<Widget> _pages = [
     HomePage(),
+    SeriesListPage(),
     ShortsPage(),
     SearchPage(),
     WatchlistPage(),
@@ -53,109 +57,187 @@ class _NavigationPageState extends State<NavigationPage> {
     final lang = AppLocalizations.of(context)!;
     final userProvider = Provider.of<UserProvider>(context);
 
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-      body: isDesktop
-          ? Row(
-              children: [
-                Container(
-                  width: 250,
-                  color: selectedThemeData.cardColor,
-                  child: _buildDrawerContent(context),
-                ),
-                Expanded(
-                  child: _pages[_currentIndex],
-                ),
-              ],
-            )
-          : Stack(
-              children: [
-                _pages[_currentIndex],
-                if (!isMobile)
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: IconButton(
-                      onPressed: () {
-                        _scaffoldKey.currentState?.openDrawer();
-                      },
-                      icon: Icon(
-                        Icons.menu,
-                        color: Colors.white,
-                      ),
-                    ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _handleBackNavigation();
+      },
+      child: Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: selectedThemeData.scaffoldBackgroundColor,
+        body: isDesktop
+            ? Row(
+                children: [
+                  Container(
+                    width: 250,
+                    color: selectedThemeData.cardColor,
+                    child: _buildDrawerContent(context),
                   ),
-              ],
-            ),
-      drawer: isMobile
-          ? null
-          : Drawer(
-              child: _buildDrawerContent(context),
-            ),
-      bottomNavigationBar: isMobile
-          ? BottomNavigationBar(
-              type: BottomNavigationBarType.fixed,
-              currentIndex: _currentIndex,
-              onTap: (index) => setState(() => _currentIndex = index),
-              backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-              selectedItemColor: selectedThemeData.primaryColor,
-              unselectedItemColor: selectedThemeData.canvasColor,
-              showSelectedLabels: true,
-              showUnselectedLabels: false,
-              items: [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.home),
-                  label: lang.home,
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.play_circle),
-                  label: 'Shorts',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.search),
-                  label: lang.search,
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.movie),
-                  label: lang.watchlist,
-                ),
-                // BottomNavigationBarItem(
-                //   icon: Icon(Icons.upcoming_outlined),
-                //   label: lang.upcoming,
-                // ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.person),
-                  activeIcon: Hero(
-                    tag: 'profile',
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: selectedThemeData.primaryColor,
-                          width: 1,
+                  Expanded(
+                    child: _pages[_currentIndex],
+                  ),
+                ],
+              )
+            : Stack(
+                children: [
+                  _pages[_currentIndex],
+                  if (!isMobile)
+                    Positioned(
+                      top: 10,
+                      left: 10,
+                      child: IconButton(
+                        onPressed: () {
+                          _scaffoldKey.currentState?.openDrawer();
+                        },
+                        icon: Icon(
+                          Icons.menu,
+                          color: Colors.white,
                         ),
                       ),
-                      child: CircleAvatar(
-                        radius: 12,
-                        backgroundColor:
-                            selectedThemeData.primaryColor.withOpacity(0.5),
-                        foregroundImage:
-                            userProvider.userObj.profilePhoto == null
-                                ? AssetImage(ImageConstant.profile)
-                                : userProvider.userObj.profilePhoto!.isNotEmpty
-                                    ? NetworkImage(
-                                        userProvider.userObj.profilePhoto!,
-                                      )
-                                    : AssetImage(ImageConstant.profile),
+                    ),
+                ],
+              ),
+        drawer: isMobile
+            ? null
+            : Drawer(
+                child: _buildDrawerContent(context),
+              ),
+        bottomNavigationBar: isMobile
+            ? BottomNavigationBar(
+                type: BottomNavigationBarType.fixed,
+                currentIndex: _currentIndex,
+                onTap: (index) => setState(() => _currentIndex = index),
+                backgroundColor: selectedThemeData.scaffoldBackgroundColor,
+                selectedItemColor: selectedThemeData.primaryColor,
+                unselectedItemColor: selectedThemeData.canvasColor,
+                showSelectedLabels: true,
+                showUnselectedLabels: false,
+                items: [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.home),
+                    label: lang.home,
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.video_library),
+                    label: lang.series,
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.play_circle),
+                    label: 'Mini Series',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.search),
+                    label: lang.search,
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.movie),
+                    label: lang.watchlist,
+                  ),
+                  // BottomNavigationBarItem(
+                  //   icon: Icon(Icons.upcoming_outlined),
+                  //   label: lang.upcoming,
+                  // ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.person),
+                    activeIcon: Hero(
+                      tag: 'profile_nav',
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: selectedThemeData.primaryColor,
+                            width: 1,
+                          ),
+                        ),
+                        child: CircleAvatar(
+                          radius: 12,
+                          backgroundColor:
+                              selectedThemeData.primaryColor.withOpacity(0.5),
+                          foregroundImage: userProvider.userObj.profilePhoto ==
+                                  null
+                              ? AssetImage(ImageConstant.profile)
+                              : userProvider.userObj.profilePhoto!.isNotEmpty
+                                  ? NetworkImage(
+                                      userProvider.userObj.profilePhoto!,
+                                    )
+                                  : AssetImage(ImageConstant.profile),
+                        ),
                       ),
                     ),
+                    label: lang.profile,
                   ),
-                  label: lang.profile,
-                ),
-              ],
-            )
-          : null,
+                ],
+              )
+            : null,
+      ),
+    );
+  }
+
+  Future<void> _handleBackNavigation() async {
+    if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    if (_currentIndex != 0) {
+      setState(() => _currentIndex = 0);
+      return;
+    }
+
+    if (_isExitDialogOpen) return;
+    _isExitDialogOpen = true;
+    final shouldExit = await _showExitConfirmationDialog();
+    _isExitDialogOpen = false;
+
+    if (shouldExit == true) {
+      SystemNavigator.pop();
+    }
+  }
+
+  Future<bool?> _showExitConfirmationDialog() {
+    final theme = Theme.of(context);
+
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: theme.cardColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          title: Text(
+            'Close app?',
+            style: TextStyle(
+              color: theme.canvasColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to close the app?',
+            style: TextStyle(
+              color: theme.canvasColor.withOpacity(0.75),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: theme.canvasColor),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -225,7 +307,7 @@ class _NavigationPageState extends State<NavigationPage> {
             child: ClipRRect(
               borderRadius: BorderRadiusGeometry.circular(25),
               child: Image.asset(
-                ImageConstant.logo2,
+                ImageConstant.logo,
               ),
             ),
           ),
@@ -252,17 +334,19 @@ class _NavigationPageState extends State<NavigationPage> {
         ),
         _buildDrawerTile(context, index: 0, icon: Icons.home, title: lang.home),
         _buildDrawerTile(context,
-            index: 1, icon: Icons.play_circle_fill_sharp, title: 'Shorts'),
+            index: 1, icon: Icons.video_library, title: lang.series),
         _buildDrawerTile(context,
-            index: 2, icon: Icons.search, title: lang.search),
+            index: 2, icon: Icons.play_circle_fill_sharp, title: 'Mini Series'),
         _buildDrawerTile(context,
-            index: 3, icon: Icons.movie, title: lang.watchlist),
+            index: 3, icon: Icons.search, title: lang.search),
         _buildDrawerTile(context,
-            index: 5, icon: Icons.upcoming, title: lang.upcoming),
+            index: 4, icon: Icons.movie, title: lang.watchlist),
         _buildDrawerTile(context,
-            index: 6, icon: Icons.account_balance_wallet, title: lang.wallet),
+            index: 6, icon: Icons.upcoming, title: lang.upcoming),
         _buildDrawerTile(context,
-            index: 4, icon: Icons.person, title: lang.profile),
+            index: 7, icon: Icons.account_balance_wallet, title: lang.wallet),
+        _buildDrawerTile(context,
+            index: 5, icon: Icons.person, title: lang.profile),
       ],
     );
   }

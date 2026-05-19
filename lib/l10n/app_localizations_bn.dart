@@ -331,5 +331,20 @@ class AppLocalizationsBn extends AppLocalizations {
   String get rateUs => 'আমাদের রেট করুন';
 
   @override
+  String get purchaseHistory => 'ক্রয়ের ইতিহাস';
+
+  @override
+  String get giftedByYou => 'আপনার দেওয়া উপহার সিনেমা';
+
+  @override
+  String get receivedGiftedMovies => 'প্রাপ্ত উপহার সিনেমা';
+
+  @override
+  String get accountDetails => 'অ্যাকাউন্টের বিবরণ';
+
+  @override
+  String get editAddress => 'ঠিকানা সম্পাদনা করুন';
+
+  @override
   String get logout => 'লগআউট';
 }

@@ -348,8 +348,9 @@ class _LoginCardState extends State<LoginCard> {
 
   // OTP send/verify logic
   void _handleLoginOrOtp() async {
-    if (!_formKey.currentState!.validate() || _mobileController.text.isEmpty)
+    if (!_formKey.currentState!.validate() || _mobileController.text.isEmpty) {
       return;
+    }
     final lang = AppLocalizations.of(context)!;
 
     setState(() => isLoading = true);

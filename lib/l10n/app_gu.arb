@@ -125,6 +125,11 @@
   "aboutFilmytell": "ફિલ્મિટેલ વિશે",
   "rateUs": "અમને રેટ કરો",
   
-
+ "purchaseHistory": "ખરીદી ઇતિહાસ",
+    "giftedByYou": "તમે ભેટ આપેલી ફિલ્મો",
+    "receivedGiftedMovies": "મળેલી ભેટ ફિલ્મો",
+    "accountDetails": "ખાતા વિગતો",
+    "editAddress": "સરનામું સંપાદિત કરો",
+    "minSeries": "મિની સિરીઝ",
   "logout": "લૉગઆઉટ"
 }

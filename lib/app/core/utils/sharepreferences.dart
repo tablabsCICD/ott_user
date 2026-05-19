@@ -13,25 +13,25 @@ class LocalSharePreferences {
   }
   LocalSharePreferences._internal();
   setString(String key, String val) async {
-    SharedPreferences _prefs = await SharedPreferences.getInstance();
-    _prefs.setString(key, val);
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setString(key, val);
   }
 
   setBool(String key, bool val) async {
-    SharedPreferences _prefs = await SharedPreferences.getInstance();
-    _prefs.setBool(key, val);
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setBool(key, val);
   }
 
   Future<String> getString(String key) async {
-    SharedPreferences _prefs = await SharedPreferences.getInstance();
-    return _prefs.getString(key)!;
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString(key)!;
   }
 
   Future<bool> getBool(String key) async {
-    SharedPreferences _prefs = await SharedPreferences.getInstance();
+    SharedPreferences prefs = await SharedPreferences.getInstance();
     bool val = false;
-    if (_prefs.getBool(key) != null) {
-      val = _prefs.getBool(key)!;
+    if (prefs.getBool(key) != null) {
+      val = prefs.getBool(key)!;
     }
     return val;
   }
@@ -63,10 +63,10 @@ class LocalSharePreferences {
   }
 
   Future<bool> logOut() async {
-    SharedPreferences _prefs = await SharedPreferences.getInstance();
-    await _prefs.setBool(SharedPreferencesConstant.isUserLoggedIn, false);
-    await _prefs.remove(SharedPreferencesConstant.currentUser);
-    await _prefs.clear();
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(SharedPreferencesConstant.isUserLoggedIn, false);
+    await prefs.remove(SharedPreferencesConstant.currentUser);
+    await prefs.clear();
     return true;
   }
 }

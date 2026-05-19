@@ -1,15 +1,25 @@
-import 'dart:async';
 import 'package:chewie/chewie.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 import '../../../../data/models/content.dart';
 import '../../../core/constant/api_constant.dart';
 import '../../../core/network/api_helper.dart';
 import '../../../core/utils/sharepreferences.dart';
+
+String? _extractYoutubeId(String urlOrId) {
+  final value = urlOrId.trim();
+  if (value.isEmpty) return null;
+
+  final converted = YoutubePlayer.convertUrlToId(value);
+  if (converted != null && converted.isNotEmpty) return converted;
+
+  final looksLikeVideoId = RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(value);
+  return looksLikeVideoId ? value : null;
+}
 
 class TrailerPage extends StatefulWidget {
   final String? trailerUrl;
@@ -28,12 +38,16 @@ class TrailerPage extends StatefulWidget {
 
 class _TrailerPageState extends State<TrailerPage> {
   VideoPlayerController? _videoController;
+  YoutubePlayerController? _youtubeController;
   ChewieController? _chewieController;
 
   bool _initialized = false;
   bool _historySaved = false;
+  bool _hasError = false;
 
-  bool get _hasUrl => widget.trailerUrl?.isNotEmpty == true;
+  String get _trailerUrl => widget.trailerUrl?.trim() ?? '';
+  bool get _hasUrl => _trailerUrl.isNotEmpty;
+  String? get _youtubeId => _extractYoutubeId(_trailerUrl);
 
   @override
   void initState() {
@@ -42,8 +56,36 @@ class _TrailerPageState extends State<TrailerPage> {
   }
 
   Future<void> _initPlayer() async {
-    _videoController =
-        VideoPlayerController.networkUrl(Uri.parse(widget.trailerUrl!));
+    final youtubeId = _youtubeId;
+    if (youtubeId != null && youtubeId.isNotEmpty) {
+      _youtubeController = YoutubePlayerController(
+        initialVideoId: youtubeId,
+        flags: const YoutubePlayerFlags(
+          autoPlay: true,
+          mute: false,
+          loop: false,
+        ),
+      )..addListener(() {
+          if (!mounted) return;
+          _youtubeController!.value.isPlaying
+              ? WakelockPlus.enable()
+              : WakelockPlus.disable();
+        });
+
+      if (mounted) {
+        setState(() => _initialized = true);
+      }
+      return;
+    }
+
+    final uri = Uri.tryParse(_trailerUrl);
+    if (uri == null || !uri.hasScheme) {
+      if (mounted) setState(() => _hasError = true);
+      return;
+    }
+
+    try {
+      _videoController = VideoPlayerController.networkUrl(uri);
 
     await _videoController!.initialize();
     _videoController!.play();
@@ -91,7 +133,12 @@ class _TrailerPageState extends State<TrailerPage> {
       ],
     );
 
-    setState(() => _initialized = true);
+      if (mounted) setState(() => _initialized = true);
+    } catch (_) {
+      await _videoController?.dispose();
+      _videoController = null;
+      if (mounted) setState(() => _hasError = true);
+    }
   }
 
   Future<void> _saveHistory() async {
@@ -115,6 +162,7 @@ class _TrailerPageState extends State<TrailerPage> {
   @override
   void dispose() {
     _videoController?.dispose();
+    _youtubeController?.dispose();
     _chewieController?.dispose();
     WakelockPlus.disable();
 
@@ -133,6 +181,11 @@ class _TrailerPageState extends State<TrailerPage> {
               child: Text("No trailer available",
                   style: TextStyle(color: Colors.white)),
             )
+          : _hasError
+              ? const Center(
+                  child: Text("Trailer unavailable",
+                      style: TextStyle(color: Colors.white)),
+                )
           : !_initialized
               ? Center(
                   child: CircularProgressIndicator(
@@ -159,6 +212,26 @@ class _TrailerPageState extends State<TrailerPage> {
   }
 
   Widget _playerSurface() {
+    if (_youtubeController != null) {
+      return YoutubePlayerBuilder(
+        player: YoutubePlayer(
+          controller: _youtubeController!,
+          showVideoProgressIndicator: true,
+          progressIndicatorColor: Colors.redAccent,
+          progressColors: const ProgressBarColors(
+            playedColor: Colors.redAccent,
+            handleColor: Colors.redAccent,
+          ),
+        ),
+        builder: (context, player) {
+          return AspectRatio(
+            aspectRatio: 16 / 9,
+            child: player,
+          );
+        },
+      );
+    }
+
     return AspectRatio(
       aspectRatio: 16 / 9,
       child: Stack(
@@ -223,10 +296,14 @@ class TrailerPreview extends StatefulWidget {
 
 class _TrailerPreviewState extends State<TrailerPreview> {
   VideoPlayerController? _c;
+  YoutubePlayerController? _youtubeController;
   bool _showControls = false;
   bool _isDisposed = false;
   bool _hasError = false;
   int _initToken = 0;
+
+  String get _trailerUrl => widget.trailerUrl?.trim() ?? '';
+  String? get _youtubeId => _extractYoutubeId(_trailerUrl);
 
   @override
   void initState() {
@@ -234,21 +311,56 @@ class _TrailerPreviewState extends State<TrailerPreview> {
 
     widget.controller.pause = () {
       _c?.pause();
+      _youtubeController?.pause();
     };
 
     widget.controller.play = () {
       _c?.play();
+      _youtubeController?.play();
     };
 
     if (widget.trailerUrl?.isNotEmpty == true) _init();
   }
 
   Future<void> _init() async {
-    final trailerUrl = widget.trailerUrl;
-    if (trailerUrl?.isNotEmpty != true) return;
+    if (_trailerUrl.isEmpty) return;
 
     final currentToken = ++_initToken;
-    final c = VideoPlayerController.networkUrl(Uri.parse(trailerUrl!));
+    final youtubeId = _youtubeId;
+    if (youtubeId != null && youtubeId.isNotEmpty) {
+      _youtubeController?.dispose();
+      final controller = YoutubePlayerController(
+        initialVideoId: youtubeId,
+        flags: const YoutubePlayerFlags(
+          autoPlay: true,
+          mute: false,
+          loop: true,
+        ),
+      );
+
+      if (_isDisposed || currentToken != _initToken) {
+        controller.dispose();
+        return;
+      }
+
+      if (mounted) {
+        setState(() {
+          _hasError = false;
+          _youtubeController = controller;
+        });
+      }
+      return;
+    }
+
+    final uri = Uri.tryParse(_trailerUrl);
+    if (uri == null || !uri.hasScheme) {
+      if (mounted && !_isDisposed) {
+        setState(() => _hasError = true);
+      }
+      return;
+    }
+
+    final c = VideoPlayerController.networkUrl(uri);
 
     try {
       await c.initialize();
@@ -295,6 +407,9 @@ class _TrailerPreviewState extends State<TrailerPreview> {
     _c?.pause();
     _c?.dispose();
     _c = null;
+    _youtubeController?.pause();
+    _youtubeController?.dispose();
+    _youtubeController = null;
   }
 
   @override
@@ -327,6 +442,10 @@ class _TrailerPreviewState extends State<TrailerPreview> {
     }
 
     if (_c == null) {
+      if (_youtubeController != null) {
+        return _buildYoutubePreview();
+      }
+
       return AspectRatio(
         aspectRatio: 16 / 9,
         child: Center(
@@ -443,6 +562,59 @@ class _TrailerPreviewState extends State<TrailerPreview> {
                     );
                   },
                   icon: Icon(
+                    Icons.fullscreen,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildYoutubePreview() {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _showControls = true),
+      onExit: (_) => setState(() => _showControls = false),
+      child: GestureDetector(
+        onTap: () => setState(() => _showControls = !_showControls),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: YoutubePlayer(
+                  controller: _youtubeController!,
+                  showVideoProgressIndicator: true,
+                  progressIndicatorColor: Colors.red,
+                  progressColors: const ProgressBarColors(
+                    playedColor: Colors.red,
+                    handleColor: Colors.red,
+                    bufferedColor: Colors.white54,
+                    backgroundColor: Colors.white24,
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 0,
+                right: 1,
+                child: IconButton(
+                  onPressed: () {
+                    _youtubeController!.pause();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TrailerPage(
+                          trailerUrl: widget.trailerUrl,
+                          isTrailerUrl: true,
+                          content: widget.content,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(
                     Icons.fullscreen,
                     color: Colors.white,
                   ),

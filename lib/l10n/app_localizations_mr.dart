@@ -331,5 +331,20 @@ class AppLocalizationsMr extends AppLocalizations {
   String get rateUs => 'आम्हाला रेट करा';
 
   @override
+  String get purchaseHistory => 'खरेदी इतिहास';
+
+  @override
+  String get giftedByYou => 'तुम्ही भेट दिलेल्या चित्रपट';
+
+  @override
+  String get receivedGiftedMovies => 'मिळालेले भेट चित्रपट';
+
+  @override
+  String get accountDetails => 'खाते तपशील';
+
+  @override
+  String get editAddress => 'पत्ता संपादित करा';
+
+  @override
   String get logout => 'बाहेर पडा';
 }

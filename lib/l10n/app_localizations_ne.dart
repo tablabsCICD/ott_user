@@ -331,5 +331,20 @@ class AppLocalizationsNe extends AppLocalizations {
   String get rateUs => 'हामीलाई रेट गर्नुहोस्';
 
   @override
+  String get purchaseHistory => 'खरिद इतिहास';
+
+  @override
+  String get giftedByYou => 'तपाईंले उपहार दिनुभएको चलचित्रहरू';
+
+  @override
+  String get receivedGiftedMovies => 'प्राप्त उपहार चलचित्रहरू';
+
+  @override
+  String get accountDetails => 'खाता विवरण';
+
+  @override
+  String get editAddress => 'ठेगाना सम्पादन गर्नुहोस्';
+
+  @override
   String get logout => 'लगआउट';
 }

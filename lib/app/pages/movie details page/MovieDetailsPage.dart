@@ -19,7 +19,6 @@ import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../widgets/show_toast.dart';
 import '../watchlist page/component/playMoviePage.dart';
 import 'component/displayStar.dart';
@@ -36,6 +35,8 @@ class MovieDetailsPage extends StatefulWidget {
 
 class _MovieDetailsPageState extends State<MovieDetailsPage> {
   bool isLoading = true;
+  bool _contentLoadCompleted = false;
+  bool _contentLoadFailed = false;
   final TrailerPreviewController _trailerController =
       TrailerPreviewController();
 
@@ -54,14 +55,43 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   Future<void> _fetchData() async {
     final dashboardProvider =
         Provider.of<DashboardProvider>(context, listen: false);
-    await dashboardProvider.getContentById(widget.movieId);
-    await dashboardProvider.getCastByContentId(widget.movieId);
-    await Provider.of<VideoProvider>(context, listen: false)
-        .getRatingReview(widget.movieId);
-    final content = dashboardProvider.content;
-    if (content.id != null && mounted) {
-      await Provider.of<OfflineDownloadProvider>(context, listen: false)
-          .refreshStatus(content);
+    try {
+      final content = await dashboardProvider.getContentById(widget.movieId);
+      final hasValidContent = content?.id == widget.movieId;
+
+      if (!hasValidContent) {
+        if (mounted) {
+          setState(() {
+            _contentLoadFailed = true;
+            _contentLoadCompleted = true;
+            isLoading = false;
+          });
+        }
+        return;
+      }
+      final loadedContent = content!;
+
+      await dashboardProvider.getCastByContentId(widget.movieId);
+      await Provider.of<VideoProvider>(context, listen: false)
+          .getRatingReview(widget.movieId);
+      if (mounted) {
+        await Provider.of<OfflineDownloadProvider>(context, listen: false)
+            .refreshStatus(loadedContent);
+      }
+    } catch (error) {
+      debugPrint("Movie details fetch error: $error");
+      if (mounted) {
+        setState(() {
+          _contentLoadFailed = true;
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _contentLoadCompleted = true;
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -69,6 +99,54 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   void dispose() {
     _trailerController.pause?.call();
     super.dispose();
+  }
+
+  Future<void> _playMovie(Content movie) async {
+    if (movie.id == null) return;
+
+    Content contentToPlay = movie;
+    var contentUrl = contentToPlay.contentUrl;
+
+    if (contentUrl == null || contentUrl.trim().isEmpty) {
+      final fetchedContent = await context
+          .read<DashboardProvider>()
+          .getContentById(movie.id!);
+      if (!mounted) return;
+
+      if (fetchedContent != null) {
+        fetchedContent.watchedSeconds ??= movie.watchedSeconds;
+        fetchedContent.watchedPercentage ??= movie.watchedPercentage;
+        contentToPlay = fetchedContent;
+        contentUrl = contentToPlay.contentUrl;
+      }
+    }
+
+    if (contentUrl == null || contentUrl.trim().isEmpty) {
+      CustomToast.show(
+        context,
+        "Video is not available",
+        isSuccess: false,
+      );
+      return;
+    }
+
+    _trailerController.pause?.call();
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PlayMediaPage(
+          seasons: null,
+          seasonIndex: 0,
+          episodeIndex: 0,
+          videoUrl: contentUrl!,
+          content: contentToPlay,
+        ),
+      ),
+    ).then((_) {
+      if (!mounted) return;
+      context.read<DashboardProvider>().getContinueWatchedMovieList("MOVIE");
+    });
   }
 
   @override
@@ -79,71 +157,116 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     Content? movieContent =
         Provider.of<DashboardProvider>(context, listen: true).content;
 
-    final controller = YoutubePlayerController(
-      initialVideoId:
-          YoutubePlayer.convertUrlToId(movieContent.trailerUrl ?? '') ?? '',
-      flags: const YoutubePlayerFlags(
-        autoPlay: true,
-        mute: false,
-        loop: true,
+    if (isLoading || !_contentLoadCompleted) {
+      return Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Theme.of(context).primaryColor,
+          ),
+        ),
+      );
+    }
+
+    if (_contentLoadFailed) {
+      return _buildContentUnavailableScaffold(selectedThemeData);
+    }
+
+    return Scaffold(
+      backgroundColor: selectedThemeData.scaffoldBackgroundColor,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        forceMaterialTransparency: true,
+        foregroundColor: Colors.white,
+        title: ResponsiveWidget.isDesktop(context)
+            ? const Text('')
+            : StarRatingWidget(
+                rating: double.parse(
+                  (Provider.of<DashboardProvider>(context).content.ratings ??
+                          0.0)
+                      .toStringAsFixed(1),
+                ),
+                starSize: 20,
+                textSize: 16,
+              ),
+        actions: [
+          _ageRating(movieContent.ageRating),
+          SizedBox(
+            width: 5,
+          )
+        ],
+        backgroundColor: Colors.transparent,
+        centerTitle: true,
+        elevation: 0,
+      ),
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: Consumer<DashboardProvider>(
+          builder: (context, provider, child) {
+            final content = provider.content;
+
+            return Stack(
+              children: [
+                ResponsiveWidget.isDesktop(context)
+                    ? _buildDesktopView(content, selectedThemeData)
+                    : _buildMobileView(content, selectedThemeData),
+              ],
+            );
+          },
+        ),
       ),
     );
-
-    return isLoading
-        ? Scaffold(
-            body: Center(
-                child: CircularProgressIndicator(
-            color: Theme.of(context).primaryColor,
-          )))
-        : Scaffold(
-            backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-            extendBodyBehindAppBar: true,
-            appBar: AppBar(
-              forceMaterialTransparency: true,
-              foregroundColor: Colors.white,
-              title: ResponsiveWidget.isDesktop(context)
-                  ? const Text('')
-                  : StarRatingWidget(
-                      rating: double.parse(
-                        (Provider.of<DashboardProvider>(context)
-                                    .content
-                                    .ratings ??
-                                0.0)
-                            .toStringAsFixed(1),
-                      ),
-                      starSize: 20,
-                      textSize: 16,
-                    ),
-              actions: [
-                _ageRating(movieContent.ageRating),
-                SizedBox(
-                  width: 5,
-                )
-              ],
-              backgroundColor: Colors.transparent,
-              centerTitle: true,
-              elevation: 0,
-            ),
-            body: Consumer<DashboardProvider>(
-              builder: (context, provider, child) {
-                final content = provider.content;
-
-                return Stack(
-                  children: [
-                    ResponsiveWidget.isDesktop(context)
-                        ? _buildDesktopView(
-                            content, selectedThemeData, controller)
-                        : _buildMobileView(
-                            content, selectedThemeData, controller),
-                  ],
-                );
-              },
-            ),
-          );
   }
 
-  Widget _buildDesktopView(Content content, ThemeData selectedThemeData,
-      YoutubePlayerController controller) {
+  Widget _buildContentUnavailableScaffold(ThemeData selectedThemeData) {
+    final lang = AppLocalizations.of(context)!;
+
+    return Scaffold(
+      backgroundColor: selectedThemeData.scaffoldBackgroundColor,
+      appBar: AppBar(
+        forceMaterialTransparency: true,
+        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                LucideIcons.alertCircle,
+                color: selectedThemeData.primaryColor,
+                size: 46,
+              ),
+              const SizedBox(height: 14),
+              Text(
+                lang.noContentAvailable,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: selectedThemeData.canvasColor,
+                  fontSize: ResponsiveWidget.isMobile(context) ? 18 : 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "This content is currently unavailable. Please try again later.",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: selectedThemeData.canvasColor.withOpacity(0.7),
+                  fontSize: ResponsiveWidget.isMobile(context) ? 14 : 16,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopView(Content content, ThemeData selectedThemeData) {
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -241,7 +364,6 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                             runSpacing: 12,
                             children: [
                               _buildButtons(context, content),
-                              _buildShareActionButton(context, content),
                             ],
                           ),
                     const SizedBox(height: 16),
@@ -258,9 +380,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                     const SizedBox(height: 16),
                     _buildDetailsSection(context, content),
                     const SizedBox(height: 16),
-                    content.isRental == true
-                        ? _buildRatingReviewSection(context, content)
-                        : SizedBox.shrink(),
+                    _buildRatingAndReviewsSection(context, content),
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -331,8 +451,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     );
   }
 
-  Widget _buildMobileView(Content content, ThemeData selectedThemeData,
-      YoutubePlayerController controller) {
+  Widget _buildMobileView(Content content, ThemeData selectedThemeData) {
     final backgroundImage =
         content.posterUrlList != null && content.posterUrlList!.isNotEmpty
             ? content.posterUrlList!.first
@@ -396,7 +515,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               ),
               const SizedBox(height: 9),
               Text(
-                "  ${content.description ?? 'N/A'}",
+                content.description ?? 'N/A',
                 textAlign: TextAlign.left,
                 maxLines: 6,
                 overflow: TextOverflow.ellipsis,
@@ -414,7 +533,6 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                       alignment: WrapAlignment.center,
                       children: [
                         _buildButtons(context, content),
-                        _buildShareActionButton(context, content),
                       ],
                     ),
               const SizedBox(height: 12),
@@ -422,9 +540,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               const SizedBox(height: 10),
               _buildDetailsSection(context, content),
               const SizedBox(height: 16),
-              content.isRental == true
-                  ? _buildRatingReviewSection(context, content)
-                  : SizedBox.shrink(),
+              _buildRatingAndReviewsSection(context, content),
+              const SizedBox(height: 24),
               /*   const SizedBox(height: 35),
               if (content.posterUrlList != null &&
                   content.posterUrlList!.isNotEmpty) ...[
@@ -546,14 +663,16 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
         : Container(color: Colors.black);
   }
 
-  Widget _buildGifting(BuildContext context, Content movie) {
+  Widget _buildGifting(BuildContext context, Content movie,
+      {bool iconOnly = false}) {
     final theme = Theme.of(context);
-    final TextEditingController _countController = TextEditingController();
+    final TextEditingController countController = TextEditingController();
 
     return Center(
       child: ActionButtonWidget(
         label: 'Gift Movie',
         icon: LucideIcons.gift,
+        iconOnly: iconOnly,
         onTap: () {
           showDialog(
             context: context,
@@ -618,7 +737,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                             CustomTextField(
                               backgroundColor: theme.scaffoldBackgroundColor,
                               isDigits: true,
-                              controller: _countController,
+                              controller: countController,
                               hintText: "Number of recipients",
                               textInputType: TextInputType.number,
                             ),
@@ -649,7 +768,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                                   ),
                                   onPressed: () {
                                     final count =
-                                        int.tryParse(_countController.text);
+                                        int.tryParse(countController.text);
                                     if (count == null || count <= 0) {
                                       CustomToast.show(
                                           context, 'Please enter valid number',
@@ -693,27 +812,24 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   Widget _buildButtons(BuildContext context, Content movie) {
     final lang = AppLocalizations.of(context)!;
     final contentType = (movie.type ?? '').toLowerCase();
-    final canPlay =
-        movie.contentUrl?.isNotEmpty == true && contentType.isNotEmpty;
+
+    final canPlay = contentType.isNotEmpty;
 
     final canDownloadOffline = _canDownloadOffline(movie);
+    final showIconOnlyButtons = canDownloadOffline;
 
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      alignment: WrapAlignment.center,
-      children: [
-        _buildGifting(context, movie),
-        movie.isRental == false
+    /// 👉 First Row Buttons
+    final buttons = <Widget>[
+      Expanded(
+        child: movie.isRental == false
             ? ActionButtonWidget(
                 label: '${lang.rent} ₹${movie.price}',
                 icon: Icons.movie,
+                iconOnly: showIconOnlyButtons,
                 onTap: () {
                   showDialog(
                     context: context,
-                    builder: (BuildContext context) {
-                      return _buildConfirmationBox(context, movie);
-                    },
+                    builder: (_) => _buildConfirmationBox(context, movie),
                   );
                 },
               )
@@ -721,31 +837,54 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 label:
                     contentType == "movie" ? lang.watchMovie : lang.watchSeries,
                 icon: Icons.play_circle_fill,
+                iconOnly: showIconOnlyButtons,
                 onTap: () {
                   if (!canPlay) {
-                    CustomToast.show(context, "Video is not available",
-                        isSuccess: false);
+                    CustomToast.show(
+                      context,
+                      "Video is not available",
+                      isSuccess: false,
+                    );
                     return;
                   }
 
-                  _trailerController.pause?.call();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PlayMediaPage(
-                        seasons: null,
-                        seasonIndex: 0,
-                        episodeIndex: 0,
-                        videoUrl: movie.contentUrl!,
-                        content: movie,
-                      ),
-                    ),
-                  );
+                  _playMovie(movie);
                 },
               ),
-        if (canDownloadOffline) _buildDownloadActionButton(context, movie),
+      ),
+      if (canDownloadOffline) ...[
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildDownloadActionButton(
+            context,
+            movie,
+            iconOnly: showIconOnlyButtons,
+          ),
+        ),
       ],
-    );
+    ];
+
+    /// 👉 Second Row Buttons
+    buttons.addAll([
+      const SizedBox(width: 12),
+      Expanded(
+        child: _buildGifting(
+          context,
+          movie,
+          iconOnly: showIconOnlyButtons,
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: _buildShareActionButton(
+          context,
+          movie,
+          iconOnly: showIconOnlyButtons,
+        ),
+      ),
+    ]);
+
+    return Row(children: buttons);
   }
 
   bool _canDownloadOffline(Content movie) {
@@ -756,7 +895,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
         (movie.contentUrl?.trim().isNotEmpty ?? false);
   }
 
-  Widget _buildDownloadActionButton(BuildContext context, Content movie) {
+  Widget _buildDownloadActionButton(BuildContext context, Content movie,
+      {bool iconOnly = false}) {
     final contentId = movie.id;
     if (contentId == null) {
       return const SizedBox.shrink();
@@ -775,6 +915,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                   ? 'Remove Offline'
                   : 'Download',
           icon: isDownloaded ? Icons.delete_outline : Icons.download_rounded,
+          iconOnly: iconOnly,
           onTap: () async {
             if (isDownloading) return;
 
@@ -826,7 +967,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
         Text(
           "Cast and Crew",
           style: TextStyle(
-            color: theme.canvasColor,
+            color: Colors.white,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -835,7 +976,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
         castList.isEmpty
             ? SizedBox.shrink()
             : SizedBox(
-                height: 110,
+                height: 120,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: castList.length,
@@ -891,9 +1032,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 11,
-            ),
+                fontWeight: FontWeight.w600, fontSize: 11, color: Colors.white),
           ),
           if (role.isNotEmpty)
             Text(
@@ -901,9 +1040,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 10,
-              ),
+              style: TextStyle(fontSize: 10, color: Colors.white),
             ),
         ],
       ),
@@ -931,10 +1068,12 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   //   );
   // }
 
-  Widget _buildShareActionButton(BuildContext context, Content movie) {
+  Widget _buildShareActionButton(BuildContext context, Content movie,
+      {bool iconOnly = false}) {
     return ActionButtonWidget(
       label: 'Share',
       icon: Icons.qr_code_2_rounded,
+      iconOnly: iconOnly,
       onTap: () => showContentShareSheet(
         context,
         movie,
@@ -1055,26 +1194,19 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.white24),
-        borderRadius: BorderRadius.circular(8),
-      ),
+          //  border: Border.all(color: Colors.white24),
+          // borderRadius: BorderRadius.circular(8),
+          ),
       child: Table(
         columnWidths: const {
           0: IntrinsicColumnWidth(),
           1: FlexColumnWidth(),
         },
-        border: TableBorder.symmetric(
+        /*   border: TableBorder.symmetric(
           inside: BorderSide(color: Colors.white12, width: 0.5),
-        ),
+        ), */
         defaultVerticalAlignment: TableCellVerticalAlignment.middle,
         children: [
-          _buildTableRow(
-              lang.director,
-              (movie.directorList != null && movie.directorList!.isNotEmpty)
-                  ? movie.directorList!.first
-                  : 'Unknown',
-              titleStyle,
-              contentStyle),
           /*    _buildTableRow(
               lang.cast,
               (movie.castList != null && movie.castList!.isNotEmpty)
@@ -1150,7 +1282,20 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     );
   }
 
-  _buildRatingReviewSection(BuildContext context, Content content) {
+  Widget _buildRatingAndReviewsSection(BuildContext context, Content content) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (content.isRental == true) ...[
+          _buildRatingReviewSection(context, content),
+          const SizedBox(height: 16),
+        ],
+        getChatList(),
+      ],
+    );
+  }
+
+  Widget _buildRatingReviewSection(BuildContext context, Content content) {
     var selectedThemeData =
         Provider.of<ThemeProvider>(context, listen: true).getTheme;
     return Consumer<VideoProvider>(
@@ -1158,7 +1303,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
         children: [
           Text(
             "Rate your experience",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: TextStyle(
+                fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
           ),
           StarRating(
             rating: provider.rating,
@@ -1174,6 +1320,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
             padding: EdgeInsets.only(bottom: 16.0),
             child: TextField(
               maxLines: 9,
+              style: TextStyle(
+                // Input text color
+                color: Colors.white,
+              ),
               controller: provider.reviewController,
               decoration: InputDecoration(
                 hintText: "Your Feedback!",
@@ -1199,27 +1349,26 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 return;
               }
 
-              if (provider.reviewController.text.isNotEmpty) {
-                if (provider.rating == 0) {
-                  CustomToast.show(context, "Please select rating..",
+              // if (provider.reviewController.text.isNotEmpty) {
+              if (provider.rating == 0) {
+                CustomToast.show(context, "Please select rating..",
+                    isSuccess: false);
+              } else {
+                var result = await provider.saveRatingReview(content.id!);
+                if (result['success'] == false) {
+                  CustomToast.show(
+                      context, "something went wrong to submit review",
                       isSuccess: false);
                 } else {
-                  var result = await provider.saveRatingReview(content.id!);
-                  if (result['success'] == false) {
-                    CustomToast.show(
-                        context, "something went wrong to submit review",
-                        isSuccess: false);
-                  } else {
-                    CustomToast.show(context, 'review submitted successfully',
-                        isSuccess: true);
-
-                    await provider.getRatingReview(content.id!);
-                  }
+                  CustomToast.show(context, 'review submitted successfully',
+                      isSuccess: true);
+                  await _fetchData();
                 }
-              } else {
+              }
+              /* } else {
                 CustomToast.show(context, "Please give some comments",
                     isSuccess: false);
-              }
+              } */
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -1227,93 +1376,113 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                   Text("Submit Review", style: TextStyle(color: Colors.white)),
             ),
           ),
-          Row(
+          /*  Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               getChatList(),
             ],
-          ),
+          ), */
         ],
       ),
     );
   }
 
-  getChatList() {
+  Widget getChatList() {
     return Consumer<VideoProvider>(
-      builder: (context, provider, child) => Expanded(
-        child: ListView.builder(
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            itemCount: provider.reviewList.length,
-            itemBuilder: (BuildContext context, int index) {
-              DateTime date = DateTime.now();
-              if (provider.reviewList[index].createdAt != null) {
-                date = DateTime.fromMillisecondsSinceEpoch(
-                    provider.reviewList[index].createdAt!);
-              }
-              String formattedDate =
-                  DateFormat('yyyy-MM-dd HH:mm:ss').format(date);
+      builder: (context, provider, child) {
+        if (provider.reviewList.isEmpty) {
+          return const SizedBox.shrink();
+        }
 
-              return Container(
-                margin: EdgeInsets.symmetric(vertical: 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        SizedBox(
-                          height: 40,
-                          width: 40,
-                          child: CircleAvatar(
-                            backgroundImage:
-                                provider.reviewList[index].userProfile != null
-                                    ? NetworkImage(
-                                        provider.reviewList[index].userProfile!)
-                                    : null,
-                            radius: 50,
-                            child:
-                                provider.reviewList[index].userProfile == null
-                                    ? Icon(Icons.person, size: 25)
-                                    : null,
-                          ),
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: provider.reviewList.length,
+          itemBuilder: (BuildContext context, int index) {
+            DateTime date = DateTime.now();
+            if (provider.reviewList[index].createdAt != null) {
+              date = DateTime.fromMillisecondsSinceEpoch(
+                  provider.reviewList[index].createdAt!);
+            }
+            String formattedDate =
+                DateFormat('yyyy-MM-dd HH:mm:ss').format(date);
+            final username = provider.reviewList[index].username;
+            final displayName = username == null || username == "null null"
+                ? "Anonymous User"
+                : username;
+
+            return Container(
+              margin: const EdgeInsets.symmetric(vertical: 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      SizedBox(
+                        height: 40,
+                        width: 40,
+                        child: CircleAvatar(
+                          backgroundImage:
+                              provider.reviewList[index].userProfile != null
+                                  ? NetworkImage(
+                                      provider.reviewList[index].userProfile!)
+                                  : null,
+                          radius: 50,
+                          child: provider.reviewList[index].userProfile == null
+                              ? const Icon(Icons.person, size: 25)
+                              : null,
                         ),
-                        SizedBox(
-                          width: 15,
+                      ),
+                      const SizedBox(
+                        width: 15,
+                      ),
+                      Expanded(
+                        child: Text(
+                          displayName,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: Colors.white),
                         ),
-                        Text(provider.reviewList[index].username ?? 'NA',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 15))
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        StarDisplay(
-                            value: provider.reviewList[index].rating ?? 5),
-                        SizedBox(
-                          width: 10,
-                        ),
-                        Text(formattedDate,
-                            style: TextStyle(
-                                fontWeight: FontWeight.normal, fontSize: 12))
-                      ],
-                    ),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    Text(provider.reviewList[index].title.toString(),
-                        style: TextStyle(
-                            fontWeight: FontWeight.normal, fontSize: 12)),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    Divider(
-                      thickness: 2,
-                    )
-                  ],
-                ),
-              );
-            }),
-      ),
+                      )
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      StarDisplay(
+                          value: provider.reviewList[index].rating ?? 5),
+                      const SizedBox(
+                        width: 10,
+                      ),
+                      Flexible(
+                        child: Text(formattedDate,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.normal,
+                                fontSize: 12,
+                                color: Colors.white)),
+                      )
+                    ],
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  Text(provider.reviewList[index].title.toString(),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.normal,
+                          fontSize: 12,
+                          color: Colors.white)),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  const Divider(
+                    thickness: 2,
+                  )
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

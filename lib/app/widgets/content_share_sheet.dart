@@ -1,0 +1,258 @@
+import 'package:flutter/material.dart';
+import 'package:ott/app/core/constant/app_constant.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/services/ShareService.dart';
+import 'package:ott/app/pages/movie%20details%20page/component/actionButtonWidget.dart';
+import 'package:ott/app/provider/themeProvider.dart';
+import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/data/models/content.dart';
+import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
+
+Future<void> showContentShareSheet(
+  BuildContext context,
+  Content content, {
+  DeepLinkContentType contentType = DeepLinkContentType.movie,
+  String unavailableMessage = 'Content details are not available yet',
+}) async {
+  if (content.id == null || content.id! <= 0) {
+    CustomToast.show(
+      context,
+      unavailableMessage,
+      isSuccess: false,
+    );
+    return;
+  }
+
+  final future = ShareService.instance.prepareContentShare(
+    content,
+    contentType: contentType,
+  );
+
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) {
+      final selectedThemeData =
+          Provider.of<ThemeProvider>(context, listen: false).getTheme;
+
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: FutureBuilder<PreparedMovieShareData>(
+            future: future,
+            builder: (context, snapshot) {
+              return Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: selectedThemeData.cardColor,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: snapshot.connectionState == ConnectionState.waiting
+                    ? SizedBox(
+                        height: 280,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              color: selectedThemeData.primaryColor,
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Generating share QR code...',
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      )
+                    : snapshot.hasError
+                        ? SizedBox(
+                            height: 220,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.error_outline,
+                                  color: selectedThemeData.primaryColor,
+                                  size: 36,
+                                ),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'Unable to prepare this share right now. Please try again.',
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                ActionButtonWidget(
+                                  label: 'Close',
+                                  icon: Icons.close,
+                                  onTap: () {
+                                    Navigator.of(sheetContext).pop();
+                                  },
+                                ),
+                              ],
+                            ),
+                          )
+                        : _ContentShareSheetBody(
+                            data: snapshot.requireData,
+                            sheetContext: sheetContext,
+                          ),
+              );
+            },
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _ContentShareSheetBody extends StatelessWidget {
+  const _ContentShareSheetBody({
+    required this.data,
+    required this.sheetContext,
+  });
+
+  final PreparedMovieShareData data;
+  final BuildContext sheetContext;
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedThemeData =
+        Provider.of<ThemeProvider>(context, listen: false).getTheme;
+
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  data.movie.title ?? 'Share Content',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: selectedThemeData.primaryColor,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.of(sheetContext).pop(),
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          /// QR CODE
+          Center(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF111111),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: QrImageView(
+                data: data.deepLink.toString(),
+                size: 220,
+                version: QrVersions.auto,
+                backgroundColor: const Color(0xFF111111),
+                eyeStyle: const QrEyeStyle(
+                  eyeShape: QrEyeShape.square,
+                  color: Colors.white,
+                ),
+                dataModuleStyle: const QrDataModuleStyle(
+                  dataModuleShape: QrDataModuleShape.square,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          const Text(
+            "Scan to watch instantly",
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+
+          const SizedBox(height: 16),
+
+          /// LINK TEXT
+          SelectableText(
+            data.deepLink.toString(),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              color: selectedThemeData.canvasColor,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          /// 🔥 SINGLE SHARE BUTTON
+          SizedBox(
+            height: 50,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: selectedThemeData.primaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 4,
+              ),
+              onPressed: () async {
+                await _shareFullContent(context, data);
+              },
+              icon: const Icon(Icons.share, color: Colors.white),
+              label: const Text(
+                "Share",
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 🔥 FULL SHARE FUNCTION
+  Future<void> _shareFullContent(
+      BuildContext context, PreparedMovieShareData data) async {
+    try {
+      final playStoreLink = AppConstant.playStoreLink;
+      final webAppLink = AppConstant.webAppLink;
+
+      final message = '''
+🎬 ${data.movie.title}
+
+Watch now 👇
+${data.deepLink}
+
+📲 Download App:
+Android: $playStoreLink
+Web: $webAppLink
+''';
+
+      final path = await ShareService.instance.downloadQrImage(data);
+
+      await Share.shareXFiles(
+        [XFile(path)],
+        text: message,
+      );
+    } catch (e) {
+      CustomToast.show(
+        context,
+        "Failed to share content",
+        isSuccess: false,
+      );
+    }
+  }
+}

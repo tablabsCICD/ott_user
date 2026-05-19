@@ -333,5 +333,20 @@ class AppLocalizationsMl extends AppLocalizations {
   String get rateUs => 'ഞങ്ങളെ റേറ്റ് ചെയ്യുക';
 
   @override
+  String get purchaseHistory => 'വാങ്ങൽ ചരിത്രം';
+
+  @override
+  String get giftedByYou => 'നിങ്ങൾ സമ്മാനിച്ച സിനിമകൾ';
+
+  @override
+  String get receivedGiftedMovies => 'ലഭിച്ച സമ്മാന സിനിമകൾ';
+
+  @override
+  String get accountDetails => 'അക്കൗണ്ട് വിശദാംശങ്ങൾ';
+
+  @override
+  String get editAddress => 'വിലാസം തിരുത്തുക';
+
+  @override
   String get logout => 'ലോഗൗട്ട്';
 }

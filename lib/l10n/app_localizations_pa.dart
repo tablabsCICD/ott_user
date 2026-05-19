@@ -330,5 +330,20 @@ class AppLocalizationsPa extends AppLocalizations {
   String get rateUs => 'ਸਾਨੂੰ ਰੇਟ ਕਰੋ';
 
   @override
+  String get purchaseHistory => 'ਖਰੀਦ ਇਤਿਹਾਸ';
+
+  @override
+  String get giftedByYou => 'ਤੁਹਾਡੇ ਵੱਲੋਂ ਤੋਹਫ਼ੇ ਦਿੱਤੀਆਂ ਫਿਲਮਾਂ';
+
+  @override
+  String get receivedGiftedMovies => 'ਮਿਲੀਆਂ ਤੋਹਫ਼ੇ ਵਾਲੀਆਂ ਫਿਲਮਾਂ';
+
+  @override
+  String get accountDetails => 'ਖਾਤਾ ਵੇਰਵੇ';
+
+  @override
+  String get editAddress => 'ਪਤਾ ਸੰਪਾਦਿਤ ਕਰੋ';
+
+  @override
   String get logout => 'ਲੌਗਆਉਟ';
 }

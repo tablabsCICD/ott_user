@@ -125,5 +125,13 @@
   "aboutFilmytell":"About Filmytell",
   "rateUs":"Rate Us",
 
+  "purchaseHistory":"Purchase History",
+  "giftedByYou": "Gifted Movies By You",
+  "receivedGiftedMovies" :"Received Gifted Movies",
+  "accountDetails" : "Account Details",
+  "editAddress" : "Edit Address",
+  "minSeries" : "Mini Series",
+  
+
   "logout": "Logout"
 }

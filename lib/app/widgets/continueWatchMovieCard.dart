@@ -33,12 +33,14 @@ class ContinueWatchMovieCard extends StatefulWidget {
   final Content movie;
   final ValueListenable<int?>? activeIndexListenable;
   final int? index;
+  final bool enableTrailerPreview;
 
   const ContinueWatchMovieCard({
     super.key,
     required this.movie,
     this.activeIndexListenable,
     this.index,
+    this.enableTrailerPreview = true,
   });
 
   @override
@@ -57,10 +59,24 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   bool _hasVideoListener = false;
   Timer? _playDelayTimer;
 
+  Uri? _previewUri(String? rawUrl) {
+    final value = rawUrl?.trim() ?? '';
+    final uri = Uri.tryParse(value);
+    if (uri == null || !uri.hasScheme) return null;
+
+    final host = uri.host.toLowerCase();
+    final isYoutube = host.contains('youtube.com') || host == 'youtu.be';
+    if (isYoutube) return null;
+
+    return uri;
+  }
+
   @override
   void initState() {
     super.initState();
-    widget.activeIndexListenable?.addListener(_handleActiveIndexChanged);
+    if (widget.enableTrailerPreview) {
+      widget.activeIndexListenable?.addListener(_handleActiveIndexChanged);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context
           .read<BookmarkProvider>()
@@ -71,7 +87,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
         }
       });
 
-      if (mounted) {
+      if (mounted && widget.enableTrailerPreview) {
         _handleActiveIndexChanged();
       }
     });
@@ -109,11 +125,10 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   Future<bool> _ensureVideoInitialized() async {
     if (_isVideoInitialized) return true;
 
-    final trailerUrl = widget.movie.trailerUrl;
-    if (trailerUrl?.isNotEmpty != true) return false;
+    final trailerUri = _previewUri(widget.movie.trailerUrl);
+    if (trailerUri == null) return false;
 
-    _videoController ??=
-        VideoPlayerController.networkUrl(Uri.parse(trailerUrl!));
+    _videoController ??= VideoPlayerController.networkUrl(trailerUri);
 
     try {
       await _videoController!.initialize();
@@ -151,12 +166,24 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   void didUpdateWidget(covariant ContinueWatchMovieCard oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (oldWidget.activeIndexListenable != widget.activeIndexListenable) {
+    if (oldWidget.enableTrailerPreview != widget.enableTrailerPreview) {
+      oldWidget.activeIndexListenable
+          ?.removeListener(_handleActiveIndexChanged);
+      _playDelayTimer?.cancel();
+      _stopPreview();
+      if (!widget.enableTrailerPreview) {
+        _disposeVideoController();
+      } else {
+        widget.activeIndexListenable?.addListener(_handleActiveIndexChanged);
+        _handleActiveIndexChanged();
+      }
+    } else if (widget.enableTrailerPreview &&
+        oldWidget.activeIndexListenable != widget.activeIndexListenable) {
       oldWidget.activeIndexListenable
           ?.removeListener(_handleActiveIndexChanged);
       widget.activeIndexListenable?.addListener(_handleActiveIndexChanged);
       _handleActiveIndexChanged();
-    } else if (oldWidget.index != widget.index) {
+    } else if (widget.enableTrailerPreview && oldWidget.index != widget.index) {
       _handleActiveIndexChanged();
     }
 
@@ -172,13 +199,17 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     if (_activePreviewState == this) {
       _activePreviewState = null;
     }
-    widget.activeIndexListenable?.removeListener(_handleActiveIndexChanged);
+    if (widget.enableTrailerPreview) {
+      widget.activeIndexListenable?.removeListener(_handleActiveIndexChanged);
+    }
     _playDelayTimer?.cancel();
     _disposeVideoController();
     super.dispose();
   }
 
   void _handleHover(bool hovering) {
+    if (!widget.enableTrailerPreview) return;
+
     setState(() => _isHovered = hovering);
 
     if (hovering) {
@@ -193,6 +224,8 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   }
 
   void _handleActiveIndexChanged() {
+    if (!widget.enableTrailerPreview) return;
+
     final activeIndex = widget.activeIndexListenable?.value;
     final shouldAutoPlay = _isAutoPlayDevice &&
         widget.index != null &&
@@ -346,20 +379,44 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
         ? widget.movie.posterUrlList!.first
         : null;
     final showPreview = _isPreviewPlaying;
-
+    final highlightColor = theme.brightness == Brightness.light
+        ? const Color.fromARGB(255, 185, 169, 169)
+        : const Color.fromARGB(255, 58, 49, 49);
     return Stack(
       children: [
         MouseRegion(
           onEnter: (_) => _handleHover(true),
           onExit: (_) => _handleHover(false),
           child: GestureDetector(
-            onTap: _openDetails,
-            child: Container(
+            onTap: _playContent,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
               width: ContinueWatchMovieCard.itemWidth,
-              margin: const EdgeInsets.all(ContinueWatchMovieCard.itemMargin),
+              //  margin: const EdgeInsets.all(ContinueWatchMovieCard.itemMargin),
+              margin: EdgeInsets.only(
+                left: ContinueWatchMovieCard.itemMargin,
+                right: ContinueWatchMovieCard.itemMargin,
+                bottom: ContinueWatchMovieCard.itemMargin,
+                top: showPreview ? 4 : 12, // 👈 selected card moves slightly up
+              ),
               decoration: BoxDecoration(
                 color: theme.cardColor,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: showPreview ? highlightColor : Colors.transparent,
+                  width: showPreview ? 2.5 : 1,
+                ),
+                boxShadow: showPreview
+                    ? [
+                        BoxShadow(
+                          color: highlightColor.withValues(alpha: 0.35),
+                          blurRadius: 18,
+                          spreadRadius: 1,
+                          offset: const Offset(0, 6),
+                        ),
+                      ]
+                    : null,
               ),
               child: Container(
                 decoration: BoxDecoration(
@@ -612,18 +669,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     if (movie.id == null || movie.type == null) return;
 
     if (movie.type!.toLowerCase() == "movie") {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => PlayMediaPage(
-            seasons: null,
-            seasonIndex: 0,
-            episodeIndex: 0,
-            videoUrl: movie.contentUrl!,
-            content: movie,
-          ),
-        ),
-      );
+      _playContent();
     } else {
       Navigator.push(
         context,
@@ -641,28 +687,62 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     }
   }
 
-  void _playMovie() {
+  Future<void> _playContent() async {
     final movie = widget.movie;
-    if (movie.contentUrl == null || movie.id == null) return;
+    if (movie.id == null) return;
+
+    Content contentToPlay = movie;
+    var contentUrl = contentToPlay.contentUrl;
+
+    if (contentUrl == null || contentUrl.trim().isEmpty) {
+      final fetchedContent = await context
+          .read<DashboardProvider>()
+          .getContentById(movie.id!);
+      if (!mounted) return;
+
+      if (fetchedContent != null) {
+        fetchedContent.watchedSeconds ??= movie.watchedSeconds;
+        fetchedContent.watchedPercentage ??= movie.watchedPercentage;
+        fetchedContent.seasonId ??= movie.seasonId;
+        fetchedContent.episodeId ??= movie.episodeId;
+        contentToPlay = fetchedContent;
+        contentUrl = contentToPlay.contentUrl;
+      }
+    }
+
+    if (contentUrl == null || contentUrl.trim().isEmpty) {
+      CustomToast.show(
+        context,
+        "Video is not available",
+        isSuccess: false,
+      );
+      return;
+    }
 
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => PlayMediaPage(
-          videoUrl: movie.contentUrl!,
-          content: movie,
-          seasonIndex: 0,
-          episodeIndex: 0,
-          seasons: [],
+          videoUrl: contentUrl!,
+          content: contentToPlay,
+          seasonIndex: contentToPlay.seasonId ?? 0,
+          episodeIndex: contentToPlay.episodeId ?? 0,
+          seasons:
+              contentToPlay.type?.toLowerCase() == "series" ? [] : null,
         ),
       ),
-    ).then((refresh) {
-      if (refresh == true) {
-        context
-            .read<DashboardProvider>()
-            .getContinueWatchedMovieList(widget.movie.type ?? "MOVIE");
-      }
+    ).then((_) {
+      if (!mounted) return;
+      context
+          .read<DashboardProvider>()
+          .getContinueWatchedMovieList(contentToPlay.type ?? "MOVIE");
     });
+  }
+
+  void _playMovie() {
+    final movie = widget.movie;
+    if (movie.id == null) return;
+    _playContent();
   }
 
   void _showCupertinoDialog(BuildContext context, Content movie) {

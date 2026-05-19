@@ -1,11 +1,13 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
+import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
 import 'package:ott/app/pages/wallet%20page/SeriesBillingPage.dart';
 import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
 import 'package:ott/app/pages/movie%20details%20page/component/actionButtonWidget.dart';
@@ -13,6 +15,7 @@ import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/series_provider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
+import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
@@ -146,6 +149,42 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           if (series == null) return const SizedBox();
 
           List<SeasonEntity> seasons = series.seasons;
+          if (seasons.isEmpty) {
+            return CustomScrollView(
+              slivers: [
+                _buildHero(series, theme),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal:
+                          ResponsiveWidget.isDesktop(context) ? 64 : 16,
+                      vertical: 20,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTitleBlock(series, theme),
+                        const SizedBox(height: 24),
+                        Text(
+                          'No seasons available yet',
+                          style: TextStyle(
+                            color: theme.canvasColor.withOpacity(0.7),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 26),
+                        _buildDetailsSection(context, widget.content, theme),
+                        const SizedBox(height: 32),
+                        _buildGallery(widget.content),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+
           if (_selectedSeasonIndex >= seasons.length) {
             _selectedSeasonIndex = 0;
           }
@@ -357,9 +396,148 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 unavailableMessage: "Series details are not available yet",
               ),
             ),
+            _buildGifting(context, widget.content),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildGifting(BuildContext context, Content seriesContent) {
+    final theme = Theme.of(context);
+    final TextEditingController countController = TextEditingController();
+
+    return ActionButtonWidget(
+      label: 'Gift Series',
+      icon: LucideIcons.gift,
+      onTap: () {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) {
+            return Dialog(
+              backgroundColor: theme.cardColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 24,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: SizedBox(
+                  width: ResponsiveWidget.isMobile(dialogContext)
+                      ? double.infinity
+                      : 400,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: Icon(
+                          LucideIcons.gift,
+                          size: 200,
+                          color: theme.canvasColor.withOpacity(0.1),
+                        ),
+                      ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                LucideIcons.gift,
+                                color: theme.primaryColor,
+                                size: 28,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                "Gift This Series",
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            "Enter how many people you'd like to gift this series to.",
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.canvasColor,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          CustomTextField(
+                            backgroundColor: theme.scaffoldBackgroundColor,
+                            isDigits: true,
+                            controller: countController,
+                            hintText: "Number of recipients",
+                            textInputType: TextInputType.number,
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dialogContext),
+                                child: Text(
+                                  "Cancel",
+                                  style: TextStyle(color: theme.canvasColor),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: theme.primaryColor,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 12,
+                                  ),
+                                ),
+                                onPressed: () {
+                                  final count =
+                                      int.tryParse(countController.text);
+                                  if (count == null || count <= 0) {
+                                    CustomToast.show(
+                                      dialogContext,
+                                      'Please enter valid number',
+                                      isSuccess: false,
+                                    );
+                                    return;
+                                  }
+
+                                  Navigator.pop(dialogContext);
+                                  _trailerController.pause?.call();
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => MovieBillingPage(
+                                        movie: seriesContent,
+                                        giftCount: count,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: const Text(
+                                  "Continue",
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ).whenComplete(countController.dispose);
+      },
     );
   }
 
@@ -462,7 +640,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                                       isSeason: true,
                                       seriesTitle: widget.content.title,
                                       itemTitle: season.title,
-                                      rentalDuration: widget.content.rentlDuration,
+                                      rentalDuration:
+                                          widget.content.rentlDuration,
                                     ),
                                   ),
                                 );
@@ -875,7 +1054,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        border: Border.all(color: theme.canvasColor.withOpacity(0.3)),
+        //  border: Border.all(color: theme.canvasColor.withOpacity(0.3)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Table(
@@ -883,19 +1062,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           0: IntrinsicColumnWidth(),
           1: FlexColumnWidth(),
         },
-        border: TableBorder.symmetric(
-          inside:
-              BorderSide(color: theme.canvasColor.withOpacity(0.3), width: 0.5),
-        ),
         defaultVerticalAlignment: TableCellVerticalAlignment.middle,
         children: [
-          _buildTableRow(
-              lang.director,
-              (movie.directorList != null && movie.directorList!.isNotEmpty)
-                  ? movie.directorList!.first
-                  : 'Unknown',
-              titleStyle,
-              contentStyle),
           /*   _buildTableRow(
               lang.cast,
               (movie.castList != null && movie.castList!.isNotEmpty)

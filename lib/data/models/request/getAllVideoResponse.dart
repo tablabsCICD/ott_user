@@ -1,4 +1,3 @@
-
 import 'package:ott/data/models/content.dart';
 
 class GetAllVideoResponse {
@@ -11,19 +10,19 @@ class GetAllVideoResponse {
 
   GetAllVideoResponse.fromJson(Map<String, dynamic> json) {
     message = json['message'];
-    data = json['data'] != null ? new Data.fromJson(json['data']) : null;
+    data = json['data'] != null ? Data.fromJson(json['data']) : null;
     statusCode = json['statusCode'];
     success = json['success'];
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['message'] = this.message;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['message'] = message;
     if (this.data != null) {
       data['data'] = this.data!.toJson();
     }
-    data['statusCode'] = this.statusCode;
-    data['success'] = this.success;
+    data['statusCode'] = statusCode;
+    data['success'] = success;
     return data;
   }
 }
@@ -37,15 +36,15 @@ class Data {
     if (json['ContentList'] != null) {
       contentList = <Content>[];
       json['ContentList'].forEach((v) {
-        contentList!.add(new Content.fromJson(v));
+        contentList!.add(Content.fromJson(v));
       });
     }
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    if (this.contentList != null) {
-      data['ContentList'] = this.contentList!.map((v) => v.toJson()).toList();
+    final Map<String, dynamic> data = <String, dynamic>{};
+    if (contentList != null) {
+      data['ContentList'] = contentList!.map((v) => v.toJson()).toList();
     }
     return data;
   }

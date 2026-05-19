@@ -332,5 +332,20 @@ class AppLocalizationsTa extends AppLocalizations {
   String get rateUs => 'எங்களை மதிப்பிடுங்கள்';
 
   @override
+  String get purchaseHistory => 'கொள்முதல் வரலாறு';
+
+  @override
+  String get giftedByYou => 'நீங்கள் பரிசளித்த திரைப்படங்கள்';
+
+  @override
+  String get receivedGiftedMovies => 'பெற்ற பரிசு திரைப்படங்கள்';
+
+  @override
+  String get accountDetails => 'கணக்கு விவரங்கள்';
+
+  @override
+  String get editAddress => 'முகவரியை திருத்தவும்';
+
+  @override
   String get logout => 'வெளியேறு';
 }

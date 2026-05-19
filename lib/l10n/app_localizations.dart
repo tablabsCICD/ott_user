@@ -764,6 +764,36 @@ abstract class AppLocalizations {
   /// **'Rate Us'**
   String get rateUs;
 
+  /// No description provided for @purchaseHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase History'**
+  String get purchaseHistory;
+
+  /// No description provided for @giftedByYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Gifted Movies By You'**
+  String get giftedByYou;
+
+  /// No description provided for @receivedGiftedMovies.
+  ///
+  /// In en, this message translates to:
+  /// **'Received Gifted Movies'**
+  String get receivedGiftedMovies;
+
+  /// No description provided for @accountDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Details'**
+  String get accountDetails;
+
+  /// No description provided for @editAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Address'**
+  String get editAddress;
+
   /// No description provided for @logout.
   ///
   /// In en, this message translates to:

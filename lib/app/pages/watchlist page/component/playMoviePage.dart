@@ -40,6 +40,7 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
   Timer? _progressTimer;
 
   bool _loading = true;
+  bool _hasPlaybackError = false;
   bool _handlingEnd = false;
   Duration _lastSavedPosition = Duration.zero;
   bool _wakelockEnabled = false;
@@ -56,11 +57,27 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
   @override
   void initState() {
     super.initState();
+    unawaited(_enterLandscapePlayback());
     _preparePlayback();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _addView();
     });
+  }
+
+  Future<void> _enterLandscapePlayback() async {
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    await SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
+  Future<void> _restorePortraitPlayback() async {
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    await SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.portraitUp,
+    ]);
   }
 
   // ================= ADD VIEW =================
@@ -79,9 +96,8 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
 
     final content = widget.content;
     if (content != null) {
-      final offlinePath = await context
-          .read<OfflineDownloadProvider>()
-          .getOfflinePath(content);
+      final offlinePath =
+          await context.read<OfflineDownloadProvider>().getOfflinePath(content);
       if (offlinePath != null && offlinePath.isNotEmpty) {
         sourceUrl = offlinePath;
         _isOfflinePlayback = true;
@@ -99,7 +115,10 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     final token = ++_setupToken;
 
     if (mounted) {
-      setState(() => _loading = true);
+      setState(() {
+        _loading = true;
+        _hasPlaybackError = false;
+      });
     }
 
     _progressTimer?.cancel();
@@ -120,6 +139,12 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     } catch (e) {
       debugPrint("VIDEO INIT ERROR => $e");
       await controller.dispose();
+      if (mounted && token == _setupToken) {
+        setState(() {
+          _loading = false;
+          _hasPlaybackError = true;
+        });
+      }
       return;
     }
 
@@ -142,6 +167,7 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
       autoPlay: false, // we already call play()
       looping: false,
       allowFullScreen: true,
+      fullScreenByDefault: true,
       allowPlaybackSpeedChanging: false,
       deviceOrientationsOnEnterFullScreen: const [
         DeviceOrientation.landscapeLeft,
@@ -163,9 +189,9 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     if (_videoController == null || !mounted) return;
     if (_isDisposed || token != _setupToken) return;
 
+    final provider = context.read<PlayMediaProvider>();
     await _videoController!.setVolume(1.0);
 
-    final provider = context.read<PlayMediaProvider>();
     final resumeSeconds = _isSeries
         ? provider.getLocalResume(
             contentId: widget.content!.id!,
@@ -291,6 +317,7 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     _isDisposed = true;
     _setupToken++;
     _disposePlayerSync(saveProgress: true);
+    unawaited(_restorePortraitPlayback());
     super.dispose();
   }
 
@@ -358,6 +385,7 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     if (_isExiting) return;
     _isExiting = true;
     await _disposePlayer(saveProgress: true);
+    await _restorePortraitPlayback();
     if (mounted) {
       Navigator.pop(context, true);
     }
@@ -376,27 +404,19 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
       },
       child: Scaffold(
         backgroundColor: Colors.black, // important for video
-        appBar: ResponsiveWidget.isDesktop(context)
-            ? null
-            : AppBar(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-                title: Text(
-                  _isOfflinePlayback
-                      ? '${widget.content?.title ?? ""} (Offline)'
-                      : widget.content?.title ?? "",
-                  style: const TextStyle(color: Colors.white),
-                ),
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: _handleExit,
-                ),
-              ),
+        appBar: null,
         body: _loading
             ? Center(
                 child: CircularProgressIndicator(
                 color: theme.primaryColor,
               ))
+            : _hasPlaybackError
+                ? const Center(
+                    child: Text(
+                      'Video unavailable',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  )
             : ResponsiveWidget.isDesktop(context)
                 ? _desktopPlayer()
                 : _mobilePlayer(),
@@ -423,6 +443,14 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     if (_videoController == null ||
         !_videoController!.value.isInitialized ||
         _chewieController == null) {
+      if (_hasPlaybackError) {
+        return const Center(
+          child: Text(
+            'Video unavailable',
+            style: TextStyle(color: Colors.white),
+          ),
+        );
+      }
       return Center(
         child: CircularProgressIndicator(
           color: Theme.of(context).primaryColor,

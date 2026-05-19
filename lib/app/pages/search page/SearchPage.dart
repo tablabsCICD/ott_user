@@ -1,12 +1,14 @@
-import 'dart:developer';
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/core/constant/api_constant.dart';
+import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/shimmer%20loader/search_shimmer.dart';
+import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/data/repositories/demo.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -14,6 +16,8 @@ import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 class SearchPage extends StatefulWidget {
+  const SearchPage({super.key});
+
   @override
   _SearchPageState createState() => _SearchPageState();
 }
@@ -291,13 +295,117 @@ class _SearchPageState extends State<SearchPage> {
   }
 }
 
-class SearchMovieCard extends StatelessWidget {
+class SearchMovieCard extends StatefulWidget {
   final Content movie;
 
   const SearchMovieCard({
     super.key,
     required this.movie,
   });
+
+  @override
+  State<SearchMovieCard> createState() => _SearchMovieCardState();
+}
+
+class _SearchMovieCardState extends State<SearchMovieCard> {
+  bool _isLoadingCast = false;
+  List<CastMember> _apiCastAndCrew = [];
+
+  Content get movie => widget.movie;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCastAndCrew();
+  }
+
+  @override
+  void didUpdateWidget(covariant SearchMovieCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.movie.id != widget.movie.id) {
+      _loadCastAndCrew();
+    }
+  }
+
+  Future<void> _loadCastAndCrew() async {
+    final contentId = widget.movie.id;
+    if (contentId == null) return;
+
+    setState(() {
+      _isLoadingCast = true;
+      _apiCastAndCrew = [];
+    });
+
+    try {
+      final response =
+          await ApiHelper().getApi(ApiConstant.getCastByContentId(contentId));
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final responseBody = json.decode(response.body);
+        final responseData = responseBody is Map<String, dynamic>
+            ? responseBody['data']
+            : null;
+        final castData =
+            responseData is Map<String, dynamic> ? responseData['cast'] : null;
+
+        setState(() {
+          _apiCastAndCrew = castData is! List
+              ? []
+              : castData
+                  .whereType<Map<String, dynamic>>()
+                  .map(CastMember.fromJson)
+                  .toList();
+        });
+      }
+    } catch (error) {
+      debugPrint('Search cast fetch error: $error');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingCast = false);
+      }
+    }
+  }
+
+  List<CastMember> get _castList {
+    final apiCast = _apiCastAndCrew.where(_isCastMember).toList();
+    if (apiCast.isNotEmpty) return apiCast;
+
+    return (movie.castList ?? const [])
+        .where((name) => name.trim().isNotEmpty)
+        .map((name) => CastMember(name: name.trim(), role: 'Cast'))
+        .toList();
+  }
+
+  List<CastMember> get _crewList {
+    final apiCrew =
+        _apiCastAndCrew.where((member) => !_isCastMember(member)).toList();
+    if (apiCrew.isNotEmpty) return apiCrew;
+
+    return (movie.directorList ?? const [])
+        .where((name) => name.trim().isNotEmpty)
+        .map((name) => CastMember(name: name.trim(), role: 'Director'))
+        .toList();
+  }
+
+  bool _isCastMember(CastMember member) {
+    final role = member.role?.toLowerCase().trim() ?? '';
+    if (role.isEmpty) return true;
+
+    const castRoles = {
+      'actor',
+      'actress',
+      'cast',
+      'lead actor',
+      'lead actress',
+      'supporting actor',
+      'supporting actress',
+      'artist',
+      'character',
+    };
+
+    return castRoles.any(role.contains);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -411,7 +519,7 @@ class SearchMovieCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 1),
                           Text.rich(
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             TextSpan(
                                 style: TextStyle(
@@ -426,17 +534,12 @@ class SearchMovieCard extends StatelessWidget {
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  TextSpan(
-                                    text: (movie.directorList != null &&
-                                            movie.directorList!.isNotEmpty)
-                                        ? movie.directorList!.join(', ')
-                                        : 'N/A',
-                                  )
+                                  TextSpan(text: _memberNames(_crewList))
                                 ]),
                           ),
                           const SizedBox(height: 1),
                           Text.rich(
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             TextSpan(
                                 style: TextStyle(
@@ -451,15 +554,12 @@ class SearchMovieCard extends StatelessWidget {
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  TextSpan(
-                                    text: (movie.castList != null &&
-                                            movie.castList!.isNotEmpty)
-                                        ? movie.castList!.join(', ')
-                                        : 'N/A',
-                                  )
+                                  TextSpan(text: _memberNames(_castList))
                                 ]),
                           ),
-                          const SizedBox(height: 1),
+                          const SizedBox(height: 4),
+                         
+                        
                           Text.rich(
                             maxLines: 4,
                             overflow: TextOverflow.ellipsis,
@@ -504,6 +604,101 @@ class SearchMovieCard extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  String _memberNames(List<CastMember> members) {
+    final names = members
+        .map((member) => member.name?.trim() ?? '')
+        .where((name) => name.isNotEmpty)
+        .toList();
+    return names.isEmpty ? 'N/A' : names.join(', ');
+  }
+
+  Widget _buildPeopleSection(BuildContext context) {
+    final cast = _castList;
+    final crew = _crewList;
+
+    if (_isLoadingCast && cast.isEmpty && crew.isEmpty) {
+      return const SizedBox(
+        height: 18,
+        width: 18,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+
+    if (cast.isEmpty && crew.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (cast.isNotEmpty) _buildPeopleChips(context, 'Cast', cast),
+        if (cast.isNotEmpty && crew.isNotEmpty) const SizedBox(height: 4),
+        if (crew.isNotEmpty) _buildPeopleChips(context, 'Crew', crew),
+      ],
+    );
+  }
+
+  Widget _buildPeopleChips(
+    BuildContext context,
+    String label,
+    List<CastMember> members,
+  ) {
+    final theme = Theme.of(context);
+    final visibleMembers = members.take(4).toList();
+
+    return SizedBox(
+      height: 28,
+      child: Row(
+        children: [
+          Text(
+            '$label: ',
+            style: TextStyle(
+              color: theme.primaryColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: visibleMembers.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (context, index) {
+                return _buildPersonChip(context, visibleMembers[index]);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPersonChip(BuildContext context, CastMember member) {
+    final theme = Theme.of(context);
+    final name = member.name?.trim() ?? 'N/A';
+    final role = member.role?.trim() ?? '';
+
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 140),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.cardColor.withOpacity(0.75),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.canvasColor.withOpacity(0.12)),
+      ),
+      child: Text(
+        role.isEmpty ? name : '$name ($role)',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: theme.canvasColor.withOpacity(0.78),
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }

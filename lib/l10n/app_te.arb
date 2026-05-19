@@ -124,6 +124,12 @@
   "aboutFilmytell": "ఫిల్మిటెల్ గురించి",
   "rateUs": "మాకు రేటింగ్ ఇవ్వండి",
   
+    "purchaseHistory": "కొనుగోలు చరిత్ర",
+    "giftedByYou": "మీరు బహుమతిగా ఇచ్చిన సినిమాలు",
+    "receivedGiftedMovies": "అందుకున్న బహుమతి సినిమాలు",
+    "accountDetails": "ఖాతా వివరాలు",
+    "editAddress": "చిరునామా సవరించండి",
+    "minSeries": "మినీ సిరీస్",
 
   "logout": "లాగ్ అవుట్"
 }

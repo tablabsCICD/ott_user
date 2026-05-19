@@ -125,5 +125,11 @@
   "aboutFilmytell": "ফিল্মিটেল সম্পর্কে",
   "rateUs": "আমাদের রেট করুন",
 
+ "purchaseHistory": "ক্রয়ের ইতিহাস",
+    "giftedByYou": "আপনার দেওয়া উপহার সিনেমা",
+    "receivedGiftedMovies": "প্রাপ্ত উপহার সিনেমা",
+    "accountDetails": "অ্যাকাউন্টের বিবরণ",
+    "editAddress": "ঠিকানা সম্পাদনা করুন",
+     "minSeries": "মিনি সিরিজ",
   "logout": "লগআউট"
 }

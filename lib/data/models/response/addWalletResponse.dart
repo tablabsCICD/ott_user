@@ -41,7 +41,7 @@ class WalletObject {
 
   factory WalletObject.fromJson(Map<String, dynamic> json) => WalletObject(
     walletId: json["walletId"],
-    balance: json["balance"],
+    balance: _asDouble(json["balance"]),
     transactionHistory: json["transactionHistory"] == null ? [] : List<dynamic>.from(json["transactionHistory"]!.map((x) => x)),
     userId: json["userId"],
   );
@@ -52,4 +52,10 @@ class WalletObject {
     "transactionHistory": transactionHistory == null ? [] : List<dynamic>.from(transactionHistory!.map((x) => x)),
     "userId": userId,
   };
+}
+
+double? _asDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
 }

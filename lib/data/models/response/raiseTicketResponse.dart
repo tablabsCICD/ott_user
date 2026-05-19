@@ -1,6 +1,3 @@
-
-
-import '../user.dart';
 import 'getRaisedTicketListResponse.dart';
 
 class RaiseTicketResponse {
@@ -14,17 +11,18 @@ class RaiseTicketResponse {
     this.status,
   });
 
-  factory RaiseTicketResponse.fromJson(Map<String, dynamic> json) => RaiseTicketResponse(
-    data: json["data"] == null ? null : Data.fromJson(json["data"]),
-    message: json["message"],
-    status: json["status"],
-  );
+  factory RaiseTicketResponse.fromJson(Map<String, dynamic> json) =>
+      RaiseTicketResponse(
+        data: json["data"] == null ? null : Data.fromJson(json["data"]),
+        message: json["message"],
+        status: json["status"],
+      );
 
   Map<String, dynamic> toJson() => {
-    "data": data?.toJson(),
-    "message": message,
-    "status": status,
-  };
+        "data": data?.toJson(),
+        "message": message,
+        "status": status,
+      };
 }
 
 class Data {
@@ -35,11 +33,12 @@ class Data {
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
-    ticketRaised: json["TicketRaised"] == null ? null : TicketRaised.fromJson(json["TicketRaised"]),
-  );
+        ticketRaised: json["TicketRaised"] == null
+            ? null
+            : TicketRaised.fromJson(json["TicketRaised"]),
+      );
 
   Map<String, dynamic> toJson() => {
-    "TicketRaised": ticketRaised?.toJson(),
-  };
+        "TicketRaised": ticketRaised?.toJson(),
+      };
 }
-

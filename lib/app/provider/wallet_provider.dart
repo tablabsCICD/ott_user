@@ -1,12 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/data/models/response/addWalletResponse.dart';
 import 'package:ott/data/models/response/getWalletAmount.dart';
 import 'package:ott/data/models/response/walletHistory.dart';
-import 'package:ott/data/models/response/withdrawAmountResponse.dart';
 import 'package:ott/data/models/user.dart';
 
 import '../core/network/api_helper.dart';
@@ -46,13 +44,17 @@ class WalletProvider extends ChangeNotifier {
     if (result['success'] == true) {
       _wallet = result['wallet'] as Wallet;
       _walletBalance = (result['balance'] as num).toDouble();
-      _transactionHistory =
-          List<Transactions>.from(result['transactions'] as List<Transactions>);
-      _filteredTransactionHistory = List<Transactions>.from(_transactionHistory);
+      if (result['historyUpdated'] != false) {
+        _transactionHistory = List<Transactions>.from(
+            result['transactions'] as List<Transactions>);
+        _filteredTransactionHistory =
+            List<Transactions>.from(_transactionHistory);
+      }
       notifyListeners();
       return {
         'success': true,
-        'message': 'Wallet refreshed successfully.',
+        'message':
+            result['message']?.toString() ?? 'Wallet refreshed successfully.',
       };
     }
 
@@ -62,7 +64,7 @@ class WalletProvider extends ChangeNotifier {
     };
   }
 
-  Future<Map<String, Object>> onPaymentVerified() async {
+  Future<Map<String, Object>> onPaymentVerified({double? expectedAmount}) async {
     if (_isAddingBalance) {
       return {
         'success': false,
@@ -74,11 +76,117 @@ class WalletProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final previousBalance = _walletBalance;
       final result = await refreshWalletData();
-      return result;
+      if (result['success'] != true) {
+        return result;
+      }
+
+      if (expectedAmount != null &&
+          _walletBalance + 0.01 < previousBalance + expectedAmount) {
+        await Future.delayed(const Duration(seconds: 2));
+        final retryResult = await refreshWalletData();
+        if (retryResult['success'] == true &&
+            _walletBalance + 0.01 >= previousBalance + expectedAmount) {
+          return {
+            'success': true,
+            'message': 'Wallet recharged successfully.',
+          };
+        }
+
+        final fallbackResult = await _addBalanceAfterVerifiedPayment(
+          expectedAmount,
+        );
+        if (fallbackResult['success'] == true) {
+          await refreshWalletData();
+          return {
+            'success': true,
+            'message': 'Wallet recharged successfully.',
+          };
+        }
+
+        return {
+          'success': false,
+          'message':
+              fallbackResult['message']?.toString() ??
+                  'Payment was verified, but the wallet balance has not updated yet. Please check again in a moment.',
+        };
+      }
+
+      return {
+        'success': true,
+        'message': 'Wallet recharged successfully.',
+      };
     } finally {
       _isAddingBalance = false;
       notifyListeners();
+    }
+  }
+
+  Future<Map<String, Object>> _addBalanceAfterVerifiedPayment(
+    double amount,
+  ) async {
+    try {
+      final apiUrl = ApiConstant.addMoneyToWallet;
+      final user = await LocalSharePreferences.localSharePreferences.getUser();
+      if (user?.id == null) {
+        return {
+          'success': false,
+          'message': 'Please log in again to update your wallet balance.',
+        };
+      }
+
+      final response = await ApiHelper().postApiWithBody(
+        apiUrl,
+        {
+          'amount': amount,
+          'userId': user!.id,
+        },
+      );
+
+      if (response.statusCode != 200) {
+        return {
+          'success': false,
+          'message':
+              'Payment was successful, but wallet credit failed. Please contact support.',
+        };
+      }
+
+      final responseBody = json.decode(response.body);
+      if (responseBody is! Map<String, dynamic>) {
+        return {
+          'success': false,
+          'message':
+              'Payment was successful, but wallet credit returned an invalid response.',
+        };
+      }
+
+      final walletResponse = AddWalletAmountResponse.fromJson(responseBody);
+      if (walletResponse.success != true) {
+        return {
+          'success': false,
+          'message': walletResponse.message ??
+              'Payment was successful, but wallet credit failed.',
+        };
+      }
+
+      if (walletResponse.data?.balance != null) {
+        _walletBalance = walletResponse.data!.balance!;
+        await getTransactionHistory();
+        notifyListeners();
+      }
+
+      return {
+        'success': true,
+        'message': walletResponse.message ?? 'Wallet recharged successfully.',
+      };
+    } catch (error) {
+      debugPrint('Wallet credit fallback error: $error');
+      return {
+        'success': false,
+        'message':
+            'Payment was successful, but wallet credit failed. Please contact support.',
+      };
     }
   }
 
@@ -161,7 +269,8 @@ class WalletProvider extends ChangeNotifier {
         contentId: contentId,
       );
 
-      _walletBalance = withdrawAmountresponse.data?.newBalance ?? _walletBalance;
+      _walletBalance =
+          withdrawAmountresponse.data?.newBalance ?? _walletBalance;
       await getTransactionHistory();
       notifyListeners();
       return {

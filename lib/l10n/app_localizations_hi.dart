@@ -331,5 +331,20 @@ class AppLocalizationsHi extends AppLocalizations {
   String get rateUs => 'हमें रेट करें';
 
   @override
+  String get purchaseHistory => 'खरीद इतिहास';
+
+  @override
+  String get giftedByYou => 'आपके द्वारा गिफ्ट की गई फिल्में';
+
+  @override
+  String get receivedGiftedMovies => 'प्राप्त गिफ्ट की गई फिल्में';
+
+  @override
+  String get accountDetails => 'खाता विवरण';
+
+  @override
+  String get editAddress => 'पता संपादित करें';
+
+  @override
   String get logout => 'लॉगआउट';
 }

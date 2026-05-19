@@ -16,7 +16,7 @@ import '../core/utils/sharepreferences.dart';
 
 class PurchaseContentProvider extends ChangeNotifier {
   static const String _purchaseCacheKey = 'cached_purchase_content';
-  List<UserContent> _userContentList = [];
+  final List<UserContent> _userContentList = [];
   bool _isSavingContent = false;
 
   List<UserContent> get userContentList => _userContentList;
@@ -59,8 +59,8 @@ class PurchaseContentProvider extends ChangeNotifier {
     try {
       var response = await apiHelper.postApiWithBody(apiUrl, mapData);
       debugPrint("save user content ${response.body}");
+      final responseBody = _decodeResponseBody(response.body);
       if (response.statusCode == 200) {
-        Map<String, dynamic> responseBody = json.decode(response.body);
         SavePurchaseContentResponse addUserResponse =
             SavePurchaseContentResponse.fromJson(responseBody);
 
@@ -85,19 +85,42 @@ class PurchaseContentProvider extends ChangeNotifier {
           };
         }
       } else {
-        return {'failure': true, 'message': 'Something went wrong!'};
-        // throw Exception('Failed to add user. Status code: ${response.statusCode}');
+        return {
+          'success': false,
+          'message': responseBody['message']?.toString() ??
+              'Purchase failed. Please try again.',
+        };
       }
     } catch (error) {
       debugPrint("Error: $error");
       return {
         'success': false,
-        'message': 'An error occurred while adding user: $error'
+        'message': _cleanPurchaseError(error)
       };
     } finally {
       _isSavingContent = false;
       notifyListeners();
     }
+  }
+
+  Map<String, dynamic> _decodeResponseBody(String body) {
+    try {
+      final decoded = json.decode(body);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {}
+
+    return {};
+  }
+
+  String _cleanPurchaseError(Object error) {
+    final message = error.toString();
+    if (message.contains('Unknown duration:')) {
+      return message.replaceFirst('Exception: ', '');
+    }
+
+    return 'Purchase failed. Please try again.';
   }
 
   Future<Map<String, Object>> getPurchaseContent({

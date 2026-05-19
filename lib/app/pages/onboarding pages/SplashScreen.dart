@@ -1,8 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/core/constant/app_constant.dart';
+import 'package:ott/app/core/services/app_update_service.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/onboarding pages/selectLanguagePage.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constant/prefrense_constant.dart';
 import '../../core/utils/sharepreferences.dart';
@@ -16,6 +20,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   final LocalSharePreferences _prefs = LocalSharePreferences();
+  final AppUpdateService _appUpdateService = AppUpdateService();
   bool _isLoggedIn = false;
 
   @override
@@ -32,6 +37,15 @@ class _SplashScreenState extends State<SplashScreen> {
 
     // Splash delay
     await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+
+    final updateInfo = await _appUpdateService.getUpdateInfo();
+    if (!mounted) return;
+
+    if (updateInfo.isUpdateAvailable) {
+      await _showUpdateDialog(updateInfo);
+      if (!mounted) return;
+    }
 
     if (!mounted) return;
     final route = ModalRoute.of(context);
@@ -46,7 +60,41 @@ class _SplashScreenState extends State<SplashScreen> {
             _isLoggedIn ? NavigationPage() : const SelectLocaleLanguagePage(),
       ),
     );
+  }
 
+  Future<void> _showUpdateDialog(AppUpdateInfo updateInfo) async {
+    await showDialog<void>(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final theme = Theme.of(dialogContext);
+        return AlertDialog(
+          backgroundColor: theme.cardColor,
+          title: const Text('Update Available'),
+          content: Text(
+            'A newer version is available (${updateInfo.latestVersion}). Please update for the best experience.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext, rootNavigator: true).pop(),
+              child: const Text('Later'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final uri = Uri.parse(AppConstant.playStoreLink);
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                if (dialogContext.mounted) {
+                  Navigator.of(dialogContext, rootNavigator: true).pop();
+                }
+              },
+              child: const Text('Update Now'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -57,13 +105,21 @@ class _SplashScreenState extends State<SplashScreen> {
       backgroundColor: theme.primaryColor,
       body: SafeArea(
           child: Stack(fit: StackFit.expand, children: [
-        Hero(
-          tag: 'logo',
-          child: Image.asset(
-            ImageConstant.fullScreenLogo,
-            fit: BoxFit.cover,
-          ),
-        ),
+        ResponsiveWidget.isMobile(context)
+            ? Hero(
+                tag: 'logo',
+                child: Image.asset(
+                  ImageConstant.fullScreenLogo,
+                  fit: BoxFit.cover,
+                ),
+              )
+            : Hero(
+                tag: 'logo',
+                child: Image.asset(
+                  ImageConstant.webFullScreenLogo,
+                  fit: BoxFit.cover,
+                ),
+              ),
         /* Align(
           alignment: Alignment.bottomCenter,
           child: Padding(

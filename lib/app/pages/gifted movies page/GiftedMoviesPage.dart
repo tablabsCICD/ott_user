@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/pages/gifted%20movies%20page/GiftDetailsPage.dart';
+import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class GiftedMoviesPage extends StatefulWidget {
   const GiftedMoviesPage({super.key});
@@ -31,6 +35,32 @@ class _GiftedMoviesPageState extends State<GiftedMoviesPage> {
   void copyToClipboard(BuildContext context, String text) {
     Clipboard.setData(ClipboardData(text: text));
     CustomToast.show(context, "Copied: $text", isSuccess: true);
+  }
+
+  Future<void> shareGiftLink(
+    String couponCode,
+    String movieTitle,
+  ) async {
+    final giftLink = DeepLinkService.instance.buildGiftDeepLink(couponCode);
+    final fallbackLink = DeepLinkService.instance.buildGiftAppLink(couponCode);
+    final message = '''
+You have received a Filmytell gift: $movieTitle
+
+Claim gift:
+$giftLink
+
+Fallback link:
+$fallbackLink
+
+Gift code: $couponCode
+''';
+
+    await SharePlus.instance.share(
+      ShareParams(
+        text: message.trim(),
+        subject: 'Filmytell movie gift',
+      ),
+    );
   }
 
   @override
@@ -83,13 +113,16 @@ class _GiftedMoviesPageState extends State<GiftedMoviesPage> {
               final record = provider.giftRecords[index];
               return GiftCard(
                 title: record.movie?.title ?? "Movie #${record.movie}",
-                date: formatDate(record.createdDate!),
+                date: record.createdDate == null
+                    ? "Date not available"
+                    : formatDate(record.createdDate!),
                 totalGifted: record.totalGiftCount ?? 0,
                 remainingGifted: record.remainingGiftCount ?? 0,
                 moviePrice: record.movie?.price ?? 0,
                 totalPaid: record.totalPaid ?? 0,
                 couponCode: record.couponCode,
                 onTap: () {
+                  if (record.id == null) return;
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -100,6 +133,23 @@ class _GiftedMoviesPageState extends State<GiftedMoviesPage> {
                 onCopy: record.couponCode != null
                     ? () => copyToClipboard(context, record.couponCode!)
                     : null,
+                onShare: record.couponCode != null
+                    ? () => shareGiftLink(
+                          record.couponCode!,
+                          record.movie?.title ?? "this movie",
+                        )
+                    : null,
+                onMovieDetails: record.movie?.id == null
+                    ? null
+                    : () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                MovieDetailsPage(movieId: record.movie!.id!),
+                          ),
+                        );
+                      },
               );
             },
           );
@@ -119,6 +169,8 @@ class GiftCard extends StatelessWidget {
   final String? couponCode;
   final VoidCallback onTap;
   final VoidCallback? onCopy;
+  final VoidCallback? onShare;
+  final VoidCallback? onMovieDetails;
 
   const GiftCard({
     super.key,
@@ -131,11 +183,15 @@ class GiftCard extends StatelessWidget {
     required this.onTap,
     this.couponCode,
     this.onCopy,
+    this.onShare,
+    this.onMovieDetails,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final showMovieDetailsButton =
+        !ResponsiveWidget.isDesktop(context) && onMovieDetails != null;
 
     return Card(
       color: theme.cardColor,
@@ -242,7 +298,56 @@ class GiftCard extends StatelessWidget {
                           onPressed: onCopy,
                           tooltip: "Copy coupon code",
                         ),
+                      if (onShare != null)
+                        IconButton(
+                          icon: const Icon(Icons.share, size: 18),
+                          color: theme.primaryColor,
+                          onPressed: onShare,
+                          tooltip: "Share gift link",
+                        ),
                     ],
+                  ),
+                ),
+                if (onShare != null) ...[
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: onShare,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.link,
+                          size: 16,
+                          color: theme.primaryColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          "Share gift claim link",
+                          style: TextStyle(
+                            color: theme.primaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+              if (showMovieDetailsButton) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: onMovieDetails,
+                    icon: const Icon(Icons.movie_outlined, size: 18),
+                    label: const Text('Movie details'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: theme.primaryColor,
+                      side: BorderSide(color: theme.primaryColor),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                   ),
                 ),
               ],

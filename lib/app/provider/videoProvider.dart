@@ -36,11 +36,11 @@ class VideoProvider extends BaseProvider {
     });
   }
 
-  List<Content> _contentList = [];
+  final List<Content> _contentList = [];
   List<Content> _filteredContentList = [];
   List<Content> _upcomingContentList = [];
-  Content _content = Content();
-  Content _selectedContent = Content();
+  final Content _content = Content();
+  final Content _selectedContent = Content();
 
   List<Content> get contentList => _contentList;
 
@@ -249,7 +249,7 @@ class VideoProvider extends BaseProvider {
     notifyListeners();
   }
 
-  List<Review> _reviewList = [];
+  final List<Review> _reviewList = [];
   List<Review> get reviewList => _reviewList;
 
   Future<Map<String, Object>> saveRatingReview(int contentId) async {

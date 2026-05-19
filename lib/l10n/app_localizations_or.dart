@@ -331,5 +331,20 @@ class AppLocalizationsOr extends AppLocalizations {
   String get rateUs => 'ଆମକୁ ମୂଲ୍ୟାଙ୍କନ କରନ୍ତୁ';
 
   @override
+  String get purchaseHistory => 'କ୍ରୟ ଇତିହାସ';
+
+  @override
+  String get giftedByYou => 'ଆପଣ ଦେଇଥିବା ଉପହାର ଚଳଚ୍ଚିତ୍ର';
+
+  @override
+  String get receivedGiftedMovies => 'ମିଳିଥିବା ଉପହାର ଚଳଚ୍ଚିତ୍ର';
+
+  @override
+  String get accountDetails => 'ଖାତା ବିବରଣୀ';
+
+  @override
+  String get editAddress => 'ଠିକଣା ସମ୍ପାଦନ କରନ୍ତୁ';
+
+  @override
   String get logout => 'ଲଗଆଉଟ୍';
 }

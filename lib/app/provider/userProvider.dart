@@ -1,17 +1,21 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:async';
 import 'dart:io' as io;
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:universal_html/html.dart' as html;
 
 import 'package:image_picker/image_picker.dart'; // For web-specific file handling
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/constant/prefrense_constant.dart';
 import 'package:ott/data/models/response/errorResponse.dart';
 import 'package:ott/data/models/response/getUserResponse.dart';
 import 'package:ott/data/models/response/updateUserResponse.dart';
+import 'package:ott/data/repositories/country_name.dart';
 
 import '../../data/models/request/user_request.dart';
 import '../../data/models/response/addUserResponse.dart';
@@ -22,7 +26,7 @@ import '../core/utils/sharepreferences.dart';
 import 'baseProvider.dart';
 
 class UserProvider extends BaseProvider {
-  UserProvider() : super('Ideal') {}
+  UserProvider() : super('Ideal');
 
   TextEditingController firstNameController = TextEditingController();
   TextEditingController lastNameController = TextEditingController();
@@ -43,8 +47,18 @@ class UserProvider extends BaseProvider {
   TextEditingController roleController = TextEditingController();
   String? selectedGender;
   List<String> selectedLanguages = [];
+  List<Map<String, String>> addressSuggestions = [];
+  bool isSearchingAddress = false;
+  bool isFetchingCurrentLocation = false;
+  List<String> countryOptions = [];
+  List<String> stateOptions = [];
+  List<String> districtOptions = [];
+  List<String> talukaOptions = [];
+  List<String> pincodeOptions = [];
 
   bool isEnbale = false;
+  final CountryService _countryService = CountryService();
+  final Map<String, List<String>> _stateOptionsCache = {};
 
   setValue() async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
@@ -78,7 +92,8 @@ class UserProvider extends BaseProvider {
   User get userObj => userObject;
 
   Future<void> hydrateFromCache() async {
-    final cachedUser = await LocalSharePreferences.localSharePreferences.getUser();
+    final cachedUser =
+        await LocalSharePreferences.localSharePreferences.getUser();
     if (cachedUser == null) return;
 
     userObject = cachedUser;
@@ -115,7 +130,9 @@ class UserProvider extends BaseProvider {
     userRequest.officeBuilding = officeBuildingController.text;
     userRequest.osName = "Web";
     userRequest.password = passwordController.text;
-    userRequest.pincode = "411017";
+    userRequest.pincode = pinCodeDateController.text.trim().isNotEmpty
+        ? pinCodeDateController.text.trim()
+        : "411017";
     userRequest.profilePhoto = profileController.text;
     userRequest.refferedBy = refferedByController.text;
     userRequest.taluka = cityController.text;
@@ -191,8 +208,8 @@ class UserProvider extends BaseProvider {
       "emailId": emailController.text.trim(),
       "firstName": firstNameController.text.trim(),
       "lastName": lastNameController.text.trim(),
-      //"dob": dobController.text,
-      "mobileNumber": user.mobileNumber, // mobileController.text,
+      "dob": dobController.text.trim(),
+      //  "mobileNumber": mobileController.text.trim(),
       "profilePhoto": profileController.text,
       //"refferedBy": refferedByController.text,
     };
@@ -273,7 +290,7 @@ class UserProvider extends BaseProvider {
       "firstName": firstNameController.text,
       "lastName": lastNameController.text,
       "dob": dobController.text,
-      "mobileNumber": user.mobileNumber, // mobileController.text,
+      // "mobileNumber": mobileController.text.trim(),
       "profilePhoto": profileController.text,
       "refferedBy": refferedByController.text,
     };
@@ -351,11 +368,15 @@ class UserProvider extends BaseProvider {
     Map<String, dynamic> data = {
       "id": user!.id,
       "emailId": user.emailId,
-      "mobileNumber": user.mobileNumber,
+      //  "mobileNumber": user.mobileNumber,
       "country": countryController.text,
       "state": stateController.text,
       "district": districtController.text,
-      "taluka": cityController.text,
+      "city": cityController.text.trim(),
+      "taluka": cityController.text.trim(),
+      "officeBuilding": officeBuildingController.text,
+      "area": officeBuildingController.text,
+      "pincode": pinCodeDateController.text,
     };
     log("data=====$data");
 
@@ -367,7 +388,7 @@ class UserProvider extends BaseProvider {
 
         UpdateUserResponse updateUserResponse =
             UpdateUserResponse.fromJson(responseBody);
-        log('Update User response === ${updateUserResponse}');
+        log('Update User response === $updateUserResponse');
 
         debugPrint("data: ${updateUserResponse.message}");
         if (updateUserResponse.success == true) {
@@ -422,6 +443,297 @@ class UserProvider extends BaseProvider {
     }
   }
 
+  Future<void> searchAddressSuggestions(String input) async {
+    final query = input.trim();
+    if (query.length < 3) {
+      addressSuggestions = [];
+      notifyListeners();
+      return;
+    }
+
+    isSearchingAddress = true;
+    notifyListeners();
+
+    try {
+      final uri = Uri.https(
+        'maps.googleapis.com',
+        '/maps/api/place/autocomplete/json',
+        {
+          'input': query,
+          'key': AppConstant.GOOGLE_KEY,
+          'components': 'country:in',
+        },
+      );
+      final response = await http.get(uri);
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final predictions = body['predictions'] as List? ?? [];
+        addressSuggestions = predictions
+            .map((item) {
+              final data = item as Map<String, dynamic>;
+              return {
+                'description': data['description']?.toString() ?? '',
+                'placeId': data['place_id']?.toString() ?? '',
+              };
+            })
+            .where((item) =>
+                item['description']!.isNotEmpty && item['placeId']!.isNotEmpty)
+            .toList();
+      } else {
+        addressSuggestions = [];
+      }
+    } catch (error) {
+      log('Places autocomplete error: $error');
+      addressSuggestions = [];
+    } finally {
+      isSearchingAddress = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> selectAddressSuggestion(Map<String, String> suggestion) async {
+    final placeId = suggestion['placeId'] ?? '';
+    if (placeId.isEmpty) return;
+
+    isSearchingAddress = true;
+    notifyListeners();
+
+    try {
+      final uri = Uri.https(
+        'maps.googleapis.com',
+        '/maps/api/place/details/json',
+        {
+          'place_id': placeId,
+          'fields': 'formatted_address,address_components',
+          'key': AppConstant.GOOGLE_KEY,
+        },
+      );
+      final response = await http.get(uri);
+      if (response.statusCode != 200) return;
+
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      if (body['status']?.toString() != 'OK') return;
+      final result = body['result'] as Map<String, dynamic>?;
+      if (result == null) return;
+
+      _applyGoogleAddressResult(
+        result,
+        fallbackAddress: suggestion['description'],
+      );
+
+      addressSuggestions = [];
+    } catch (error) {
+      log('Places details error: $error');
+    } finally {
+      isSearchingAddress = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> useCurrentLocationFromGoogle() async {
+    isFetchingCurrentLocation = true;
+    notifyListeners();
+
+    try {
+      final geocodeResult = await _resolveCurrentLocationAddress();
+      if (geocodeResult != null) {
+        _applyGoogleAddressResult(geocodeResult);
+        addressSuggestions = [];
+        return true;
+      }
+      addressSuggestions = [];
+      return false;
+    } catch (error) {
+      log('Current location fetch error: $error');
+      return false;
+    } finally {
+      isFetchingCurrentLocation = false;
+      notifyListeners();
+    }
+  }
+
+  Future<Map<String, dynamic>?> _resolveCurrentLocationAddress() async {
+    final deviceResult = await _lookupLocationViaDeviceGeolocation();
+    if (deviceResult != null) return deviceResult;
+
+    final browserResult = await _lookupLocationViaBrowserGeolocation();
+    if (browserResult != null) return browserResult;
+
+    return _lookupLocationViaGoogleGeolocation();
+  }
+
+  Future<Map<String, dynamic>?> _lookupLocationViaDeviceGeolocation() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return null;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return null;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+
+      final geocodeUri = Uri.https(
+        'maps.googleapis.com',
+        '/maps/api/geocode/json',
+        {
+          'latlng': '${position.latitude},${position.longitude}',
+          'key': AppConstant.GOOGLE_KEY,
+        },
+      );
+      final geocodeResponse = await http.get(geocodeUri);
+      if (geocodeResponse.statusCode != 200) return null;
+
+      final geocodeBody =
+          jsonDecode(geocodeResponse.body) as Map<String, dynamic>;
+      final status = geocodeBody['status']?.toString();
+      if (status != 'OK') return null;
+
+      final results = geocodeBody['results'] as List? ?? [];
+      if (results.isEmpty) return null;
+
+      return results.first as Map<String, dynamic>;
+    } catch (error) {
+      log('Device geolocation error: $error');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> _lookupLocationViaBrowserGeolocation() async {
+    if (!kIsWeb) return null;
+
+    try {
+      final geolocation = html.window.navigator.geolocation;
+      final position = await geolocation.getCurrentPosition(
+        enableHighAccuracy: true,
+        timeout: const Duration(seconds: 15),
+      );
+      final lat = position.coords?.latitude;
+      final lng = position.coords?.longitude;
+      if (lat == null || lng == null) return null;
+
+      final geocodeUri = Uri.https(
+        'maps.googleapis.com',
+        '/maps/api/geocode/json',
+        {
+          'latlng': '$lat,$lng',
+          'key': AppConstant.GOOGLE_KEY,
+        },
+      );
+      final geocodeResponse = await http.get(geocodeUri);
+      if (geocodeResponse.statusCode != 200) return null;
+
+      final geocodeBody =
+          jsonDecode(geocodeResponse.body) as Map<String, dynamic>;
+      final status = geocodeBody['status']?.toString();
+      if (status != 'OK') return null;
+
+      final results = geocodeBody['results'] as List? ?? [];
+      if (results.isEmpty) return null;
+
+      return results.first as Map<String, dynamic>;
+    } catch (error) {
+      log('Browser geolocation error: $error');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> _lookupLocationViaGoogleGeolocation() async {
+    try {
+      final geoUri = Uri.https(
+        'www.googleapis.com',
+        '/geolocation/v1/geolocate',
+        {'key': AppConstant.GOOGLE_KEY},
+      );
+      final geoResponse = await http.post(
+        geoUri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(<String, Object>{'considerIp': true}),
+      );
+      if (geoResponse.statusCode != 200) return null;
+
+      final geoBody = jsonDecode(geoResponse.body) as Map<String, dynamic>;
+      final location = geoBody['location'] as Map<String, dynamic>?;
+      final lat = location?['lat'];
+      final lng = location?['lng'];
+      if (lat == null || lng == null) return null;
+
+      final geocodeUri = Uri.https(
+        'maps.googleapis.com',
+        '/maps/api/geocode/json',
+        {
+          'latlng': '$lat,$lng',
+          'key': AppConstant.GOOGLE_KEY,
+        },
+      );
+      final geocodeResponse = await http.get(geocodeUri);
+      if (geocodeResponse.statusCode != 200) return null;
+
+      final geocodeBody =
+          jsonDecode(geocodeResponse.body) as Map<String, dynamic>;
+      final status = geocodeBody['status']?.toString();
+      if (status != 'OK') return null;
+      final results = geocodeBody['results'] as List? ?? [];
+      if (results.isEmpty) return null;
+
+      return results.first as Map<String, dynamic>;
+    } catch (error) {
+      log('Google geolocation error: $error');
+      return null;
+    }
+  }
+
+  void _applyGoogleAddressResult(
+    Map<String, dynamic> result, {
+    String? fallbackAddress,
+  }) {
+    officeBuildingController.text =
+        result['formatted_address']?.toString() ?? fallbackAddress ?? '';
+
+    final components = result['address_components'] as List? ?? [];
+    String valueForType(String type) {
+      for (final component in components) {
+        final data = component as Map<String, dynamic>;
+        final types = (data['types'] as List? ?? []).map((e) => '$e');
+        if (types.contains(type)) {
+          return data['long_name']?.toString() ?? '';
+        }
+      }
+      return '';
+    }
+
+    final country = valueForType('country');
+    final state = valueForType('administrative_area_level_1');
+    final district = valueForType('administrative_area_level_3').isNotEmpty
+        ? valueForType('administrative_area_level_3')
+        : valueForType('administrative_area_level_2');
+    final city = valueForType('locality').isNotEmpty
+        ? valueForType('locality')
+        : valueForType('sublocality_level_1');
+    final pincode = valueForType('postal_code');
+
+    if (country.isNotEmpty) countryController.text = country;
+    if (state.isNotEmpty) stateController.text = state;
+    if (district.isNotEmpty) districtController.text = district;
+    if (city.isNotEmpty) cityController.text = city;
+    if (pincode.isNotEmpty) pinCodeDateController.text = pincode;
+
+    countryOptions = country.isEmpty ? [] : [country];
+    stateOptions = state.isEmpty ? [] : [state];
+    districtOptions = district.isEmpty ? [] : [district];
+    talukaOptions = city.isEmpty ? [] : [city];
+    pincodeOptions = pincode.isEmpty ? [] : [pincode];
+  }
+
   // Update user data
   Future<Map<String, Object>> updateUserLang(List<String> langList) async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
@@ -429,10 +741,10 @@ class UserProvider extends BaseProvider {
 
     ApiHelper apiHelper = ApiHelper();
     Map<String, dynamic> data = {
-      "firstName": user!.firstName,
-      "id": user.id,
-      "lastName": user.lastName,
-      "mobileNumber": user.mobileNumber,
+      //"firstName": user!.firstName,
+      "id": user!.id,
+      //"lastName": user.lastName,
+      // "mobileNumber": user.mobileNumber,
       "languages": langList
     };
     try {
@@ -862,11 +1174,66 @@ class UserProvider extends BaseProvider {
     notifyListeners();
   }
 
+  Future<void> loadCountryOptions() async {
+    if (countryOptions.isNotEmpty) return;
+
+    try {
+      countryOptions = await _countryService.fetchCountryNames();
+      notifyListeners();
+    } catch (error) {
+      log('Country list fetch error: $error');
+    }
+  }
+
+  Future<void> loadStateOptionsByCountry(String country) async {
+    final selectedCountry = country.trim();
+
+    stateController.clear();
+    districtController.clear();
+    cityController.clear();
+    pinCodeDateController.clear();
+    districtOptions = [];
+    talukaOptions = [];
+    pincodeOptions = [];
+
+    if (selectedCountry.isEmpty) {
+      stateOptions = [];
+      notifyListeners();
+      return;
+    }
+
+    final cached = _stateOptionsCache[selectedCountry];
+    if (cached != null) {
+      stateOptions = List<String>.from(cached);
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final states =
+          await _countryService.fetchStatesByCountry(selectedCountry);
+      stateOptions = states;
+      _stateOptionsCache[selectedCountry] = List<String>.from(states);
+    } catch (error) {
+      log('State list fetch error: $error');
+      stateOptions = [];
+    }
+
+    notifyListeners();
+  }
+
   void disposeData() {
     firstNameController.clear();
     lastNameController.clear();
     cityController.clear();
     countryController.clear();
+    addressSuggestions = [];
+    countryOptions = [];
+    stateOptions = [];
+    _stateOptionsCache.clear();
+    districtOptions = [];
+    talukaOptions = [];
+    pincodeOptions = [];
     confirmPasswordController.clear();
     districtController.clear();
     dobController.clear();
@@ -874,7 +1241,7 @@ class UserProvider extends BaseProvider {
     mobileController.clear(); // double-check spelling here
     officeBuildingController.clear();
     profileController.clear();
-    profileController.clear();
+
     pinCodeDateController.clear();
     refferedByController.clear();
     roleController.clear();

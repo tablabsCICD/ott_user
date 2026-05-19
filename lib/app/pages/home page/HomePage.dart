@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:developer';
 import 'dart:math' as math;
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
@@ -12,6 +15,7 @@ import 'package:ott/app/pages/profile%20page/ProfilePage.dart';
 import 'package:ott/app/pages/search%20page/SearchPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
+import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/continueWatchMovieCard.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
@@ -37,7 +41,7 @@ class HomePage extends StatefulWidget {
   _HomePageState createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with RouteAware {
   String selectedType = "MOVIE";
   bool isLoading = true;
 
@@ -63,12 +67,18 @@ class _HomePageState extends State<HomePage> {
   bool _continueWatchListenerAttached = false;
   final GlobalKey _continueWatchKey = GlobalKey();
   bool _visibleUpdateScheduled = false;
+  bool _isOffline = false;
+  bool _continueWatchRefreshInFlight = false;
+  PageRoute<dynamic>? _route;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   @override
   void initState() {
     super.initState();
 
     _verticalController.addListener(_updateVisibleRows);
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen(_setConnectionStatus);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!_dataLoaded) {
@@ -82,7 +92,26 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<dynamic> && route != _route) {
+      if (_route != null) {
+        routeObserver.unsubscribe(this);
+      }
+      _route = route;
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPopNext() {
+    _refreshContinueWatching();
+  }
+
+  @override
   void dispose() {
+    routeObserver.unsubscribe(this);
     for (final controller in _rowControllers.values) {
       controller.dispose();
     }
@@ -98,15 +127,54 @@ class _HomePageState extends State<HomePage> {
     _verticalController.dispose();
     _continueWatchController.dispose();
     _continueWatchActiveIndex.dispose();
+    _connectivitySubscription?.cancel();
     super.dispose();
   }
 
+  Future<void> _refreshContinueWatching() async {
+    if (!mounted ||
+        _continueWatchRefreshInFlight ||
+        _isOffline ||
+        selectedType == 'MINI SERIES' ||
+        selectedType == 'MADIOO') {
+      return;
+    }
+
+    _continueWatchRefreshInFlight = true;
+    try {
+      await context
+          .read<DashboardProvider>()
+          .getContinueWatchedMovieList(selectedType);
+    } finally {
+      _continueWatchRefreshInFlight = false;
+    }
+  }
+
   Future<void> _initializeData() async {
+    await _updateConnectionStatus();
     await _fetchUserData();
+    if (!mounted) return;
     setState(() {
       isLoading = false;
     });
     confirmDetails(context);
+  }
+
+  Future<void> _updateConnectionStatus() async {
+    final connectivityResults = await Connectivity().checkConnectivity();
+    _setConnectionStatus(connectivityResults);
+  }
+
+  void _setConnectionStatus(List<ConnectivityResult> connectivityResults) {
+    final isOffline = !connectivityResults.any(
+      (result) => result != ConnectivityResult.none,
+    );
+
+    if (!mounted) return;
+    if (_isOffline == isOffline) return;
+    setState(() {
+      _isOffline = isOffline;
+    });
   }
 
   void _startAutoScroll() {
@@ -261,9 +329,7 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
-    if (bestIndex == null) {
-      bestIndex = fallbackIndex;
-    }
+    bestIndex ??= fallbackIndex;
 
     if (bestIndex == null) {
       if (notifier.value != null) {
@@ -325,7 +391,8 @@ class _HomePageState extends State<HomePage> {
 
     if (_continueWatchItemCount > 0) {
       final centerY = _rowCenterY(_continueWatchKey);
-      final isVisible = centerY != null && centerY >= 0 && centerY <= screenHeight;
+      final isVisible =
+          centerY != null && centerY >= 0 && centerY <= screenHeight;
       if (isVisible) {
         _updateActiveIndex(
           _continueWatchActiveIndex,
@@ -394,9 +461,12 @@ class _HomePageState extends State<HomePage> {
                                     selectedType == 'MINI SERIES' ||
                                             selectedType == 'MADIOO'
                                         ? SizedBox.shrink()
-                                        : continueWatchWidget(
-                                            continueWatchList: dashboardProvider
-                                                .continueWatchedMovies),
+                                        : _isOffline
+                                            ? _continueWatchShimmerWidget()
+                                            : continueWatchWidget(
+                                                continueWatchList:
+                                                    dashboardProvider
+                                                        .continueWatchedMovies),
                                     selectedType == 'MINI SERIES'
                                         ? ShortsLibraryPage(
                                             useParentScroll: true)
@@ -668,7 +738,7 @@ class _HomePageState extends State<HomePage> {
         children: [
           // 🔴 LABEL
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
             child: Text(
               "Continue Watching",
               style: GoogleFonts.inter(
@@ -703,7 +773,7 @@ class _HomePageState extends State<HomePage> {
                   child: ContinueWatchMovieCard(
                     movie: item,
                     index: index,
-                    activeIndexListenable: _continueWatchActiveIndex,
+                    enableTrailerPreview: false,
                   ),
                 );
               },
@@ -712,6 +782,98 @@ class _HomePageState extends State<HomePage> {
           SizedBox(height: 20),
         ],
       ),
+    );
+  }
+
+  Widget _continueWatchShimmerWidget() {
+    final theme = Theme.of(context);
+    final itemCount = ResponsiveWidget.isMobile(context)
+        ? 2
+        : ResponsiveWidget.isDesktop(context)
+            ? 5
+            : 3;
+
+    _continueWatchItemCount = 0;
+    _continueWatchItems = const <Content>[];
+    if (_continueWatchActiveIndex.value != null) {
+      _continueWatchActiveIndex.value = null;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+          child: ShimmerLoader(
+            width: ResponsiveWidget.isMobile(context) ? 170 : 220,
+            height: ResponsiveWidget.isMobile(context) ? 18 : 20,
+            borderRadius: 8,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 220,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            itemCount: itemCount,
+            itemBuilder: (context, index) {
+              return Container(
+                width: ContinueWatchMovieCard.itemExtent,
+                margin: const EdgeInsets.only(right: 12),
+                decoration: BoxDecoration(
+                  color: theme.cardColor.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(12),
+                        ),
+                        child: ShimmerLoader(
+                          width: double.infinity,
+                          height: double.infinity,
+                          borderRadius: 0,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const ShimmerLoader(
+                            width: double.infinity,
+                            height: 6,
+                            borderRadius: 6,
+                          ),
+                          const SizedBox(height: 10),
+                          ShimmerLoader(
+                            width: ContinueWatchMovieCard.itemExtent * 0.62,
+                            height: 14,
+                            borderRadius: 6,
+                          ),
+                          const SizedBox(height: 8),
+                          ShimmerLoader(
+                            width: ContinueWatchMovieCard.itemExtent * 0.4,
+                            height: 10,
+                            borderRadius: 6,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
     );
   }
 
@@ -746,9 +908,9 @@ class _HomePageState extends State<HomePage> {
                 fontWeight: FontWeight.bold,
               ),
             )
-          : Container(
-              width: 50,
-              height: 50,
+          : SizedBox(
+              width: 70,
+              height: 70,
               /*   decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.white),
@@ -847,9 +1009,6 @@ class _HomePageState extends State<HomePage> {
               Provider.of<WalletProvider>(context, listen: false);
 
           final user = userProvider.userObject;
-          if (user == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
           return Row(
             children: [
               IconButton(
@@ -1208,9 +1367,7 @@ class _HomePageState extends State<HomePage> {
               if (selectedType == 'MADIOO') {
                 return;
               }
-              if (selectedLanguages.isEmpty ||
-                  selectedLanguages == [] ||
-                  selectedLanguages == null) {
+              if (selectedLanguages.isEmpty || selectedLanguages == []) {
                 await getMovieList(
                     dashboardProvider, selectedType, ["Hindi", "English"]);
               } else {
@@ -1220,13 +1377,16 @@ class _HomePageState extends State<HomePage> {
             },
             child: Container(
               decoration: BoxDecoration(
+                color: selectedType == type
+                    ? selectedThemeData.primaryColor
+                    : Colors.transparent,
                 border: Border.all(
                   color: selectedType == type
                       ? selectedThemeData.primaryColor
                       : selectedThemeData.canvasColor.withOpacity(0.6),
                 ),
                 borderRadius: BorderRadius.circular(
-                  15,
+                  10,
                 ),
               ),
               child: Padding(
@@ -1242,11 +1402,11 @@ class _HomePageState extends State<HomePage> {
                               : 'Madioo',
                   style: TextStyle(
                     color: selectedType == type
-                        ? selectedThemeData.primaryColor
-                        : selectedThemeData.canvasColor,
+                        ? Colors.white
+                        : selectedThemeData.primaryColor,
                     fontWeight: selectedType == type
                         ? FontWeight.bold
-                        : FontWeight.normal,
+                        : FontWeight.w600,
                   ),
                 ),
               ),
@@ -1365,7 +1525,7 @@ class _HomePageState extends State<HomePage> {
 
 //get user baisc details after sign in
   Future<void> userDetailsPopUp(BuildContext context) async {
-    final _formKey = GlobalKey<FormState>();
+    final formKey = GlobalKey<FormState>();
     final lang = AppLocalizations.of(context)!;
 
     await showDialog(
@@ -1382,7 +1542,7 @@ class _HomePageState extends State<HomePage> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           content: SingleChildScrollView(
             child: Form(
-              key: _formKey,
+              key: formKey,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1434,6 +1594,7 @@ class _HomePageState extends State<HomePage> {
                     hintText: lang.enterFirstName,
                     isValidator: true,
                     textInputType: TextInputType.name,
+                    capitalization: TextCapitalization.words,
                     //decoration: const InputDecoration(labelText: 'Name'),
                     //validator: (value) =>
                     //  value!.isEmpty ? 'Enter a valid name' : null,
@@ -1445,6 +1606,7 @@ class _HomePageState extends State<HomePage> {
                     hintText: lang.enterLastName,
                     isValidator: true,
                     textInputType: TextInputType.name,
+                    capitalization: TextCapitalization.words,
                     //decoration: const InputDecoration(labelText: 'Name'),
                     //validator: (value) =>
                     //  value!.isEmpty ? 'Enter a valid name' : null,
@@ -1515,8 +1677,10 @@ class _HomePageState extends State<HomePage> {
 
 //get user location details after sign in
   Future<void> userLocationPopUp(BuildContext context) async {
-    final _formKey = GlobalKey<FormState>();
+    final formKey = GlobalKey<FormState>();
     final lang = AppLocalizations.of(context)!;
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    await userProvider.loadCountryOptions();
 
     await showDialog(
       context: context,
@@ -1534,53 +1698,203 @@ class _HomePageState extends State<HomePage> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           content: SingleChildScrollView(
             child: Form(
-              key: _formKey,
+              key: formKey,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CustomTextField(
+                  TextFormField(
+                    controller: userProvider.officeBuildingController,
+                    maxLines: 2,
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [CapitalizeWordsTextInputFormatter()],
+                    cursorColor: selectedThemeData.primaryColor,
+                    onChanged: (value) {
+                      userProvider.searchAddressSuggestions(value);
+                    },
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: selectedThemeData.cardColor,
+                      labelText: 'Address',
+                      hintText: 'Search your address',
+                      labelStyle:
+                          TextStyle(color: selectedThemeData.canvasColor),
+                      hintStyle: TextStyle(
+                        color: selectedThemeData.canvasColor,
+                        fontSize: 13,
+                      ),
+                      border: OutlineInputBorder(
+                        borderSide: const BorderSide(color: Colors.transparent),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(color: Colors.transparent),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: selectedThemeData.primaryColor,
+                        ),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      prefixIcon: Icon(
+                        Icons.location_on_outlined,
+                        color: selectedThemeData.canvasColor,
+                      ),
+                      suffixIcon: userProvider.isSearchingAddress
+                          ? Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: selectedThemeData.primaryColor,
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
+                    style: TextStyle(color: selectedThemeData.canvasColor),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: userProvider.isFetchingCurrentLocation
+                        ? null
+                        : () async {
+                            final allowed =
+                                await _showLocationPermissionPrompt(ctx);
+                            if (!ctx.mounted) return;
+                            if (allowed != true) return;
+
+                            final locationFilled = await userProvider
+                                .useCurrentLocationFromGoogle();
+                            if (!ctx.mounted) return;
+                            if (!locationFilled) {
+                              CustomToast.show(
+                                ctx,
+                                'Unable to fetch your location. Please enter address manually.',
+                                isSuccess: false,
+                              );
+                            }
+                          },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: selectedThemeData.primaryColor,
+                      side: BorderSide(color: selectedThemeData.primaryColor),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    icon: userProvider.isFetchingCurrentLocation
+                        ? SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: selectedThemeData.primaryColor,
+                            ),
+                          )
+                        : const Icon(Icons.my_location),
+                    label: Text(
+                      userProvider.isFetchingCurrentLocation
+                          ? 'Fetching location...'
+                          : 'Use current location',
+                    ),
+                  ),
+                  if (userProvider.addressSuggestions.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(top: 6, bottom: 8),
+                      decoration: BoxDecoration(
+                        color: selectedThemeData.cardColor,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: selectedThemeData.primaryColor
+                              .withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: userProvider.addressSuggestions.length,
+                        separatorBuilder: (_, __) => Divider(
+                          height: 1,
+                          color: selectedThemeData.canvasColor
+                              .withValues(alpha: 0.08),
+                        ),
+                        itemBuilder: (context, index) {
+                          final suggestion =
+                              userProvider.addressSuggestions[index];
+                          return ListTile(
+                            dense: true,
+                            leading: Icon(
+                              Icons.place_outlined,
+                              color: selectedThemeData.primaryColor,
+                            ),
+                            title: Text(
+                              suggestion['description'] ?? '',
+                              style: TextStyle(
+                                color: selectedThemeData.canvasColor,
+                                fontSize: 13,
+                              ),
+                            ),
+                            onTap: () {
+                              userProvider.selectAddressSuggestion(suggestion);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  _buildEditableLocationDropdown(
+                    context: context,
+                    selectedThemeData: selectedThemeData,
                     controller: userProvider.countryController,
-                    isName: true,
                     label: lang.country,
                     hintText: lang.enterCountry,
-                    isValidator: true,
-                    textInputType: TextInputType.name,
-                    //decoration: const InputDecoration(labelText: 'Name'),
-                    //validator: (value) =>
-                    //  value!.isEmpty ? 'Enter a valid name' : null,
+                    options: userProvider.countryOptions,
+                    onChanged: (value) {
+                      if (value.trim().isEmpty) {
+                        userProvider.loadStateOptionsByCountry('');
+                      }
+                    },
+                    onFieldSubmitted: (value) {
+                      userProvider.loadStateOptionsByCountry(value);
+                    },
+                    onOptionSelected: (value) {
+                      userProvider.loadStateOptionsByCountry(value);
+                    },
                   ),
-                  CustomTextField(
+                  _buildEditableLocationDropdown(
+                    context: context,
+                    selectedThemeData: selectedThemeData,
                     controller: userProvider.stateController,
-                    isName: true,
                     label: lang.state,
                     hintText: lang.enterState,
-                    isValidator: true,
-                    textInputType: TextInputType.name,
-                    //decoration: const InputDecoration(labelText: 'Name'),
-                    //validator: (value) =>
-                    //  value!.isEmpty ? 'Enter a valid name' : null,
+                    options: userProvider.stateOptions,
                   ),
-                  CustomTextField(
+                  _buildEditableLocationDropdown(
+                    context: context,
+                    selectedThemeData: selectedThemeData,
                     controller: userProvider.districtController,
-                    isName: true,
                     label: lang.district,
                     hintText: lang.enterDistrict,
-                    isValidator: true,
-                    textInputType: TextInputType.name,
-                    //decoration: const InputDecoration(labelText: 'Name'),
-                    //validator: (value) =>
-                    //  value!.isEmpty ? 'Enter a valid name' : null,
+                    options: userProvider.districtOptions,
                   ),
-                  CustomTextField(
+                  _buildEditableLocationDropdown(
+                    context: context,
+                    selectedThemeData: selectedThemeData,
                     controller: userProvider.cityController,
-                    isName: true,
                     label: lang.taluka,
                     hintText: lang.enterTaluka,
-                    isValidator: true,
-                    textInputType: TextInputType.name,
-                    //decoration: const InputDecoration(labelText: 'Name'),
-                    //validator: (value) =>
-                    //  value!.isEmpty ? 'Enter a valid name' : null,
+                    options: userProvider.talukaOptions,
+                  ),
+                  _buildEditableLocationDropdown(
+                    context: context,
+                    selectedThemeData: selectedThemeData,
+                    controller: userProvider.pinCodeDateController,
+                    label: 'Pincode',
+                    hintText: 'Enter pincode',
+                    options: userProvider.pincodeOptions,
+                    keyboardType: TextInputType.number,
+                    isRequired: false,
                   ),
                 ],
               ),
@@ -1595,6 +1909,7 @@ class _HomePageState extends State<HomePage> {
                     borderRadius: BorderRadius.circular(6)),
               ),
               onPressed: () async {
+                if (!formKey.currentState!.validate()) return;
                 var result = await userProvider.updateUserLocation();
                 if (result['success'] == true) {
                   final prefs = await SharedPreferences.getInstance();
@@ -1624,6 +1939,188 @@ class _HomePageState extends State<HomePage> {
           ],
         );
       },
+    );
+  }
+
+  Future<bool?> _showLocationPermissionPrompt(BuildContext dialogContext) {
+    final selectedThemeData = Theme.of(dialogContext);
+
+    return showDialog<bool>(
+      context: dialogContext,
+      builder: (permissionContext) {
+        return AlertDialog(
+          backgroundColor: selectedThemeData.scaffoldBackgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.my_location,
+                color: selectedThemeData.primaryColor,
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text('Use your location?'),
+              ),
+            ],
+          ),
+          content: Text(
+            'Filmytell can use your current location to fill your registration address details automatically.',
+            style: TextStyle(color: selectedThemeData.canvasColor),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(permissionContext).pop(false),
+              child: Text(
+                'Not now',
+                style: TextStyle(color: selectedThemeData.canvasColor),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: selectedThemeData.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: () => Navigator.of(permissionContext).pop(true),
+              child: const Text('Allow'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildEditableLocationDropdown({
+    required BuildContext context,
+    required ThemeData selectedThemeData,
+    required TextEditingController controller,
+    required String label,
+    required String hintText,
+    required List<String> options,
+    TextInputType keyboardType = TextInputType.text,
+    bool isRequired = true,
+    ValueChanged<String>? onChanged,
+    ValueChanged<String>? onFieldSubmitted,
+    ValueChanged<String>? onOptionSelected,
+  }) {
+    final cleanOptions =
+        options.where((option) => option.trim().isNotEmpty).toSet().toList();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: selectedThemeData.canvasColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 5),
+          TextFormField(
+            controller: controller,
+            keyboardType: keyboardType,
+            textCapitalization: keyboardType == TextInputType.number
+                ? TextCapitalization.none
+                : TextCapitalization.words,
+            inputFormatters: keyboardType == TextInputType.number
+                ? [FilteringTextInputFormatter.digitsOnly]
+                : [CapitalizeWordsTextInputFormatter()],
+            cursorColor: selectedThemeData.primaryColor,
+            onChanged: onChanged,
+            onFieldSubmitted: onFieldSubmitted,
+            validator: isRequired
+                ? (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return '$hintText is required';
+                    }
+                    return null;
+                  }
+                : null,
+            style: TextStyle(
+              color: selectedThemeData.canvasColor,
+              fontSize: 14,
+            ),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: selectedThemeData.cardColor,
+              hintText: hintText,
+              hintStyle: TextStyle(
+                color: selectedThemeData.canvasColor,
+                fontSize: 14,
+              ),
+              border: OutlineInputBorder(
+                borderSide: const BorderSide(color: Colors.transparent),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: Colors.transparent),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: selectedThemeData.primaryColor),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              suffixIcon: cleanOptions.isEmpty
+                  ? PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.arrow_drop_down,
+                        color: selectedThemeData.primaryColor,
+                      ),
+                      color: selectedThemeData.cardColor,
+                      enabled: false,
+                      itemBuilder: (context) => [
+                        PopupMenuItem<String>(
+                          enabled: false,
+                          child: Text(
+                            'No options available',
+                            style: TextStyle(
+                              color: selectedThemeData.canvasColor
+                                  .withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.arrow_drop_down,
+                        color: selectedThemeData.primaryColor,
+                      ),
+                      color: selectedThemeData.cardColor,
+                      onSelected: (value) {
+                        controller.text = value;
+                        if (onOptionSelected != null) {
+                          onOptionSelected(value);
+                        }
+                      },
+                      itemBuilder: (context) {
+                        return cleanOptions
+                            .map(
+                              (option) => PopupMenuItem<String>(
+                                value: option,
+                                child: Text(
+                                  option,
+                                  style: TextStyle(
+                                    color: selectedThemeData.canvasColor,
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList();
+                      },
+                    ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Keep HTTPS as the default, but allow the legacy backend host that is
+         still exposed over HTTP for watchlist/media endpoints. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">ec2-43-205-217-79.ap-south-1.compute.amazonaws.com</domain>
+    </domain-config>
+</network-security-config>

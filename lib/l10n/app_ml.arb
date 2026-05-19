@@ -123,5 +123,11 @@
   "aboutFilmytell": "ഫില്മിടെൽ കുറിച്ച്",
   "rateUs": "ഞങ്ങളെ റേറ്റ് ചെയ്യുക",
 
+ "purchaseHistory": "വാങ്ങൽ ചരിത്രം",
+    "giftedByYou": "നിങ്ങൾ സമ്മാനിച്ച സിനിമകൾ",
+    "receivedGiftedMovies": "ലഭിച്ച സമ്മാന സിനിമകൾ",
+    "accountDetails": "അക്കൗണ്ട് വിശദാംശങ്ങൾ",
+    "editAddress": "വിലാസം തിരുത്തുക",
+     "minSeries": "മിനി സീരീസ്",
   "logout": "ലോഗൗട്ട്"
 }

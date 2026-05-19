@@ -332,5 +332,20 @@ class AppLocalizationsTe extends AppLocalizations {
   String get rateUs => 'మాకు రేటింగ్ ఇవ్వండి';
 
   @override
+  String get purchaseHistory => 'కొనుగోలు చరిత్ర';
+
+  @override
+  String get giftedByYou => 'మీరు బహుమతిగా ఇచ్చిన సినిమాలు';
+
+  @override
+  String get receivedGiftedMovies => 'అందుకున్న బహుమతి సినిమాలు';
+
+  @override
+  String get accountDetails => 'ఖాతా వివరాలు';
+
+  @override
+  String get editAddress => 'చిరునామా సవరించండి';
+
+  @override
   String get logout => 'లాగ్ అవుట్';
 }

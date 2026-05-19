@@ -377,29 +377,25 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                               if (!mounted) return;
                               if (result is Map && result['success'] == true) {
                                 final addResult =
-                                    await walletProvider.onPaymentVerified();
+                                    await walletProvider.onPaymentVerified(
+                                  expectedAmount: amount,
+                                );
 
                                 if (!mounted) return;
-                                if (addResult['success'] == true) {
-                                  CustomToast.show(
-                                    pageContext,
-                                    "Wallet recharged successfully.",
-                                    isSuccess: true,
-                                  );
-                                } else {
-                                  final msg =
-                                      addResult['message']?.toString() ??
-                                          "Recharge failed. Please try again.";
-                                  CustomToast.show(
-                                    pageContext,
-                                    msg,
-                                    isSuccess: false,
-                                  );
-                                }
+                                final msg = addResult['message']?.toString() ??
+                                    "Recharge failed. Please try again.";
+                                CustomToast.show(
+                                  pageContext,
+                                  msg,
+                                  isSuccess: addResult['success'] == true,
+                                );
                               } else {
                                 CustomToast.show(
                                   pageContext,
-                                  "Payment Failed ❌",
+                                  result is Map
+                                      ? result['message']?.toString() ??
+                                          "Payment failed. Please try again."
+                                      : "Payment failed. Please try again.",
                                   isSuccess: false,
                                 );
                               }

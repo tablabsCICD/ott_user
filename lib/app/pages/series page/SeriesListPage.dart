@@ -1,0 +1,664 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
+import 'package:ott/app/pages/home%20page/category_content_page.dart';
+import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
+import 'package:ott/app/pages/profile%20page/ProfilePage.dart';
+import 'package:ott/app/pages/profile%20page/component/change_language.dart';
+import 'package:ott/app/pages/search%20page/SearchPage.dart';
+import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
+import 'package:ott/app/provider/dashboardProvider.dart';
+import 'package:ott/app/provider/themeProvider.dart';
+import 'package:ott/app/provider/userProvider.dart';
+import 'package:ott/app/provider/wallet_provider.dart';
+import 'package:ott/app/widgets/movieCard.dart';
+import 'package:ott/app/widgets/shimmer%20loader/home_shimmer.dart';
+import 'package:ott/app/widgets/shimmer%20loader/shimmer_loader.dart';
+import 'package:ott/data/models/content.dart';
+import 'package:ott/data/models/response/get_dashboard_data.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/l10n/app_localizations.dart';
+import 'package:provider/provider.dart';
+
+class SeriesListPage extends StatelessWidget {
+  const SeriesListPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => DashboardProvider(),
+      child: const _SeriesListView(),
+    );
+  }
+}
+
+class _SeriesListView extends StatefulWidget {
+  const _SeriesListView();
+
+  @override
+  State<_SeriesListView> createState() => _SeriesListViewState();
+}
+
+class _SeriesListViewState extends State<_SeriesListView> {
+  static const String _seriesType = 'SERIES';
+
+  final ScrollController _verticalController = ScrollController();
+  final Map<int, ScrollController> _rowControllers = {};
+  final Map<int, ValueNotifier<int?>> _rowActiveIndexes = {};
+  final Map<int, int> _rowItemCounts = {};
+  final Map<int, List<Content>> _rowItems = {};
+  final Map<int, GlobalKey> _rowKeys = {};
+
+  bool _isLoading = true;
+  bool _visibleUpdateScheduled = false;
+  int? _userId;
+
+  @override
+  void initState() {
+    super.initState();
+    _verticalController.addListener(_updateVisibleRows);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadSeries());
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _rowControllers.values) {
+      controller.dispose();
+    }
+    for (final notifier in _rowActiveIndexes.values) {
+      notifier.dispose();
+    }
+    _verticalController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadSeries() async {
+    final localSharePreferences = LocalSharePreferences();
+    final user = await localSharePreferences.getUser();
+    if (user == null || !mounted) return;
+
+    _userId = user.id;
+    await context.read<UserProvider>().getUserById(user.id!);
+    if (!mounted) return;
+
+    final selectedLanguages =
+        context.read<UserProvider>().userObject.selectedLanguages ?? [];
+    final languages =
+        selectedLanguages.isEmpty ? <String>['English'] : selectedLanguages;
+
+    final dashboardProvider = context.read<DashboardProvider>();
+    await dashboardProvider.getContinueWatchedMovieList(_seriesType);
+    await dashboardProvider.getDashboardData(_seriesType, languages, user.id!);
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    _scheduleVisibleUpdate();
+  }
+
+  void _updateActiveIndex(
+    ValueNotifier<int?> notifier,
+    ScrollController controller,
+    int itemCount,
+    List<Content>? items,
+  ) {
+    if (!controller.hasClients || itemCount <= 0) {
+      if (notifier.value != null) notifier.value = null;
+      return;
+    }
+
+    final viewport = controller.position.viewportDimension;
+    if (viewport <= 0) {
+      if (notifier.value != null) notifier.value = null;
+      return;
+    }
+
+    final maxScrollExtent = controller.position.maxScrollExtent;
+    if (maxScrollExtent - controller.offset <= 1.0) {
+      int bestLastIndex = itemCount - 1;
+      if (items != null && items.isNotEmpty) {
+        for (int i = itemCount - 1; i >= 0; i--) {
+          if (i < items.length &&
+              (items[i].trailerUrl?.trim().isNotEmpty ?? false)) {
+            bestLastIndex = i;
+            break;
+          }
+        }
+      }
+      if (notifier.value != bestLastIndex) notifier.value = bestLastIndex;
+      return;
+    }
+
+    final viewStart = controller.offset;
+    final viewEnd = viewStart + viewport;
+    final firstCandidate = math.max(
+      0,
+      (viewStart / MovieCard.itemExtent).floor(),
+    );
+    final lastCandidate = math.min(
+      itemCount - 1,
+      ((viewEnd - 0.001) / MovieCard.itemExtent).floor(),
+    );
+
+    int? bestIndex;
+    int? fallbackIndex;
+    double bestOverlap = 0;
+
+    for (int candidate = firstCandidate; candidate <= lastCandidate; candidate++) {
+      final overlap = _visibleOverlap(viewStart, viewEnd, candidate);
+      if (overlap <= 0) continue;
+
+      fallbackIndex = candidate;
+      final hasTrailer = items != null &&
+          candidate < items.length &&
+          (items[candidate].trailerUrl?.trim().isNotEmpty ?? false);
+      if (!hasTrailer) continue;
+
+      if (bestIndex == null ||
+          overlap > bestOverlap ||
+          (overlap == bestOverlap && candidate > bestIndex)) {
+        bestOverlap = overlap;
+        bestIndex = candidate;
+      }
+    }
+
+    bestIndex ??= fallbackIndex;
+    if (notifier.value != bestIndex) notifier.value = bestIndex;
+  }
+
+  double _visibleOverlap(double viewStart, double viewEnd, int index) {
+    final itemStart = index * MovieCard.itemExtent;
+    final itemEnd = itemStart + MovieCard.itemExtent;
+    final overlap = math.min(viewEnd, itemEnd) - math.max(viewStart, itemStart);
+    return overlap <= 0 ? 0 : overlap;
+  }
+
+  double? _rowCenterY(GlobalKey key) {
+    final context = key.currentContext;
+    if (context == null) return null;
+
+    final renderObject = context.findRenderObject();
+    if (renderObject is! RenderBox || !renderObject.hasSize) return null;
+
+    final position = renderObject.localToGlobal(Offset.zero);
+    return position.dy + (renderObject.size.height / 2);
+  }
+
+  void _updateVisibleRows() {
+    if (!mounted) return;
+
+    final screenHeight = MediaQuery.of(context).size.height;
+    for (final entry in _rowActiveIndexes.entries) {
+      final rowIndex = entry.key;
+      final notifier = entry.value;
+      final controller = _rowControllers[rowIndex];
+      final itemCount = _rowItemCounts[rowIndex] ?? 0;
+      final items = _rowItems[rowIndex];
+      final key = _rowKeys[rowIndex];
+      final centerY = key == null ? null : _rowCenterY(key);
+      final isVisible =
+          centerY != null && centerY >= 0 && centerY <= screenHeight;
+
+      if (!isVisible || controller == null) {
+        if (notifier.value != null) notifier.value = null;
+        continue;
+      }
+
+      _updateActiveIndex(notifier, controller, itemCount, items);
+    }
+  }
+
+  void _scheduleVisibleUpdate() {
+    if (_visibleUpdateScheduled) return;
+    _visibleUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _visibleUpdateScheduled = false;
+      _updateVisibleRows();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedThemeData = context.watch<ThemeProvider>().getTheme;
+
+    return Scaffold(
+      backgroundColor: selectedThemeData.scaffoldBackgroundColor,
+      body: _isLoading
+          ? const HomeShimmer()
+          : CustomScrollView(
+              controller: _verticalController,
+              slivers: [
+                _buildSliverAppBar(context, selectedThemeData),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Consumer<DashboardProvider>(
+                      builder: (context, dashboardProvider, child) {
+                        if (dashboardProvider.isLoading) {
+                          return _buildDashboardSectionLoader(
+                            context,
+                            selectedThemeData,
+                          );
+                        }
+
+                        if (dashboardProvider.dashboardData.isEmpty) {
+                          return SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.65,
+                            child: Center(
+                              child: Text(
+                                'No series available',
+                                style: TextStyle(
+                                  color: selectedThemeData.canvasColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          padding: EdgeInsets.zero,
+                          itemCount: dashboardProvider.dashboardData.length,
+                          itemBuilder: (context, index) {
+                            final dashboardData =
+                                dashboardProvider.dashboardData[index];
+                            return _buildDashboardRow(
+                              context,
+                              dashboardProvider,
+                              dashboardData,
+                              index,
+                              selectedThemeData,
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  SliverAppBar _buildSliverAppBar(
+    BuildContext context,
+    ThemeData selectedThemeData,
+  ) {
+    final lang = AppLocalizations.of(context)!;
+
+    return SliverAppBar(
+      automaticallyImplyLeading: false,
+      forceMaterialTransparency: ResponsiveWidget.isDesktop(context),
+      floating: false,
+      pinned: true,
+      stretch: true,
+      surfaceTintColor: Colors.transparent,
+      backgroundColor: ResponsiveWidget.isDesktop(context)
+          ? selectedThemeData.scaffoldBackgroundColor
+          : selectedThemeData.primaryColor,
+      titleSpacing: ResponsiveWidget.isTablet(context) ? 50 : 10,
+      title: ResponsiveWidget.isDesktop(context)
+          ? Text(
+              lang.series,
+              style: TextStyle(
+                color: selectedThemeData.canvasColor,
+                fontWeight: FontWeight.bold,
+              ),
+            )
+          : SizedBox(
+              width: 70,
+              height: 70,
+              child: Hero(
+                tag: 'series_logo',
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.asset(
+                    ImageConstant.inAppLogo,
+                    width: 75,
+                    height: 75,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+      actions: [
+        IconButton(
+          icon: Icon(
+            Icons.search,
+            color: ResponsiveWidget.isDesktop(context)
+                ? selectedThemeData.canvasColor
+                : Colors.white,
+          ),
+          tooltip: lang.search,
+          style: _appBarIconStyle(context),
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SearchPage()),
+          ),
+        ),
+        const SizedBox(width: 4),
+        IconButton(
+          icon: Icon(
+            Icons.notifications_active,
+            color: ResponsiveWidget.isDesktop(context)
+                ? selectedThemeData.canvasColor
+                : Colors.white,
+          ),
+          tooltip: lang.notification,
+          style: _appBarIconStyle(context),
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const NotificationPage()),
+          ),
+        ),
+        const SizedBox(width: 4),
+        IconButton(
+          tooltip: lang.selectPreferredLanguage,
+          style: _appBarIconStyle(context),
+          icon: Icon(
+            Icons.language_sharp,
+            color: ResponsiveWidget.isDesktop(context)
+                ? selectedThemeData.canvasColor
+                : Colors.white,
+          ),
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => ChangeLanguage()),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Consumer<UserProvider>(
+          builder: (context, userProvider, child) {
+            final walletProvider =
+                Provider.of<WalletProvider>(context, listen: false);
+            return Row(
+              children: [
+                IconButton(
+                  icon: Icon(
+                    Icons.account_balance_wallet,
+                    color: ResponsiveWidget.isDesktop(context)
+                        ? selectedThemeData.canvasColor
+                        : Colors.white,
+                  ),
+                  tooltip: '${walletProvider.walletBalance}',
+                  style: _appBarIconStyle(context),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => WalletPage()),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Tooltip(
+                  textStyle: TextStyle(
+                    fontSize: 10,
+                    color: selectedThemeData.scaffoldBackgroundColor,
+                  ),
+                  message:
+                      '${userProvider.userObj.firstName} ${userProvider.userObj.lastName}',
+                  child: InkWell(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => ProfilePage()),
+                    ),
+                    child: Hero(
+                      tag: 'series_profile',
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1),
+                        ),
+                        child: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: selectedThemeData.canvasColor,
+                          backgroundImage:
+                              userProvider.userObj.profilePhoto == null
+                                  ? AssetImage(ImageConstant.profile)
+                                  : userProvider.userObj.profilePhoto!.isNotEmpty
+                                      ? NetworkImage(
+                                          userProvider.userObj.profilePhoto!,
+                                        )
+                                      : AssetImage(ImageConstant.profile),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  ButtonStyle _appBarIconStyle(BuildContext context) {
+    return IconButton.styleFrom(
+      backgroundColor: ResponsiveWidget.isDesktop(context)
+          ? Colors.white.withOpacity(0.3)
+          : Colors.black.withOpacity(0.2),
+    );
+  }
+
+  Widget _buildDashboardRow(
+    BuildContext context,
+    DashboardProvider dashboardProvider,
+    DashboardData dashboardData,
+    int index,
+    ThemeData selectedThemeData,
+  ) {
+    if (dashboardData.movies == null || dashboardData.movies!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    _rowControllers.putIfAbsent(index, () => ScrollController());
+    _rowActiveIndexes.putIfAbsent(index, () => ValueNotifier<int?>(0));
+    _rowItemCounts[index] = dashboardData.movies?.length ?? 0;
+    _rowItems[index] = dashboardData.movies ?? const <Content>[];
+    _rowKeys.putIfAbsent(index, () => GlobalKey());
+
+    final controller = _rowControllers[index]!;
+    final activeIndex = _rowActiveIndexes[index]!;
+    final rowKey = _rowKeys[index]!;
+
+    if (!controller.hasListeners) {
+      controller.addListener(() {
+        _updateActiveIndex(
+          activeIndex,
+          controller,
+          _rowItemCounts[index] ?? 0,
+          _rowItems[index],
+        );
+        _scheduleVisibleUpdate();
+
+        if (controller.position.pixels >=
+            controller.position.maxScrollExtent - 200) {
+          if (_userId != null) {
+            dashboardProvider.loadMoreRowData(
+              dashboardData,
+              _seriesType,
+              _userId!,
+            );
+          }
+        }
+      });
+    }
+
+    _scheduleVisibleUpdate();
+
+    final title = '${dashboardData.language} - ${dashboardData.category}';
+
+    return KeyedSubtree(
+      key: rowKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            splashColor: Colors.transparent,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CategoryContentPage(
+                    categoryTitle: title,
+                    contents: dashboardData.movies ?? [],
+                  ),
+                ),
+              );
+            },
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
+                      fontWeight: FontWeight.bold,
+                      color: selectedThemeData.canvasColor,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 18,
+                  color: selectedThemeData.primaryColor,
+                ),
+                const SizedBox(width: 3),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 270,
+            child: ListView.builder(
+              controller: controller,
+              scrollDirection: Axis.horizontal,
+              itemCount: dashboardData.movies!.length +
+                  (dashboardData.isRowLoading ? 1 : 0),
+              itemBuilder: (context, i) {
+                if (i < dashboardData.movies!.length) {
+                  return MovieCard(
+                    movie: dashboardData.movies![i],
+                    index: i,
+                    activeIndexListenable: activeIndex,
+                  );
+                }
+
+                return const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDashboardSectionLoader(
+    BuildContext context,
+    ThemeData selectedThemeData,
+  ) {
+    final cardCount = ResponsiveWidget.isMobile(context)
+        ? 1
+        : ResponsiveWidget.isDesktop(context)
+            ? 4
+            : 3;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: List.generate(3, (sectionIndex) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: sectionIndex == 2 ? 0 : 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: ShimmerLoader(
+                  width: ResponsiveWidget.isMobile(context) ? 170 : 220,
+                  height: 18,
+                  borderRadius: 8,
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 300,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: cardCount,
+                  itemBuilder: (context, index) {
+                    return Container(
+                      width: MovieCard.itemWidth,
+                      margin: const EdgeInsets.all(MovieCard.itemMargin),
+                      decoration: BoxDecoration(
+                        color:
+                            selectedThemeData.cardColor.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Column(
+                        children: [
+                          Expanded(
+                            flex: 8,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(12),
+                              ),
+                              child: ShimmerLoader(
+                                width: double.infinity,
+                                height: double.infinity,
+                                borderRadius: 0,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 4,
+                            child: Padding(
+                              padding: EdgeInsets.all(8),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ShimmerLoader(
+                                    width: 80,
+                                    height: 10,
+                                    borderRadius: 6,
+                                  ),
+                                  SizedBox(height: 8),
+                                  ShimmerLoader(
+                                    width: double.infinity,
+                                    height: 14,
+                                  ),
+                                  SizedBox(height: 6),
+                                  ShimmerLoader(
+                                    width: 110,
+                                    height: 10,
+                                    borderRadius: 6,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+}

@@ -2,10 +2,7 @@
 //
 //     final contentResponse = contentResponseFromJson(jsonString);
 
-import 'dart:convert';
-
 import 'package:ott/data/models/content.dart';
-
 
 class GetContentResponse {
   String? message;
@@ -20,19 +17,20 @@ class GetContentResponse {
     this.success,
   });
 
-  factory GetContentResponse.fromJson(Map<String, dynamic> json) => GetContentResponse(
-    message: json["message"],
-    data: json["data"] == null ? null : Data.fromJson(json["data"]),
-    statusCode: json["statusCode"],
-    success: json["success"],
-  );
+  factory GetContentResponse.fromJson(Map<String, dynamic> json) =>
+      GetContentResponse(
+        message: json["message"],
+        data: json["data"] == null ? null : Data.fromJson(json["data"]),
+        statusCode: json["statusCode"],
+        success: json["success"],
+      );
 
   Map<String, dynamic> toJson() => {
-    "message": message,
-    "data": data?.toJson(),
-    "statusCode": statusCode,
-    "success": success,
-  };
+        "message": message,
+        "data": data?.toJson(),
+        "statusCode": statusCode,
+        "success": success,
+      };
 }
 
 class Data {
@@ -43,11 +41,12 @@ class Data {
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
-    contentList: json["ContentList"] == null ? null : Content.fromJson(json["ContentList"]),
-  );
+        contentList: json["ContentList"] == null
+            ? null
+            : Content.fromJson(json["ContentList"]),
+      );
 
   Map<String, dynamic> toJson() => {
-    "ContentList": contentList?.toJson(),
-  };
+        "ContentList": contentList?.toJson(),
+      };
 }
-

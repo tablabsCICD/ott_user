@@ -1,4 +1,3 @@
-
 class PromoterModel {
   int? id;
   String? firstName;
@@ -25,27 +24,27 @@ class PromoterModel {
 
   PromoterModel(
       {this.id,
-        this.firstName,
-        this.lastName,
-        this.mobileNumber,
-        this.emailId,
-        this.profilePhoto,
-        this.password,
-        this.otp,
-        this.age,
-        this.dob,
-        this.refferedBy,
-        this.joinDate,
-        this.country,
-        this.state,
-        this.district,
-        this.taluka,
-        this.gender,
-        this.insentives,
-        this.targetResion,
-        this.status,
-        this.addres,
-        this.level});
+      this.firstName,
+      this.lastName,
+      this.mobileNumber,
+      this.emailId,
+      this.profilePhoto,
+      this.password,
+      this.otp,
+      this.age,
+      this.dob,
+      this.refferedBy,
+      this.joinDate,
+      this.country,
+      this.state,
+      this.district,
+      this.taluka,
+      this.gender,
+      this.insentives,
+      this.targetResion,
+      this.status,
+      this.addres,
+      this.level});
 
   PromoterModel.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -73,29 +72,29 @@ class PromoterModel {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['id'] = this.id;
-    data['firstName'] = this.firstName;
-    data['lastName'] = this.lastName;
-    data['mobileNumber'] = this.mobileNumber;
-    data['emailId'] = this.emailId;
-    data['profilePhoto'] = this.profilePhoto;
-    data['password'] = this.password;
-    data['otp'] = this.otp;
-    data['age'] = this.age;
-    data['dob'] = this.dob;
-    data['refferedBy'] = this.refferedBy;
-    data['joinDate'] = this.joinDate;
-    data['country'] = this.country;
-    data['state'] = this.state;
-    data['district'] = this.district;
-    data['taluka'] = this.taluka;
-    data['gender'] = this.gender;
-    data['insentives'] = this.insentives;
-    data['targetResion'] = this.targetResion;
-    data['status'] = this.status;
-    data['addres'] = this.addres;
-    data['level'] = this.level;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
+    data['firstName'] = firstName;
+    data['lastName'] = lastName;
+    data['mobileNumber'] = mobileNumber;
+    data['emailId'] = emailId;
+    data['profilePhoto'] = profilePhoto;
+    data['password'] = password;
+    data['otp'] = otp;
+    data['age'] = age;
+    data['dob'] = dob;
+    data['refferedBy'] = refferedBy;
+    data['joinDate'] = joinDate;
+    data['country'] = country;
+    data['state'] = state;
+    data['district'] = district;
+    data['taluka'] = taluka;
+    data['gender'] = gender;
+    data['insentives'] = insentives;
+    data['targetResion'] = targetResion;
+    data['status'] = status;
+    data['addres'] = addres;
+    data['level'] = level;
     return data;
   }
 }

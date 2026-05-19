@@ -125,5 +125,12 @@
   "aboutFilmytell": "ফিল্মিটেলৰ বিষয়ে",
   "rateUs": "আমাক মূল্যায়ন কৰক",
 
+ "purchaseHistory": "ক্ৰয় ইতিহাস",
+    "giftedByYou": "আপুনি উপহাৰ দিয়া চলচ্চিত্ৰসমূহ",
+    "receivedGiftedMovies": "প্ৰাপ্ত উপহাৰ চলচ্চিত্ৰসমূহ",
+    "accountDetails": "একাউণ্টৰ বিৱৰণ",
+    "editAddress": "ঠিকনা সম্পাদনা কৰক",
+     "minSeries" : "Mini Series",
+     "minSeries": "মিনি ছিৰিজ",
   "logout": "লগ আউট"
 }

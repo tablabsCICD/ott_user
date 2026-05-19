@@ -68,6 +68,23 @@
 	<string>Camera required for payments</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Photo library access required for payments</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Location access is required to auto-fill your address.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Location access is required to auto-fill your address.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>ec2-43-205-217-79.ap-south-1.compute.amazonaws.com</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
 
 </dict>
 </plist>

@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
-import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/content.dart';
@@ -119,8 +118,23 @@ class GiftProvider extends ChangeNotifier {
         final Map<String, dynamic> responseBody = json.decode(response.body);
 
         if (responseBody["success"] == true) {
-          final List<dynamic> records =
-              responseBody["data"]["giftRecords"] ?? [];
+          final dynamic data = responseBody["data"];
+          List<dynamic> records = [];
+
+          if (data is List) {
+            // Shape: { success:true, data:[...] }
+            records = data;
+          } else if (data is Map<String, dynamic>) {
+            // Shape: { success:true, data:{ giftRecords:[...] } }
+            final nested = data["giftRecords"];
+            if (nested is List) {
+              records = nested;
+            }
+          } else if (responseBody["giftRecords"] is List) {
+            // Shape: { success:true, giftRecords:[...] }
+            records = responseBody["giftRecords"] as List<dynamic>;
+          }
+
           _giftRecords =
               records.map((e) => GiftRecordModel.fromJson(e)).toList();
         } else {

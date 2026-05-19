@@ -100,22 +100,77 @@ class PaymentService {
     required double amount,
     required int userId,
   }) async {
-    final response = await _apiHelper.postApiWithoutAuthToken(
+    final normalizedAmount =
+        amount == amount.truncateToDouble() ? amount.toInt() : amount;
+    final paiseAmount = (amount * 100).round();
+
+    final urls = <String>[
       ApiConstant.createWalletOrder(amount, userId),
+      '${ApiConstant.baseUrl}api/razorpay/create-order?amount=$normalizedAmount&userId=$userId',
+      '${ApiConstant.baseUrl}api/razorpay/create-order?amount=$paiseAmount&customerId=$userId',
+      '${ApiConstant.baseUrl}api/razorpay/create-order?amount=$paiseAmount&userId=$userId',
+    ];
+
+    Object? lastError;
+    int? lastStatusCode;
+
+    for (final url in urls) {
+      try {
+        final postResponse = await _apiHelper.postApiWithoutAuthToken(url);
+        lastStatusCode = postResponse.statusCode;
+        if (postResponse.statusCode == 200) {
+          final order = _tryParseOrder(postResponse.body);
+          if (order != null) return order;
+        }
+
+        final getResponse = await _apiHelper.getApi(url);
+        lastStatusCode = getResponse.statusCode;
+        if (getResponse.statusCode == 200) {
+          final order = _tryParseOrder(getResponse.body);
+          if (order != null) return order;
+        }
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (lastError != null) {
+      throw Exception('Unable to create Razorpay order: $lastError');
+    }
+    throw Exception(
+      'Unable to create Razorpay order (status: ${lastStatusCode ?? 500}).',
     );
+  }
 
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Unable to create Razorpay order (status: ${response.statusCode}).',
-      );
+  PaymentOrder? _tryParseOrder(String bodyString) {
+    try {
+      final body = jsonDecode(bodyString);
+      if (body is! Map<String, dynamic>) return null;
+
+      // Format A: {success:true, data:{orderId, amount, currency, receipt}}
+      if (body['success'] == true && body['data'] is Map<String, dynamic>) {
+        final data = body['data'] as Map<String, dynamic>;
+        return PaymentOrder.fromJson({
+          'orderId': data['orderId'] ?? data['id'],
+          'amount': data['amount'],
+          'currency': data['currency'] ?? 'INR',
+          'receipt': data['receipt'] ?? '',
+        });
+      }
+
+      // Format B: direct Razorpay order payload {id, amount, currency, receipt}
+      if (body.containsKey('id') || body.containsKey('orderId')) {
+        return PaymentOrder.fromJson({
+          'orderId': body['orderId'] ?? body['id'],
+          'amount': body['amount'],
+          'currency': body['currency'] ?? 'INR',
+          'receipt': body['receipt'] ?? '',
+        });
+      }
+    } catch (_) {
+      return null;
     }
-
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    if (body['success'] != true || body['data'] is! Map<String, dynamic>) {
-      throw Exception(body['message']?.toString() ?? 'Order creation failed');
-    }
-
-    return PaymentOrder.fromJson(body['data'] as Map<String, dynamic>);
+    return null;
   }
 
   Future<PaymentResult> openCheckout({
@@ -265,19 +320,35 @@ class PaymentService {
       },
     );
 
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final body = _decodeResponseBody(response.body);
     final success = response.statusCode == 200 && body['success'] == true;
+    final message = body['message']?.toString();
 
     return PaymentResult(
       success: success,
-      message: body['message']?.toString() ??
+      message: message ??
           (success
               ? 'Payment verified successfully.'
-              : 'Payment verification failed.'),
+              : 'Payment verification failed. Please contact support if money was deducted.'),
       orderId: razorPayOrderId,
       paymentId: transactionId,
       signature: signature,
     );
+  }
+
+  Map<String, dynamic> _decodeResponseBody(String bodyString) {
+    try {
+      final body = jsonDecode(bodyString);
+      if (body is Map<String, dynamic>) {
+        return body;
+      }
+    } catch (_) {}
+
+    return {
+      'success': false,
+      'message':
+          'Payment verification returned an invalid response. Please contact support if money was deducted.',
+    };
   }
 
   Future<void> _handleSuccess(PaymentSuccessResponse response) async {
@@ -319,7 +390,8 @@ class PaymentService {
       completer.complete(
         PaymentResult(
           success: false,
-          message: 'Payment verification failed: $error',
+          message:
+              'Payment verification failed. Please contact support if money was deducted. ${error.toString()}',
           orderId: response.orderId,
           paymentId: response.paymentId,
           signature: response.signature,

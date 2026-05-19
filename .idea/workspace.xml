@@ -9,27 +9,11 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3f04a968-27e5-4905-8561-ff00d911146d" name="Changes" comment="changes in change_language and home screen">
+    <list default="true" id="3f04a968-27e5-4905-8561-ff00d911146d" name="Changes" comment="added deeplink and final launch build for deployment">
       <change beforePath="$PROJECT_DIR$/.flutter-plugins-dependencies" beforeDir="false" afterPath="$PROJECT_DIR$/.flutter-plugins-dependencies" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/app/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/app/google-services.json" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/google-services.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/src/main/AndroidManifest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/app/src/main/kotlin/com/example/ott/MainActivity.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/git-index-backup.patch" beforeDir="false" afterPath="$PROJECT_DIR$/git-index-backup.patch" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ios/Runner.xcodeproj/project.pbxproj" beforeDir="false" afterPath="$PROJECT_DIR$/ios/Runner.xcodeproj/project.pbxproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ios/Runner/GoogleService-Info.plist" beforeDir="false" afterPath="$PROJECT_DIR$/ios/Runner/GoogleService-Info.plist" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/app/core/network/api_helper.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/core/network/api_helper.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/app/pages/home page/HomePage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/home page/HomePage.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/app/pages/movie details page/MovieDetailsPage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/movie details page/MovieDetailsPage.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/app/pages/series details page/seriesdetailspage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/series details page/seriesdetailspage.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/app/widgets/movieCard.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/widgets/movieCard.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/linux/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/linux/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/macos/Runner.xcodeproj/project.pbxproj" beforeDir="false" afterPath="$PROJECT_DIR$/macos/Runner.xcodeproj/project.pbxproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/macos/Runner/Configs/AppInfo.xcconfig" beforeDir="false" afterPath="$PROJECT_DIR$/macos/Runner/Configs/AppInfo.xcconfig" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/macos/Runner/GoogleService-Info.plist" beforeDir="false" afterPath="$PROJECT_DIR$/macos/Runner/GoogleService-Info.plist" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/core/constant/api_constant.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/core/constant/api_constant.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ott.iml" beforeDir="false" afterPath="$PROJECT_DIR$/ott.iml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -165,7 +149,15 @@
       <option name="project" value="LOCAL" />
       <updated>1770121683319</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="added deeplink and final launch build for deployment">
+      <option name="closed" value="true" />
+      <created>1776959386554</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1776959386554</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -191,7 +183,8 @@
     <MESSAGE value="changes in continue watch card" />
     <MESSAGE value="changes in continue watch card and media player" />
     <MESSAGE value="changes in change_language and home screen" />
-    <option name="LAST_COMMIT_MESSAGE" value="changes in change_language and home screen" />
+    <MESSAGE value="added deeplink and final launch build for deployment" />
+    <option name="LAST_COMMIT_MESSAGE" value="added deeplink and final launch build for deployment" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

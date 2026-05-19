@@ -25,6 +25,7 @@ class CustomTextField extends StatefulWidget {
   final IconData? suffixIcon;
   final Widget? prefixIcon;
   final Color? backgroundColor;
+  final String? Function(String?)? validator;
 
   const CustomTextField({
     required this.controller,
@@ -47,6 +48,7 @@ class CustomTextField extends StatefulWidget {
     this.suffixIcon,
     this.prefixIcon,
     this.backgroundColor,
+    this.validator,
     super.key,
   });
 
@@ -82,11 +84,10 @@ class _CustomTextFieldState extends State<CustomTextField> {
             keyboardType: widget.textInputType,
             textCapitalization: widget.capitalization,
             readOnly: widget.readOnly ?? false,
+            onTap: widget.onTap == null ? null : () => widget.onTap!(),
             maxLines: widget.maxLine,
             cursorColor: const Color(0xFFE50914),
-            inputFormatters: widget.isPhoneNumber
-                ? [FilteringTextInputFormatter.digitsOnly]
-                : [FilteringTextInputFormatter.singleLineFormatter],
+            inputFormatters: _buildInputFormatters(),
             validator: _buildValidator(),
             style: TextStyle(color: selectedTheme.canvasColor, fontSize: 14),
             decoration: InputDecoration(
@@ -136,6 +137,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
   }
 
   String? Function(String?)? _buildValidator() {
+    if (widget.validator != null) return widget.validator;
     if (!widget.isValidator) return null;
     if (widget.isPhoneNumber) {
       return Validators.compose([
@@ -163,5 +165,58 @@ class _CustomTextFieldState extends State<CustomTextField> {
     } else {
       return Validators.required('This field is required');
     }
+  }
+
+  List<TextInputFormatter> _buildInputFormatters() {
+    if (widget.isPhoneNumber) {
+      return [FilteringTextInputFormatter.digitsOnly];
+    }
+
+    return [
+      if (widget.maxLine == 1) FilteringTextInputFormatter.singleLineFormatter,
+      if (widget.capitalization == TextCapitalization.words)
+        CapitalizeWordsTextInputFormatter(),
+    ];
+  }
+}
+
+class CapitalizeWordsTextInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text;
+    if (text.isEmpty) return newValue;
+
+    final buffer = StringBuffer();
+    var shouldCapitalize = true;
+
+    for (var i = 0; i < text.length; i++) {
+      final char = text[i];
+      if (RegExp(r'\s').hasMatch(char)) {
+        shouldCapitalize = true;
+        buffer.write(char);
+        continue;
+      }
+
+      if (shouldCapitalize) {
+        buffer.write(char.toUpperCase());
+        shouldCapitalize = false;
+      } else {
+        buffer.write(char);
+      }
+    }
+
+    final formatted = buffer.toString();
+    if (formatted == text) return newValue;
+
+    return newValue.copyWith(
+      text: formatted,
+      selection: TextSelection.collapsed(
+        offset: newValue.selection.baseOffset.clamp(0, formatted.length),
+      ),
+      composing: TextRange.empty,
+    );
   }
 }

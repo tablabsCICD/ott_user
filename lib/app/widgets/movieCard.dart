@@ -7,7 +7,6 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
-import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
@@ -61,6 +60,18 @@ class _MovieCardState extends State<MovieCard> {
   bool _hasVideoListener = false;
   Timer? _playDelayTimer;
 
+  Uri? _previewUri(String? rawUrl) {
+    final value = rawUrl?.trim() ?? '';
+    final uri = Uri.tryParse(value);
+    if (uri == null || !uri.hasScheme) return null;
+
+    final host = uri.host.toLowerCase();
+    final isYoutube = host.contains('youtube.com') || host == 'youtu.be';
+    if (isYoutube) return null;
+
+    return uri;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -113,11 +124,10 @@ class _MovieCardState extends State<MovieCard> {
   Future<bool> _ensureVideoInitialized() async {
     if (_isVideoInitialized) return true;
 
-    final trailerUrl = widget.movie.trailerUrl;
-    if (trailerUrl?.isNotEmpty != true) return false;
+    final trailerUri = _previewUri(widget.movie.trailerUrl);
+    if (trailerUri == null) return false;
 
-    _videoController ??=
-        VideoPlayerController.networkUrl(Uri.parse(trailerUrl!));
+    _videoController ??= VideoPlayerController.networkUrl(trailerUri);
 
     try {
       await _videoController!.initialize();
@@ -352,6 +362,9 @@ class _MovieCardState extends State<MovieCard> {
     final showPreview = _isPreviewPlaying;
     final cardWidth = widget.cardWidth ?? MovieCard.itemWidth;
     final cardMargin = widget.cardMargin ?? MovieCard.itemMargin;
+    final highlightColor = theme.brightness == Brightness.light
+        ? const Color.fromARGB(255, 185, 169, 169)
+        : const Color.fromARGB(255, 58, 49, 49);
 
     return Stack(
       children: [
@@ -360,15 +373,36 @@ class _MovieCardState extends State<MovieCard> {
           onExit: (_) => _handleHover(false),
           child: GestureDetector(
             onTap: _openDetails,
-            child: Container(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
               width: cardWidth,
-              margin: EdgeInsets.all(cardMargin),
+              margin: EdgeInsets.only(
+                left: cardMargin,
+                right: cardMargin,
+                bottom: cardMargin,
+                top: showPreview ? 4 : 12, // 👈 selected card moves slightly up
+              ),
+              //    margin: EdgeInsets.all(cardMargin),
               decoration: BoxDecoration(
                 color: theme.cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: theme.canvasColor.withOpacity(0.2),
+                  color: showPreview
+                      ? highlightColor
+                      : theme.canvasColor.withValues(alpha: 0.2),
+                  width: showPreview ? 2.5 : 1,
                 ),
+                /*  boxShadow: showPreview
+                    ? [
+                        BoxShadow(
+                          color: highlightColor.withValues(alpha: 0.12),
+                          blurRadius: 3,
+                          spreadRadius: 0.5,  
+                          offset: const Offset(0, 3),
+                        ),
+                      ]
+                    : null, */
               ),
               child: Column(
                 children: [
@@ -561,6 +595,9 @@ class _MovieCardState extends State<MovieCard> {
                     ),
                   )
                 : _buildPriceButton(theme, lang, price),
+            SizedBox(
+              width: 5,
+            )
           ],
         ),
       ],
@@ -581,14 +618,14 @@ class _MovieCardState extends State<MovieCard> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(7),
           color: theme.primaryColor.withOpacity(0.9),
         ),
         child: Text(
           movie.type!.toLowerCase() == 'series'
               ? isRental
                   ? "Watch Series"
-                  : 'Rent Series'
+                  : '₹ $price'
               : isRental
                   ? movie.type?.toLowerCase() == "movie"
                       ? lang.watchMovie
@@ -626,27 +663,52 @@ class _MovieCardState extends State<MovieCard> {
     );
   }
 
-  void _playMovie() {
+  Future<void> _playMovie() async {
     final movie = widget.movie;
-    if (movie.contentUrl == null || movie.id == null) return;
+    if (movie.id == null) return;
+
+    Content contentToPlay = movie;
+    var contentUrl = contentToPlay.contentUrl;
+
+    if (contentUrl == null || contentUrl.trim().isEmpty) {
+      final fetchedContent = await context
+          .read<DashboardProvider>()
+          .getContentById(movie.id!);
+      if (!mounted) return;
+
+      if (fetchedContent != null) {
+        fetchedContent.watchedSeconds ??= movie.watchedSeconds;
+        fetchedContent.watchedPercentage ??= movie.watchedPercentage;
+        contentToPlay = fetchedContent;
+        contentUrl = contentToPlay.contentUrl;
+      }
+    }
+
+    if (contentUrl == null || contentUrl.trim().isEmpty) {
+      CustomToast.show(
+        context,
+        "Video is not available",
+        isSuccess: false,
+      );
+      return;
+    }
 
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => PlayMediaPage(
-          videoUrl: movie.contentUrl!,
-          content: movie,
+          videoUrl: contentUrl!,
+          content: contentToPlay,
           seasonIndex: 0,
           episodeIndex: 0,
           seasons: [],
         ),
       ),
-    ).then((refresh) {
-      if (refresh == true) {
-        context
-            .read<DashboardProvider>()
-            .getContinueWatchedMovieList(widget.movie.type ?? "MOVIE");
-      }
+    ).then((_) {
+      if (!mounted) return;
+      context
+          .read<DashboardProvider>()
+          .getContinueWatchedMovieList(contentToPlay.type ?? "MOVIE");
     });
   }
 

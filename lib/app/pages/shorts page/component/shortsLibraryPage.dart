@@ -1,6 +1,4 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
@@ -13,7 +11,6 @@ import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 class ShortsLibraryPage extends StatefulWidget {
   const ShortsLibraryPage({super.key, this.useParentScroll = false});
@@ -417,5 +414,4 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
       unavailableMessage: "Mini series details are not available yet",
     );
   }
-
 }

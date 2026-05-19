@@ -123,5 +123,11 @@
   "aboutFilmytell": "फिल्मिटेल बारे",
   "rateUs": "हामीलाई रेट गर्नुहोस्",
 
+ "purchaseHistory": "खरिद इतिहास",
+    "giftedByYou": "तपाईंले उपहार दिनुभएको चलचित्रहरू",
+    "receivedGiftedMovies": "प्राप्त उपहार चलचित्रहरू",
+    "accountDetails": "खाता विवरण",
+    "editAddress": "ठेगाना सम्पादन गर्नुहोस्",
+    "minSeries": "मिनी सिरिज",
   "logout": "लगआउट"
 }

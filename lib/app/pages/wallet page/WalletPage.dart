@@ -9,6 +9,8 @@ import 'package:provider/provider.dart';
 import '../../widgets/show_toast.dart';
 
 class WalletPage extends StatefulWidget {
+  const WalletPage({super.key});
+
   @override
   State<WalletPage> createState() => _WalletPageState();
 }
@@ -375,10 +377,9 @@ class _WalletPageState extends State<WalletPage> {
                               if (!mounted) return;
                               if (paymentResult is Map &&
                                   paymentResult['success'] == true) {
-                                final result = await provider.addBalance(amt);
-                                if (result['success'] == true) {
-                                  await provider.onPaymentVerified();
-                                }
+                                final result = await provider.onPaymentVerified(
+                                  expectedAmount: amt,
+                                );
                                 CustomToast.show(
                                   pageContext,
                                   result['message']?.toString() ??

@@ -123,6 +123,12 @@
       <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/wakelock_plus/example/.dart_tool" />
       <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/wakelock_plus/example/.pub" />
       <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/wakelock_plus/example/build" />
+      <excludeFolder url="file://$MODULE_DIR$/third_party/uni_links/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/third_party/uni_links/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/third_party/uni_links/build" />
+      <excludeFolder url="file://$MODULE_DIR$/third_party/uni_links/example/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/third_party/uni_links/example/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/third_party/uni_links/example/build" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Dart SDK" level="project" />

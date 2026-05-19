@@ -125,5 +125,12 @@
   "rateUs": "आम्हाला रेट करा",
   
 
+ "purchaseHistory": "खरेदी इतिहास",
+    "giftedByYou": "तुम्ही भेट दिलेल्या चित्रपट",
+    "receivedGiftedMovies": "मिळालेले भेट चित्रपट",
+    "accountDetails": "खाते तपशील",
+    "editAddress": "पत्ता संपादित करा",
+    "minSeries": "मिनी सिरीज",
+
   "logout": "बाहेर पडा"
 }

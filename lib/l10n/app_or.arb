@@ -124,6 +124,12 @@
   "aboutFilmytell": "ଫିଲ୍ମିଟେଲ ବିଷୟରେ",
   "rateUs": "ଆମକୁ ମୂଲ୍ୟାଙ୍କନ କରନ୍ତୁ",
   
+    "purchaseHistory": "କ୍ରୟ ଇତିହାସ",
+    "giftedByYou": "ଆପଣ ଦେଇଥିବା ଉପହାର ଚଳଚ୍ଚିତ୍ର",
+    "receivedGiftedMovies": "ମିଳିଥିବା ଉପହାର ଚଳଚ୍ଚିତ୍ର",
+    "accountDetails": "ଖାତା ବିବରଣୀ",
+    "editAddress": "ଠିକଣା ସମ୍ପାଦନ କରନ୍ତୁ",
+     "minSeries": "ମିନି ସିରିଜ୍",
 
   "logout": "ଲଗଆଉଟ୍"
 }

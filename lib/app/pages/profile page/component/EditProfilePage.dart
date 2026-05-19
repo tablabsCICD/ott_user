@@ -42,11 +42,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
     var selectedThemeData = themeProvider.getTheme;
     UserProvider userProvider = Provider.of<UserProvider>(context);
     final cachedPhoto = userProvider.userObj.profilePhoto ?? '';
-    final ImageProvider avatarImage = userProvider.profileController.text.isNotEmpty
-        ? NetworkImage(userProvider.profileController.text)
-        : cachedPhoto.isNotEmpty
-            ? NetworkImage(cachedPhoto)
-            : AssetImage(ImageConstant.profile);
+    final ImageProvider avatarImage =
+        userProvider.profileController.text.isNotEmpty
+            ? NetworkImage(userProvider.profileController.text)
+            : cachedPhoto.isNotEmpty
+                ? NetworkImage(cachedPhoto)
+                : AssetImage(ImageConstant.profile);
 
     return Scaffold(
       backgroundColor: selectedThemeData.scaffoldBackgroundColor,
@@ -176,6 +177,32 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           userProvider.userObj.emailId ?? 'Enter valid email',
                       textInputType: TextInputType.emailAddress,
                     ),
+                    /*  CustomTextField(
+                      controller: userProvider.mobileController,
+                      label: 'Mobile Number',
+                      isPhoneNumber: true,
+                      isValidator: true,
+                      hintText: userProvider.userObj.mobileNumber != null
+                          ? userProvider.userObj.mobileNumber!.isNotEmpty
+                              ? userProvider.userObj.mobileNumber!
+                              : 'Enter mobile number'
+                          : 'Enter mobile number',
+                      textInputType: TextInputType.phone,
+                    ), */
+                    CustomTextField(
+                      controller: userProvider.dobController,
+                      label: 'Birth Date',
+                      isValidator: true,
+                      readOnly: true,
+                      suffixIcon: Icons.calendar_today_outlined,
+                      hintText: userProvider.userObj.dob != null
+                          ? userProvider.userObj.dob!.isNotEmpty
+                              ? userProvider.userObj.dob!
+                              : 'Enter birth date'
+                          : 'Enter birth date',
+                      textInputType: TextInputType.datetime,
+                      onTap: () => _selectDate(userProvider),
+                    ),
                     const SizedBox(height: 30),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -201,6 +228,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           userProvider.lastNameController.text =
                               userProvider.userObj.lastName ?? '';
                         }
+                        if (userProvider.mobileController.text.isEmpty) {
+                          userProvider.mobileController.text =
+                              userProvider.userObj.mobileNumber ?? '';
+                        }
+                        if (userProvider.dobController.text.isEmpty) {
+                          userProvider.dobController.text =
+                              userProvider.userObj.dob ?? '';
+                        }
+                        if (!_formKey.currentState!.validate()) return;
                         var result = await userProvider.updateUser();
                         if (result['success'] == true) {
                           final prefs = await SharedPreferences.getInstance();
@@ -239,5 +275,25 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ),
       ),
     );
+  }
+
+  Future<void> _selectDate(UserProvider userProvider) async {
+    final now = DateTime.now();
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _initialDobDate(userProvider.dobController.text, now),
+      firstDate: DateTime(1900),
+      lastDate: now,
+    );
+
+    if (pickedDate != null) {
+      userProvider.setDate(pickedDate);
+    }
+  }
+
+  DateTime _initialDobDate(String value, DateTime fallback) {
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null || parsed.isAfter(fallback)) return fallback;
+    return parsed;
   }
 }

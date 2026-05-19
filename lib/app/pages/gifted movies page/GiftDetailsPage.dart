@@ -3,8 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/widgets/show_toast.dart';
-import 'package:ott/data/models/giftMasterModel.dart'
-    hide User; // avoid conflict
+// avoid conflict
 import 'package:provider/provider.dart';
 
 class GiftDetailsPage extends StatefulWidget {

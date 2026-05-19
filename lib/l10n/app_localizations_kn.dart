@@ -331,5 +331,20 @@ class AppLocalizationsKn extends AppLocalizations {
   String get rateUs => 'ನಮಗೆ ಮೌಲ್ಯಮಾಪನ ನೀಡಿ';
 
   @override
+  String get purchaseHistory => 'ಖರೀದಿ ಇತಿಹಾಸ';
+
+  @override
+  String get giftedByYou => 'ನೀವು ಉಡುಗೊರೆಯಾಗಿ ನೀಡಿದ ಚಿತ್ರಗಳು';
+
+  @override
+  String get receivedGiftedMovies => 'ಸ್ವೀಕರಿಸಿದ ಉಡುಗೊರೆ ಚಿತ್ರಗಳು';
+
+  @override
+  String get accountDetails => 'ಖಾತೆ ವಿವರಗಳು';
+
+  @override
+  String get editAddress => 'ವಿಳಾಸ ಸಂಪಾದಿಸಿ';
+
+  @override
   String get logout => 'ಲಾಗ್ ಔಟ್';
 }

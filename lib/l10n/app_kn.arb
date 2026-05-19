@@ -125,5 +125,12 @@
   "aboutFilmytell": "ಫಿಲ್ಮಿಟೆಲ್ ಬಗ್ಗೆ",
   "rateUs": "ನಮಗೆ ಮೌಲ್ಯಮಾಪನ ನೀಡಿ",
 
+   "purchaseHistory": "ಖರೀದಿ ಇತಿಹಾಸ",
+    "giftedByYou": "ನೀವು ಉಡುಗೊರೆಯಾಗಿ ನೀಡಿದ ಚಿತ್ರಗಳು",
+    "receivedGiftedMovies": "ಸ್ವೀಕರಿಸಿದ ಉಡುಗೊರೆ ಚಿತ್ರಗಳು",
+    "accountDetails": "ಖಾತೆ ವಿವರಗಳು",
+    "editAddress": "ವಿಳಾಸ ಸಂಪಾದಿಸಿ",
+     "minSeries": "ಮಿನಿ ಸರಣಿ",
+
   "logout": "ಲಾಗ್ ಔಟ್"
 }

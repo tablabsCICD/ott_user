@@ -85,13 +85,25 @@ class WalletService {
   Future<Map<String, Object>> refreshWalletSnapshot() async {
     try {
       final balanceResponse = await getBalance();
-      final historyResponse = await getTransactionHistory();
+      WalletHistory? historyResponse;
+      Object? historyError;
+
+      try {
+        historyResponse = await getTransactionHistory();
+      } catch (error) {
+        historyError = error;
+        debugPrint('Wallet history refresh error: $error');
+      }
 
       return {
         'success': true,
         'wallet': balanceResponse.data ?? Wallet(),
         'balance': balanceResponse.data?.balance ?? 0.0,
-        'transactions': historyResponse.data ?? <Transactions>[],
+        'transactions': historyResponse?.data ?? <Transactions>[],
+        'historyUpdated': historyError == null,
+        'message': historyError == null
+            ? 'Wallet refreshed successfully.'
+            : 'Wallet balance updated. Transaction history will refresh shortly.',
       };
     } catch (error) {
       debugPrint('Wallet refresh error: $error');

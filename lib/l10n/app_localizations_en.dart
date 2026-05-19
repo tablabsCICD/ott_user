@@ -330,5 +330,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rateUs => 'Rate Us';
 
   @override
+  String get purchaseHistory => 'Purchase History';
+
+  @override
+  String get giftedByYou => 'Gifted Movies By You';
+
+  @override
+  String get receivedGiftedMovies => 'Received Gifted Movies';
+
+  @override
+  String get accountDetails => 'Account Details';
+
+  @override
+  String get editAddress => 'Edit Address';
+
+  @override
   String get logout => 'Logout';
 }

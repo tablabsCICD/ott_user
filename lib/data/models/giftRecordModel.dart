@@ -29,7 +29,9 @@ class GiftRecordModel {
         createdDate: json["createdDate"],
         giftOwnerId: json["giftOwnerId"],
         movie: json["movie"] == null ? null : Content.fromJson(json["movie"]),
-        totalPaid: json["totalPaid"],
+        totalPaid: (json["totalPaid"] as num?)?.toDouble() ??
+            double.tryParse('${json["totalPaid"]}') ??
+            0,
         id: json["id"],
         isActive: json["isActive"],
         remainingGiftCount: json["remainingGiftCount"],

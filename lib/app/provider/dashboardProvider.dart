@@ -14,7 +14,7 @@ import '../core/network/api_helper.dart';
 import 'baseProvider.dart';
 
 class DashboardProvider extends BaseProvider {
-  DashboardProvider() : super('Ideal') {}
+  DashboardProvider() : super('Ideal');
 
   List<DashboardData> _dashboardData = [];
   List<DashboardData> get dashboardData => _dashboardData;
@@ -196,7 +196,7 @@ class DashboardProvider extends BaseProvider {
 
   // ==================== CONTENT DETAILS ====================
 
-  getContentById(int id) async {
+  Future<Content?> getContentById(int id) async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
     String apiUrl = ApiConstant.getVideoById(id, user?.id ?? 1);
     ApiHelper apiHelper = ApiHelper();
@@ -212,11 +212,13 @@ class DashboardProvider extends BaseProvider {
             addUserResponse.data?.contentList != null) {
           _content = addUserResponse.data!.contentList!;
           notifyListeners();
+          return _content;
         }
       }
     } catch (error) {
       debugPrint("❌ getContentById error::: $error");
     }
+    return null;
   }
 
   Future<void> getCastByContentId(int contentId) async {
@@ -234,9 +236,7 @@ class DashboardProvider extends BaseProvider {
 
         _castList = castData == null
             ? []
-            : castData
-                .map((item) => CastMember.fromJson(item))
-                .toList();
+            : castData.map((item) => CastMember.fromJson(item)).toList();
       } else {
         _castList = [];
       }

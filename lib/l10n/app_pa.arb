@@ -124,6 +124,12 @@
   "aboutFilmytell": "ਫਿਲਮੀਟੈਲ ਬਾਰੇ",
   "rateUs": "ਸਾਨੂੰ ਰੇਟ ਕਰੋ",
   
+   "purchaseHistory": "ਖਰੀਦ ਇਤਿਹਾਸ",
+    "giftedByYou": "ਤੁਹਾਡੇ ਵੱਲੋਂ ਤੋਹਫ਼ੇ ਦਿੱਤੀਆਂ ਫਿਲਮਾਂ",
+    "receivedGiftedMovies": "ਮਿਲੀਆਂ ਤੋਹਫ਼ੇ ਵਾਲੀਆਂ ਫਿਲਮਾਂ",
+    "accountDetails": "ਖਾਤਾ ਵੇਰਵੇ",
+    "editAddress": "ਪਤਾ ਸੰਪਾਦਿਤ ਕਰੋ",
+     "minSeries": "ਮਿਨੀ ਸੀਰੀਜ਼",
 
   "logout": "ਲੌਗਆਉਟ"
 }

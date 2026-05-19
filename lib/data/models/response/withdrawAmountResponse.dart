@@ -36,7 +36,7 @@ class Data {
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
-    newBalance: json["newBalance"],
+    newBalance: _asDouble(json["newBalance"]),
     message: json["message"],
   );
 
@@ -44,4 +44,10 @@ class Data {
     "newBalance": newBalance,
     "message": message,
   };
+}
+
+double? _asDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
 }

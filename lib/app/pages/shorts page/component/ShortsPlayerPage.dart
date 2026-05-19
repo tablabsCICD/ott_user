@@ -266,12 +266,18 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
   Widget build(BuildContext context) {
     final balanceProvider = Provider.of<WalletProvider>(context);
     balanceProvider.getBalance();
+    final orientation = MediaQuery.of(context).orientation;
+    final shortsScrollDirection =
+        orientation == Orientation.landscape ? Axis.horizontal : Axis.vertical;
+    final isLandscape = orientation == Orientation.landscape;
+    final useFullWidthPlayer =
+        isLandscape || ResponsiveWidget.isMobile(context);
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
         child: SizedBox(
-          width: ResponsiveWidget.isMobile(context) ? double.infinity : 450,
+          width: useFullWidthPlayer ? double.infinity : 450,
           child: Stack(
             children: [
               _videoBackground(),
@@ -281,7 +287,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                 onDoubleTap: _handleDoubleTapLike,
                 child: PageView.builder(
                   controller: _pageController,
-                  scrollDirection: Axis.vertical,
+                  scrollDirection: shortsScrollDirection,
                   itemCount: totalParts,
                   onPageChanged: _changePage,
                   itemBuilder: (_, i) => _overlay(i),
@@ -350,9 +356,13 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       );
     }
 
+    final videoFit = MediaQuery.of(context).orientation == Orientation.landscape
+        ? BoxFit.contain
+        : BoxFit.cover;
+
     return Positioned.fill(
       child: FittedBox(
-        fit: BoxFit.cover,
+        fit: videoFit,
         child: SizedBox(
           width: size.width,
           height: size.height,
@@ -404,7 +414,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                     width: 10,
                   ),
                   Text(
-                    "${widget.short.creatorName}",
+                    widget.short.creatorName,
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 15,

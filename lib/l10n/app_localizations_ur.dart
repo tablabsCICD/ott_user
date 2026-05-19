@@ -330,5 +330,20 @@ class AppLocalizationsUr extends AppLocalizations {
   String get rateUs => 'ہمیں ریٹ کریں';
 
   @override
+  String get purchaseHistory => 'خریداری کی تاریخ';
+
+  @override
+  String get giftedByYou => 'آپ کی جانب سے تحفہ دی گئی فلمیں';
+
+  @override
+  String get receivedGiftedMovies => 'موصولہ تحفہ فلمیں';
+
+  @override
+  String get accountDetails => 'اکاؤنٹ کی تفصیلات';
+
+  @override
+  String get editAddress => 'پتہ ترمیم کریں';
+
+  @override
   String get logout => 'لاگ آؤٹ';
 }

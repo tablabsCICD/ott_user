@@ -123,5 +123,12 @@
   "aboutFilmytell": "फिल्मिटेल के बारे में",
   "rateUs": "हमें रेट करें",
 
+"purchaseHistory": "खरीद इतिहास",
+"giftedByYou": "आपके द्वारा गिफ्ट की गई फिल्में",
+"receivedGiftedMovies": "प्राप्त गिफ्ट की गई फिल्में",
+"accountDetails": "खाता विवरण",
+"editAddress": "पता संपादित करें",
+ "minSeries": "मिनी सीरीज़",
+
   "logout": "लॉगआउट"
 }

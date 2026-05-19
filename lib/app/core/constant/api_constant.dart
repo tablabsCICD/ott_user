@@ -49,6 +49,7 @@ class ApiConstant {
   // get all languges
   static String fetchLang = "${baseUrl}api/Languages/getAll";
   static String fetchGroupedLang = "${baseUrl}api/all/withGrouping";
+  static String getLatestVersion = "${baseUrl}api/GetLatestVaersion";
 
   static String addMoneyToWallet = "${baseUrl}add-amount";
   static String createWalletOrder(double amount, int userId) {
@@ -73,7 +74,7 @@ class ApiConstant {
 
   static String raiseTicket = "${baseUrl}api/TicketRaised/add";
   static String deleteTicket(id) =>
-      "${baseUrl}api/tickets/deleteTicketRaisedBy/$id";
+      "${baseUrl}api/TicketRaised/deleteTicketRaisedBy/$id";
   static String getRaisedTicketByUserId(userId) =>
       "${baseUrl}api/TicketRaised/user/$userId";
 
@@ -84,8 +85,12 @@ class ApiConstant {
     bool isExpired = false,
   }) =>
       "${baseUrl}api/filter/remainingDays/$id?isGifted=$isGifted&isExpired=$isExpired";
-  static String purchaseHistory(userId, fromDate, toDate, selectedType) =>
-      "${baseUrl}api/purchase-history?userId=$userId&fromDate=$fromDate&toDate=$toDate&type=$selectedType";
+  static String purchaseHistory(userId, fromDate, toDate, selectedType) {
+    final type = selectedType?.toString().trim() ?? '';
+    final typeQuery =
+        type.isEmpty || type.toLowerCase() == 'all' ? '' : '&type=$type';
+    return "${baseUrl}api/purchase-history?userId=$userId&fromDate=$fromDate&toDate=$toDate$typeQuery";
+  }
 
   static String saveViewHistory = "${baseUrl}api/saveOrUpdate";
 
@@ -99,12 +104,18 @@ class ApiConstant {
       "${baseUrl}api/getByGiftMasterId?giftMasterId=$giftMasterId";
 
   static String useGiftByCoupon(userId, couponCode) =>
-      "${baseUrl}api/useGiftByCoupon?couponCode=$couponCode&userId=$userId";
+      "${baseUrl}api/useGiftByCoupon?couponCode=${Uri.encodeComponent(couponCode.toString())}&userId=$userId";
 
   //shorts
   static String shortsMaster = "${baseUrl}api/shortsMaster";
+  static String getLatestShortsByLang(lang, page) =>
+      "${baseUrl}api/shortsMaster/latest?lang=${Uri.encodeComponent(lang.toString())}&page=$page&size=10";
+  static String getTrendingShortsByLang(lang, page) =>
+      "${baseUrl}api/shortsMaster/trending?lang=${Uri.encodeComponent(lang.toString())}&page=$page&size=10";
   static String getShortsByTypeLang(type, lang, page) =>
-      "${baseUrl}api/shortsMaster/$type?lang=$lang&page=$page&size=10";
+      type.toString().toLowerCase() == 'trending'
+          ? getTrendingShortsByLang(lang, page)
+          : getLatestShortsByLang(lang, page);
   static String shortsDetails(id, userId) =>
       "${baseUrl}api/shortsMaster/$id?userId=$userId";
   static String likeshort(partId, userId) =>

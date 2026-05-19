@@ -86,7 +86,7 @@ class UserContent {
 
   factory UserContent.fromJson(Map<String, dynamic> json) => UserContent(
       id: json["id"],
-      contentPercentage: json["contentPercentage"],
+      contentPercentage: _asDouble(json["contentPercentage"]),
       dateFrom: json["dateFrom"],
       dateTo: json["dateTo"],
       refferedBy: json["refferedBy"],
@@ -116,4 +116,11 @@ class UserContent {
         "active": active,
         "remainingDays": remainingDays
       };
+}
+
+double? _asDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
 }

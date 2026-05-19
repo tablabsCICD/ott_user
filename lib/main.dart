@@ -28,6 +28,7 @@ import 'app/core/constant/prefrense_constant.dart';
 import 'app/core/utils/sharepreferences.dart';
 import 'app/provider/userProvider.dart';
 import 'app/route/navigation_service.dart';
+import 'app/route/route_observer.dart';
 import 'app/route/routes/routes.dart';
 import 'firebase_options.dart';
 
@@ -138,7 +139,6 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     sendNotification();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      DeepLinkService.instance.consumePendingNavigation();
       NotificationService.instance.consumePendingNavigation();
     });
   }
@@ -176,6 +176,7 @@ class _MyAppState extends State<MyApp> {
       theme: themeProvider.getTheme,
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
+      navigatorObservers: [routeObserver],
       // Navigate based on login state
       initialRoute: "/",
       onGenerateRoute: RouteGenerator.generateRoute,

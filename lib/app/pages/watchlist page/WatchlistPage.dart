@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
+import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/offline_download_provider.dart';
+import 'package:ott/app/provider/playMediaProvider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
+import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/app/widgets/shimmer%20loader/comming_soon_shimmer.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -27,11 +32,14 @@ class _WatchlistPageState extends State<WatchlistPage> {
   bool isLoading = true;
   bool isOffline = false;
   late WatchlistFilter selectedFilter;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   @override
   void initState() {
     super.initState();
     selectedFilter = widget.initialFilter;
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen(_onConnectivityChanged);
     _load();
   }
 
@@ -40,15 +48,39 @@ class _WatchlistPageState extends State<WatchlistPage> {
         Provider.of<PurchaseContentProvider>(context, listen: false);
     final offlineProvider =
         Provider.of<OfflineDownloadProvider>(context, listen: false);
-    final connectivityResults = await Connectivity().checkConnectivity();
-    isOffline = !connectivityResults.any(
-      (result) => result != ConnectivityResult.none,
-    );
+    await context.read<PlayMediaProvider>().loadLocalResumes();
+    await _updateConnectionStatus();
     await offlineProvider.loadDownloadedContents();
-    await _fetchWatchlistContent(purchaseProvider, selectedFilter);
+    if (!isOffline) {
+      await _fetchWatchlistContent(purchaseProvider, selectedFilter);
+    }
     if (mounted) {
       setState(() => isLoading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _updateConnectionStatus() async {
+    _setConnectionStatus(await Connectivity().checkConnectivity());
+  }
+
+  void _onConnectivityChanged(List<ConnectivityResult> results) {
+    final wasOffline = isOffline;
+    _setConnectionStatus(results);
+    if (wasOffline != isOffline) {
+      _load();
+    }
+  }
+
+  void _setConnectionStatus(List<ConnectivityResult> connectivityResults) {
+    isOffline = !connectivityResults.any(
+      (result) => result != ConnectivityResult.none,
+    );
   }
 
   Future<void> _onFilterSelected(WatchlistFilter filter) async {
@@ -61,7 +93,13 @@ class _WatchlistPageState extends State<WatchlistPage> {
 
     final purchaseProvider =
         Provider.of<PurchaseContentProvider>(context, listen: false);
-    await _fetchWatchlistContent(purchaseProvider, filter);
+    final offlineProvider =
+        Provider.of<OfflineDownloadProvider>(context, listen: false);
+    await _updateConnectionStatus();
+    await offlineProvider.loadDownloadedContents();
+    if (!isOffline) {
+      await _fetchWatchlistContent(purchaseProvider, filter);
+    }
 
     if (!mounted) return;
     setState(() => isLoading = false);
@@ -77,6 +115,71 @@ class _WatchlistPageState extends State<WatchlistPage> {
     return purchaseProvider.getPurchaseContent(
       isGifted: isGifted,
       isExpired: isExpired,
+    );
+  }
+
+  Future<void> _playContent(Content item) async {
+    if (item.id == null) return;
+
+    Content contentToPlay = item;
+    var contentUrl = contentToPlay.contentUrl;
+    final localResumeSeconds = context.read<PlayMediaProvider>().getLocalResume(
+          contentId: item.id!,
+          seasonId: item.seasonId,
+          episodeId: item.episodeId,
+        );
+    final latestResumeSeconds =
+        (item.watchedSeconds ?? 0) > localResumeSeconds
+            ? item.watchedSeconds ?? 0
+            : localResumeSeconds;
+
+    // Watchlist items come from the purchase API, which can already contain
+    // a playable URL but not the latest continue-watching fields. Refresh the
+    // content before playback so watchlist behaves like Continue Watching.
+    if (!isOffline) {
+      final fetchedContent = await context
+          .read<DashboardProvider>()
+          .getContentById(item.id!);
+      if (!mounted) return;
+
+      if (fetchedContent != null) {
+        // Downloaded copies often keep the progress value that existed when
+        // the file was saved (usually 0). Prefer the newest local resume when
+        // it is ahead of the server/offline snapshot.
+        if ((fetchedContent.watchedSeconds ?? 0) < latestResumeSeconds) {
+          fetchedContent.watchedSeconds = latestResumeSeconds;
+        }
+        fetchedContent.watchedPercentage ??= item.watchedPercentage;
+        contentToPlay = fetchedContent;
+        contentUrl = contentToPlay.contentUrl;
+      }
+    }
+
+    if ((contentToPlay.watchedSeconds ?? 0) < latestResumeSeconds) {
+      contentToPlay.watchedSeconds = latestResumeSeconds;
+    }
+    contentToPlay.watchedPercentage ??= item.watchedPercentage;
+
+    if (contentUrl == null || contentUrl.trim().isEmpty) {
+      CustomToast.show(
+        context,
+        "Video is not available",
+        isSuccess: false,
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PlayMediaPage(
+          content: contentToPlay,
+          seasons: null,
+          videoUrl: contentUrl!,
+          seasonIndex: 0,
+          episodeIndex: 0,
+        ),
+      ),
     );
   }
 
@@ -182,15 +285,17 @@ class _WatchlistPageState extends State<WatchlistPage> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(10),
 
           // ✅ Selected state (like your image)
           color: selected ? theme.primaryColor : Colors.transparent,
 
           border: Border.all(
-            color: selected ? theme.primaryColor : Colors.grey.shade400,
+            color: selected
+                ? theme.primaryColor
+                : theme.canvasColor.withOpacity(0.6),
           ),
 
           boxShadow: selected
@@ -227,17 +332,28 @@ class _WatchlistPageState extends State<WatchlistPage> {
       if (movie == null || movieId == null) continue;
 
       entriesById[movieId] = _WatchlistEntry(
-        movie: movie,
+        movie: movie
+          ..watchedPercentage ??= userContent.contentPercentage?.round(),
         isActive: userContent.active ?? false,
         isGifted: userContent.isGifted ?? false,
         isDownloaded: offlineProvider.isDownloaded(movieId),
       );
     }
 
-    if (selectedFilter == WatchlistFilter.downloaded) {
+    if (isOffline || selectedFilter == WatchlistFilter.downloaded) {
       for (final movie in offlineProvider.downloadedContents) {
         final movieId = movie.id;
         if (movieId == null) continue;
+        final existingMovie = entriesById[movieId]?.movie;
+
+        if ((movie.watchedSeconds ?? 0) <
+            (existingMovie?.watchedSeconds ?? 0)) {
+          movie.watchedSeconds = existingMovie?.watchedSeconds;
+        }
+        if ((movie.watchedPercentage ?? 0) <
+            (existingMovie?.watchedPercentage ?? 0)) {
+          movie.watchedPercentage = existingMovie?.watchedPercentage;
+        }
 
         entriesById[movieId] = _WatchlistEntry(
           movie: movie,
@@ -249,9 +365,13 @@ class _WatchlistPageState extends State<WatchlistPage> {
     }
 
     return entriesById.values.where((entry) {
+      if (isOffline) {
+        return entry.isDownloaded;
+      }
+
       switch (selectedFilter) {
         case WatchlistFilter.available:
-          return !(isOffline && entry.isDownloaded);
+          return true;
         case WatchlistFilter.downloaded:
           return entry.isDownloaded;
         case WatchlistFilter.gifted:
@@ -268,20 +388,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
 
     return GestureDetector(
       onTap: content.active == true
-          ? () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => PlayMediaPage(
-                    content: item,
-                    seasons: null,
-                    videoUrl: item.contentUrl ?? '',
-                    seasonIndex: 0,
-                    episodeIndex: 0,
-                  ),
-                ),
-              );
-            }
+          ? () => _playContent(item)
           : null,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -410,6 +517,20 @@ class _WatchlistPageState extends State<WatchlistPage> {
                   ),
                 ),
               ),
+            if ((item.watchedPercentage ?? 0) > 0 &&
+                (item.watchedPercentage ?? 0) < 95)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: LinearProgressIndicator(
+                  value: (item.watchedPercentage! / 100).clamp(0.0, 1.0),
+                  minHeight: 4,
+                  backgroundColor: Colors.white24,
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(theme.primaryColor),
+                ),
+              ),
           ],
         ),
       ),
@@ -457,7 +578,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
   }
 
   Widget _emptyState(ThemeData theme, {bool showSegmentedToggle = true}) {
-    final emptyTitle = selectedFilter == WatchlistFilter.downloaded
+    final emptyTitle = isOffline || selectedFilter == WatchlistFilter.downloaded
         ? "No downloaded content found"
         : "No content found";
     return Column(

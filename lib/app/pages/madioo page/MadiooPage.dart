@@ -63,18 +63,14 @@ class _MadiooPageState extends State<MadiooPage>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SizedBox(
-            height: 100,
-          ),
-
-          /// 📻 Radio Icon with glow
-          Container(
+        /// 📻 Radio Icon with glow
+          /*  Container(
             padding: const EdgeInsets.all(20),
             child: Hero(
               tag: "logo",
@@ -95,7 +91,7 @@ class _MadiooPageState extends State<MadiooPage>
           ),
 
           const SizedBox(height: 30),
-
+ */
           /// 🎧 Title
           Text(
             "Madioo is Coming Soon",
