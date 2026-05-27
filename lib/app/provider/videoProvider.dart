@@ -144,6 +144,7 @@ class VideoProvider extends BaseProvider {
   @override
   void dispose() {
     searchContentController.dispose();
+    reviewController.dispose();
     _debounce?.cancel();
     super.dispose();
   }
@@ -278,6 +279,8 @@ class VideoProvider extends BaseProvider {
         if (saveRatingsAndReviewResponse.success == true) {
           if (saveRatingsAndReviewResponse.data != null) {
             _reviewList.add(saveRatingsAndReviewResponse.data!.user!);
+            reviewController.clear();
+            rating = 0;
             notifyListeners();
             return {
               'success': true,
@@ -300,7 +303,11 @@ class VideoProvider extends BaseProvider {
           };
         }
       } else {
-        return {'failure': true, 'message': 'Something went wrong!'};
+        final responseMessage = _messageFromResponseBody(response.body);
+        return {
+          'success': false,
+          'message': responseMessage ?? 'Something went wrong!'
+        };
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
@@ -310,6 +317,19 @@ class VideoProvider extends BaseProvider {
         'message': 'An error occurred while adding user: $error'
       };
     }
+  }
+
+  String? _messageFromResponseBody(String responseBody) {
+    try {
+      final decoded = json.decode(responseBody);
+      if (decoded is Map<String, dynamic>) {
+        final message = decoded['message']?.toString().trim();
+        if (message != null && message.isNotEmpty) return message;
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
   }
 
   Future<Map<String, Object>> getRatingReview(int contentId) async {

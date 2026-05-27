@@ -71,6 +71,8 @@ class ApiConstant {
       "${baseUrl}api/deleteRatingAndRewiewBy/$id";
   static String getRatingAndReviewByContentId(contentId) =>
       "${baseUrl}api/content/$contentId";
+  static String userPushNotifications(userId, pageNo, pageSize) =>
+      "${baseUrl}api/notifications/user/$userId/push?pageNo=$pageNo&pageSize=$pageSize";
 
   static String raiseTicket = "${baseUrl}api/TicketRaised/add";
   static String deleteTicket(id) =>

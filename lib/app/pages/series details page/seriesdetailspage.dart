@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
@@ -14,6 +15,7 @@ import 'package:ott/app/pages/movie%20details%20page/component/actionButtonWidge
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/series_provider.dart';
+import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -25,6 +27,8 @@ import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 import '../../provider/playMediaProvider.dart';
+import '../movie details page/component/displayStar.dart';
+import '../movie details page/component/starRating.dart';
 
 class SeriesDetailsPage extends StatefulWidget {
   final int seriesId;
@@ -44,6 +48,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   int _selectedSeasonIndex = 0;
   final TrailerPreviewController _trailerController =
       TrailerPreviewController();
+  final TrailerPreviewController _teaserController = TrailerPreviewController();
   final ApiHelper _apiHelper = ApiHelper();
   List<CastMember> _seasonCastList = [];
   bool _isLoadingSeasonCast = false;
@@ -61,12 +66,16 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   @override
   void dispose() {
     _trailerController.pause?.call();
+    _teaserController.pause?.call();
     super.dispose();
   }
 
   Future<void> _loadInitialData() async {
     final provider = context.read<SeriesProvider>();
     await provider.fetchSeriesDetails(widget.seriesId);
+    await context
+        .read<VideoProvider>()
+        .getRatingReview(widget.content.id ?? widget.seriesId);
 
     if (!mounted) return;
 
@@ -177,6 +186,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                         _buildDetailsSection(context, widget.content, theme),
                         const SizedBox(height: 32),
                         _buildGallery(widget.content),
+                        const SizedBox(height: 32),
+                        _buildRatingAndReviewsSection(context, widget.content),
                       ],
                     ),
                   ),
@@ -226,6 +237,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                       _buildDetailsSection(context, widget.content, theme),
                       const SizedBox(height: 32),
                       _buildGallery(widget.content),
+                      const SizedBox(height: 32),
+                      _buildRatingAndReviewsSection(context, widget.content),
                       const SizedBox(height: 60),
                     ],
                   ),
@@ -303,7 +316,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           child: AspectRatio(
             aspectRatio: 16 / 9,
             child: TrailerPreview(
-              trailerUrl: widget.content.trailerUrl,
+              trailerUrl: widget.content.teaserOrTrailerUrl,
               content: widget.content,
               controller: _trailerController,
             ),
@@ -331,7 +344,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           child: AspectRatio(
             aspectRatio: 16 / 9,
             child: TrailerPreview(
-              trailerUrl: widget.content.trailerUrl,
+              trailerUrl: widget.content.teaserOrTrailerUrl,
               content: widget.content,
               controller: _trailerController,
             ),
@@ -1129,45 +1142,273 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     );
   }
 
+  Widget _buildRatingAndReviewsSection(BuildContext context, Content content) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildRatingReviewSection(context, content),
+        const SizedBox(height: 16),
+        _buildReviewList(),
+      ],
+    );
+  }
+
+  Widget _buildRatingReviewSection(BuildContext context, Content content) {
+    final selectedThemeData =
+        Provider.of<ThemeProvider>(context, listen: true).getTheme;
+
+    return Consumer<VideoProvider>(
+      builder: (context, provider, child) => Column(
+        children: [
+          const Text(
+            "Rate your experience",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: Colors.white,
+            ),
+          ),
+          StarRating(
+            rating: provider.rating,
+            onRatingChanged: (rating) =>
+                setState(() => provider.rating = rating),
+          ),
+          const SizedBox(height: 7),
+          Container(
+            height: 90,
+            margin: const EdgeInsets.all(10.0),
+            padding: const EdgeInsets.only(bottom: 16.0),
+            child: TextField(
+              maxLines: 9,
+              style: const TextStyle(color: Colors.white),
+              controller: provider.reviewController,
+              decoration: const InputDecoration(
+                hintText: "Your Feedback!",
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ),
+          const SizedBox(height: 7),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: selectedThemeData.primaryColor,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            onPressed: () async {
+              final contentId = content.id ?? widget.seriesId;
+              if (provider.rating == 0) {
+                CustomToast.show(context, "Please select rating..",
+                    isSuccess: false);
+                return;
+              }
+
+              final result = await provider.saveRatingReview(contentId);
+              if (!mounted) return;
+
+              final message = result['message']?.toString().trim();
+              if (result['success'] != true) {
+                CustomToast.show(
+                  context,
+                  message != null && message.isNotEmpty
+                      ? message
+                      : "something went wrong to submit review",
+                  isSuccess: false,
+                );
+                return;
+              }
+
+              CustomToast.show(
+                context,
+                message != null && message.isNotEmpty
+                    ? message
+                    : 'review submitted successfully',
+                isSuccess: true,
+              );
+              await context.read<VideoProvider>().getRatingReview(contentId);
+            },
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8.0),
+              child:
+                  Text("Submit Review", style: TextStyle(color: Colors.white)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewList() {
+    return Consumer<VideoProvider>(
+      builder: (context, provider, child) {
+        if (provider.reviewList.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: provider.reviewList.length,
+          itemBuilder: (BuildContext context, int index) {
+            DateTime date = DateTime.now();
+            if (provider.reviewList[index].createdAt != null) {
+              date = DateTime.fromMillisecondsSinceEpoch(
+                  provider.reviewList[index].createdAt!);
+            }
+            final formattedDate =
+                DateFormat('yyyy-MM-dd HH:mm:ss').format(date);
+            final username = provider.reviewList[index].username;
+            final displayName = username == null || username == "null null"
+                ? "Anonymous User"
+                : username;
+
+            return Container(
+              margin: const EdgeInsets.symmetric(vertical: 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      SizedBox(
+                        height: 40,
+                        width: 40,
+                        child: CircleAvatar(
+                          backgroundImage:
+                              provider.reviewList[index].userProfile != null
+                                  ? NetworkImage(
+                                      provider.reviewList[index].userProfile!)
+                                  : null,
+                          radius: 50,
+                          child: provider.reviewList[index].userProfile == null
+                              ? const Icon(Icons.person, size: 25)
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: Text(
+                          displayName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      StarDisplay(
+                          value: provider.reviewList[index].rating ?? 5),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          formattedDate,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.normal,
+                            fontSize: 12,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    provider.reviewList[index].title.toString(),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.normal,
+                      fontSize: 12,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Divider(thickness: 2),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   // ---------------- GALLERY ----------------
 
   Widget _buildGallery(Content content) {
     final theme = Theme.of(context);
-    // Using poster as placeholder images
+    final posters = content.posterUrlList ?? [];
+    final teaserUrl = _galleryVideoUrl(content);
+    final hasPosters = posters.isNotEmpty;
+    final hasTeaser = teaserUrl.isNotEmpty;
+
+    if (!hasPosters && !hasTeaser) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (content.posterUrlList != null &&
-            content.posterUrlList!.isNotEmpty) ...[
-          Text(
-            "Gallery",
-            style: TextStyle(
-              color: theme.primaryColor,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+        Text(
+          "Gallery",
+          style: TextStyle(
+            color: theme.primaryColor,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 160,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: content.posterUrlList!.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    content.posterUrlList![index],
-                    width: 320,
-                    fit: BoxFit.cover,
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 180,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: posters.length + (hasTeaser ? 1 : 0),
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              if (hasTeaser && index == 0) {
+                return SizedBox(
+                  width: 320,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: TrailerPreview(
+                      trailerUrl: teaserUrl,
+                      content: content,
+                      controller: _teaserController,
+                    ),
                   ),
                 );
-              },
-            ),
+              }
+
+              final posterIndex = hasTeaser ? index - 1 : index;
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  posters[posterIndex],
+                  width: 320,
+                  height: 180,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    width: 320,
+                    color: Colors.black26,
+                    child: Icon(
+                      Icons.broken_image,
+                      color: theme.canvasColor.withOpacity(0.5),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
-        ],
+        ),
       ],
     );
+  }
+
+  String _galleryVideoUrl(Content content) {
+    final teaserUrl = content.teaserUrl?.trim() ?? '';
+    if (teaserUrl.isNotEmpty) return teaserUrl;
+
+    return content.trailerUrl?.trim() ?? '';
   }
 }

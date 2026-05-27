@@ -36,6 +36,9 @@ class SeriesBillingPage extends StatefulWidget {
 }
 
 class _SeriesBillingPageState extends State<SeriesBillingPage> {
+  static const double _minimumRechargeAmount = 100;
+  static const double _maximumRechargeAmount = 100000;
+
   @override
   void initState() {
     super.initState();
@@ -363,6 +366,22 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                                 );
                                 return;
                               }
+                              if (amount < _minimumRechargeAmount) {
+                                CustomToast.show(
+                                  pageContext,
+                                  "Minimum recharge amount is Rs ${_minimumRechargeAmount.toStringAsFixed(0)}",
+                                  isSuccess: false,
+                                );
+                                return;
+                              }
+                              if (amount > _maximumRechargeAmount) {
+                                CustomToast.show(
+                                  pageContext,
+                                  "Maximum recharge amount is Rs ${_maximumRechargeAmount.toStringAsFixed(0)}",
+                                  isSuccess: false,
+                                );
+                                return;
+                              }
 
                               setState(() => isProcessing = true);
                               Navigator.pop(dialogContext);
@@ -376,10 +395,19 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
 
                               if (!mounted) return;
                               if (result is Map && result['success'] == true) {
+                                _showWalletReflectLoader(pageContext);
                                 final addResult =
-                                    await walletProvider.onPaymentVerified(
-                                  expectedAmount: amount,
-                                );
+                                    await walletProvider
+                                        .onPaymentVerified(
+                                          expectedAmount: amount,
+                                        )
+                                        .whenComplete(() {
+                                  if (mounted) {
+                                    Navigator.of(pageContext,
+                                            rootNavigator: true)
+                                        .pop();
+                                  }
+                                });
 
                                 if (!mounted) return;
                                 final msg = addResult['message']?.toString() ??
@@ -412,6 +440,26 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
           },
         );
       },
+    );
+  }
+
+  void _showWalletReflectLoader(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+            SizedBox(width: 16),
+            Expanded(child: Text("Updating wallet balance...")),
+          ],
+        ),
+      ),
     );
   }
 

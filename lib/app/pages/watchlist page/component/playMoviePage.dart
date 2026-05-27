@@ -1,18 +1,31 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ott/data/models/seriesModel.dart';
-import 'package:video_player/video_player.dart';
-import 'package:chewie/chewie.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart' as youtube;
 
 import 'package:ott/app/provider/themeProvider.dart';
-import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/data/models/content.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 import '../../../provider/offline_download_provider.dart';
 import '../../../provider/playMediaProvider.dart';
+
+String? _extractYoutubeId(String urlOrId) {
+  final value = urlOrId.trim();
+  if (value.isEmpty) return null;
+
+  final converted = youtube.YoutubePlayer.convertUrlToId(value);
+  if (converted != null && converted.isNotEmpty) return converted;
+
+  final looksLikeVideoId = RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(value);
+  return looksLikeVideoId ? value : null;
+}
 
 class PlayMediaPage extends StatefulWidget {
   final Content? content;
@@ -34,9 +47,12 @@ class PlayMediaPage extends StatefulWidget {
   State<PlayMediaPage> createState() => _PlayMediaPageState();
 }
 
-class _PlayMediaPageState extends State<PlayMediaPage> {
-  VideoPlayerController? _videoController;
-  ChewieController? _chewieController;
+class _PlayMediaPageState extends State<PlayMediaPage>
+    with WidgetsBindingObserver {
+  Player? _player;
+  VideoController? _videoController;
+  youtube.YoutubePlayerController? _youtubeController;
+  final List<StreamSubscription<dynamic>> _playerSubscriptions = [];
   Timer? _progressTimer;
 
   bool _loading = true;
@@ -57,20 +73,27 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
   @override
   void initState() {
     super.initState();
-    unawaited(_enterLandscapePlayback());
-    _preparePlayback();
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(_startFullscreenPlayback());
+  }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _addView();
-    });
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      unawaited(_player?.pause());
+      _youtubeController?.pause();
+      _saveProgress();
+    }
   }
 
   Future<void> _enterLandscapePlayback() async {
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     await SystemChrome.setPreferredOrientations(const [
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   Future<void> _restorePortraitPlayback() async {
@@ -80,7 +103,19 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     ]);
   }
 
-  // ================= ADD VIEW =================
+  Future<void> _startFullscreenPlayback() async {
+    await _enterLandscapePlayback();
+    if (!mounted || _isDisposed) return;
+
+    await _preparePlayback();
+    if (!mounted || _isDisposed) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_isDisposed) {
+        _addView();
+      }
+    });
+  }
 
   void _addView() {
     if (widget.content?.id == null) return;
@@ -92,7 +127,19 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
   }
 
   Future<void> _preparePlayback() async {
-    String sourceUrl = widget.videoUrl;
+    String sourceUrl = widget.videoUrl.trim();
+    if (sourceUrl.isEmpty) {
+      _showPlaybackError();
+      return;
+    }
+
+    final youtubeId = _extractYoutubeId(sourceUrl);
+
+    if (youtubeId != null && youtubeId.isNotEmpty) {
+      _isOfflinePlayback = false;
+      await _setupYoutubePlayer(youtubeId);
+      return;
+    }
 
     final content = widget.content;
     if (content != null) {
@@ -109,7 +156,81 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     await _setupPlayer(sourceUrl, playFromFile: _isOfflinePlayback);
   }
 
-  // ================= PLAYER SETUP =================
+  void _showPlaybackError() {
+    if (!mounted || _isDisposed) return;
+
+    setState(() {
+      _loading = false;
+      _hasPlaybackError = true;
+    });
+  }
+
+  Future<void> _setupYoutubePlayer(String videoId) async {
+    final token = ++_setupToken;
+
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _hasPlaybackError = false;
+      });
+    }
+
+    _progressTimer?.cancel();
+    await _disposePlayer(saveProgress: false);
+    if (_isDisposed || !mounted || token != _setupToken) return;
+
+    final provider = context.read<PlayMediaProvider>();
+    final resumeSeconds = _isSeries
+        ? provider.getLocalResume(
+            contentId: widget.content!.id!,
+            seasonId: widget.seasonIndex,
+            episodeId: widget.episodeIndex,
+          )
+        : widget.content?.watchedSeconds ?? 0;
+
+    final controller = youtube.YoutubePlayerController(
+      initialVideoId: videoId,
+      flags: youtube.YoutubePlayerFlags(
+        autoPlay: true,
+        mute: false,
+        loop: false,
+        startAt: resumeSeconds > 5 ? resumeSeconds : 0,
+      ),
+    );
+
+    controller.addListener(() {
+      if (_isDisposed || !mounted || token != _setupToken) return;
+
+      final value = controller.value;
+      _handlePlayingChanged(value.isPlaying);
+
+      if (value.hasError) {
+        setState(() => _hasPlaybackError = true);
+      }
+
+      if (value.playerState == youtube.PlayerState.ended) {
+        _handlePlaybackCompleted();
+      }
+
+      setState(() {});
+    });
+
+    if (_isDisposed || !mounted || token != _setupToken) {
+      controller.dispose();
+      return;
+    }
+
+    _youtubeController = controller;
+
+    if (mounted && token == _setupToken) {
+      setState(() => _loading = false);
+    }
+
+    _progressTimer = Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => _saveProgress(),
+    );
+  }
 
   Future<void> _setupPlayer(String url, {bool playFromFile = false}) async {
     final token = ++_setupToken;
@@ -125,20 +246,25 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     await _disposePlayer(saveProgress: false);
     if (_isDisposed || !mounted || token != _setupToken) return;
 
-    // 🔑 Give MIUI time to release decoder
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 250));
     if (_isDisposed || !mounted || token != _setupToken) return;
 
-    debugPrint("VIDEO SOURCE => $url");
+    debugPrint("MEDIA SOURCE => $url");
 
-    final controller = playFromFile
-        ? VideoPlayerController.file(File(url))
-        : VideoPlayerController.networkUrl(Uri.parse(url));
+    final player = Player();
+    final controller = VideoController(player);
+
     try {
-      await controller.initialize();
-    } catch (e) {
-      debugPrint("VIDEO INIT ERROR => $e");
-      await controller.dispose();
+      // media_kit is the underlying playback engine; the route keeps the
+      // existing fullscreen, resume, continue-watching and auto-next behavior.
+      await player.open(
+        Media(playFromFile ? File(url).uri.toString() : url),
+        play: false,
+      );
+      await player.setVolume(100);
+    } catch (error) {
+      debugPrint("MEDIA_KIT INIT ERROR => $error");
+      await player.dispose();
       if (mounted && token == _setupToken) {
         setState(() {
           _loading = false;
@@ -149,34 +275,13 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     }
 
     if (_isDisposed || !mounted || token != _setupToken) {
-      await controller.dispose();
+      await player.dispose();
       return;
     }
 
-    if (controller.value.hasError) {
-      debugPrint(
-        "VIDEO ERROR => ${controller.value.errorDescription}",
-      );
-    }
-
-    controller.addListener(_videoListener);
+    _player = player;
     _videoController = controller;
-
-    _chewieController = ChewieController(
-      videoPlayerController: controller,
-      autoPlay: false, // we already call play()
-      looping: false,
-      allowFullScreen: true,
-      fullScreenByDefault: true,
-      allowPlaybackSpeedChanging: false,
-      deviceOrientationsOnEnterFullScreen: const [
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ],
-      deviceOrientationsAfterFullScreen: const [
-        DeviceOrientation.portraitUp,
-      ],
-    );
+    _bindPlayerStreams(player);
 
     if (mounted && token == _setupToken) {
       setState(() => _loading = false);
@@ -185,12 +290,33 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     await _resumeAndPlay(token);
   }
 
+  void _bindPlayerStreams(Player player) {
+    _playerSubscriptions
+      ..add(player.stream.playing.listen((isPlaying) {
+        _handlePlayingChanged(isPlaying);
+        if (mounted) setState(() {});
+      }))
+      ..add(player.stream.position.listen((_) => _handlePositionChanged()))
+      ..add(player.stream.duration.listen((_) {
+        if (mounted) setState(() {});
+      }))
+      ..add(player.stream.completed.listen((completed) {
+        if (completed) _handlePlaybackCompleted();
+      }))
+      ..add(player.stream.error.listen((error) {
+        debugPrint("MEDIA_KIT PLAYBACK ERROR => $error");
+        if (mounted) {
+          setState(() => _hasPlaybackError = true);
+        }
+      }));
+  }
+
   Future<void> _resumeAndPlay(int token) async {
-    if (_videoController == null || !mounted) return;
+    if (_player == null || !mounted) return;
     if (_isDisposed || token != _setupToken) return;
 
     final provider = context.read<PlayMediaProvider>();
-    await _videoController!.setVolume(1.0);
+    await _player!.setVolume(100);
 
     final resumeSeconds = _isSeries
         ? provider.getLocalResume(
@@ -201,10 +327,10 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
         : widget.content?.watchedSeconds ?? 0;
 
     if (resumeSeconds > 5) {
-      await _videoController!.seekTo(Duration(seconds: resumeSeconds));
+      await _player!.seek(Duration(seconds: resumeSeconds));
     }
 
-    await _videoController!.play();
+    await _player!.play();
     if (_isDisposed || token != _setupToken) return;
 
     _progressTimer = Timer.periodic(
@@ -213,51 +339,52 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     );
   }
 
-  // ================= VIDEO LISTENER =================
-  void _videoListener() {
+  void _handlePlayingChanged(bool isPlaying) {
     if (_isDisposed || !mounted) return;
-    if (_videoController == null || _handlingEnd) return;
 
-    final value = _videoController!.value;
-
-    // 🔋 wakelock
-    if (value.isPlaying && !_wakelockEnabled) {
+    if (isPlaying && !_wakelockEnabled) {
       WakelockPlus.enable();
       _wakelockEnabled = true;
-    } else if (!value.isPlaying && _wakelockEnabled) {
+    } else if (!isPlaying && _wakelockEnabled) {
       WakelockPlus.disable();
       _wakelockEnabled = false;
     }
-
-    // ▶ SAVE EVERY 15s WHILE PLAYING
-    if (value.isPlaying &&
-        (value.position - _lastSavedPosition).inSeconds >= 15) {
-      _saveProgress();
-    }
-
-    // ▶ SAVE WHEN PAUSED
-    if (!value.isPlaying &&
-        value.position > Duration.zero &&
-        value.position != _lastSavedPosition) {
-      _saveProgress();
-    }
-
-    // ▶ AUTO NEXT EPISODE
-    if (_isSeries &&
-        value.duration.inSeconds > 0 &&
-        value.position >= value.duration) {
-      _handlingEnd = true;
-      _playNextEpisode();
-    }
   }
 
-  // ================= SAVE PROGRESS =================
+  void _handlePositionChanged() {
+    if (_isDisposed || !mounted || _player == null || _handlingEnd) return;
+
+    final state = _player!.state;
+
+    if (state.playing &&
+        (state.position - _lastSavedPosition).inSeconds >= 15) {
+      _saveProgress();
+    }
+
+    if (!state.playing &&
+        state.position > Duration.zero &&
+        state.position != _lastSavedPosition) {
+      _saveProgress();
+    }
+
+    if (mounted) setState(() {});
+  }
+
+  void _handlePlaybackCompleted() {
+    if (_handlingEnd || !_isSeries) return;
+    _handlingEnd = true;
+    unawaited(_playNextEpisode());
+  }
 
   void _saveProgress() {
-    if (_videoController == null || widget.content?.id == null) return;
+    if (widget.content?.id == null) return;
 
-    final position = _videoController!.value.position;
-    final duration = _videoController!.value.duration;
+    final position =
+        _youtubeController?.value.position ?? _player?.state.position;
+    final duration = _youtubeController?.value.metaData.duration ??
+        _player?.state.duration;
+
+    if (position == null || duration == null) return;
 
     if (duration.inSeconds == 0) return;
 
@@ -283,8 +410,6 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
         );
   }
 
-  // ================= AUTO NEXT =================
-
   Future<void> _playNextEpisode() async {
     if (!_isSeries ||
         widget.seasons == null ||
@@ -302,20 +427,30 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     );
 
     if (next == null) {
-      Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
       return;
     }
 
     _handlingEnd = false;
-    await _setupPlayer(next.videoUrl ?? "");
-  }
+    final nextUrl = next.videoUrl?.trim() ?? "";
+    if (nextUrl.isEmpty) {
+      _showPlaybackError();
+      return;
+    }
 
-  // ================= DISPOSE =================
+    final youtubeId = _extractYoutubeId(nextUrl);
+    if (youtubeId != null && youtubeId.isNotEmpty) {
+      await _setupYoutubePlayer(youtubeId);
+    } else {
+      await _setupPlayer(nextUrl);
+    }
+  }
 
   @override
   void dispose() {
     _isDisposed = true;
     _setupToken++;
+    WidgetsBinding.instance.removeObserver(this);
     _disposePlayerSync(saveProgress: true);
     unawaited(_restorePortraitPlayback());
     super.dispose();
@@ -328,22 +463,29 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     _progressTimer?.cancel();
     _progressTimer = null;
 
-    final controller = _videoController;
-    _videoController = null;
+    for (final subscription in _playerSubscriptions) {
+      await subscription.cancel();
+    }
+    _playerSubscriptions.clear();
 
-    if (controller != null) {
-      controller.removeListener(_videoListener);
+    final player = _player;
+    final youtubeController = _youtubeController;
+    _player = null;
+    _videoController = null;
+    _youtubeController = null;
+
+    if (player != null) {
       try {
-        await controller.pause();
+        await player.pause();
       } catch (_) {}
       try {
-        await controller.setVolume(0.0);
+        await player.setVolume(0);
       } catch (_) {}
-      await controller.dispose();
+      await player.dispose();
     }
 
-    _chewieController?.dispose();
-    _chewieController = null;
+    youtubeController?.pause();
+    youtubeController?.dispose();
 
     if (_wakelockEnabled) {
       WakelockPlus.disable();
@@ -358,22 +500,29 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     _progressTimer?.cancel();
     _progressTimer = null;
 
-    final controller = _videoController;
-    _videoController = null;
+    for (final subscription in _playerSubscriptions) {
+      unawaited(subscription.cancel());
+    }
+    _playerSubscriptions.clear();
 
-    if (controller != null) {
-      controller.removeListener(_videoListener);
+    final player = _player;
+    final youtubeController = _youtubeController;
+    _player = null;
+    _videoController = null;
+    _youtubeController = null;
+
+    if (player != null) {
       try {
-        controller.pause();
+        player.pause();
       } catch (_) {}
       try {
-        controller.setVolume(0.0);
+        player.setVolume(0);
       } catch (_) {}
-      controller.dispose();
+      player.dispose();
     }
 
-    _chewieController?.dispose();
-    _chewieController = null;
+    youtubeController?.pause();
+    youtubeController?.dispose();
 
     if (_wakelockEnabled) {
       WakelockPlus.disable();
@@ -391,8 +540,6 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
     }
   }
 
-  // ================= UI =================
-
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>().getTheme;
@@ -403,23 +550,56 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
         return false;
       },
       child: Scaffold(
-        backgroundColor: Colors.black, // important for video
+        backgroundColor: Colors.black,
         appBar: null,
-        body: _loading
-            ? Center(
-                child: CircularProgressIndicator(
-                color: theme.primaryColor,
-              ))
-            : _hasPlaybackError
-                ? const Center(
-                    child: Text(
-                      'Video unavailable',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  )
-            : ResponsiveWidget.isDesktop(context)
-                ? _desktopPlayer()
-                : _mobilePlayer(),
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            Positioned.fill(
+              child: _loading
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: theme.primaryColor,
+                      ),
+                    )
+                  : _hasPlaybackError
+                      ? const Center(
+                          child: Text(
+                            'Video unavailable',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        )
+                      : ResponsiveWidget.isDesktop(context)
+                          ? _desktopPlayer()
+                          : _mobilePlayer(),
+            ),
+            Positioned(
+              top: 8,
+              left: 8,
+              child: SafeArea(child: _backButton()),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _backButton() {
+    return Material(
+      color: Colors.black.withOpacity(0.45),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: _handleExit,
+        child: const SizedBox(
+          height: 36,
+          width: 36,
+          child: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+            size: 18,
+          ),
+        ),
       ),
     );
   }
@@ -431,18 +611,38 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
   }
 
   Widget _desktopPlayer() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: SizedBox.expand(
-        child: _playerSurface(),
-      ),
+    return SizedBox.expand(
+      child: _playerSurface(),
     );
   }
 
   Widget _playerSurface() {
-    if (_videoController == null ||
-        !_videoController!.value.isInitialized ||
-        _chewieController == null) {
+    final theme = Theme.of(context);
+
+    if (_youtubeController != null) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final height = constraints.maxHeight;
+          if (width <= 0 || height <= 0) return const SizedBox.expand();
+          final aspectRatio = width / height;
+
+          return SizedBox(
+            width: width,
+            height: height,
+            child: youtube.YoutubePlayer(
+              controller: _youtubeController!,
+              width: width,
+              aspectRatio: aspectRatio,
+              showVideoProgressIndicator: true,
+              progressIndicatorColor: theme.primaryColor,
+            ),
+          );
+        },
+      );
+    }
+
+    if (_player == null || _videoController == null) {
       if (_hasPlaybackError) {
         return const Center(
           child: Text(
@@ -453,14 +653,29 @@ class _PlayMediaPageState extends State<PlayMediaPage> {
       }
       return Center(
         child: CircularProgressIndicator(
-          color: Theme.of(context).primaryColor,
+          color: theme.primaryColor,
         ),
       );
     }
 
-    return SizedBox.expand(
-      // 🔥 CRITICAL
-      child: Chewie(controller: _chewieController!),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final height = constraints.maxHeight;
+        if (width <= 0 || height <= 0) return const SizedBox.expand();
+
+        return SizedBox(
+          width: width,
+          height: height,
+          child: Video(
+            controller: _videoController!,
+            width: width,
+            height: height,
+            fit: BoxFit.cover,
+            fill: Colors.black,
+          ),
+        );
+      },
     );
   }
 }

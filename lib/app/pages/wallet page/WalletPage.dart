@@ -19,6 +19,9 @@ class _WalletPageState extends State<WalletPage> {
   DateTime? _startDate;
   DateTime? _endDate;
 
+  static const double _minimumRechargeAmount = 100;
+  static const double _maximumRechargeAmount = 100000;
+
   @override
   void initState() {
     super.initState();
@@ -355,10 +358,26 @@ class _WalletPageState extends State<WalletPage> {
                           ? null
                           : () async {
                               final amt = double.tryParse(controller.text);
-                              if (amt == null || amt < 10) {
+                              if (amt == null) {
                                 CustomToast.show(
                                   pageContext,
-                                  "Minimum recharge amount is ₹10",
+                                  "Enter a valid amount",
+                                  isSuccess: false,
+                                );
+                                return;
+                              }
+                              if (amt < _minimumRechargeAmount) {
+                                CustomToast.show(
+                                  pageContext,
+                                  "Minimum recharge amount is Rs ${_minimumRechargeAmount.toStringAsFixed(0)}",
+                                  isSuccess: false,
+                                );
+                                return;
+                              }
+                              if (amt > _maximumRechargeAmount) {
+                                CustomToast.show(
+                                  pageContext,
+                                  "Maximum recharge amount is Rs ${_maximumRechargeAmount.toStringAsFixed(0)}",
                                   isSuccess: false,
                                 );
                                 return;
@@ -377,9 +396,19 @@ class _WalletPageState extends State<WalletPage> {
                               if (!mounted) return;
                               if (paymentResult is Map &&
                                   paymentResult['success'] == true) {
-                                final result = await provider.onPaymentVerified(
-                                  expectedAmount: amt,
-                                );
+                                _showWalletReflectLoader(pageContext);
+                                final result = await provider
+                                    .onPaymentVerified(
+                                      expectedAmount: amt,
+                                    )
+                                    .whenComplete(() {
+                                  if (mounted) {
+                                    Navigator.of(pageContext,
+                                            rootNavigator: true)
+                                        .pop();
+                                  }
+                                });
+                                if (!mounted) return;
                                 CustomToast.show(
                                   pageContext,
                                   result['message']?.toString() ??
@@ -406,6 +435,26 @@ class _WalletPageState extends State<WalletPage> {
           },
         );
       },
+    );
+  }
+
+  void _showWalletReflectLoader(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+            SizedBox(width: 16),
+            Expanded(child: Text("Updating wallet balance...")),
+          ],
+        ),
+      ),
     );
   }
 }

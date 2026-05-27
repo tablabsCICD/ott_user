@@ -39,6 +39,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   bool _contentLoadFailed = false;
   final TrailerPreviewController _trailerController =
       TrailerPreviewController();
+  final TrailerPreviewController _teaserController = TrailerPreviewController();
 
   @override
   void initState() {
@@ -98,6 +99,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   @override
   void dispose() {
     _trailerController.pause?.call();
+    _teaserController.pause?.call();
     super.dispose();
   }
 
@@ -108,9 +110,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     var contentUrl = contentToPlay.contentUrl;
 
     if (contentUrl == null || contentUrl.trim().isEmpty) {
-      final fetchedContent = await context
-          .read<DashboardProvider>()
-          .getContentById(movie.id!);
+      final fetchedContent =
+          await context.read<DashboardProvider>().getContentById(movie.id!);
       if (!mounted) return;
 
       if (fetchedContent != null) {
@@ -380,6 +381,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                     const SizedBox(height: 16),
                     _buildDetailsSection(context, content),
                     const SizedBox(height: 16),
+                    _buildGallery(context, content),
+                    const SizedBox(height: 16),
                     _buildRatingAndReviewsSection(context, content),
                     const SizedBox(height: 24),
                   ],
@@ -401,7 +404,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                       child: AspectRatio(
                         aspectRatio: 16 / 9,
                         child: TrailerPreview(
-                          trailerUrl: content.trailerUrl,
+                          trailerUrl: content.teaserOrTrailerUrl,
                           content: content,
                           controller: _trailerController,
                         ),
@@ -484,7 +487,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
                   child: TrailerPreview(
-                    trailerUrl: content.trailerUrl,
+                    trailerUrl: content.teaserOrTrailerUrl,
                     content: content,
                     controller: _trailerController,
                   ),
@@ -540,6 +543,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               const SizedBox(height: 10),
               _buildDetailsSection(context, content),
               const SizedBox(height: 16),
+              _buildGallery(context, content),
+              const SizedBox(height: 16),
               _buildRatingAndReviewsSection(context, content),
               const SizedBox(height: 24),
               /*   const SizedBox(height: 35),
@@ -594,6 +599,80 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 Container(color: Colors.grey),
           )
         : Container(color: Colors.black);
+  }
+
+  Widget _buildGallery(BuildContext context, Content content) {
+    final theme = Theme.of(context);
+    final posters = content.posterUrlList ?? [];
+    final teaserUrl = _galleryVideoUrl(content);
+    final hasPosters = posters.isNotEmpty;
+    final hasTeaser = teaserUrl.isNotEmpty;
+
+    if (!hasPosters && !hasTeaser) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Gallery",
+          style: TextStyle(
+            color: theme.primaryColor,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 180,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: posters.length + (hasTeaser ? 1 : 0),
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              if (hasTeaser && index == 0) {
+                return SizedBox(
+                  width: 320,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: TrailerPreview(
+                      trailerUrl: teaserUrl,
+                      content: content,
+                      controller: _teaserController,
+                    ),
+                  ),
+                );
+              }
+
+              final posterIndex = hasTeaser ? index - 1 : index;
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  posters[posterIndex],
+                  width: 320,
+                  height: 180,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    width: 320,
+                    color: Colors.black26,
+                    child: Icon(
+                      Icons.broken_image,
+                      color: theme.canvasColor.withOpacity(0.5),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _galleryVideoUrl(Content content) {
+    final teaserUrl = content.teaserUrl?.trim() ?? '';
+    if (teaserUrl.isNotEmpty) return teaserUrl;
+
+    return content.trailerUrl?.trim() ?? '';
   }
 
   Widget _buildReleaseDateHighlight(
@@ -1249,7 +1328,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               )} ⭐',
               titleStyle,
               contentStyle),
-          _buildTableRow(
+          /*    _buildTableRow(
               lang.audioFormat,
               (movie.audioFormatList ?? []).join(', '),
               titleStyle,
@@ -1258,7 +1337,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               lang.subtitle,
               (movie.subtitleLanguageList ?? []).join(', '),
               titleStyle,
-              contentStyle),
+              contentStyle), */
           _buildTableRow(lang.ageRating, movie.ageRating ?? 'N/A', titleStyle,
               contentStyle),
         ],
@@ -1355,12 +1434,21 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                     isSuccess: false);
               } else {
                 var result = await provider.saveRatingReview(content.id!);
-                if (result['success'] == false) {
+                if (result['success'] != true) {
+                  final message = result['message']?.toString().trim();
                   CustomToast.show(
-                      context, "something went wrong to submit review",
+                      context,
+                      message != null && message.isNotEmpty
+                          ? message
+                          : "something went wrong to submit review",
                       isSuccess: false);
                 } else {
-                  CustomToast.show(context, 'review submitted successfully',
+                  final message = result['message']?.toString().trim();
+                  CustomToast.show(
+                      context,
+                      message != null && message.isNotEmpty
+                          ? message
+                          : 'review submitted successfully',
                       isSuccess: true);
                   await _fetchData();
                 }

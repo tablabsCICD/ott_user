@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/invoice_service.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
@@ -13,7 +17,6 @@ import 'package:ott/data/models/shorts.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:video_player/video_player.dart';
 
 class ShortsPlayerPage extends StatefulWidget {
   final ShortDetailModel short;
@@ -25,7 +28,9 @@ class ShortsPlayerPage extends StatefulWidget {
 
 class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     with WidgetsBindingObserver {
-  VideoPlayerController? _controller;
+  Player? _controller;
+  VideoController? _videoController;
+  final List<StreamSubscription<dynamic>> _playerSubscriptions = [];
   final PageController _pageController = PageController();
 
   List<ShortPart> _parts = [];
@@ -67,9 +72,22 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    for (final subscription in _playerSubscriptions) {
+      unawaited(subscription.cancel());
+    }
+    _playerSubscriptions.clear();
     _controller?.dispose();
     _pageController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      unawaited(_controller?.pause());
+    }
   }
 
   Future<void> _refreshFromBackend() async {
@@ -131,6 +149,11 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
       final old = _controller;
       _controller = null;
+      _videoController = null;
+      for (final subscription in _playerSubscriptions) {
+        await subscription.cancel();
+      }
+      _playerSubscriptions.clear();
       await old?.pause();
       await old?.dispose();
 
@@ -179,9 +202,31 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         return;
       }
 
-      final ctrl = VideoPlayerController.network(updated.videoUrl);
+      final ctrl = Player();
+      final videoController = VideoController(ctrl);
       try {
-        await ctrl.initialize();
+        _playerSubscriptions
+          ..add(ctrl.stream.position.listen((_) {
+            if (mounted) setState(() {});
+          }))
+          ..add(ctrl.stream.duration.listen((_) {
+            if (mounted) setState(() {});
+          }))
+          ..add(ctrl.stream.playing.listen((_) {
+            if (mounted) setState(() {});
+          }))
+          ..add(ctrl.stream.error.listen((error) {
+            debugPrint('Short media_kit error: $error');
+            if (mounted) {
+              setState(() {
+                _hasVideoError = true;
+                _videoErrorMessage = "Failed to load video";
+              });
+            }
+          }));
+
+        await ctrl.open(Media(updated.videoUrl), play: true);
+        await ctrl.setVolume(100);
       } catch (e) {
         await ctrl.dispose();
         if (mounted) {
@@ -192,8 +237,6 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         }
         return;
       }
-
-      await ctrl.play();
 
       if (!mounted) {
         await ctrl.dispose();
@@ -209,8 +252,8 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
       setState(() {
         _controller = ctrl;
+        _videoController = videoController;
         _currentIndex = index;
-        ctrl.setVolume(1);
         _hasVideoError = false;
         _videoErrorMessage = null;
       });
@@ -303,6 +346,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
   Widget _videoBackground() {
     final controller = _controller;
+    final videoController = _videoController;
     if (_hasVideoError) {
       return Positioned.fill(
         child: Container(
@@ -322,34 +366,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         ),
       );
     }
-    if (controller == null || !controller.value.isInitialized) {
-      return const ShimmerLoader(
-        height: double.infinity,
-        width: double.infinity,
-      );
-    }
-
-    final size = controller.value.size;
-    if (controller.value.hasError) {
-      return Positioned.fill(
-        child: Container(
-          color: Colors.black,
-          alignment: Alignment.center,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(Icons.play_disabled, color: Colors.white70, size: 32),
-              SizedBox(height: 8),
-              Text(
-                "Video unavailable",
-                style: TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-    if (size.width == 0 || size.height == 0) {
+    if (controller == null || videoController == null) {
       return const ShimmerLoader(
         height: double.infinity,
         width: double.infinity,
@@ -361,13 +378,10 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         : BoxFit.cover;
 
     return Positioned.fill(
-      child: FittedBox(
+      child: Video(
+        controller: videoController,
         fit: videoFit,
-        child: SizedBox(
-          width: size.width,
-          height: size.height,
-          child: VideoPlayer(controller),
-        ),
+        controls: null,
       ),
     );
   }
@@ -564,7 +578,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         _rightButtons(index),
         _bottomEpisodeBar(),
         if (_controller != null)
-          _controller!.value.isPlaying
+          _controller!.state.playing
               ? SizedBox()
               : Center(
                   child: Icon(
@@ -761,10 +775,8 @@ ${short.durationSec ?? ''}
     final controller = _controller;
     if (controller == null) return const SizedBox.shrink();
 
-    final value = controller.value;
-    if (!value.isInitialized ||
-        value.duration == Duration.zero ||
-        value.hasError) {
+    final duration = controller.state.duration.inMilliseconds;
+    if (duration <= 0) {
       return const SizedBox.shrink();
     }
 
@@ -774,13 +786,23 @@ ${short.durationSec ?? ''}
       padding: const EdgeInsets.only(top: 8),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(4),
-        child: VideoProgressIndicator(
-          controller,
-          allowScrubbing: true,
-          colors: VideoProgressColors(
-            playedColor: theme.primaryColor,
-            bufferedColor: Colors.white30,
-            backgroundColor: Colors.white24,
+        child: SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            trackHeight: 4,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+          ),
+          child: Slider(
+            min: 0,
+            max: duration.toDouble(),
+            value: controller.state.position.inMilliseconds
+                .clamp(0, duration)
+                .toDouble(),
+            activeColor: theme.primaryColor,
+            inactiveColor: Colors.white24,
+            onChanged: (value) {
+              controller.seek(Duration(milliseconds: value.round()));
+            },
           ),
         ),
       ),
@@ -789,15 +811,13 @@ ${short.durationSec ?? ''}
 
   void _togglePlayPause() {
     final controller = _controller;
-    if (controller == null || !controller.value.isInitialized) return;
-    controller.value.isPlaying ? controller.pause() : controller.play();
+    if (controller == null) return;
+    controller.state.playing ? controller.pause() : controller.play();
   }
 
   Future<void> _handleDoubleTapLike() async {
     final controller = _controller;
-    if (controller == null ||
-        !controller.value.isInitialized ||
-        _parts.isEmpty) {
+    if (controller == null || _parts.isEmpty) {
       return;
     }
 
@@ -886,9 +906,9 @@ ${short.durationSec ?? ''}
       top: MediaQuery.of(context).padding.top + 12,
       left: 12,
       child: InkWell(
-        onTap: () {
-          _controller?.pause();
-          Navigator.pop(context);
+      onTap: () {
+        _controller?.pause();
+        Navigator.pop(context);
         },
         child: const CircleAvatar(
           radius: 18,

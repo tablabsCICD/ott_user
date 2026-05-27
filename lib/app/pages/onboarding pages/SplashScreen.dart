@@ -42,7 +42,10 @@ class _SplashScreenState extends State<SplashScreen> {
     final updateInfo = await _appUpdateService.getUpdateInfo();
     if (!mounted) return;
 
-    if (updateInfo.isUpdateAvailable) {
+    final shouldShowMobileUpdateDialog =
+        updateInfo.isUpdateAvailable && ResponsiveWidget.isMobile(context);
+
+    if (shouldShowMobileUpdateDialog) {
       await _showUpdateDialog(updateInfo);
       if (!mounted) return;
     }

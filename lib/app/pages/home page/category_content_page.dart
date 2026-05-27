@@ -23,10 +23,12 @@ class _CategoryContentPageState extends State<CategoryContentPage> {
 
   final ScrollController _scrollController = ScrollController();
   final ValueNotifier<int?> _activeIndex = ValueNotifier<int?>(0);
+  late List<Content> _contents;
 
   @override
   void initState() {
     super.initState();
+    _contents = List<Content>.from(widget.contents);
     _scrollController.addListener(_updateActiveIndex);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -35,8 +37,19 @@ class _CategoryContentPageState extends State<CategoryContentPage> {
     });
   }
 
+  @override
+  void didUpdateWidget(covariant CategoryContentPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.contents != widget.contents) {
+      _contents = List<Content>.from(widget.contents);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _updateActiveIndex();
+      });
+    }
+  }
+
   void _updateActiveIndex() {
-    if (!_scrollController.hasClients || widget.contents.isEmpty) {
+    if (!_scrollController.hasClients || _contents.isEmpty) {
       if (_activeIndex.value != null) {
         _activeIndex.value = null;
       }
@@ -48,9 +61,9 @@ class _CategoryContentPageState extends State<CategoryContentPage> {
 
     final maxScrollExtent = _scrollController.position.maxScrollExtent;
     if (maxScrollExtent - _scrollController.offset <= 1.0) {
-      int lastIndex = widget.contents.length - 1;
-      for (int i = widget.contents.length - 1; i >= 0; i--) {
-        if (widget.contents[i].trailerUrl?.trim().isNotEmpty ?? false) {
+      int lastIndex = _contents.length - 1;
+      for (int i = _contents.length - 1; i >= 0; i--) {
+        if (_contents[i].trailerUrl?.trim().isNotEmpty ?? false) {
           lastIndex = i;
           break;
         }
@@ -67,13 +80,26 @@ class _CategoryContentPageState extends State<CategoryContentPage> {
     int index = (center / rowExtent).floor();
 
     if (index < 0) index = 0;
-    if (index >= widget.contents.length) {
-      index = widget.contents.length - 1;
+    if (index >= _contents.length) {
+      index = _contents.length - 1;
     }
 
     if (_activeIndex.value != index) {
       _activeIndex.value = index;
     }
+  }
+
+  void _replaceContent(Content updatedContent) {
+    final contentId = updatedContent.id;
+    if (contentId == null || !mounted) return;
+
+    final index = _contents.indexWhere((content) => content.id == contentId);
+    if (index == -1) return;
+
+    setState(() {
+      _contents[index] = updatedContent;
+    });
+    _updateActiveIndex();
   }
 
   @override
@@ -99,7 +125,7 @@ class _CategoryContentPageState extends State<CategoryContentPage> {
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
-      body: widget.contents.isEmpty
+      body: _contents.isEmpty
           ? const Center(
               child: Text('No content available'),
             )
@@ -209,19 +235,21 @@ class _CategoryContentPageState extends State<CategoryContentPage> {
                               horizontalPadding,
                               16,
                             ),
-                            itemCount: widget.contents.length,
+                            itemCount: _contents.length,
                             separatorBuilder: (_, __) =>
                                 const SizedBox(height: _gap),
                             itemBuilder: (context, index) {
+                              final content = _contents[index];
                               return SizedBox(
                                 width: cardWidth,
                                 height: _cardHeight,
                                 child: MovieCard(
-                                  movie: widget.contents[index],
+                                  movie: content,
                                   index: index,
                                   activeIndexListenable: _activeIndex,
                                   cardWidth: cardWidth,
                                   cardMargin: 0,
+                                  onContentUpdated: _replaceContent,
                                 ),
                               );
                             },
@@ -267,16 +295,18 @@ class _CategoryContentPageState extends State<CategoryContentPage> {
                         sliver: SliverGrid(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
+                              final content = _contents[index];
                               return SizedBox(
                                 height: _cardHeight,
                                 child: MovieCard(
-                                  movie: widget.contents[index],
+                                  movie: content,
                                   cardWidth: cardWidth,
                                   cardMargin: 0,
+                                  onContentUpdated: _replaceContent,
                                 ),
                               );
                             },
-                            childCount: widget.contents.length,
+                            childCount: _contents.length,
                           ),
                           gridDelegate:
                               SliverGridDelegateWithFixedCrossAxisCount(

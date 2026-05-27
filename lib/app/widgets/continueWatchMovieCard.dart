@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
@@ -21,7 +23,6 @@ import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:video_player/video_player.dart';
 
 import 'package:ott/data/models/content.dart';
 
@@ -49,14 +50,15 @@ class ContinueWatchMovieCard extends StatefulWidget {
 
 class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   static _ContinueWatchMovieCardState? _activePreviewState;
-  VideoPlayerController? _videoController;
+  Player? _previewPlayer;
+  VideoController? _videoController;
+  final List<StreamSubscription<dynamic>> _previewSubscriptions = [];
   bool _isHovered = false;
   bool _isMuted = true;
   bool _isVideoInitialized = false;
   bool _isPreviewPlaying = false;
   bool _isAutoPlayActive = false;
   bool _isStartingPreview = false;
-  bool _hasVideoListener = false;
   Timer? _playDelayTimer;
 
   Uri? _previewUri(String? rawUrl) {
@@ -115,11 +117,11 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   }
 
   void _toggleMute() {
-    final controller = _videoController;
+    final player = _previewPlayer;
     setState(() {
       _isMuted = !_isMuted;
     });
-    controller?.setVolume(_isMuted ? 0 : 1);
+    player?.setVolume(_isMuted ? 0 : 100);
   }
 
   Future<bool> _ensureVideoInitialized() async {
@@ -128,18 +130,36 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     final trailerUri = _previewUri(widget.movie.trailerUrl);
     if (trailerUri == null) return false;
 
-    _videoController ??= VideoPlayerController.networkUrl(trailerUri);
+    final player = Player();
+    final controller = VideoController(player);
 
     try {
-      await _videoController!.initialize();
-      _videoController!
-        ..setLooping(true)
-        ..setVolume(_isMuted ? 0.0 : 1.0);
+      _previewSubscriptions
+        ..add(player.stream.completed.listen((completed) {
+          if (completed && _isPreviewPlaying) {
+            player.seek(Duration.zero);
+            player.play();
+          }
+        }))
+        ..add(player.stream.position.listen((_) {
+          if (mounted) setState(() {});
+        }))
+        ..add(player.stream.duration.listen((_) {
+          if (mounted) setState(() {});
+        }))
+        ..add(player.stream.error.listen((error) {
+          debugPrint("Trailer playback error: $error");
+          _stopPreview();
+          if (_activePreviewState == this) {
+            _activePreviewState = null;
+          }
+        }));
 
-      if (!_hasVideoListener) {
-        _videoController!.addListener(_handleVideoTick);
-        _hasVideoListener = true;
-      }
+      await player.open(Media(trailerUri.toString()), play: false);
+      await player.setVolume(_isMuted ? 0 : 100);
+
+      _previewPlayer = player;
+      _videoController = controller;
 
       if (mounted) {
         setState(() => _isVideoInitialized = true);
@@ -147,17 +167,19 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       return true;
     } catch (e) {
       debugPrint("Video init failed: $e");
+      await player.dispose();
       _disposeVideoController();
       return false;
     }
   }
 
   void _disposeVideoController() {
-    if (_videoController != null && _hasVideoListener) {
-      _videoController!.removeListener(_handleVideoTick);
-      _hasVideoListener = false;
+    for (final subscription in _previewSubscriptions) {
+      unawaited(subscription.cancel());
     }
-    _videoController?.dispose();
+    _previewSubscriptions.clear();
+    _previewPlayer?.dispose();
+    _previewPlayer = null;
     _videoController = null;
     _isVideoInitialized = false;
   }
@@ -263,22 +285,6 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     }
   }
 
-  void _handleVideoTick() {
-    if (!mounted) return;
-    final controller = _videoController;
-    if (controller == null || !_isVideoInitialized) return;
-
-    final value = controller.value;
-    if (value.hasError) {
-      debugPrint("Trailer playback error: ${value.errorDescription}");
-      _stopPreview();
-      if (_activePreviewState == this) {
-        _activePreviewState = null;
-      }
-      return;
-    }
-  }
-
   void _schedulePreview() {
     if (_playDelayTimer != null) return;
     if (_isStartingPreview || _isPreviewPlaying) return;
@@ -324,7 +330,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
 
       _ensureMuted();
 
-      await _videoController!.play();
+      await _previewPlayer!.play();
       if (!mounted) return;
       setState(() => _isPreviewPlaying = true);
     } catch (e) {
@@ -346,21 +352,21 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   }
 
   void _ensureMuted() {
-    final controller = _videoController;
-    if (controller == null) return;
+    final player = _previewPlayer;
+    if (player == null) return;
     if (!_isMuted) {
       setState(() => _isMuted = true);
     }
-    controller.setVolume(0.0);
+    player.setVolume(0);
   }
 
   void _stopPreview({bool external = false}) {
-    final controller = _videoController;
-    if (controller == null || !_isVideoInitialized) return;
+    final player = _previewPlayer;
+    if (player == null || !_isVideoInitialized) return;
 
     try {
-      controller.pause();
-      controller.seekTo(Duration.zero);
+      player.pause();
+      player.seek(Duration.zero);
     } catch (e) {
       debugPrint("Trailer stop failed: $e");
     }
@@ -452,15 +458,18 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     if (showPreview && _isVideoInitialized && _videoController != null) {
       return Stack(
         children: [
-          Positioned.fill(child: VideoPlayer(_videoController!)),
+          Positioned.fill(
+            child: Video(
+              controller: _videoController!,
+              fit: BoxFit.cover,
+              controls: null,
+            ),
+          ),
           Positioned(
             bottom: 5,
             left: 0,
             right: 0,
-            child: VideoProgressIndicator(
-              _videoController!,
-              allowScrubbing: true,
-            ),
+            child: _previewProgress(),
           ),
           Positioned(
             right: 5,
@@ -676,7 +685,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
         MaterialPageRoute(
           builder: (_) => movie.isFeatured == true
               ? TrailerPage(
-                  trailerUrl: movie.trailerUrl ?? "",
+                  trailerUrl: movie.teaserOrTrailerUrl ?? "",
                   isTrailerUrl: true,
                   content: movie)
               : movie.type!.toLowerCase() == 'movie'
@@ -685,6 +694,25 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
         ),
       );
     }
+  }
+
+  Widget _previewProgress() {
+    final player = _previewPlayer;
+    if (player == null) return const SizedBox.shrink();
+
+    final duration = player.state.duration.inMilliseconds;
+    if (duration <= 0) return const SizedBox.shrink();
+
+    final value = (player.state.position.inMilliseconds / duration)
+        .clamp(0.0, 1.0)
+        .toDouble();
+
+    return LinearProgressIndicator(
+      value: value,
+      minHeight: 3,
+      color: Colors.red,
+      backgroundColor: Colors.white24,
+    );
   }
 
   Future<void> _playContent() async {

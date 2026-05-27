@@ -36,6 +36,9 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
   DateTime? _startDate;
   DateTime? _endDate;
 
+  static const double _minimumRechargeAmount = 100;
+  static const double _maximumRechargeAmount = 100000;
+
   String get _contentLabel {
     final type = (widget.movie.type ?? '').trim().toLowerCase();
     return type == 'series' ? 'series' : 'movie';
@@ -661,6 +664,22 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                 );
                                 return;
                               }
+                              if (amount < _minimumRechargeAmount) {
+                                CustomToast.show(
+                                  pageContext,
+                                  "Minimum recharge amount is Rs ${_minimumRechargeAmount.toStringAsFixed(0)}",
+                                  isSuccess: false,
+                                );
+                                return;
+                              }
+                              if (amount > _maximumRechargeAmount) {
+                                CustomToast.show(
+                                  pageContext,
+                                  "Maximum recharge amount is Rs ${_maximumRechargeAmount.toStringAsFixed(0)}",
+                                  isSuccess: false,
+                                );
+                                return;
+                              }
 
                               setState(() => isProcessing = true);
                               Navigator.pop(dialogContext);
@@ -674,10 +693,19 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
 
                               if (!mounted) return;
                               if (result is Map && result['success'] == true) {
+                                _showWalletReflectLoader(pageContext);
                                 final addResult =
-                                    await provider.onPaymentVerified(
-                                  expectedAmount: amount,
-                                );
+                                    await provider
+                                        .onPaymentVerified(
+                                          expectedAmount: amount,
+                                        )
+                                        .whenComplete(() {
+                                  if (mounted) {
+                                    Navigator.of(pageContext,
+                                            rootNavigator: true)
+                                        .pop();
+                                  }
+                                });
 
                                 if (!mounted) return;
                                 final msg = addResult['message']?.toString() ??
@@ -710,6 +738,26 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
           },
         );
       },
+    );
+  }
+
+  void _showWalletReflectLoader(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+            SizedBox(width: 16),
+            Expanded(child: Text("Updating wallet balance...")),
+          ],
+        ),
+      ),
     );
   }
 

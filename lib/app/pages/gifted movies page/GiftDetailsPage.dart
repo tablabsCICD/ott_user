@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 // avoid conflict
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class GiftDetailsPage extends StatefulWidget {
   final int giftMasterId;
@@ -27,6 +29,32 @@ class _GiftDetailsPageState extends State<GiftDetailsPage> {
   void copyToClipboard(BuildContext context, String text) {
     Clipboard.setData(ClipboardData(text: text));
     CustomToast.show(context, "Copied: $text", isSuccess: true);
+  }
+
+  Future<void> shareGiftLink(
+    String couponCode,
+    String movieTitle,
+  ) async {
+    final giftLink = DeepLinkService.instance.buildGiftDeepLink(couponCode);
+    final fallbackLink = DeepLinkService.instance.buildGiftAppLink(couponCode);
+    final message = '''
+You have received a Filmytell gift: $movieTitle
+
+Claim gift:
+$fallbackLink
+
+Fallback link:
+$fallbackLink
+
+Gift code: $couponCode
+''';
+
+    await SharePlus.instance.share(
+      ShareParams(
+        text: message.trim(),
+        subject: 'Filmytell movie gift',
+      ),
+    );
   }
 
   @override
@@ -160,8 +188,10 @@ class _GiftDetailsPageState extends State<GiftDetailsPage> {
                             if (giftMaster.couponCode != null)
                               GestureDetector(
                                 onTap: () {
-                                  copyToClipboard(
-                                      context, giftMaster.couponCode!);
+                                  shareGiftLink(
+                                    giftMaster.couponCode!,
+                                    giftMaster.movie?.title ?? "this movie",
+                                  );
                                 },
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
@@ -183,7 +213,7 @@ class _GiftDetailsPageState extends State<GiftDetailsPage> {
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      const Icon(Icons.copy, size: 18),
+                                      const Icon(Icons.share, size: 18),
                                     ],
                                   ),
                                 ),

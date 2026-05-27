@@ -56,6 +56,10 @@ class _NavigationPageState extends State<NavigationPage> {
     final isDesktop = ResponsiveWidget.isDesktop(context);
     final lang = AppLocalizations.of(context)!;
     final userProvider = Provider.of<UserProvider>(context);
+    final mobilePageIndices = [0, 1, 3, 4, 5];
+    final mobileCurrentIndex = mobilePageIndices.contains(_currentIndex)
+        ? mobilePageIndices.indexOf(_currentIndex)
+        : 0;
 
     return PopScope(
       canPop: false,
@@ -106,8 +110,9 @@ class _NavigationPageState extends State<NavigationPage> {
         bottomNavigationBar: isMobile
             ? BottomNavigationBar(
                 type: BottomNavigationBarType.fixed,
-                currentIndex: _currentIndex,
-                onTap: (index) => setState(() => _currentIndex = index),
+                currentIndex: mobileCurrentIndex,
+                onTap: (index) =>
+                    setState(() => _currentIndex = mobilePageIndices[index]),
                 backgroundColor: selectedThemeData.scaffoldBackgroundColor,
                 selectedItemColor: selectedThemeData.primaryColor,
                 unselectedItemColor: selectedThemeData.canvasColor,
@@ -122,10 +127,10 @@ class _NavigationPageState extends State<NavigationPage> {
                     icon: Icon(Icons.video_library),
                     label: lang.series,
                   ),
-                  BottomNavigationBarItem(
+                  /*   BottomNavigationBarItem(
                     icon: Icon(Icons.play_circle),
-                    label: 'Mini Series',
-                  ),
+                    label: lang.minSeries,
+                  ), */
                   BottomNavigationBarItem(
                     icon: Icon(Icons.search),
                     label: lang.search,
@@ -335,8 +340,8 @@ class _NavigationPageState extends State<NavigationPage> {
         _buildDrawerTile(context, index: 0, icon: Icons.home, title: lang.home),
         _buildDrawerTile(context,
             index: 1, icon: Icons.video_library, title: lang.series),
-        _buildDrawerTile(context,
-            index: 2, icon: Icons.play_circle_fill_sharp, title: 'Mini Series'),
+        /*    _buildDrawerTile(context,
+            index: 2, icon: Icons.play_circle_fill_sharp, title: 'Mini Series'), */
         _buildDrawerTile(context,
             index: 3, icon: Icons.search, title: lang.search),
         _buildDrawerTile(context,
