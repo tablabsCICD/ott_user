@@ -4,6 +4,7 @@ import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/shimmer%20loader/comming_soon_shimmer.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -101,10 +102,10 @@ class _UpcomingPageState extends State<UpcomingPage> {
   Widget _upcomingCard(BuildContext context, Content item) {
     final theme = Theme.of(context);
 
-    return InkWell(
-      onTap: () {
-        _openDetails(item);
-      },
+    return OttTvFocus(
+      onTap: () => _openDetails(item),
+      borderRadius: BorderRadius.circular(16),
+      scale: 1.04,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Stack(

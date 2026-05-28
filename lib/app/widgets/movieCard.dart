@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +19,7 @@ import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -57,6 +59,7 @@ class _MovieCardState extends State<MovieCard> {
   VideoController? _videoController;
   final List<StreamSubscription<dynamic>> _previewSubscriptions = [];
   bool _isHovered = false;
+  bool _isFocused = false;
   bool _isMuted = true;
   bool _isVideoInitialized = false;
   bool _isPreviewPlaying = false;
@@ -367,93 +370,249 @@ class _MovieCardState extends State<MovieCard> {
     final posterUrl = widget.movie.posterUrlList?.isNotEmpty == true
         ? widget.movie.posterUrlList!.first
         : null;
-    final showPreview = _isPreviewPlaying;
+    final showPreview = _isPreviewPlaying || _isFocused;
     final cardWidth = widget.cardWidth ?? MovieCard.itemWidth;
     final cardMargin = widget.cardMargin ?? MovieCard.itemMargin;
-    final highlightColor = theme.brightness == Brightness.light
-        ? const Color.fromARGB(255, 185, 169, 169)
-        : const Color.fromARGB(255, 58, 49, 49);
-
-    return Stack(
-      children: [
-        MouseRegion(
-          onEnter: (_) => _handleHover(true),
-          onExit: (_) => _handleHover(false),
-          child: GestureDetector(
-            onTap: _openDetails,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOut,
-              width: cardWidth,
-              margin: EdgeInsets.only(
-                left: cardMargin,
-                right: cardMargin,
-                bottom: cardMargin,
-                top: showPreview ? 4 : 12, // 👈 selected card moves slightly up
-              ),
-              //    margin: EdgeInsets.all(cardMargin),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: showPreview
-                      ? highlightColor
-                      : theme.canvasColor.withValues(alpha: 0.2),
-                  width: showPreview ? 2.5 : 1,
+    return OttTvFocus(
+      onTap: _openDetails,
+      borderRadius: BorderRadius.circular(16),
+      showFocusDecoration: false,
+      onFocusChange: (focused) {
+        setState(() => _isFocused = focused);
+        _handleHover(focused);
+      },
+      child: Stack(
+        children: [
+          MouseRegion(
+            onEnter: (_) => _handleHover(true),
+            onExit: (_) => _handleHover(false),
+            child: GestureDetector(
+              onTap: _openDetails,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                width: cardWidth,
+                margin: EdgeInsets.only(
+                  left: cardMargin,
+                  right: cardMargin,
+                  bottom: cardMargin,
+                  top: showPreview
+                      ? 4
+                      : 12, // 👈 selected card moves slightly up
                 ),
-                /*  boxShadow: showPreview
-                    ? [
-                        BoxShadow(
-                          color: highlightColor.withValues(alpha: 0.12),
-                          blurRadius: 3,
-                          spreadRadius: 0.5,  
-                          offset: const Offset(0, 3),
+                //    margin: EdgeInsets.all(cardMargin),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: showPreview
+                        ? theme.primaryColor.withValues(alpha: 0.86)
+                        : theme.canvasColor.withValues(alpha: 0.2),
+                    width: showPreview ? 2 : 1,
+                  ),
+                  boxShadow: showPreview
+                      ? [
+                          BoxShadow(
+                            color: theme.primaryColor.withValues(alpha: 0),
+                            blurRadius: 24,
+                            spreadRadius: 0.5,
+                            offset: const Offset(0, 10),
+                          ),
+                        ]
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.28),
+                            blurRadius: 18,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                ),
+                child: Column(
+                  children: [
+                    /// 🎬 POSTER + PROGRESS BAR STACK
+                    Expanded(
+                      flex: 8,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: theme.cardColor, width: 1),
+                            left: BorderSide(color: theme.cardColor, width: 1),
+                            right: BorderSide(color: theme.cardColor, width: 1),
+                          ),
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                      ]
-                    : null, */
-              ),
-              child: Column(
-                children: [
-                  /// 🎬 POSTER + PROGRESS BAR STACK
-                  Expanded(
-                    flex: 8,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: theme.cardColor, width: 1),
-                          left: BorderSide(color: theme.cardColor, width: 1),
-                          right: BorderSide(color: theme.cardColor, width: 1),
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(12),
-                        ),
-                        child: _buildMediaPreview(
-                          posterUrl,
-                          theme,
-                          widget.movie,
-                          showPreview,
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(16),
+                          ),
+                          child: _buildMediaPreview(
+                            posterUrl,
+                            theme,
+                            widget.movie,
+                            showPreview,
+                          ),
                         ),
                       ),
                     ),
-                  ),
 
-                  /// 📄 DETAILS SECTION
-                  Expanded(
-                    flex: 3,
-                    child: _buildContentSection(theme, lang),
-                  ),
-                ],
+                    /// 📄 DETAILS SECTION
+                    Expanded(
+                      flex: 3,
+                      child: _buildContentSection(theme, lang),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
 
-        /// ⋮ OPTIONS BUTTON
-        _optionButton(context, widget.movie),
-      ],
+          /// ⋮ OPTIONS BUTTON
+          if (showPreview) _buildPrimeDetailOverlay(theme),
+          _optionButton(context, widget.movie),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrimeDetailOverlay(ThemeData theme) {
+    final movie = widget.movie;
+    final cardMargin = widget.cardMargin ?? MovieCard.itemMargin;
+    final progress = ((movie.watchedPercentage ?? 0) / 100).clamp(0.0, 1.0);
+    final isRental = movie.isRental ?? false;
+
+    return Positioned(
+      left: cardMargin + 10,
+      right: cardMargin + 10,
+      bottom: cardMargin + 10,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.82),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: theme.primaryColor.withValues(alpha: 0.34),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.46),
+                  blurRadius: 28,
+                  offset: const Offset(0, 14),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  movie.title ?? 'No Title',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  [
+                    '${double.parse((movie.ratings ?? 0).toStringAsFixed(1))} ★',
+                    movie.runtime != null ? '${movie.runtime} min' : '',
+                    movie.genreList?.take(2).join(', ') ?? '',
+                  ].where((value) => value.trim().isNotEmpty).join('  •  '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  movie.description ?? '',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.74),
+                    fontSize: 11,
+                    height: 1.25,
+                  ),
+                ),
+                if (progress > 0) ...[
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 4,
+                      backgroundColor: Colors.white24,
+                      valueColor: AlwaysStoppedAnimation(theme.primaryColor),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _overlayRoundAction(
+                      icon: Icons.play_arrow_rounded,
+                      onTap: movie.type?.toLowerCase() == 'series'
+                          ? _openDetails
+                          : isRental
+                              ? _playMovie
+                              : () => _showCupertinoDialog(context, movie),
+                    ),
+                    const SizedBox(width: 8),
+                    _overlayRoundAction(
+                      icon: Icons.add_rounded,
+                      onTap: () async {
+                        await context
+                            .read<BookmarkProvider>()
+                            .toggleBookmark(movie);
+                      },
+                    ),
+                    const Spacer(),
+                    Text(
+                      isRental ? 'Ready' : '₹ ${movie.price ?? 0}',
+                      style: TextStyle(
+                        color: theme.primaryColor,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _overlayRoundAction({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.14),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 34,
+          height: 34,
+          child: Icon(icon, color: Colors.white, size: 20),
+        ),
+      ),
     );
   }
 
@@ -682,9 +841,8 @@ class _MovieCardState extends State<MovieCard> {
     var contentUrl = contentToPlay.contentUrl;
 
     if (contentUrl == null || contentUrl.trim().isEmpty) {
-      final fetchedContent = await context
-          .read<DashboardProvider>()
-          .getContentById(movie.id!);
+      final fetchedContent =
+          await context.read<DashboardProvider>().getContentById(movie.id!);
       if (!mounted) return;
 
       if (fetchedContent != null) {

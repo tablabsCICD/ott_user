@@ -9,6 +9,7 @@ import 'package:ott/app/provider/playMediaProvider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/app/widgets/shimmer%20loader/comming_soon_shimmer.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -128,18 +129,16 @@ class _WatchlistPageState extends State<WatchlistPage> {
           seasonId: item.seasonId,
           episodeId: item.episodeId,
         );
-    final latestResumeSeconds =
-        (item.watchedSeconds ?? 0) > localResumeSeconds
-            ? item.watchedSeconds ?? 0
-            : localResumeSeconds;
+    final latestResumeSeconds = (item.watchedSeconds ?? 0) > localResumeSeconds
+        ? item.watchedSeconds ?? 0
+        : localResumeSeconds;
 
     // Watchlist items come from the purchase API, which can already contain
     // a playable URL but not the latest continue-watching fields. Refresh the
     // content before playback so watchlist behaves like Continue Watching.
     if (!isOffline) {
-      final fetchedContent = await context
-          .read<DashboardProvider>()
-          .getContentById(item.id!);
+      final fetchedContent =
+          await context.read<DashboardProvider>().getContentById(item.id!);
       if (!mounted) return;
 
       if (fetchedContent != null) {
@@ -280,8 +279,10 @@ class _WatchlistPageState extends State<WatchlistPage> {
   ) {
     final selected = selectedFilter == value;
 
-    return GestureDetector(
+    return OttTvFocus(
       onTap: () => _onFilterSelected(value),
+      borderRadius: BorderRadius.circular(10),
+      scale: 1.045,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
@@ -386,10 +387,11 @@ class _WatchlistPageState extends State<WatchlistPage> {
     final theme = Theme.of(context);
     final item = content.movie;
 
-    return GestureDetector(
-      onTap: content.active == true
-          ? () => _playContent(item)
-          : null,
+    return OttTvFocus(
+      onTap: content.active == true ? () => _playContent(item) : null,
+      enabled: content.active == true,
+      borderRadius: BorderRadius.circular(16),
+      scale: 1.04,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Stack(
@@ -527,8 +529,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
                   value: (item.watchedPercentage! / 100).clamp(0.0, 1.0),
                   minHeight: 4,
                   backgroundColor: Colors.white24,
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(theme.primaryColor),
+                  valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor),
                 ),
               ),
           ],

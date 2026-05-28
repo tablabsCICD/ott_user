@@ -39,8 +39,7 @@ class TrailerPage extends StatefulWidget {
   State<TrailerPage> createState() => _TrailerPageState();
 }
 
-class _TrailerPageState extends State<TrailerPage>
-    with WidgetsBindingObserver {
+class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
   Player? _player;
   VideoController? _videoController;
   YoutubePlayerController? _youtubeController;
@@ -310,12 +309,14 @@ class TrailerPreview extends StatefulWidget {
   final String? trailerUrl;
   final Content content;
   final TrailerPreviewController controller;
+  final bool autoplayMuted;
 
   const TrailerPreview({
     super.key,
     required this.trailerUrl,
     required this.content,
     required this.controller,
+    this.autoplayMuted = false,
   });
 
   @override
@@ -421,7 +422,7 @@ class _TrailerPreviewState extends State<TrailerPreview> {
         }));
 
       await player.open(Media(_trailerUrl), play: false);
-      await player.setVolume(100);
+      await player.setVolume(widget.autoplayMuted ? 0 : 100);
       await player.play();
 
       if (_isDisposed || currentToken != _initToken) {

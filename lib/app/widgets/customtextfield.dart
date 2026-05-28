@@ -26,6 +26,7 @@ class CustomTextField extends StatefulWidget {
   final Widget? prefixIcon;
   final Color? backgroundColor;
   final String? Function(String?)? validator;
+  final bool autofocus;
 
   const CustomTextField({
     required this.controller,
@@ -49,6 +50,7 @@ class CustomTextField extends StatefulWidget {
     this.prefixIcon,
     this.backgroundColor,
     this.validator,
+    this.autofocus = false,
     super.key,
   });
 
@@ -79,6 +81,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
             ),
           const SizedBox(height: 5),
           TextFormField(
+            autofocus: widget.autofocus,
             controller: widget.controller,
             obscureText: widget.isPassword ? _isObscure : false,
             keyboardType: widget.textInputType,

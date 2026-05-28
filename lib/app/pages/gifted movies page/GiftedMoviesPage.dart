@@ -6,6 +6,7 @@ import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/pages/gifted%20movies%20page/GiftDetailsPage.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/provider/giftProvider.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
@@ -193,16 +194,17 @@ class GiftCard extends StatelessWidget {
     final showMovieDetailsButton =
         !ResponsiveWidget.isDesktop(context) && onMovieDetails != null;
 
-    return Card(
-      color: theme.cardColor,
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      clipBehavior: Clip.antiAliasWithSaveLayer,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+    return OttTvFocus(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      scale: 1.025,
+      child: Card(
+        color: theme.cardColor,
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        clipBehavior: Clip.antiAliasWithSaveLayer,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(

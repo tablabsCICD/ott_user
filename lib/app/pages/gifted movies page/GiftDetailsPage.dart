@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/provider/giftProvider.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 // avoid conflict
 import 'package:provider/provider.dart';
@@ -186,13 +187,14 @@ Gift code: $couponCode
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             if (giftMaster.couponCode != null)
-                              GestureDetector(
+                              OttTvFocus(
                                 onTap: () {
                                   shareGiftLink(
                                     giftMaster.couponCode!,
                                     giftMaster.movie?.title ?? "this movie",
                                   );
                                 },
+                                borderRadius: BorderRadius.circular(15),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 3,

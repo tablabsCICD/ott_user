@@ -24,6 +24,7 @@ import 'package:ott/app/provider/purchase_history_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/LanguageDropdown.dart';
 import 'package:ott/app/widgets/gift_claim_dialog.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/shimmer%20loader/profile_shimmer.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -655,29 +656,37 @@ class _ProfileOptionState extends State<ProfileOption> {
     final theme = Theme.of(context);
     return SizedBox(
       width: ResponsiveWidget.isMobile(context) ? double.infinity : 600,
-      child: ListTile(
-        dense: true,
-        leading: Icon(widget.icon, color: Theme.of(context).primaryColor),
-        title: Text(
-          widget.title,
-          style: TextStyle(
-            color: theme.canvasColor,
-            fontWeight: FontWeight.normal,
-            fontSize: 14,
-          ),
-        ),
-        subtitle: widget.balance != null
-            ? Text(
-                '₹ ${widget.balance}',
-                style: TextStyle(
-                  color: theme.canvasColor.withOpacity(0.6),
-                  fontWeight: FontWeight.normal,
-                  fontSize: 12,
-                ),
-              )
-            : null,
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      child: OttTvFocus(
         onTap: widget.onTap,
+        borderRadius: BorderRadius.circular(12),
+        scale: 1.025,
+        child: ListTile(
+          dense: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          leading: Icon(widget.icon, color: Theme.of(context).primaryColor),
+          title: Text(
+            widget.title,
+            style: TextStyle(
+              color: theme.canvasColor,
+              fontWeight: FontWeight.normal,
+              fontSize: 14,
+            ),
+          ),
+          subtitle: widget.balance != null
+              ? Text(
+                  '₹ ${widget.balance}',
+                  style: TextStyle(
+                    color: theme.canvasColor.withOpacity(0.6),
+                    fontWeight: FontWeight.normal,
+                    fontSize: 12,
+                  ),
+                )
+              : null,
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: widget.onTap,
+        ),
       ),
     );
   }

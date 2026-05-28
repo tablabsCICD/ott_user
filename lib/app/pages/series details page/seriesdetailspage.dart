@@ -13,11 +13,13 @@ import 'package:ott/app/pages/wallet%20page/SeriesBillingPage.dart';
 import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
 import 'package:ott/app/pages/movie%20details%20page/component/actionButtonWidget.dart';
 import 'package:ott/app/provider/themeProvider.dart';
+import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/series_provider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
@@ -159,20 +161,28 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
 
           List<SeasonEntity> seasons = series.seasons;
           if (seasons.isEmpty) {
+            if (ResponsiveWidget.isMobile(context)) {
+              return _buildMobileSeriesView(
+                series: series,
+                seasons: seasons,
+                season: null,
+                theme: theme,
+              );
+            }
+
             return CustomScrollView(
               slivers: [
                 _buildHero(series, theme),
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal:
-                          ResponsiveWidget.isDesktop(context) ? 64 : 16,
-                      vertical: 20,
+                      horizontal: ResponsiveWidget.isDesktop(context) ? 72 : 16,
+                      vertical: 28,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildTitleBlock(series, theme),
+                        _buildPrimeTabBar(theme, active: 'Episodes'),
                         const SizedBox(height: 24),
                         Text(
                           'No seasons available yet',
@@ -183,6 +193,10 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                           ),
                         ),
                         const SizedBox(height: 26),
+                        _buildCastSection(context, null, theme),
+                        const SizedBox(height: 32),
+                        _buildRelatedRail(widget.content, theme),
+                        const SizedBox(height: 32),
                         _buildDetailsSection(context, widget.content, theme),
                         const SizedBox(height: 32),
                         _buildGallery(widget.content),
@@ -210,29 +224,43 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
             });
           }
 
+          if (ResponsiveWidget.isMobile(context)) {
+            return _buildMobileSeriesView(
+              series: series,
+              seasons: seasons,
+              season: season,
+              theme: theme,
+            );
+          }
+
           return CustomScrollView(
             slivers: [
-              _buildHero(series, theme),
+              _buildHero(
+                series,
+                theme,
+                seasons: seasons,
+                season: season,
+              ),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.symmetric(
-                    horizontal: ResponsiveWidget.isDesktop(context) ? 64 : 16,
-                    vertical: 1,
+                    horizontal: ResponsiveWidget.isDesktop(context) ? 72 : 16,
+                    vertical: 24,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildTitleBlock(series, theme),
-                      const SizedBox(height: 20),
+                      _buildPrimeTabBar(theme, active: 'Episodes'),
+                      const SizedBox(height: 24),
                       _buildSeasonSelector(seasons, theme),
                       const SizedBox(height: 20),
                       _buildSeasonInfo(context, season, theme),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 18),
+                      _buildEpisodeRail(context, season, theme),
+                      const SizedBox(height: 32),
                       _buildCastSection(context, season, theme),
-                      const SizedBox(height: 16),
-                      ...season.episodes
-                          .map((e) => _episodeTile(context, season, e, theme)),
-                      Divider(),
+                      const SizedBox(height: 32),
+                      _buildRelatedRail(widget.content, theme),
                       const SizedBox(height: 26),
                       _buildDetailsSection(context, widget.content, theme),
                       const SizedBox(height: 32),
@@ -251,19 +279,374 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     );
   }
 
+  Widget _buildMobileSeriesView({
+    required SeriesEntity series,
+    required List<SeasonEntity> seasons,
+    required SeasonEntity? season,
+    required ThemeData theme,
+  }) {
+    final episodes = season?.episodes ?? const <EpisodeEntity>[];
+
+    return Container(
+      color: Colors.black,
+      child: SafeArea(
+        bottom: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildMobileSeriesPreview(series, theme),
+              const SizedBox(height: 24),
+              Text(
+                series.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: theme.primaryColor,
+                  fontSize: 34,
+                  height: 1.02,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  StarRatingWidget(
+                    rating: double.parse(
+                      (widget.content.ratings ?? 0.0).toStringAsFixed(1),
+                    ),
+                    starSize: 20,
+                    textSize: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '(${widget.content.ratingCount ?? 0})',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Text(
+                series.description,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 21,
+                  height: 1.35,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 26),
+              Row(
+                children: [
+                  Expanded(
+                    child: ActionButtonWidget(
+                      label: 'Share',
+                      icon: Icons.qr_code_2_rounded,
+                      onTap: () => showContentShareSheet(
+                        context,
+                        widget.content,
+                        contentType: DeepLinkContentType.series,
+                        unavailableMessage:
+                            "Series details are not available yet",
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(child: _buildGifting(context, widget.content)),
+                ],
+              ),
+              if (seasons.isNotEmpty) ...[
+                const SizedBox(height: 28),
+                _buildMobileSeasonChips(seasons, theme),
+              ],
+              if (season != null) ...[
+                const SizedBox(height: 28),
+                Text(
+                  "Season ${season.seasonNumber}: ${season.title}",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 27,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  season.description,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 20,
+                    height: 1.35,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 28),
+              _buildCastSection(context, season, theme),
+              if (episodes.isNotEmpty) ...[
+                const SizedBox(height: 26),
+                _buildMobileEpisodeList(season!, episodes, theme),
+              ],
+              const SizedBox(height: 28),
+              Divider(color: Colors.white.withValues(alpha: 0.18)),
+              const SizedBox(height: 22),
+              _buildDetailsSection(context, widget.content, theme),
+              const SizedBox(height: 28),
+              _buildRatingAndReviewsSection(context, widget.content),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileSeriesPreview(SeriesEntity series, ThemeData theme) {
+    final poster = series.posterUrl.trim().isNotEmpty
+        ? series.posterUrl
+        : (widget.content.posterUrlList?.isNotEmpty == true
+            ? widget.content.posterUrlList!.first
+            : '');
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        AspectRatio(
+          aspectRatio: 16 / 9,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                poster.isNotEmpty
+                    ? Image.network(
+                        poster,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            Container(color: Colors.grey.shade900),
+                      )
+                    : Container(color: Colors.grey.shade900),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.22),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 18,
+                  top: 18,
+                  child: Icon(
+                    Icons.volume_up_rounded,
+                    color: Colors.white.withValues(alpha: 0.92),
+                    size: 32,
+                  ),
+                ),
+                Positioned(
+                  right: 18,
+                  top: 18,
+                  child: Icon(
+                    Icons.fullscreen_rounded,
+                    color: Colors.white.withValues(alpha: 0.92),
+                    size: 30,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          left: -8,
+          top: -42,
+          child: IconButton(
+            onPressed: () => Navigator.maybePop(context),
+            icon: const Icon(
+              Icons.arrow_back_rounded,
+              color: Colors.white,
+              size: 34,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileSeasonChips(
+    List<SeasonEntity> seasons,
+    ThemeData theme,
+  ) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: List.generate(seasons.length, (index) {
+          final selected = index == _selectedSeasonIndex;
+          return Padding(
+            padding:
+                EdgeInsets.only(right: index == seasons.length - 1 ? 0 : 14),
+            child: Material(
+              color: selected ? theme.primaryColor : theme.cardColor,
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () {
+                  setState(() => _selectedSeasonIndex = index);
+                  _loadSeasonCast(seasons[index].seasonId);
+                },
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                  child: Text(
+                    'Season ${seasons[index].seasonNumber}',
+                    style: TextStyle(
+                      color: selected ? Colors.white : Colors.white70,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildMobileEpisodeList(
+    SeasonEntity season,
+    List<EpisodeEntity> episodes,
+    ThemeData theme,
+  ) {
+    return Column(
+      children: [
+        for (final ep in episodes) ...[
+          _buildMobileEpisodeCard(season, ep, theme),
+          const SizedBox(height: 14),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildMobileEpisodeCard(
+    SeasonEntity season,
+    EpisodeEntity ep,
+    ThemeData theme,
+  ) {
+    final canPlay = season.isSeasonPurchased || ep.isPurchased || ep.isFree;
+
+    return Material(
+      color: theme.cardColor,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap:
+            canPlay ? () => _playEpisode(season, ep) : () => _rentEpisode(ep),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 135,
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.network(
+                          ep.posterUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              Container(color: Colors.grey.shade900),
+                        ),
+                        Center(
+                          child: Icon(
+                            canPlay
+                                ? Icons.play_circle_fill_rounded
+                                : Icons.lock_rounded,
+                            color: Colors.white.withValues(alpha: 0.82),
+                            size: 40,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ep.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Ep. ${ep.episodeNumber} • ${ep.runtime} min',
+                      style: const TextStyle(
+                        color: Colors.white60,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      ep.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                        height: 1.25,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ---------------- HERO ----------------
 
-  SliverAppBar _buildHero(series, ThemeData theme) {
+  SliverAppBar _buildHero(
+    SeriesEntity series,
+    ThemeData theme, {
+    List<SeasonEntity> seasons = const [],
+    SeasonEntity? season,
+  }) {
     final bool isMobile = ResponsiveWidget.isMobile(context);
     final bool isTablet = ResponsiveWidget.isTablet(context);
+    final heroHeight = isMobile
+        ? 520.0
+        : isTablet
+            ? 560.0
+            : 640.0;
 
     return SliverAppBar(
       pinned: true,
-      expandedHeight: isMobile
-          ? 250
-          : isTablet
-              ? 420
-              : 560,
+      expandedHeight: heroHeight,
       forceMaterialTransparency: true,
       backgroundColor: Colors.black,
       foregroundColor: Colors.white,
@@ -279,25 +662,48 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
             ),
 
             /// 🌗 Gradient overlay
-            Container(
-              decoration: const BoxDecoration(
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Colors.black,
+                    Colors.black.withValues(alpha: 0.94),
+                    Colors.black.withValues(alpha: 0.46),
+                    Colors.transparent,
+                  ],
+                  stops: const [0, 0.38, 0.72, 1],
+                ),
+              ),
+            ),
+            const DecoratedBox(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black87,
-                    Colors.black87,
+                    Colors.black45,
+                    Colors.transparent,
                     Colors.black,
                   ],
+                  stops: [0, 0.52, 1],
                 ),
               ),
             ),
 
             /// ▶ Trailer Preview (Responsive)
-            if (isMobile)
-              _buildMobileTrailer()
-            else
-              _buildDesktopTabletTrailer(),
+            Positioned(
+              left: isMobile ? 16 : 72,
+              right: isMobile ? 16 : MediaQuery.of(context).size.width * 0.38,
+              bottom: isMobile ? 34 : 58,
+              child: _buildHeroCopy(
+                series,
+                theme,
+                seasons: seasons,
+                season: season,
+              ),
+            ),
           ],
         ),
       ),
@@ -556,143 +962,189 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
 
   // ---------------- SEASON SELECTOR ----------------
 
-  Widget _buildSeasonSelector(List seasons, ThemeData theme) {
-    return SizedBox(
-      height: 40,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: seasons.length,
-        itemBuilder: (context, i) {
-          final selected = i == _selectedSeasonIndex;
-          return GestureDetector(
-            onTap: () {
-              setState(() => _selectedSeasonIndex = i);
-              _loadSeasonCast(seasons[i].seasonId);
-            },
-            child: Container(
-              margin: const EdgeInsets.only(right: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: selected ? theme.primaryColor : theme.cardColor,
-                borderRadius: BorderRadius.circular(10),
-              ),
+  Widget _buildSeasonSelector(List<SeasonEntity> seasons, ThemeData theme) {
+    return Row(
+      children: [
+        PopupMenuButton<int>(
+          tooltip: 'Select season',
+          color: theme.cardColor,
+          onSelected: (index) {
+            setState(() => _selectedSeasonIndex = index);
+            _loadSeasonCast(seasons[index].seasonId);
+          },
+          itemBuilder: (context) => List.generate(
+            seasons.length,
+            (index) => PopupMenuItem<int>(
+              value: index,
               child: Text(
-                "Season ${seasons[i].seasonNumber}",
+                'Season ${seasons[index].seasonNumber}',
                 style: TextStyle(
-                  color: selected
-                      ? Colors.white
-                      : theme.canvasColor.withOpacity(0.7),
-                  fontWeight: FontWeight.w600,
+                  color: theme.canvasColor,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
-
-  // ---------------- SEASON INFO ----------------
-
-  Widget _buildSeasonInfo(BuildContext context, season, ThemeData theme) {
-    final hasPurchasedEpisode =
-        season.episodes.any((EpisodeEntity ep) => ep.isPurchased);
-    final canPurchaseSeason = !season.isSeasonPurchased && !hasPurchasedEpisode;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Season ${season.seasonNumber}: ${season.title}",
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: theme.canvasColor,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+          ),
+          child: OttTvFocus(
+            borderRadius: BorderRadius.circular(12),
+            scale: 1.04,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.cardColor.withValues(alpha: 0.86),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: theme.canvasColor.withValues(alpha: 0.7),
+                  width: 1.4,
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                season.description,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: theme.canvasColor.withOpacity(0.7)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.local_movies_rounded,
+                    color: theme.primaryColor,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Season ${seasons[_selectedSeasonIndex].seasonNumber}',
+                    style: TextStyle(
+                      color: theme.canvasColor,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: theme.canvasColor,
+                  ),
+                ],
               ),
-              const SizedBox(height: 6),
-              widget.content.isFeatured == true
-                  ? _buildReleaseDateHighlight(context, season)
-                  : !season.isSeasonPurchased && canPurchaseSeason
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: theme.primaryColor,
-                                disabledBackgroundColor:
-                                    theme.canvasColor.withOpacity(0.2),
-                                disabledForegroundColor:
-                                    theme.canvasColor.withOpacity(0.6),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              onPressed: () async {
-                                _trailerController.pause?.call();
-                                final result = await Navigator.push<bool>(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => SeriesBillingPage(
-                                      seriesId: widget.seriesId,
-                                      seasonId: season.seasonId,
-                                      amount: season.price.toDouble(),
-                                      isSeason: true,
-                                      seriesTitle: widget.content.title,
-                                      itemTitle: season.title,
-                                      rentalDuration:
-                                          widget.content.rentlDuration,
-                                    ),
-                                  ),
-                                );
-
-                                if (result == true && mounted) {
-                                  CustomToast.show(
-                                    context,
-                                    "Season unlocked! Enjoy watching 🎬",
-                                    isSuccess: true,
-                                  );
-                                }
-                              },
-                              child: Text(
-                                "Rent complete Season ₹${season.price}",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      : const SizedBox()
-              //: SizedBox(),
-            ],
+            ),
           ),
         ),
       ],
     );
   }
 
+  // ---------------- SEASON INFO ----------------
+
+  Widget _buildSeasonInfo(
+      BuildContext context, SeasonEntity season, ThemeData theme) {
+    final hasPurchasedEpisode =
+        season.episodes.any((EpisodeEntity ep) => ep.isPurchased);
+    final canPurchaseSeason = !season.isSeasonPurchased && !hasPurchasedEpisode;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: theme.cardColor.withValues(alpha: 0.54),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.canvasColor.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Season ${season.seasonNumber}: ${season.title}",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: theme.canvasColor,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  season.description,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: theme.canvasColor.withOpacity(0.7)),
+                ),
+                const SizedBox(height: 6),
+                widget.content.isFeatured == true
+                    ? _buildReleaseDateHighlight(context, season)
+                    : !season.isSeasonPurchased && canPurchaseSeason
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: theme.primaryColor,
+                                  disabledBackgroundColor:
+                                      theme.canvasColor.withOpacity(0.2),
+                                  disabledForegroundColor:
+                                      theme.canvasColor.withOpacity(0.6),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  _trailerController.pause?.call();
+                                  final result = await Navigator.push<bool>(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => SeriesBillingPage(
+                                        seriesId: widget.seriesId,
+                                        seasonId: season.seasonId,
+                                        amount: season.price.toDouble(),
+                                        isSeason: true,
+                                        seriesTitle: widget.content.title,
+                                        itemTitle: season.title,
+                                        rentalDuration:
+                                            widget.content.rentlDuration,
+                                      ),
+                                    ),
+                                  );
+
+                                  if (result == true && mounted) {
+                                    CustomToast.show(
+                                      context,
+                                      "Season unlocked! Enjoy watching 🎬",
+                                      isSuccess: true,
+                                    );
+                                  }
+                                },
+                                child: Text(
+                                  "Rent complete Season ₹ ${season.price}",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : const SizedBox()
+                //: SizedBox(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildReleaseDateHighlight(
     BuildContext context,
-    Content content, {
+    Object content, {
     bool centered = false,
   }) {
     final theme = Theme.of(context);
-    final releaseDateText = content.releaseDate?.toString().trim();
+    final releaseDate = content is Content
+        ? content.releaseDate
+        : content is SeasonEntity
+            ? _yearFromMillis(content.releaseDate)
+            : null;
+    final releaseDateText = releaseDate?.toString().trim();
     final displayText = (releaseDateText != null && releaseDateText.isNotEmpty)
         ? 'Release On: $releaseDateText'
         : 'Release On: Coming Soon';
@@ -728,10 +1180,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
 
   Widget _buildCastSection(
     BuildContext context,
-    SeasonEntity season,
+    SeasonEntity? season,
     ThemeData theme,
   ) {
-    final lang = AppLocalizations.of(context)!;
     final fallbackCast = (widget.content.castList ?? const [])
         .where((name) => name.trim().isNotEmpty)
         .map((name) => CastMember(name: name.trim()))
@@ -739,7 +1190,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     final castList =
         _seasonCastList.isNotEmpty ? _seasonCastList : fallbackCast;
 
-    if (_isLoadingSeasonCast && _loadedSeasonId == season.seasonId) {
+    if (season != null &&
+        _isLoadingSeasonCast &&
+        _loadedSeasonId == season.seasonId) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -768,7 +1221,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
         ),
         const SizedBox(height: 10),
         castList.isEmpty
-            ? SizedBox.shrink()
+            ? const SizedBox.shrink()
             : SizedBox(
                 height: 120,
                 child: ListView.separated(
@@ -795,50 +1248,59 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     final role =
         (cast.role?.trim().isNotEmpty ?? false) ? cast.role!.trim() : '';
 
-    return SizedBox(
-      width: 84,
-      child: Column(
-        children: [
-          Container(
-            height: 60,
-            width: 60,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: theme.cardColor,
+    return OttTvFocus(
+      borderRadius: BorderRadius.circular(14),
+      scale: 1.06,
+      child: SizedBox(
+        width: 96,
+        child: Column(
+          children: [
+            Container(
+              height: 68,
+              width: 68,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: theme.cardColor,
+                border: Border.all(
+                  color: theme.canvasColor.withValues(alpha: 0.08),
+                ),
+              ),
+              child: ClipOval(
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            _buildCastInitial(theme, displayName),
+                      )
+                    : _buildCastInitial(theme, displayName),
+              ),
             ),
-            child: ClipOval(
-              child: imageUrl.isNotEmpty
-                  ? Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          _buildCastInitial(theme, displayName),
-                    )
-                  : _buildCastInitial(theme, displayName),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            displayName,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 11,
-            ),
-          ),
-          if (role.isNotEmpty)
+            const SizedBox(height: 8),
             Text(
-              "($role)",
-              maxLines: 1,
+              displayName,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 10,
+                color: theme.canvasColor,
+                fontWeight: FontWeight.w800,
+                fontSize: 11,
               ),
             ),
-        ],
+            if (role.isNotEmpty)
+              Text(
+                role,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: theme.canvasColor.withOpacity(0.62),
+                  fontSize: 10,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -857,6 +1319,300 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   }
 
   // ---------------- EPISODE TILE ----------------
+
+  Widget _buildEpisodeRail(
+    BuildContext context,
+    SeasonEntity season,
+    ThemeData theme,
+  ) {
+    if (season.episodes.isEmpty) {
+      return Text(
+        'No episodes available yet',
+        style: TextStyle(
+          color: theme.canvasColor.withOpacity(0.7),
+          fontWeight: FontWeight.w700,
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(theme, 'Episodes'),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: ResponsiveWidget.isMobile(context) ? 278 : 302,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: season.episodes.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 18),
+            itemBuilder: (context, index) {
+              return SizedBox(
+                width: ResponsiveWidget.isMobile(context) ? 300 : 370,
+                child: _episodePrimeCard(
+                  context,
+                  season,
+                  season.episodes[index],
+                  theme,
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _episodePrimeCard(
+    BuildContext context,
+    SeasonEntity season,
+    EpisodeEntity ep,
+    ThemeData theme,
+  ) {
+    final canPlay = season.isSeasonPurchased || ep.isPurchased || ep.isFree;
+    final resumeSeconds = context.watch<PlayMediaProvider>().getLocalResume(
+          contentId: widget.content.id!,
+          seasonId: season.seasonId,
+          episodeId: ep.episodeId,
+        );
+    final progress = ep.runtime > 0
+        ? (resumeSeconds / (ep.runtime * 60)).clamp(0.0, 1.0)
+        : 0.0;
+
+    return OttTvFocus(
+      onTap: canPlay ? () => _playEpisode(season, ep) : null,
+      borderRadius: BorderRadius.circular(12),
+      scale: 1.045,
+      child: GestureDetector(
+        onTap: canPlay ? () => _playEpisode(season, ep) : null,
+        child: Container(
+          decoration: BoxDecoration(
+            color: theme.cardColor.withValues(alpha: 0.86),
+            borderRadius: BorderRadius.circular(12),
+            border:
+                Border.all(color: theme.canvasColor.withValues(alpha: 0.08)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: Image.network(
+                      ep.posterUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: Colors.grey.shade900,
+                        child: const Icon(
+                          Icons.broken_image,
+                          color: Colors.white54,
+                          size: 34,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.68),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 12,
+                    bottom: 10,
+                    child: Icon(
+                      canPlay ? Icons.play_circle_fill : Icons.lock_rounded,
+                      color: Colors.white.withValues(alpha: 0.9),
+                      size: 34,
+                    ),
+                  ),
+                  if (progress > 0)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 4,
+                        backgroundColor: Colors.white24,
+                        valueColor: AlwaysStoppedAnimation(theme.primaryColor),
+                      ),
+                    ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${ep.episodeNumber}. ${ep.title}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: theme.canvasColor,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "${ep.runtime} min  •  ${_yearFromMillis(ep.releaseDate) ?? ''}",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.canvasColor.withOpacity(0.66),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      ep.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.35,
+                        color: theme.canvasColor.withOpacity(0.7),
+                      ),
+                    ),
+                    if (!canPlay) ...[
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: ActionButtonWidget(
+                          label: "Rent ₹ ${ep.price}",
+                          icon: Icons.lock_open_rounded,
+                          onTap: () => _rentEpisode(ep),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _rentEpisode(EpisodeEntity ep) async {
+    _trailerController.pause?.call();
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SeriesBillingPage(
+          seriesId: widget.seriesId,
+          episodeId: ep.episodeId,
+          amount: ep.price.toDouble(),
+          isSeason: false,
+          seriesTitle: widget.content.title,
+          itemTitle: ep.title,
+          rentalDuration: widget.content.rentlDuration,
+        ),
+      ),
+    );
+
+    if (result == true && mounted) {
+      CustomToast.show(
+        context,
+        "Episode unlocked! Enjoy watching 🎬",
+        isSuccess: true,
+      );
+    }
+  }
+
+  Widget _buildSectionHeader(ThemeData theme, String title) {
+    return Text(
+      title,
+      style: TextStyle(
+        color: theme.canvasColor,
+        fontSize: ResponsiveWidget.isMobile(context) ? 20 : 24,
+        fontWeight: FontWeight.w900,
+      ),
+    );
+  }
+
+  Widget _buildRelatedRail(Content content, ThemeData theme) {
+    final posters = content.posterUrlList ?? const <String>[];
+    if (posters.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildPrimeTabBar(theme, active: 'Related'),
+        const SizedBox(height: 20),
+        _buildSectionHeader(theme, 'Related Series'),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: ResponsiveWidget.isMobile(context) ? 154 : 190,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: posters.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            itemBuilder: (context, index) {
+              return OttTvFocus(
+                borderRadius: BorderRadius.circular(12),
+                scale: 1.045,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
+                    children: [
+                      Image.network(
+                        posters[index],
+                        width: ResponsiveWidget.isMobile(context) ? 250 : 320,
+                        height: ResponsiveWidget.isMobile(context) ? 154 : 190,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: ResponsiveWidget.isMobile(context) ? 250 : 320,
+                          color: theme.cardColor,
+                          child: Icon(
+                            Icons.broken_image,
+                            color: theme.canvasColor.withOpacity(0.4),
+                          ),
+                        ),
+                      ),
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.7),
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _episodeTile(
     BuildContext context,
@@ -1024,7 +1780,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                           }
                         },
                         child: Text(
-                          "₹${ep.price}",
+                          "₹ ${ep.price}",
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -1236,6 +1992,281 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeroCopy(
+    SeriesEntity series,
+    ThemeData theme, {
+    required List<SeasonEntity> seasons,
+    required SeasonEntity? season,
+  }) {
+    final isMobile = ResponsiveWidget.isMobile(context);
+    final genreText = (widget.content.genreList ?? const [])
+        .where((genre) => genre.trim().isNotEmpty)
+        .take(3)
+        .join('  •  ');
+    final languageText = (widget.content.languageList ?? const [])
+        .map((e) => e.language?.trim())
+        .where((language) => language != null && language.isNotEmpty)
+        .cast<String>()
+        .take(2)
+        .join(', ');
+    final yearText = _yearFromMillis(season?.releaseDate) ??
+        widget.content.releaseDate ??
+        '';
+    final runtimeText = widget.content.runtime != null
+        ? '${widget.content.runtime} min'
+        : season != null && season.episodes.isNotEmpty
+            ? '${season.episodes.length} episodes'
+            : '';
+    final seasonText = seasons.isNotEmpty ? '${seasons.length} seasons' : '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          series.title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: isMobile ? 34 : 54,
+            height: 0.98,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 18),
+        Wrap(
+          spacing: 10,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            _metadataPill(
+              theme,
+              'IMDb ${double.parse((widget.content.ratings ?? 0).toStringAsFixed(1))}/10',
+              highlighted: true,
+            ),
+            if (yearText.trim().isNotEmpty) _metadataText(yearText),
+            if (seasonText.isNotEmpty) _metadataText(seasonText),
+            if (runtimeText.isNotEmpty) _metadataText(runtimeText),
+            if ((widget.content.ageRating ?? '').trim().isNotEmpty)
+              _metadataPill(theme, widget.content.ageRating!),
+            if (genreText.isNotEmpty) _metadataText(genreText),
+            if (languageText.isNotEmpty) _metadataText(languageText),
+          ],
+        ),
+        const SizedBox(height: 18),
+        Text(
+          series.description,
+          maxLines: isMobile ? 4 : 3,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.88),
+            height: 1.45,
+            fontSize: isMobile ? 14 : 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            ActionButtonWidget(
+              label: 'Play Now',
+              icon: Icons.play_arrow_rounded,
+              onTap: () => _playFirstAvailableEpisode(season),
+            ),
+            ActionButtonWidget(
+              label: 'Watch Trailer',
+              icon: Icons.movie_filter_rounded,
+              onTap: _openTrailer,
+            ),
+            _buildWatchlistButton(theme),
+            ActionButtonWidget(
+              label: 'Share',
+              icon: Icons.qr_code_2_rounded,
+              onTap: () => showContentShareSheet(
+                context,
+                widget.content,
+                contentType: DeepLinkContentType.series,
+                unavailableMessage: "Series details are not available yet",
+              ),
+            ),
+            _buildGifting(context, widget.content),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _metadataText(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        color: Colors.white70,
+        fontWeight: FontWeight.w800,
+        fontSize: 13,
+      ),
+    );
+  }
+
+  Widget _metadataPill(
+    ThemeData theme,
+    String text, {
+    bool highlighted = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: highlighted
+            ? theme.primaryColor.withValues(alpha: 0.9)
+            : Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWatchlistButton(ThemeData theme) {
+    return Consumer<BookmarkProvider>(
+      builder: (context, bookmarkProvider, _) {
+        final isBookmarked =
+            bookmarkProvider.isBookmarkedLocally(widget.content.id ?? 0);
+        return ActionButtonWidget(
+          label: isBookmarked ? 'Watchlisted' : 'Add to Watchlist',
+          icon: isBookmarked ? Icons.bookmark : Icons.bookmark_add_outlined,
+          onTap: () async {
+            await bookmarkProvider.toggleBookmark(widget.content);
+            if (!mounted) return;
+            CustomToast.show(
+              context,
+              isBookmarked
+                  ? "${widget.content.title} removed from watchlist"
+                  : "${widget.content.title} added to watchlist",
+              isSuccess: true,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _openTrailer() {
+    final trailerUrl =
+        (widget.content.teaserOrTrailerUrl?.trim().isNotEmpty ?? false)
+            ? widget.content.teaserOrTrailerUrl
+            : widget.content.trailerUrl;
+
+    if (trailerUrl == null || trailerUrl.trim().isEmpty) {
+      CustomToast.show(context, "Trailer is not available", isSuccess: false);
+      return;
+    }
+
+    _trailerController.pause?.call();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TrailerPage(
+          trailerUrl: trailerUrl,
+          isTrailerUrl: true,
+          content: widget.content,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _playFirstAvailableEpisode(SeasonEntity? season) async {
+    if (season == null || season.episodes.isEmpty) {
+      CustomToast.show(context, "Episodes are not available", isSuccess: false);
+      return;
+    }
+
+    EpisodeEntity? selectedEpisode;
+    for (final episode in season.episodes) {
+      if (season.isSeasonPurchased || episode.isPurchased || episode.isFree) {
+        selectedEpisode = episode;
+        break;
+      }
+    }
+
+    if (selectedEpisode == null) {
+      CustomToast.show(
+        context,
+        "Please rent this season or episode to watch",
+        isSuccess: false,
+      );
+      return;
+    }
+
+    await _playEpisode(season, selectedEpisode);
+  }
+
+  Future<void> _playEpisode(SeasonEntity season, EpisodeEntity ep) async {
+    _trailerController.pause?.call();
+    final shouldRefresh = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PlayMediaPage(
+          videoUrl: ep.videoUrl ?? "",
+          content: widget.content,
+          seasonIndex: season.seasonId,
+          episodeIndex: ep.episodeId,
+          seasons: [season],
+        ),
+      ),
+    );
+
+    if (shouldRefresh == true && context.mounted) {
+      context.read<DashboardProvider>().getContinueWatchedMovieList("SERIES");
+    }
+  }
+
+  String? _yearFromMillis(int? millis) {
+    if (millis == null || millis <= 0) return null;
+    return DateTime.fromMillisecondsSinceEpoch(millis).year.toString();
+  }
+
+  Widget _buildPrimeTabBar(ThemeData theme, {required String active}) {
+    const tabs = ['Episodes', 'Related', 'Details'];
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: theme.cardColor.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      child: Wrap(
+        spacing: 28,
+        runSpacing: 8,
+        children: tabs.map((tab) {
+          final selected = tab == active;
+          return Text(
+            tab,
+            style: TextStyle(
+              color: selected
+                  ? theme.canvasColor
+                  : theme.canvasColor.withOpacity(0.5),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              decoration: selected ? TextDecoration.underline : null,
+              decorationThickness: 3,
+              decorationColor: theme.canvasColor,
+            ),
+          );
+        }).toList(),
       ),
     );
   }

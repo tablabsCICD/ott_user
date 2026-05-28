@@ -39,250 +39,256 @@ class _WalletPageState extends State<WalletPage> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          /// -------- Extended AppBar with Wallet --------
-          SliverAppBar(
-            pinned: true,
-            expandedHeight: 280,
-            backgroundColor: theme.primaryColor,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            // actions: [
-            //   _buildFilterBar(context),
-            // ],
-            actionsPadding: EdgeInsets.symmetric(
-              vertical: 4,
-              horizontal: 8,
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              stretchModes: const [
-                StretchMode.zoomBackground,
-                StretchMode.fadeTitle,
-              ],
-              background: Stack(
-                children: [
-                  Container(
-                    color: theme.scaffoldBackgroundColor,
-                  ),
-                  Center(
-                    child: Container(
-                      width: ResponsiveWidget.isMobile(context)
-                          ? double.infinity
-                          : 500,
-                      padding: const EdgeInsets.all(20.0),
-                      decoration: BoxDecoration(
-                        color: theme.primaryColor,
-                        borderRadius: ResponsiveWidget.isDesktop(context)
-                            ? BorderRadius.circular(60)
-                            : const BorderRadius.only(
-                                bottomLeft: Radius.circular(70),
-                                bottomRight: Radius.circular(70),
-                              ),
-                      ),
-                      child: Consumer<WalletProvider>(
-                        builder: (_, walletProvider, __) {
-                          return Column(
-                            children: [
-                              const Spacer(),
-
-                              Icon(
-                                Icons.account_balance_wallet,
-                                size: 80,
-                                color: Colors.white38,
-                              ),
-
-                              const SizedBox(height: 6),
-
-                              /// Balance
-                              Text(
-                                "₹ ${walletProvider.walletBalance.toStringAsFixed(1)}",
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-
-                              const SizedBox(height: 4),
-
-                              const Text(
-                                "Available Balance",
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 14,
-                                ),
-                              ),
-
-                              const SizedBox(height: 6),
-
-                              /// CTA
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: theme.primaryColor,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                ),
-                                onPressed: _showBuyDialog,
-                                icon: const Icon(Icons.add),
-                                label: const Text(
-                                  "Recharge Wallet",
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
+      body: FocusTraversalGroup(
+        child: CustomScrollView(
+          slivers: [
+            /// -------- Extended AppBar with Wallet --------
+            SliverAppBar(
+              pinned: true,
+              expandedHeight: 280,
+              backgroundColor: theme.primaryColor,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              // actions: [
+              //   _buildFilterBar(context),
+              // ],
+              actionsPadding: EdgeInsets.symmetric(
+                vertical: 4,
+                horizontal: 8,
+              ),
+              flexibleSpace: FlexibleSpaceBar(
+                stretchModes: const [
+                  StretchMode.zoomBackground,
+                  StretchMode.fadeTitle,
+                ],
+                background: Stack(
+                  children: [
+                    Container(
+                      color: theme.scaffoldBackgroundColor,
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          /// -------- Header + Filter --------
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(horizontal, 16, horizontal, 8),
-            sliver: SliverToBoxAdapter(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Transaction History",
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                  ),
-                  //_buildFilterBar(context),
-                ],
-              ),
-            ),
-          ),
-
-          /// -------- History List --------
-          Consumer<WalletProvider>(
-            builder: (_, p, __) {
-              final list = p.filteredTransactionHistory;
-
-              if (list.isEmpty) {
-                return const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(child: Text("No transactions")),
-                );
-              }
-
-              return SliverPadding(
-                padding: EdgeInsets.symmetric(horizontal: horizontal),
-                sliver: SliverList.separated(
-                  itemCount: list.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (_, i) {
-                    final tx = list[i];
-                    final isCredit = tx.action?.toLowerCase() == "credit";
-
-                    return Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: theme.cardColor,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 6,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 15,
-                            backgroundColor: theme.scaffoldBackgroundColor,
-                            foregroundColor:
-                                isCredit ? Colors.green : Colors.red,
-                            child: Text(
-                              '₹',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                    Center(
+                      child: Container(
+                        width: ResponsiveWidget.isMobile(context)
+                            ? double.infinity
+                            : 500,
+                        padding: const EdgeInsets.all(20.0),
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor,
+                          borderRadius: ResponsiveWidget.isDesktop(context)
+                              ? BorderRadius.circular(60)
+                              : const BorderRadius.only(
+                                  bottomLeft: Radius.circular(70),
+                                  bottomRight: Radius.circular(70),
+                                ),
+                        ),
+                        child: Consumer<WalletProvider>(
+                          builder: (_, walletProvider, __) {
+                            return Column(
                               children: [
+                                const Spacer(),
+
+                                Icon(
+                                  Icons.account_balance_wallet,
+                                  size: 80,
+                                  color: Colors.white38,
+                                ),
+
+                                const SizedBox(height: 6),
+
+                                /// Balance
                                 Text(
-                                  tx.status ?? "",
-                                  style: TextStyle(
+                                  "₹ ${walletProvider.walletBalance.toStringAsFixed(1)}",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 36,
                                     fontWeight: FontWeight.bold,
-                                    color: theme.canvasColor,
                                   ),
                                 ),
+
                                 const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Text(
-                                      DateFormat('dd MMM yyyy • hh:mm a')
-                                          .format(
-                                        DateTime.fromMillisecondsSinceEpoch(
-                                            tx.date ?? 0),
-                                      ),
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color:
-                                            theme.canvasColor.withOpacity(0.6),
-                                      ),
-                                    ),
-                                    // Text(
-                                    //   ' • ',
-                                    //   style: TextStyle(
-                                    //     fontSize: 12,
-                                    //     color:
-                                    //         theme.canvasColor.withOpacity(0.6),
-                                    //   ),
-                                    // ),
-                                    // Text(
-                                    //   tx.action ?? '',
-                                    //   style: TextStyle(
-                                    //     fontSize: 12,
-                                    //     color:
-                                    //         theme.canvasColor.withOpacity(0.6),
-                                    //   ),
-                                    // )
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  tx.reason ?? "",
+
+                                const Text(
+                                  "Available Balance",
                                   style: TextStyle(
-                                    fontSize: 12,
-                                    color: theme.canvasColor.withOpacity(0.6),
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 6),
+
+                                /// CTA
+                                ElevatedButton.icon(
+                                  autofocus:
+                                      !ResponsiveWidget.isMobile(context),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: theme.primaryColor,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  onPressed: _showBuyDialog,
+                                  icon: const Icon(Icons.add),
+                                  label: const Text(
+                                    "Recharge Wallet",
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold),
                                   ),
                                 ),
                               ],
-                            ),
-                          ),
-                          Text(
-                            "${isCredit ? "+" : "-"}${tx.amount?.toStringAsFixed(0) ?? "0"}",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: isCredit ? Colors.green : Colors.red,
-                            ),
-                          ),
-                        ],
+                            );
+                          },
+                        ),
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
-              );
-            },
-          ),
+              ),
+            ),
 
-          const SliverToBoxAdapter(child: SizedBox(height: 24)),
-        ],
+            /// -------- Header + Filter --------
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(horizontal, 16, horizontal, 8),
+              sliver: SliverToBoxAdapter(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Transaction History",
+                      style:
+                          TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                    ),
+                    //_buildFilterBar(context),
+                  ],
+                ),
+              ),
+            ),
+
+            /// -------- History List --------
+            Consumer<WalletProvider>(
+              builder: (_, p, __) {
+                final list = p.filteredTransactionHistory;
+
+                if (list.isEmpty) {
+                  return const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(child: Text("No transactions")),
+                  );
+                }
+
+                return SliverPadding(
+                  padding: EdgeInsets.symmetric(horizontal: horizontal),
+                  sliver: SliverList.separated(
+                    itemCount: list.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (_, i) {
+                      final tx = list[i];
+                      final isCredit = tx.action?.toLowerCase() == "credit";
+
+                      return Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 15,
+                              backgroundColor: theme.scaffoldBackgroundColor,
+                              foregroundColor:
+                                  isCredit ? Colors.green : Colors.red,
+                              child: Text(
+                                '₹',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    tx.status ?? "",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: theme.canvasColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        DateFormat('dd MMM yyyy • hh:mm a')
+                                            .format(
+                                          DateTime.fromMillisecondsSinceEpoch(
+                                              tx.date ?? 0),
+                                        ),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: theme.canvasColor
+                                              .withOpacity(0.6),
+                                        ),
+                                      ),
+                                      // Text(
+                                      //   ' • ',
+                                      //   style: TextStyle(
+                                      //     fontSize: 12,
+                                      //     color:
+                                      //         theme.canvasColor.withOpacity(0.6),
+                                      //   ),
+                                      // ),
+                                      // Text(
+                                      //   tx.action ?? '',
+                                      //   style: TextStyle(
+                                      //     fontSize: 12,
+                                      //     color:
+                                      //         theme.canvasColor.withOpacity(0.6),
+                                      //   ),
+                                      // )
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    tx.reason ?? "",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: theme.canvasColor.withOpacity(0.6),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              "${isCredit ? "+" : "-"}${tx.amount?.toStringAsFixed(0) ?? "0"}",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isCredit ? Colors.green : Colors.red,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          ],
+        ),
       ),
     );
   }
@@ -340,20 +346,29 @@ class _WalletPageState extends State<WalletPage> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                   title: const Text("Recharge Wallet"),
-                  content: TextField(
-                    controller: controller,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Enter amount",
-                      border: OutlineInputBorder(),
+                  content: SizedBox(
+                    width: ResponsiveWidget.isMobile(context) ? null : 420,
+                    child: TextField(
+                      autofocus: !ResponsiveWidget.isMobile(context),
+                      controller: controller,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Enter amount",
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                   ),
                   actions: [
                     TextButton(
+                        autofocus: false,
                         onPressed:
                             isBusy ? null : () => Navigator.pop(dialogContext),
                         child: const Text("Cancel")),
                     ElevatedButton(
+                      autofocus: !ResponsiveWidget.isMobile(context),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(156, 46),
+                      ),
                       onPressed: isBusy
                           ? null
                           : () async {
@@ -399,8 +414,8 @@ class _WalletPageState extends State<WalletPage> {
                                 _showWalletReflectLoader(pageContext);
                                 final result = await provider
                                     .onPaymentVerified(
-                                      expectedAmount: amt,
-                                    )
+                                  expectedAmount: amt,
+                                )
                                     .whenComplete(() {
                                   if (mounted) {
                                     Navigator.of(pageContext,
@@ -442,17 +457,19 @@ class _WalletPageState extends State<WalletPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const AlertDialog(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2.5),
-            ),
-            SizedBox(width: 16),
-            Expanded(child: Text("Updating wallet balance...")),
-          ],
+      builder: (_) => AlertDialog(
+        content: FocusTraversalGroup(
+          child: const Row(
+            children: [
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              ),
+              SizedBox(width: 16),
+              Expanded(child: Text("Updating wallet balance...")),
+            ],
+          ),
         ),
       ),
     );

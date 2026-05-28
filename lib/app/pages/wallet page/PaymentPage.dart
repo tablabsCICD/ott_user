@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:ott/app/core/services/PaymentService.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 
@@ -22,6 +23,7 @@ class _PaymentPageState extends State<PaymentPage> {
   final PaymentService _paymentService = PaymentService();
   bool _isLoading = true;
   String _status = 'Preparing secure checkout...';
+  bool _hasReturnedResult = false;
 
   @override
   void initState() {
@@ -93,6 +95,10 @@ class _PaymentPageState extends State<PaymentPage> {
     if (!mounted) {
       return;
     }
+    if (_hasReturnedResult) {
+      return;
+    }
+    _hasReturnedResult = true;
 
     setState(() {
       _isLoading = false;
@@ -100,6 +106,15 @@ class _PaymentPageState extends State<PaymentPage> {
     });
 
     Navigator.pop(context, result.toMap());
+  }
+
+  void _cancelPayment() {
+    _finish(
+      PaymentResult(
+        success: false,
+        message: 'Payment cancelled.',
+      ),
+    );
   }
 
   @override
@@ -110,23 +125,94 @@ class _PaymentPageState extends State<PaymentPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_isLoading) const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                _status,
-                textAlign: TextAlign.center,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: FocusTraversalGroup(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: theme.primaryColor.withValues(alpha: 0.24),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.28),
+                      blurRadius: 28,
+                      offset: const Offset(0, 16),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_isLoading)
+                        SizedBox(
+                          width: 42,
+                          height: 42,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            color: theme.primaryColor,
+                          ),
+                        )
+                      else
+                        Icon(
+                          Icons.info_outline,
+                          color: theme.primaryColor,
+                          size: 42,
+                        ),
+                      const SizedBox(height: 18),
+                      Text(
+                        _status,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: theme.canvasColor,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      OutlinedButton.icon(
+                        autofocus: _isTvLikeSurface(context),
+                        onPressed: _cancelPayment,
+                        icon: const Icon(Icons.close),
+                        label: const Text('Cancel Payment'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(190, 48),
+                          foregroundColor: theme.canvasColor,
+                          side: BorderSide(
+                            color: theme.canvasColor.withValues(alpha: 0.4),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+bool _isTvLikeSurface(BuildContext context) {
+  final size = MediaQuery.sizeOf(context);
+  final isLargeLandscape =
+      size.width >= 900 && size.width > size.height && size.shortestSide >= 540;
+
+  return isLargeLandscape &&
+      (kIsWeb || defaultTargetPlatform == TargetPlatform.android);
 }

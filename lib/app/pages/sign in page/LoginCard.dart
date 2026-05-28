@@ -180,6 +180,7 @@ class _LoginCardState extends State<LoginCard> {
                                     fillColor: theme.cardColor,
                                     hintText:
                                         'Search by country name and code ..',
+                                    counterText: "",
                                     hintStyle: const TextStyle(fontSize: 14),
                                     // Border properties for search in dropdown
                                     border: OutlineInputBorder(
@@ -206,6 +207,7 @@ class _LoginCardState extends State<LoginCard> {
                               decoration: InputDecoration(
                                 filled: true,
                                 fillColor: theme.cardColor,
+                                counterText: "",
 
                                 hintText: lang.enterMobileNumber,
                                 hintStyle: const TextStyle(fontSize: 14),
@@ -251,7 +253,7 @@ class _LoginCardState extends State<LoginCard> {
                             //   isPhoneNumber: true,
                             //   isValidator: true,
                             // ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 25),
 
                             /// OTP input
                             if (otpSent) ...[
@@ -266,7 +268,7 @@ class _LoginCardState extends State<LoginCard> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 25),
                               PinCodeTextField(
                                 cursorColor: theme.primaryColor,
                                 appContext: context,

@@ -7,6 +7,7 @@ import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/shimmer%20loader/search_shimmer.dart';
 import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
@@ -43,25 +44,22 @@ class _SearchPageState extends State<SearchPage> {
     final lang = AppLocalizations.of(context)!;
 
     final movies = featuredContent["movies"];
-    final genreSet = {
-      for (var movie in movies)
-        ...List<String>.from([
-          'Action',
-          'Drama',
-          'Comedy',
-          'Thriller',
-          'Horror',
-          'Romance',
-          'Sci-Fi',
-          'Fantasy',
-          'Mystery',
-          'Documentary',
-          'Animation',
-          'Adventure',
-          'Musical',
-          'Historical',
-          'Crime'
-        ])
+    const genreSet = {
+      'Action',
+      'Drama',
+      'Comedy',
+      'Thriller',
+      'Horror',
+      'Romance',
+      'Sci-Fi',
+      'Fantasy',
+      'Mystery',
+      'Documentary',
+      'Animation',
+      'Adventure',
+      'Musical',
+      'Historical',
+      'Crime',
     };
     final languageSet = {
       for (var movie in movies) movie['language'].toString()
@@ -343,9 +341,8 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
 
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
-        final responseData = responseBody is Map<String, dynamic>
-            ? responseBody['data']
-            : null;
+        final responseData =
+            responseBody is Map<String, dynamic> ? responseBody['data'] : null;
         final castData =
             responseData is Map<String, dynamic> ? responseData['cast'] : null;
 
@@ -412,198 +409,191 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     final theme = themeProvider.getTheme;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => movie.type!.toLowerCase() == 'movie'
-                    ? MovieDetailsPage(
-                        movieId: movie.id!,
-                      )
-                    : SeriesDetailsPage(
-                        seriesId: movie.id!,
-                        content: movie,
-                      ),
-              ),
-            );
-          },
-          child: Card(
-            color: theme.cardColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 4,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 100,
-                    height: 140,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: movie.posterUrlList != null &&
-                              movie.posterUrlList!.isNotEmpty
-                          ? Image.network(
-                              movie.posterUrlList![0],
-                              width: 100,
-                              height: 140,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Icon(Icons.broken_image,
-                                      size: 30, color: Colors.grey),
-                            )
-                          : Container(
-                              width: 100,
-                              height: 140,
-                              color: Colors.grey[300],
-                              child: Icon(
-                                Icons.movie,
-                                size: 60,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text.rich(
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            TextSpan(
-                                style: TextStyle(
-                                  color: theme.canvasColor.withOpacity(0.7),
-                                  fontSize: 12,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: ' ${movie.ratings ?? '-'}',
-                                    style: TextStyle(
-                                        color: Colors.amberAccent,
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                                  TextSpan(
-                                    text: ' | ',
-                                    style: TextStyle(
-                                      color: theme.canvasColor.withOpacity(0.7),
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: (movie.genreList != null &&
-                                            movie.genreList!.isNotEmpty)
-                                        ? movie.genreList!.join(', ')
-                                        : 'N/A',
-                                  )
-                                ]),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            movie.title ?? 'No Title',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: theme.canvasColor,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 1),
-                          Text.rich(
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            TextSpan(
-                                style: TextStyle(
-                                  color: theme.canvasColor.withOpacity(0.7),
-                                  fontSize: 12,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: 'Director: ',
-                                    style: TextStyle(
-                                      color: theme.primaryColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  TextSpan(text: _memberNames(_crewList))
-                                ]),
-                          ),
-                          const SizedBox(height: 1),
-                          Text.rich(
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            TextSpan(
-                                style: TextStyle(
-                                  color: theme.canvasColor.withOpacity(0.7),
-                                  fontSize: 12,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: 'Cast: ',
-                                    style: TextStyle(
-                                      color: theme.primaryColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  TextSpan(text: _memberNames(_castList))
-                                ]),
-                          ),
-                          const SizedBox(height: 4),
-                         
-                        
-                          Text.rich(
-                            maxLines: 4,
-                            overflow: TextOverflow.ellipsis,
-                            TextSpan(
-                                style: TextStyle(
-                                  color: theme.canvasColor.withOpacity(0.7),
-                                  fontSize: 12,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: movie.releaseDate ?? '',
-                                    style: TextStyle(
-                                      color: theme.canvasColor,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: ' | ',
-                                    style: TextStyle(
-                                      color: theme.canvasColor.withOpacity(0.7),
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: movie.description ?? '',
-                                    style: TextStyle(
-                                      overflow: TextOverflow.ellipsis,
-                                      fontSize: 12,
-                                      color: theme.canvasColor.withOpacity(0.7),
-                                    ),
-                                  )
-                                ]),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+    return OttTvFocus(
+      onTap: _openDetails,
+      borderRadius: BorderRadius.circular(14),
+      scale: 1.025,
+      child: GestureDetector(
+        onTap: _openDetails,
+        child: Card(
+          color: theme.cardColor,
+          elevation: 8,
+          shadowColor: Colors.black.withValues(alpha: 0.35),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+              color: theme.canvasColor.withValues(alpha: 0.08),
             ),
           ),
-        );
-      },
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildPoster(theme),
+                const SizedBox(width: 12),
+                Expanded(child: _buildSearchMeta(theme)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPoster(ThemeData theme) {
+    return SizedBox(
+      width: 100,
+      height: 140,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: movie.posterUrlList != null && movie.posterUrlList!.isNotEmpty
+            ? Image.network(
+                movie.posterUrlList![0],
+                width: 100,
+                height: 140,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.broken_image,
+                  size: 30,
+                  color: Colors.grey,
+                ),
+              )
+            : Container(
+                width: 100,
+                height: 140,
+                color: Colors.grey[300],
+                child: Icon(
+                  Icons.movie,
+                  size: 60,
+                  color: Colors.grey[600],
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildSearchMeta(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text.rich(
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          TextSpan(
+            style: TextStyle(
+              color: theme.canvasColor.withOpacity(0.7),
+              fontSize: 12,
+            ),
+            children: [
+              TextSpan(
+                text: ' ${movie.ratings ?? '-'}',
+                style: const TextStyle(
+                  color: Colors.amberAccent,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              TextSpan(
+                text: ' | ',
+                style: TextStyle(
+                  color: theme.canvasColor.withOpacity(0.7),
+                  fontSize: 14,
+                ),
+              ),
+              TextSpan(
+                text: (movie.genreList != null && movie.genreList!.isNotEmpty)
+                    ? movie.genreList!.join(', ')
+                    : 'N/A',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          movie.title ?? 'No Title',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: theme.canvasColor,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 1),
+        _buildMetaLine(theme, 'Director: ', _memberNames(_crewList)),
+        const SizedBox(height: 1),
+        _buildMetaLine(theme, 'Cast: ', _memberNames(_castList)),
+        const SizedBox(height: 4),
+        Text.rich(
+          maxLines: 4,
+          overflow: TextOverflow.ellipsis,
+          TextSpan(
+            style: TextStyle(
+              color: theme.canvasColor.withOpacity(0.7),
+              fontSize: 12,
+            ),
+            children: [
+              TextSpan(
+                text: movie.releaseDate ?? '',
+                style: TextStyle(
+                  color: theme.canvasColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              TextSpan(
+                text: ' | ',
+                style: TextStyle(
+                  color: theme.canvasColor.withOpacity(0.7),
+                  fontSize: 14,
+                ),
+              ),
+              TextSpan(text: movie.description ?? ''),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetaLine(ThemeData theme, String label, String value) {
+    return Text.rich(
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      TextSpan(
+        style: TextStyle(
+          color: theme.canvasColor.withOpacity(0.7),
+          fontSize: 12,
+        ),
+        children: [
+          TextSpan(
+            text: label,
+            style: TextStyle(
+              color: theme.primaryColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          TextSpan(text: value),
+        ],
+      ),
+    );
+  }
+
+  void _openDetails() {
+    if (movie.id == null || movie.type == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => movie.type!.toLowerCase() == 'movie'
+            ? MovieDetailsPage(
+                movieId: movie.id!,
+              )
+            : SeriesDetailsPage(
+                seriesId: movie.id!,
+                content: movie,
+              ),
+      ),
     );
   }
 

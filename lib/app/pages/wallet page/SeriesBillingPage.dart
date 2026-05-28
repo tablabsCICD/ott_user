@@ -57,179 +57,186 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          // -------- Wallet Header --------
-          SliverAppBar(
-            pinned: true,
-            expandedHeight: 230,
-            elevation: 0,
-            backgroundColor: theme.scaffoldBackgroundColor,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Center(
-                child: Container(
-                  width: ResponsiveWidget.isMobile(context)
-                      ? double.infinity
-                      : 500,
-                  padding: const EdgeInsets.all(20.0),
-                  decoration: BoxDecoration(
-                    color: theme.primaryColor,
-                    borderRadius: ResponsiveWidget.isDesktop(context)
-                        ? BorderRadius.circular(60)
-                        : const BorderRadius.only(
-                            bottomLeft: Radius.circular(70),
-                            bottomRight: Radius.circular(70),
-                          ),
-                  ),
-                  child: Consumer<WalletProvider>(
-                    builder: (_, walletProvider, __) {
-                      return Column(
-                        children: [
-                          const Spacer(),
-                          const Icon(
-                            Icons.account_balance_wallet,
-                            size: 80,
-                            color: Colors.white38,
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            "₹ ${walletProvider.walletBalance.toStringAsFixed(0)}",
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 36,
-                              fontWeight: FontWeight.bold,
+      body: FocusTraversalGroup(
+        child: CustomScrollView(
+          slivers: [
+            // -------- Wallet Header --------
+            SliverAppBar(
+              pinned: true,
+              expandedHeight: 230,
+              elevation: 0,
+              backgroundColor: theme.scaffoldBackgroundColor,
+              flexibleSpace: FlexibleSpaceBar(
+                background: Center(
+                  child: Container(
+                    width: ResponsiveWidget.isMobile(context)
+                        ? double.infinity
+                        : 500,
+                    padding: const EdgeInsets.all(20.0),
+                    decoration: BoxDecoration(
+                      color: theme.primaryColor,
+                      borderRadius: ResponsiveWidget.isDesktop(context)
+                          ? BorderRadius.circular(60)
+                          : const BorderRadius.only(
+                              bottomLeft: Radius.circular(70),
+                              bottomRight: Radius.circular(70),
                             ),
-                          ),
-                          const Text(
-                            "Available Balance",
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                          const SizedBox(height: 10),
-                        ],
-                      );
-                    },
+                    ),
+                    child: Consumer<WalletProvider>(
+                      builder: (_, walletProvider, __) {
+                        return Column(
+                          children: [
+                            const Spacer(),
+                            const Icon(
+                              Icons.account_balance_wallet,
+                              size: 80,
+                              color: Colors.white38,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              "₹ ${walletProvider.walletBalance.toStringAsFixed(0)}",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Text(
+                              "Available Balance",
+                              style: TextStyle(color: Colors.white70),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
 
-          // -------- Payment Card --------
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(horizontal, 16, horizontal, 24),
-            sliver: SliverToBoxAdapter(
-              child: Consumer<WalletProvider>(
-                builder: (_, provider, __) {
-                  final hasBalance = provider.walletBalance >= totalCoins;
+            // -------- Payment Card --------
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(horizontal, 16, horizontal, 24),
+              sliver: SliverToBoxAdapter(
+                child: Consumer<WalletProvider>(
+                  builder: (_, provider, __) {
+                    final hasBalance = provider.walletBalance >= totalCoins;
 
-                  return Card(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
-                    elevation: 4,
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.isSeason
-                                ? "Season Purchase"
-                                : "Episode Purchase",
-                            style: const TextStyle(
-                                fontSize: 22, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            "Amount: ₹ ${totalCoins.toStringAsFixed(0)}",
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: theme.primaryColor,
+                    return Card(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      elevation: 4,
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.isSeason
+                                  ? "Season Purchase"
+                                  : "Episode Purchase",
+                              style: const TextStyle(
+                                  fontSize: 22, fontWeight: FontWeight.bold),
                             ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Wallet Status
-                          Card(
-                            color: hasBalance
-                                ? Colors.green.shade50
-                                : Colors.red.shade50,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      "Wallet: ₹ ${provider.walletBalance.toStringAsFixed(0)}",
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: hasBalance
-                                            ? Colors.green
-                                            : theme.primaryColor,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                            const SizedBox(height: 12),
+                            Text(
+                              "Amount: ₹ ${totalCoins.toStringAsFixed(0)}",
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: theme.primaryColor,
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 20),
+                            const SizedBox(height: 16),
 
-                          hasBalance
-                              ? ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: theme.primaryColor,
-                                    minimumSize:
-                                        const Size(double.infinity, 50),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12)),
-                                  ),
-                                  icon: const Icon(Icons.check,
-                                      color: Colors.white),
-                                  label: const Text(
-                                    "Proceed to Pay",
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                  onPressed: () {
-                                    _showConfirmationDialog(
-                                      context,
-                                    );
-                                  },
-                                )
-                              : ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: theme.primaryColor,
-                                    minimumSize:
-                                        const Size(double.infinity, 50),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12)),
-                                  ),
-                                  icon: const Icon(Icons.add_circle,
-                                      color: Colors.white),
-                                  label: const Text(
-                                    "Recharge Wallet",
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                  onPressed: () => _showRechargeDialog(context),
+                            // Wallet Status
+                            Card(
+                              color: hasBalance
+                                  ? Colors.green.shade50
+                                  : Colors.red.shade50,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        "Wallet: ₹ ${provider.walletBalance.toStringAsFixed(0)}",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: hasBalance
+                                              ? Colors.green
+                                              : theme.primaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                        ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            hasBalance
+                                ? ElevatedButton.icon(
+                                    autofocus:
+                                        !ResponsiveWidget.isMobile(context),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: theme.primaryColor,
+                                      minimumSize:
+                                          const Size(double.infinity, 50),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12)),
+                                    ),
+                                    icon: const Icon(Icons.check,
+                                        color: Colors.white),
+                                    label: const Text(
+                                      "Proceed to Pay",
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    onPressed: () {
+                                      _showConfirmationDialog(
+                                        context,
+                                      );
+                                    },
+                                  )
+                                : ElevatedButton.icon(
+                                    autofocus:
+                                        !ResponsiveWidget.isMobile(context),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: theme.primaryColor,
+                                      minimumSize:
+                                          const Size(double.infinity, 50),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12)),
+                                    ),
+                                    icon: const Icon(Icons.add_circle,
+                                        color: Colors.white),
+                                    label: const Text(
+                                      "Recharge Wallet",
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    onPressed: () =>
+                                        _showRechargeDialog(context),
+                                  ),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -261,8 +268,11 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                       child: const Text("Cancel"),
                     ),
                     ElevatedButton(
+                      autofocus: !ResponsiveWidget.isMobile(context),
                       style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.primaryColor),
+                        backgroundColor: theme.primaryColor,
+                        minimumSize: const Size(156, 46),
+                      ),
                       onPressed: isBusy
                           ? null
                           : () async {
@@ -334,12 +344,16 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                   title: const Text("Recharge Wallet"),
-                  content: TextField(
-                    controller: walletProvider.amountController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Enter amount",
-                      border: OutlineInputBorder(),
+                  content: SizedBox(
+                    width: ResponsiveWidget.isMobile(context) ? null : 420,
+                    child: TextField(
+                      autofocus: !ResponsiveWidget.isMobile(context),
+                      controller: walletProvider.amountController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Enter amount",
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                   ),
                   actions: [
@@ -349,8 +363,11 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                       child: const Text("Cancel"),
                     ),
                     ElevatedButton(
+                      autofocus: !ResponsiveWidget.isMobile(context),
                       style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.primaryColor),
+                        backgroundColor: theme.primaryColor,
+                        minimumSize: const Size(156, 46),
+                      ),
                       onPressed: isBusy
                           ? null
                           : () async {
@@ -396,12 +413,11 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                               if (!mounted) return;
                               if (result is Map && result['success'] == true) {
                                 _showWalletReflectLoader(pageContext);
-                                final addResult =
-                                    await walletProvider
-                                        .onPaymentVerified(
-                                          expectedAmount: amount,
-                                        )
-                                        .whenComplete(() {
+                                final addResult = await walletProvider
+                                    .onPaymentVerified(
+                                  expectedAmount: amount,
+                                )
+                                    .whenComplete(() {
                                   if (mounted) {
                                     Navigator.of(pageContext,
                                             rootNavigator: true)
@@ -447,17 +463,19 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const AlertDialog(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2.5),
-            ),
-            SizedBox(width: 16),
-            Expanded(child: Text("Updating wallet balance...")),
-          ],
+      builder: (_) => AlertDialog(
+        content: FocusTraversalGroup(
+          child: const Row(
+            children: [
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              ),
+              SizedBox(width: 16),
+              Expanded(child: Text("Updating wallet balance...")),
+            ],
+          ),
         ),
       ),
     );
@@ -584,6 +602,7 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                           Padding(
                             padding: const EdgeInsets.only(top: 10),
                             child: ElevatedButton(
+                              autofocus: !ResponsiveWidget.isMobile(context),
                               onPressed: () async {
                                 final Uri url = Uri.parse(invoiceUrl);
                                 if (await canLaunchUrl(url)) {
@@ -602,6 +621,7 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
+                        autofocus: !ResponsiveWidget.isMobile(context),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: theme.primaryColor,
                           minimumSize: const Size(double.infinity, 50),

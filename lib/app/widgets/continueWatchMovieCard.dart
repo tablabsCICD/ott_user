@@ -18,6 +18,7 @@ import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -54,6 +55,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   VideoController? _videoController;
   final List<StreamSubscription<dynamic>> _previewSubscriptions = [];
   bool _isHovered = false;
+  bool _isFocused = false;
   bool _isMuted = true;
   bool _isVideoInitialized = false;
   bool _isPreviewPlaying = false;
@@ -384,11 +386,15 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     final posterUrl = widget.movie.posterUrlList?.isNotEmpty == true
         ? widget.movie.posterUrlList!.first
         : null;
-    final showPreview = _isPreviewPlaying;
-    final highlightColor = theme.brightness == Brightness.light
-        ? const Color.fromARGB(255, 185, 169, 169)
-        : const Color.fromARGB(255, 58, 49, 49);
-    return Stack(
+    final showPreview = _isPreviewPlaying || _isFocused;
+    return OttTvFocus(
+      onTap: _playContent,
+      borderRadius: BorderRadius.circular(16),
+      onFocusChange: (focused) {
+        setState(() => _isFocused = focused);
+        _handleHover(focused);
+      },
+      child: Stack(
       children: [
         MouseRegion(
           onEnter: (_) => _handleHover(true),
@@ -408,18 +414,20 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
               ),
               decoration: BoxDecoration(
                 color: theme.cardColor,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: showPreview ? highlightColor : Colors.transparent,
-                  width: showPreview ? 2.5 : 1,
+                  color: showPreview
+                      ? theme.primaryColor.withValues(alpha: 0.86)
+                      : Colors.transparent,
+                  width: showPreview ? 2 : 1,
                 ),
                 boxShadow: showPreview
                     ? [
                         BoxShadow(
-                          color: highlightColor.withValues(alpha: 0.35),
-                          blurRadius: 18,
+                          color: theme.primaryColor.withValues(alpha: 0.26),
+                          blurRadius: 26,
                           spreadRadius: 1,
-                          offset: const Offset(0, 6),
+                          offset: const Offset(0, 10),
                         ),
                       ]
                     : null,
@@ -431,10 +439,10 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                     left: BorderSide(color: theme.cardColor, width: 1),
                     right: BorderSide(color: theme.cardColor, width: 1),
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   child: _buildMediaPreview(
                     posterUrl,
                     theme,
@@ -450,6 +458,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
         /*/// ⋮ OPTIONS BUTTON
         _optionButton(context, widget.movie),*/
       ],
+      ),
     );
   }
 

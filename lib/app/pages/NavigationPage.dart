@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
@@ -5,15 +7,24 @@ import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/pages/shorts%20page/ShortsPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/pages/watchlist%20page/WatchlistPage.dart';
+import 'package:ott/app/pages/help%20support%20page/HelpSupportPage.dart';
+import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/pages/upcoming%20movies%20page/UpcomingPage.dart';
 import 'package:ott/app/pages/home%20page/HomePage.dart';
 import 'package:ott/app/pages/profile%20page/ProfilePage.dart';
 import 'package:ott/app/pages/search%20page/SearchPage.dart';
 import 'package:ott/app/pages/series%20page/SeriesListPage.dart';
+import 'package:ott/app/core/constant/app_constant.dart';
+import 'package:ott/app/core/constant/prefrense_constant.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
+import 'package:ott/app/provider/bookmarkProvider.dart';
+import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/themeProvider.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../provider/userProvider.dart';
 
@@ -26,223 +37,335 @@ class NavigationPage extends StatefulWidget {
 
 class _NavigationPageState extends State<NavigationPage> {
   int _currentIndex = 0;
+  String _homeContentType = "HOME";
   bool _isExitDialogOpen = false;
+
+  // NEW
+  bool _isSidebarExpanded = false;
+
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  final List<Widget> _pages = [
-    HomePage(),
-    SeriesListPage(),
-    ShortsPage(),
-    SearchPage(),
-    WatchlistPage(),
-    ProfilePage(),
-    UpcomingPage(),
-    WalletPage(),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      DeepLinkService.instance.consumePendingNavigation();
-    });
-  }
+  static const int _homeIndex = 0;
+  static const int _seriesIndex = 1;
+  static const int _shortsIndex = 2;
+  static const int _searchIndex = 3;
+  static const int _watchlistIndex = 4;
+  static const int _profileIndex = 5;
+  static const int _upcomingIndex = 6;
+  static const int _walletIndex = 7;
+  //static const int _downloadsIndex = 8;
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final selectedThemeData = themeProvider.getTheme;
-    final isMobile = ResponsiveWidget.isMobile(context);
-    final isDesktop = ResponsiveWidget.isDesktop(context);
-    final lang = AppLocalizations.of(context)!;
-    final userProvider = Provider.of<UserProvider>(context);
-    final mobilePageIndices = [0, 1, 3, 4, 5];
-    final mobileCurrentIndex = mobilePageIndices.contains(_currentIndex)
-        ? mobilePageIndices.indexOf(_currentIndex)
-        : 0;
+    final usePersistentSidebar = ResponsiveWidget.isTabletOrTv(context);
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-        await _handleBackNavigation();
-      },
-      child: Scaffold(
-        key: _scaffoldKey,
-        backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-        body: isDesktop
-            ? Row(
-                children: [
-                  Container(
-                    width: 250,
-                    color: selectedThemeData.cardColor,
+    return Scaffold(
+      key: _scaffoldKey,
+      backgroundColor: selectedThemeData.scaffoldBackgroundColor,
+      body: usePersistentSidebar
+          ? Row(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOutCubic,
+                  width: _isSidebarExpanded ? 250 : 90,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.92),
+                        selectedThemeData.cardColor.withValues(alpha: 0.96),
+                        selectedThemeData.scaffoldBackgroundColor,
+                      ],
+                    ),
+                    border: Border(
+                      right: BorderSide(
+                        color: selectedThemeData.canvasColor
+                            .withValues(alpha: 0.08),
+                      ),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.34),
+                        blurRadius: 30,
+                        offset: const Offset(12, 0),
+                      ),
+                    ],
+                  ),
+                  child: FocusTraversalGroup(
                     child: _buildDrawerContent(context),
                   ),
-                  Expanded(
-                    child: _pages[_currentIndex],
-                  ),
-                ],
-              )
-            : Stack(
-                children: [
-                  _pages[_currentIndex],
-                  if (!isMobile)
-                    Positioned(
-                      top: 10,
-                      left: 10,
-                      child: IconButton(
-                        onPressed: () {
-                          _scaffoldKey.currentState?.openDrawer();
-                        },
-                        icon: Icon(
-                          Icons.menu,
-                          color: Colors.white,
-                        ),
-                      ),
+                ),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    child: KeyedSubtree(
+                      key: ValueKey('$_currentIndex-$_homeContentType'),
+                      child: _currentPage(),
                     ),
-                ],
-              ),
-        drawer: isMobile
-            ? null
-            : Drawer(
-                child: _buildDrawerContent(context),
-              ),
-        bottomNavigationBar: isMobile
-            ? BottomNavigationBar(
-                type: BottomNavigationBarType.fixed,
-                currentIndex: mobileCurrentIndex,
-                onTap: (index) =>
-                    setState(() => _currentIndex = mobilePageIndices[index]),
-                backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-                selectedItemColor: selectedThemeData.primaryColor,
-                unselectedItemColor: selectedThemeData.canvasColor,
-                showSelectedLabels: true,
-                showUnselectedLabels: false,
-                items: [
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.home),
-                    label: lang.home,
                   ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.video_library),
-                    label: lang.series,
-                  ),
-                  /*   BottomNavigationBarItem(
-                    icon: Icon(Icons.play_circle),
-                    label: lang.minSeries,
-                  ), */
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.search),
-                    label: lang.search,
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.movie),
-                    label: lang.watchlist,
-                  ),
-                  // BottomNavigationBarItem(
-                  //   icon: Icon(Icons.upcoming_outlined),
-                  //   label: lang.upcoming,
-                  // ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.person),
-                    activeIcon: Hero(
-                      tag: 'profile_nav',
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: selectedThemeData.primaryColor,
-                            width: 1,
-                          ),
-                        ),
-                        child: CircleAvatar(
-                          radius: 12,
-                          backgroundColor:
-                              selectedThemeData.primaryColor.withOpacity(0.5),
-                          foregroundImage: userProvider.userObj.profilePhoto ==
-                                  null
-                              ? AssetImage(ImageConstant.profile)
-                              : userProvider.userObj.profilePhoto!.isNotEmpty
-                                  ? NetworkImage(
-                                      userProvider.userObj.profilePhoto!,
-                                    )
-                                  : AssetImage(ImageConstant.profile),
-                        ),
-                      ),
-                    ),
-                    label: lang.profile,
-                  ),
-                ],
-              )
-            : null,
-      ),
+                ),
+              ],
+            )
+          : _currentPage(),
     );
   }
 
-  Future<void> _handleBackNavigation() async {
-    if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
-      Navigator.of(context).pop();
-      return;
-    }
+  Widget _currentPage() {
+    switch (_currentIndex) {
+      case _homeIndex:
+        return HomePage(
+          key: ValueKey(_homeContentType),
+          initialSelectedType: _homeContentType,
+        );
 
-    if (_currentIndex != 0) {
-      setState(() => _currentIndex = 0);
-      return;
-    }
+      case _seriesIndex:
+        return SeriesListPage();
 
-    if (_isExitDialogOpen) return;
-    _isExitDialogOpen = true;
-    final shouldExit = await _showExitConfirmationDialog();
-    _isExitDialogOpen = false;
+      case _shortsIndex:
+        return ShortsPage();
 
-    if (shouldExit == true) {
-      SystemNavigator.pop();
+      case _searchIndex:
+        return SearchPage();
+
+      case _watchlistIndex:
+        return WatchlistPage();
+
+      case _profileIndex:
+        return ProfilePage();
+
+      case _upcomingIndex:
+        return UpcomingPage();
+
+      case _walletIndex:
+        return WalletPage();
+
+      /*  case _downloadsIndex:
+        return const WatchlistPage(
+          initialFilter: WatchlistFilter.downloaded,
+        ); */
+
+      default:
+        return HomePage(
+          key: ValueKey(_homeContentType),
+          initialSelectedType: _homeContentType,
+        );
     }
   }
 
-  Future<bool?> _showExitConfirmationDialog() {
-    final theme = Theme.of(context);
+  Widget _buildDrawerContent(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
-    return showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: theme.cardColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          title: Text(
-            'Close app?',
-            style: TextStyle(
-              color: theme.canvasColor,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Text(
-            'Are you sure you want to close the app?',
-            style: TextStyle(
-              color: theme.canvasColor.withOpacity(0.75),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: theme.canvasColor),
+    final selectedThemeData = themeProvider.getTheme;
+
+    final lang = AppLocalizations.of(context)!;
+
+    final userProvider = Provider.of<UserProvider>(context);
+
+    final profilePhoto = userProvider.userObj.profilePhoto ?? '';
+
+    final hasProfilePhoto = profilePhoto.trim().isNotEmpty;
+
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(
+          sigmaX: 18,
+          sigmaY: 18,
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: selectedThemeData.scaffoldBackgroundColor
+                .withValues(alpha: 0.88),
+            border: Border(
+              right: BorderSide(
+                color: selectedThemeData.canvasColor.withValues(alpha: 0.08),
               ),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.primaryColor,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Close'),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                // TOP AREA
+                Container(
+                  width: double.infinity,
+                  color: Theme.of(context).primaryColor,
+                  child: Column(
+                    children: [
+                      // HAMBURGER
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: IconButton(
+                            icon: Icon(
+                              _isSidebarExpanded
+                                  ? Icons.menu_open_rounded
+                                  : Icons.menu_rounded,
+                              color: Colors.white,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isSidebarExpanded = !_isSidebarExpanded;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+
+                      // LOGO
+                      Container(
+                        width: double.infinity,
+                        height: 90,
+                        alignment: Alignment.center,
+                        child: Hero(
+                          tag: "logo",
+                          child: Image.asset(
+                            ImageConstant.inAppLogo,
+                            width: _isSidebarExpanded ? 140 : 140,
+                            height: _isSidebarExpanded ? 200 : 200,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+                    ],
+                  ),
+                ),
+
+                // PROFILE SECTION
+                if (_isSidebarExpanded)
+                  Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 25,
+                            backgroundColor: selectedThemeData.primaryColor
+                                .withValues(alpha: 0.22),
+                            backgroundImage: hasProfilePhoto
+                                ? NetworkImage(profilePhoto)
+                                : AssetImage(ImageConstant.profile)
+                                    as ImageProvider,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${userProvider.userObj.firstName ?? ''} ${userProvider.userObj.lastName ?? ''}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: selectedThemeData.canvasColor,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  userProvider.userObj.emailId ?? '',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: selectedThemeData.canvasColor
+                                        .withValues(alpha: 0.5),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // MENU LIST
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    children: [
+                      _buildDrawerTile(
+                        context,
+                        index: _homeIndex,
+                        icon: Icons.home,
+                        title: lang.home,
+                        homeContentType: "HOME",
+                      ),
+                      _buildDrawerTile(
+                        context,
+                        index: _seriesIndex,
+                        icon: Icons.video_library,
+                        title: lang.series,
+                      ),
+                      _buildDrawerTile(
+                        context,
+                        index: _searchIndex,
+                        icon: Icons.search,
+                        title: lang.search,
+                      ),
+                      _buildDrawerTile(
+                        context,
+                        index: _watchlistIndex,
+                        icon: Icons.playlist_play_rounded,
+                        title: "My List",
+                      ),
+                      _buildDrawerTile(
+                        context,
+                        index: _profileIndex,
+                        icon: Icons.person,
+                        title: lang.profile,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // BOTTOM ACTIONS
+                Column(
+                  children: [
+                    _buildDrawerAction(
+                      context,
+                      icon: Icons.logout_rounded,
+                      title: lang.logout,
+                      onTap: _logout,
+                      destructive: true,
+                    ),
+                    if (_isSidebarExpanded)
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          bottom: 12,
+                          top: 6,
+                        ),
+                        child: Text(
+                          "Version ${AppConstant.appVersion}",
+                          style: TextStyle(
+                            color: selectedThemeData.canvasColor
+                                .withValues(alpha: 0.35),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
             ),
-          ],
-        );
-      },
+          ),
+        ),
+      ),
     );
   }
 
@@ -251,108 +374,253 @@ class _NavigationPageState extends State<NavigationPage> {
     required int index,
     required IconData icon,
     required String title,
+    String? homeContentType,
   }) {
-    final selectedThemeData =
-        Provider.of<ThemeProvider>(context, listen: false).getTheme;
-    final isSelected = index == _currentIndex;
+    final selectedThemeData = Provider.of<ThemeProvider>(
+      context,
+      listen: false,
+    ).getTheme;
+
+    final isSelected = index == _currentIndex &&
+        (homeContentType == null || homeContentType == _homeContentType);
 
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: 8.0,
+        horizontal: 10,
+        vertical: 4,
       ),
-      child: ListTile(
-        leading: Icon(
-          icon,
-          color: isSelected
-              ? selectedThemeData.primaryColor
-              : selectedThemeData.canvasColor,
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: isSelected
-                ? selectedThemeData.primaryColor
-                : selectedThemeData.canvasColor,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            if (title == "Profile") {
+              Provider.of<UserProvider>(
+                context,
+                listen: false,
+              ).setValue();
+            }
+
+            _navigateTo(
+              index,
+              homeContentType: homeContentType,
+            );
+          },
+          child: OttTvFocus(
+            onTap: () {
+              if (title == "Profile") {
+                Provider.of<UserProvider>(
+                  context,
+                  listen: false,
+                ).setValue();
+              }
+
+              _navigateTo(
+                index,
+                homeContentType: homeContentType,
+              );
+            },
+            borderRadius: BorderRadius.circular(16),
+            scale: 1.04,
+            child: AnimatedContainer(
+              duration: const Duration(
+                milliseconds: 220,
+              ),
+              curve: Curves.easeOutCubic,
+              height: 60,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? selectedThemeData.primaryColor.withValues(
+                        alpha: 0.18,
+                      )
+                    : Colors.white.withValues(
+                        alpha: 0.02,
+                      ),
+                borderRadius: BorderRadius.circular(
+                  16,
+                ),
+                border: Border.all(
+                  color: isSelected
+                      ? selectedThemeData.primaryColor
+                      : Colors.white.withValues(
+                          alpha: 0.05,
+                        ),
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: selectedThemeData.primaryColor.withValues(
+                            alpha: 0.22,
+                          ),
+                          blurRadius: 18,
+                          offset: const Offset(
+                            0,
+                            8,
+                          ),
+                        ),
+                      ]
+                    : [],
+              ),
+              child: Row(
+                mainAxisAlignment: _isSidebarExpanded
+                    ? MainAxisAlignment.start
+                    : MainAxisAlignment.center,
+                children: [
+                  if (_isSidebarExpanded)
+                    const SizedBox(
+                      width: 14,
+                    ),
+                  Icon(
+                    icon,
+                    size: 24,
+                    color: isSelected
+                        ? selectedThemeData.primaryColor
+                        : selectedThemeData.canvasColor,
+                  ),
+                  if (_isSidebarExpanded)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          left: 14,
+                        ),
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: selectedThemeData.canvasColor,
+                            fontWeight:
+                                isSelected ? FontWeight.w800 : FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (_isSidebarExpanded && isSelected)
+                    Container(
+                      width: 4,
+                      height: 28,
+                      margin: const EdgeInsets.only(
+                        right: 14,
+                      ),
+                      decoration: BoxDecoration(
+                        color: selectedThemeData.primaryColor,
+                        borderRadius: BorderRadius.circular(
+                          20,
+                        ),
+                      ),
+                    ),
+                  if (!_isSidebarExpanded)
+                    const SizedBox(
+                      width: 14,
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
-        onTap: () {
-          if (title == "Profile") {
-            Provider.of<UserProvider>(context, listen: false).setValue();
-          }
-          _navigateTo(index);
-        },
       ),
     );
   }
 
-  void _navigateTo(int index) {
+  Widget _buildDrawerAction(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    bool destructive = false,
+  }) {
+    final theme = Provider.of<ThemeProvider>(
+      context,
+      listen: false,
+    ).getTheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 4,
+      ),
+      child: OttTvFocus(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        scale: 1.03,
+        child: Container(
+          height: 56,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: Colors.white.withValues(alpha: 0.02),
+          ),
+          child: Row(
+            mainAxisAlignment: _isSidebarExpanded
+                ? MainAxisAlignment.start
+                : MainAxisAlignment.center,
+            children: [
+              const SizedBox(width: 14),
+              Icon(
+                icon,
+                color: destructive ? theme.primaryColor : theme.canvasColor,
+              ),
+              if (_isSidebarExpanded)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 14),
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        color: destructive
+                            ? theme.primaryColor
+                            : theme.canvasColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _navigateTo(
+    int index, {
+    String? homeContentType,
+  }) {
     setState(() {
       _currentIndex = index;
+
+      if (homeContentType != null) {
+        _homeContentType = homeContentType;
+      }
     });
+
+    // Close drawer safely for mobile
     if (Navigator.canPop(context)) {
-      Navigator.of(context).pop(); // Close the drawer safely
+      Navigator.of(context).pop();
     }
   }
 
-  Widget _buildDrawerContent(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final selectedThemeData = themeProvider.getTheme;
-    final isDark = selectedThemeData.brightness == Brightness.dark;
-    final lang = AppLocalizations.of(context)!;
+  Future<void> _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('isLoggedIn');
+    final localSharePreferences = LocalSharePreferences();
+    localSharePreferences.setBool(
+      SharedPreferencesConstant.isUserLoggedIn,
+      false,
+    );
+    localSharePreferences.setString(
+      SharedPreferencesConstant.currentUser,
+      '',
+    );
 
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        DrawerHeader(
-          decoration: BoxDecoration(
-            color: selectedThemeData.primaryColor,
-          ),
-          child: Hero(
-            tag: "logo",
-            child: ClipRRect(
-              borderRadius: BorderRadiusGeometry.circular(25),
-              child: Image.asset(
-                ImageConstant.logo,
-              ),
-            ),
-          ),
-        ),
-        Row(
-          children: [
-            Expanded(
-              child: Divider(
-                color: selectedThemeData.primaryColor,
-                thickness: 1,
-              ),
-            ),
-            IconButton(
-              tooltip: "Toggle Theme",
-              icon: Icon(
-                isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round,
-                color: selectedThemeData.canvasColor,
-              ),
-              onPressed: () {
-                themeProvider.toggleTheme();
-              },
-            ),
-          ],
-        ),
-        _buildDrawerTile(context, index: 0, icon: Icons.home, title: lang.home),
-        _buildDrawerTile(context,
-            index: 1, icon: Icons.video_library, title: lang.series),
-        /*    _buildDrawerTile(context,
-            index: 2, icon: Icons.play_circle_fill_sharp, title: 'Mini Series'), */
-        _buildDrawerTile(context,
-            index: 3, icon: Icons.search, title: lang.search),
-        _buildDrawerTile(context,
-            index: 4, icon: Icons.movie, title: lang.watchlist),
-        _buildDrawerTile(context,
-            index: 6, icon: Icons.upcoming, title: lang.upcoming),
-        _buildDrawerTile(context,
-            index: 7, icon: Icons.account_balance_wallet, title: lang.wallet),
-        _buildDrawerTile(context,
-            index: 5, icon: Icons.person, title: lang.profile),
-      ],
+    if (!mounted) return;
+    Provider.of<DashboardProvider>(context, listen: false).clear();
+    Provider.of<BookmarkProvider>(context, listen: false).clear();
+    Provider.of<UserProvider>(context, listen: false).clear();
+    Provider.of<UserProvider>(context, listen: false).disposeData();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => LoginCard()),
     );
   }
 }

@@ -11,6 +11,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart' as youtube;
 
 import 'package:ott/app/provider/themeProvider.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import '../../../provider/offline_download_provider.dart';
@@ -381,8 +382,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
     final position =
         _youtubeController?.value.position ?? _player?.state.position;
-    final duration = _youtubeController?.value.metaData.duration ??
-        _player?.state.duration;
+    final duration =
+        _youtubeController?.value.metaData.duration ?? _player?.state.duration;
 
     if (position == null || duration == null) return;
 
@@ -540,6 +541,85 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
   }
 
+  KeyEventResult _handlePlaybackKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.space ||
+        key == LogicalKeyboardKey.mediaPlayPause) {
+      _togglePlayback();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowRight ||
+        key == LogicalKeyboardKey.mediaTrackNext) {
+      _seekBy(const Duration(seconds: 10));
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.mediaTrackPrevious) {
+      _seekBy(const Duration(seconds: -10));
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.escape ||
+        key == LogicalKeyboardKey.backspace) {
+      unawaited(_handleExit());
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  void _togglePlayback() {
+    final youtubeController = _youtubeController;
+    if (youtubeController != null) {
+      if (youtubeController.value.isPlaying) {
+        youtubeController.pause();
+      } else {
+        youtubeController.play();
+      }
+      return;
+    }
+
+    final player = _player;
+    if (player == null) return;
+    if (player.state.playing) {
+      unawaited(player.pause());
+    } else {
+      unawaited(player.play());
+    }
+  }
+
+  void _seekBy(Duration delta) {
+    final youtubeController = _youtubeController;
+    if (youtubeController != null) {
+      final current = youtubeController.value.position;
+      final duration = youtubeController.value.metaData.duration;
+      final target = _clampDuration(current + delta, duration);
+      youtubeController.seekTo(target);
+      return;
+    }
+
+    final player = _player;
+    if (player == null) return;
+    final target = _clampDuration(
+      player.state.position + delta,
+      player.state.duration,
+    );
+    unawaited(player.seek(target));
+  }
+
+  Duration _clampDuration(Duration value, Duration max) {
+    if (value < Duration.zero) return Duration.zero;
+    if (max > Duration.zero && value > max) return max;
+    return value;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>().getTheme;
@@ -552,52 +632,61 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       child: Scaffold(
         backgroundColor: Colors.black,
         appBar: null,
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            Positioned.fill(
-              child: _loading
-                  ? Center(
-                      child: CircularProgressIndicator(
-                        color: theme.primaryColor,
-                      ),
-                    )
-                  : _hasPlaybackError
-                      ? const Center(
-                          child: Text(
-                            'Video unavailable',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        )
-                      : ResponsiveWidget.isDesktop(context)
-                          ? _desktopPlayer()
-                          : _mobilePlayer(),
-            ),
-            Positioned(
-              top: 8,
-              left: 8,
-              child: SafeArea(child: _backButton()),
-            ),
-          ],
+        body: Focus(
+          autofocus: true,
+          onKeyEvent: _handlePlaybackKey,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Positioned.fill(
+                child: _loading
+                    ? Center(
+                        child: CircularProgressIndicator(
+                          color: theme.primaryColor,
+                        ),
+                      )
+                    : _hasPlaybackError
+                        ? const Center(
+                            child: Text(
+                              'Video unavailable',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          )
+                        : ResponsiveWidget.isDesktop(context)
+                            ? _desktopPlayer()
+                            : _mobilePlayer(),
+              ),
+              Positioned(
+                top: 8,
+                left: 8,
+                child: SafeArea(child: _backButton()),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _backButton() {
-    return Material(
-      color: Colors.black.withOpacity(0.45),
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: _handleExit,
-        child: const SizedBox(
-          height: 36,
-          width: 36,
-          child: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Colors.white,
-            size: 18,
+    return OttTvFocus(
+      onTap: _handleExit,
+      borderRadius: BorderRadius.circular(18),
+      scale: 1.1,
+      child: Material(
+        color: Colors.black.withOpacity(0.45),
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: _handleExit,
+          child: const SizedBox(
+            height: 36,
+            width: 36,
+            child: Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
           ),
         ),
       ),

@@ -7,6 +7,7 @@ import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/shorts.dart';
@@ -27,28 +28,29 @@ class BookmarkPosterCard extends StatelessWidget {
         ? movie.posterUrlList!.first
         : "";
 
-    return Material(
-      color: Colors.transparent,
+    return OttTvFocus(
       borderRadius: BorderRadius.circular(12),
-      child: InkWell(
+      scale: 1.04,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => movie.isFeatured ?? true
+                ? TrailerPage(
+                    trailerUrl: movie.trailerUrl ?? "",
+                    isTrailerUrl: true,
+                    content: movie,
+                  )
+                : movie.type!.toLowerCase() == 'movie'
+                    ? MovieDetailsPage(movieId: movie.id ?? 0)
+                    : SeriesDetailsPage(
+                        seriesId: movie.id ?? 0, content: movie),
+          ),
+        );
+      },
+      child: Material(
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => movie.isFeatured ?? true
-                  ? TrailerPage(
-                      trailerUrl: movie.trailerUrl ?? "",
-                      isTrailerUrl: true,
-                      content: movie,
-                    )
-                  : movie.type!.toLowerCase() == 'movie'
-                      ? MovieDetailsPage(movieId: movie.id ?? 0)
-                      : SeriesDetailsPage(
-                          seriesId: movie.id ?? 0, content: movie),
-            ),
-          );
-        },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -142,29 +144,30 @@ class ShortBookmarkPosterCard extends StatelessWidget {
     final bool isBookmarked =
         bookmarkProvider.isShortBookmarkedLocally(short.id);
 
-    return Material(
-      color: Colors.transparent,
+    return OttTvFocus(
       borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () async {
-          final user =
-              await LocalSharePreferences.localSharePreferences.getUser();
-          await context
-              .read<ShortProvider>()
-              .fetchShortDetail(short.id, user?.id ?? 1);
+      scale: 1.04,
+      onTap: () async {
+        final user =
+            await LocalSharePreferences.localSharePreferences.getUser();
+        await context
+            .read<ShortProvider>()
+            .fetchShortDetail(short.id, user?.id ?? 1);
 
-          if (context.read<ShortProvider>().shortDetail != null) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ShortsPlayerPage(
-                  short: context.read<ShortProvider>().shortDetail!,
-                ),
+        if (context.read<ShortProvider>().shortDetail != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ShortsPlayerPage(
+                short: context.read<ShortProvider>().shortDetail!,
               ),
-            );
-          }
-        },
+            ),
+          );
+        }
+      },
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
         child: Stack(
           children: [
             ClipRRect(
