@@ -540,6 +540,80 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
   }
 
+  KeyEventResult _handleRemoteKey(FocusNode node, KeyEvent event) {
+    if (!ResponsiveWidget.isTabletOrTv(context) || event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.space ||
+        key == LogicalKeyboardKey.gameButtonA) {
+      _togglePlayback();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowRight) {
+      _seekBy(const Duration(seconds: 10));
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      _seekBy(const Duration(seconds: -10));
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.escape ||
+        key == LogicalKeyboardKey.goBack ||
+        key == LogicalKeyboardKey.browserBack) {
+      unawaited(_handleExit());
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  void _togglePlayback() {
+    final youtubeController = _youtubeController;
+    if (youtubeController != null) {
+      if (youtubeController.value.isPlaying) {
+        youtubeController.pause();
+      } else {
+        youtubeController.play();
+      }
+      return;
+    }
+
+    final player = _player;
+    if (player != null) {
+      unawaited(player.playOrPause());
+    }
+  }
+
+  void _seekBy(Duration delta) {
+    final youtubeController = _youtubeController;
+    if (youtubeController != null) {
+      final duration = youtubeController.value.metaData.duration;
+      final next = youtubeController.value.position + delta;
+      final clamped = next < Duration.zero
+          ? Duration.zero
+          : duration > Duration.zero && next > duration
+              ? duration
+              : next;
+      youtubeController.seekTo(clamped);
+      return;
+    }
+
+    final player = _player;
+    if (player != null) {
+      final duration = player.state.duration;
+      final next = player.state.position + delta;
+      final clamped = next < Duration.zero
+          ? Duration.zero
+          : duration > Duration.zero && next > duration
+              ? duration
+              : next;
+      unawaited(player.seek(clamped));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>().getTheme;
@@ -552,33 +626,37 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       child: Scaffold(
         backgroundColor: Colors.black,
         appBar: null,
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            Positioned.fill(
-              child: _loading
-                  ? Center(
-                      child: CircularProgressIndicator(
-                        color: theme.primaryColor,
-                      ),
-                    )
-                  : _hasPlaybackError
-                      ? const Center(
-                          child: Text(
-                            'Video unavailable',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        )
-                      : ResponsiveWidget.isDesktop(context)
-                          ? _desktopPlayer()
-                          : _mobilePlayer(),
-            ),
-            Positioned(
-              top: 8,
-              left: 8,
-              child: SafeArea(child: _backButton()),
-            ),
-          ],
+        body: Focus(
+          autofocus: ResponsiveWidget.isTabletOrTv(context),
+          onKeyEvent: _handleRemoteKey,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Positioned.fill(
+                child: _loading
+                    ? Center(
+                        child: CircularProgressIndicator(
+                          color: theme.primaryColor,
+                        ),
+                      )
+                    : _hasPlaybackError
+                        ? const Center(
+                            child: Text(
+                              'Video unavailable',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          )
+                        : ResponsiveWidget.isDesktop(context)
+                            ? _desktopPlayer()
+                            : _mobilePlayer(),
+              ),
+              Positioned(
+                top: 8,
+                left: 8,
+                child: SafeArea(child: _backButton()),
+              ),
+            ],
+          ),
         ),
       ),
     );

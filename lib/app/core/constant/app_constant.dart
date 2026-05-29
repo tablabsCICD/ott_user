@@ -8,8 +8,9 @@ class AppConstant {
   );
   static const String razorpayMerchantName = 'Filmytell';
   static const String razorpayLogoUrl = String.fromEnvironment(
-    'https://filmytell-document.s3.ap-south-1.amazonaws.com/documents/filmytell-logo-1778238183653.jpeg',
-    defaultValue: '',
+    'RAZORPAY_LOGO_URL',
+    defaultValue:
+        'https://filmytell-document.s3.ap-south-1.amazonaws.com/documents/filmytell-logo-1778238183653.jpeg',
   );
   static const playStoreLink =
       "https://play.google.com/store/apps/details?id=com.filmytell.ott";

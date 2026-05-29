@@ -1,5 +1,7 @@
-import 'package:flutter/cupertino.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
@@ -7,6 +9,7 @@ import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
 import 'package:ott/app/pages/movie%20details%20page/component/actionButtonWidget.dart';
+import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/offline_download_provider.dart';
@@ -40,6 +43,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   final TrailerPreviewController _trailerController =
       TrailerPreviewController();
   final TrailerPreviewController _teaserController = TrailerPreviewController();
+  final ScrollController _tvScrollController = ScrollController();
+  final FocusNode _heroFocusNode = FocusNode(debugLabel: 'movieHero');
+  Timer? _heroTrailerTimer;
+  bool _isHeroTrailerPlaying = false;
 
   @override
   void initState() {
@@ -78,6 +85,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
       if (mounted) {
         await Provider.of<OfflineDownloadProvider>(context, listen: false)
             .refreshStatus(loadedContent);
+        await Provider.of<BookmarkProvider>(context, listen: false)
+            .getUserBookmarks();
+        await dashboardProvider.getContinueWatchedMovieList("MOVIE");
       }
     } catch (error) {
       debugPrint("Movie details fetch error: $error");
@@ -100,6 +110,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   void dispose() {
     _trailerController.pause?.call();
     _teaserController.pause?.call();
+    _heroTrailerTimer?.cancel();
+    _tvScrollController.dispose();
+    _heroFocusNode.dispose();
     super.dispose();
   }
 
@@ -178,7 +191,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
       appBar: AppBar(
         forceMaterialTransparency: true,
         foregroundColor: Colors.white,
-        title: ResponsiveWidget.isDesktop(context)
+        title: !ResponsiveWidget.isMobile(context)
             ? const Text('')
             : StarRatingWidget(
                 rating: double.parse(
@@ -208,8 +221,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
 
             return Stack(
               children: [
-                ResponsiveWidget.isDesktop(context)
-                    ? _buildDesktopView(content, selectedThemeData)
+                !ResponsiveWidget.isMobile(context)
+                    ? _buildCinematicTvView(content, selectedThemeData)
                     : _buildMobileView(content, selectedThemeData),
               ],
             );
@@ -267,6 +280,853 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     );
   }
 
+  Widget _buildCinematicTvView(Content content, ThemeData selectedThemeData) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_isHeroTrailerPlaying && _heroTrailerTimer == null) {
+        _queueHeroTrailerAutoplay();
+      }
+    });
+
+    return Shortcuts(
+      shortcuts: const {
+        SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
+        SingleActivator(LogicalKeyboardKey.goBack): DismissIntent(),
+        SingleActivator(LogicalKeyboardKey.browserBack): DismissIntent(),
+      },
+      child: Actions(
+        actions: {
+          DismissIntent: CallbackAction<DismissIntent>(
+            onInvoke: (_) {
+              if (Navigator.canPop(context)) Navigator.pop(context);
+              return null;
+            },
+          ),
+        },
+        child: FocusTraversalGroup(
+          policy: OrderedTraversalPolicy(),
+          child: ColoredBox(
+            color: Colors.black,
+            child: CustomScrollView(
+              controller: _tvScrollController,
+              slivers: [
+                SliverToBoxAdapter(
+                  child: _buildTvHero(content, selectedThemeData),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      ResponsiveWidget.isDesktop(context) ? 64 : 32,
+                      10,
+                      ResponsiveWidget.isDesktop(context) ? 64 : 32,
+                      56,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTvCastRail(context, content, selectedThemeData),
+                        const SizedBox(height: 34),
+                        _buildTvRecommendationRails(
+                          context,
+                          content,
+                          selectedThemeData,
+                        ),
+                        const SizedBox(height: 34),
+                        _buildDetailsSection(context, content),
+                        const SizedBox(height: 28),
+                        _buildGallery(context, content, previewAutoPlay: false),
+                        const SizedBox(height: 28),
+                        _buildRatingAndReviewsSection(context, content),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvHero(Content content, ThemeData theme) {
+    final size = MediaQuery.of(context).size;
+    final heroHeight = (size.height * 0.78).clamp(560.0, 760.0);
+    final backdrop = _heroImage(content);
+    final hasResume = (content.watchedSeconds ?? 0) > 5 ||
+        (content.watchedPercentage ?? 0) > 0;
+
+    return Focus(
+      focusNode: _heroFocusNode,
+      autofocus: true,
+      onFocusChange: (hasFocus) {
+        if (hasFocus) {
+          _queueHeroTrailerAutoplay();
+        } else {
+          _stopHeroTrailer();
+        }
+      },
+      child: SizedBox(
+        height: heroHeight,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            _buildBackground(backdrop),
+            AnimatedOpacity(
+              duration: const Duration(milliseconds: 520),
+              opacity: _isHeroTrailerPlaying ? 0.74 : 1,
+              child: const SizedBox.expand(),
+            ),
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
+                  colors: [Colors.black12, Colors.black87, Colors.black],
+                  stops: [0, 0.48, 1],
+                ),
+              ),
+            ),
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.black54, Colors.transparent, Colors.black],
+                  stops: [0, 0.46, 1],
+                ),
+              ),
+            ),
+            Positioned(
+              left: ResponsiveWidget.isDesktop(context) ? 64 : 32,
+              right: size.width * 0.43,
+              bottom: 54,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    content.title ?? '',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: ResponsiveWidget.isDesktop(context) ? 56 : 42,
+                      height: 1.02,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTvMetaRow(content, theme),
+                  const SizedBox(height: 16),
+                  Text(
+                    content.description ?? 'N/A',
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.82),
+                      fontSize: 17,
+                      height: 1.42,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  content.isFeatured == true
+                      ? _buildReleaseDateHighlight(context, content)
+                      : _buildTvActionButtons(context, content, theme,
+                          hasResume: hasResume),
+                ],
+              ),
+            ),
+            Positioned(
+              right: ResponsiveWidget.isDesktop(context) ? 64 : 32,
+              bottom: 70,
+              width: ResponsiveWidget.isDesktop(context) ? 500 : 390,
+              child: _buildTvTrailerPanel(content, theme),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvTrailerPanel(Content content, ThemeData theme) {
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 500),
+      opacity: _isHeroTrailerPlaying ? 1 : 0.76,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white.withOpacity(0.16)),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Stack(
+            children: [
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: TrailerPreview(
+                  trailerUrl: content.teaserOrTrailerUrl,
+                  content: content,
+                  controller: _trailerController,
+                  autoPlay: false,
+                  muted: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvMetaRow(Content content, ThemeData theme) {
+    final genres = (content.genreList ?? const <String>[])
+        .where((item) => item.trim().isNotEmpty)
+        .take(2)
+        .join(' / ');
+    final languages = (content.languageList ?? const <LanguageList>[])
+        .map((item) => item.language)
+        .whereType<String>()
+        .where((item) => item.trim().isNotEmpty)
+        .take(2)
+        .join(' / ');
+    final items = <String>[
+      '${(content.ratings ?? 0).toStringAsFixed(1)} rating',
+      if (_releaseYearText(content.releaseDate).isNotEmpty)
+        _releaseYearText(content.releaseDate),
+      if ((content.runtime ?? 0) > 0) '${content.runtime} min',
+      if (genres.isNotEmpty) genres,
+      if (languages.isNotEmpty) languages,
+      _qualityBadge(content),
+      if ((content.ageRating ?? '').trim().isNotEmpty)
+        content.ageRating!.trim(),
+    ];
+
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: items.map((item) => _buildTvMetaPill(item)).toList(),
+    );
+  }
+
+  Widget _buildTvMetaPill(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.09),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvActionButtons(
+    BuildContext context,
+    Content content,
+    ThemeData theme, {
+    required bool hasResume,
+  }) {
+    return Wrap(
+      spacing: 14,
+      runSpacing: 14,
+      children: [
+        _tvActionButton(
+          theme: theme,
+          label: content.isRental == true
+              ? (hasResume ? 'Resume' : 'Watch Now')
+              : 'Rent Rs ${content.price ?? 0}',
+          icon: content.isRental == true
+              ? (hasResume ? Icons.restart_alt : Icons.play_arrow_rounded)
+              : Icons.lock_open_rounded,
+          emphasized: true,
+          onPressed: () {
+            if (content.isRental == true) {
+              _playMovie(content);
+            } else {
+              showDialog(
+                context: context,
+                builder: (_) => _buildConfirmationBox(context, content),
+              );
+            }
+          },
+        ),
+        _tvActionButton(
+          theme: theme,
+          label: 'Watch Trailer',
+          icon: Icons.movie_creation_outlined,
+          onPressed: () => _openTrailer(content),
+        ),
+        _buildTvDownloadButton(context, content, theme),
+        _tvActionButton(
+          theme: theme,
+          label: 'Share',
+          icon: Icons.ios_share_rounded,
+          onPressed: () => showContentShareSheet(
+            context,
+            content,
+            contentType: DeepLinkContentType.movie,
+            unavailableMessage: "Movie details are not available yet",
+          ),
+        ),
+        _tvActionButton(
+          theme: theme,
+          label: 'Gift',
+          icon: LucideIcons.gift,
+          onPressed: () => _showGiftDialog(context, content),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTvBookmarkButton(
+    BuildContext context,
+    Content content,
+    ThemeData theme,
+  ) {
+    final bookmarkProvider = context.watch<BookmarkProvider>();
+    final id = content.id ?? 0;
+    final isBookmarked = bookmarkProvider.isBookmarkedLocally(id);
+
+    return _tvActionButton(
+      theme: theme,
+      label: isBookmarked ? 'Watchlisted' : 'Add to Watchlist',
+      icon: isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+      onPressed: id == 0
+          ? null
+          : () async {
+              final wasBookmarked =
+                  context.read<BookmarkProvider>().isBookmarkedLocally(id);
+              await context.read<BookmarkProvider>().toggleBookmark(content);
+              if (!mounted) return;
+              CustomToast.show(
+                context,
+                wasBookmarked
+                    ? '${content.title} removed from bookmarks'
+                    : '${content.title} added to bookmarks',
+                isSuccess: true,
+              );
+            },
+    );
+  }
+
+  Widget _buildTvDownloadButton(
+    BuildContext context,
+    Content content,
+    ThemeData theme,
+  ) {
+    if (!_canDownloadOffline(content)) {
+      return _tvActionButton(
+        theme: theme,
+        label: 'Download',
+        icon: Icons.download_rounded,
+        onPressed: () => CustomToast.show(
+          context,
+          'Download is not available for this movie.',
+          isSuccess: false,
+        ),
+      );
+    }
+
+    final contentId = content.id;
+    if (contentId == null) return const SizedBox.shrink();
+
+    return Consumer<OfflineDownloadProvider>(
+      builder: (context, offlineProvider, _) {
+        final isDownloading = offlineProvider.isDownloading(contentId);
+        final isDownloaded = offlineProvider.isDownloaded(contentId);
+        final progress = offlineProvider.progressFor(contentId);
+        return _tvActionButton(
+          theme: theme,
+          label: isDownloading
+              ? 'Downloading ${(progress * 100).clamp(0, 100).toStringAsFixed(0)}%'
+              : isDownloaded
+                  ? 'Downloaded'
+                  : 'Download',
+          icon: isDownloaded ? Icons.download_done_rounded : Icons.download,
+          onPressed: isDownloading
+              ? null
+              : () async {
+                  final result = isDownloaded
+                      ? await offlineProvider.deleteContent(content)
+                      : await offlineProvider.downloadContent(content);
+                  if (!mounted) return;
+                  CustomToast.show(
+                    context,
+                    result['message']?.toString() ?? 'Download updated',
+                    isSuccess: result['success'] == true,
+                  );
+                },
+        );
+      },
+    );
+  }
+
+  Widget _tvActionButton({
+    required ThemeData theme,
+    required String label,
+    required IconData icon,
+    required VoidCallback? onPressed,
+    bool emphasized = false,
+  }) {
+    return _MovieTvFocusableScale(
+      onPressed: onPressed,
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 24),
+        label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: emphasized
+              ? theme.primaryColor
+              : theme.primaryColor.withOpacity(0.82),
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: Colors.white.withOpacity(0.08),
+          disabledForegroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+          minimumSize: const Size(0, 56),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          shadowColor: theme.primaryColor.withOpacity(0.45),
+          elevation: emphasized ? 12 : 4,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvCastRail(
+    BuildContext context,
+    Content content,
+    ThemeData theme,
+  ) {
+    final provider = context.watch<DashboardProvider>();
+    final fallbackCastList = (content.castList ?? const [])
+        .where((name) => name.trim().isNotEmpty)
+        .map((name) => CastMember(name: name.trim()))
+        .toList();
+    final castList =
+        provider.castList.isNotEmpty ? provider.castList : fallbackCastList;
+
+    if (provider.isLoadingCast) {
+      return Center(
+        child: CircularProgressIndicator(color: theme.primaryColor),
+      );
+    }
+
+    if (castList.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildTvSectionTitle('Cast & Crew'),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 172,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: castList.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            itemBuilder: (context, index) =>
+                _buildTvCastCard(context, castList[index], theme),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTvCastCard(
+    BuildContext context,
+    CastMember cast,
+    ThemeData theme,
+  ) {
+    final imageUrl = cast.image?.trim() ?? '';
+    final displayName =
+        (cast.name?.trim().isNotEmpty ?? false) ? cast.name!.trim() : 'N/A';
+    final role =
+        (cast.role?.trim().isNotEmpty ?? false) ? cast.role!.trim() : '';
+
+    return _MovieTvFocusableScale(
+      width: 132,
+      onPressed: () {},
+      child: SizedBox(
+        width: 132,
+        child: Column(
+          children: [
+            Container(
+              height: 104,
+              width: 104,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.08),
+                border: Border.all(color: Colors.white.withOpacity(0.14)),
+              ),
+              child: ClipOval(
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            _buildCastInitial(theme, displayName),
+                      )
+                    : _buildCastInitial(theme, displayName),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              displayName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            if (role.isNotEmpty)
+              Text(
+                role,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.58),
+                  fontSize: 12,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvRecommendationRails(
+    BuildContext context,
+    Content current,
+    ThemeData theme,
+  ) {
+    final dashboard = context.watch<DashboardProvider>();
+    final rows = dashboard.dashboardData
+        .where((row) => (row.movies ?? const <Content>[]).isNotEmpty)
+        .take(3)
+        .toList();
+    final continueItems = dashboard.continueWatchedMovies
+        .where((item) => item.id != null && item.id != current.id)
+        .toList();
+
+    if (rows.isEmpty && continueItems.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (continueItems.isNotEmpty) ...[
+          _buildTvContentRail(
+            context,
+            'Continue Watching',
+            continueItems,
+            theme,
+          ),
+          const SizedBox(height: 28),
+        ],
+        for (final row in rows) ...[
+          _buildTvContentRail(
+            context,
+            _railTitle(row.category),
+            (row.movies ?? const <Content>[])
+                .where((item) => item.id != current.id)
+                .toList(),
+            theme,
+          ),
+          const SizedBox(height: 28),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildTvContentRail(
+    BuildContext context,
+    String title,
+    List<Content> items,
+    ThemeData theme,
+  ) {
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildTvSectionTitle(title),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 250,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            itemBuilder: (context, index) =>
+                _buildTvMovieCard(context, items[index], theme),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTvMovieCard(
+    BuildContext context,
+    Content content,
+    ThemeData theme,
+  ) {
+    final image = _heroImage(content) ?? '';
+    return _MovieTvFocusableScale(
+      width: 300,
+      onPressed: content.id == null
+          ? null
+          : () {
+              _stopHeroTrailer();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MovieDetailsPage(movieId: content.id!),
+                ),
+              );
+            },
+      child: SizedBox(
+        width: 300,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                image,
+                width: 300,
+                height: 170,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 300,
+                  height: 170,
+                  color: Colors.grey.shade900,
+                  child: const Icon(Icons.movie, color: Colors.white54),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              content.title ?? 'Untitled',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              [
+                if ((content.ageRating ?? '').isNotEmpty) content.ageRating,
+                if ((content.genreList ?? const <String>[]).isNotEmpty)
+                  content.genreList!.first,
+              ].whereType<String>().join('  |  '),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: Colors.white.withOpacity(0.58)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvSectionTitle(String title) {
+    final theme = Theme.of(context);
+    return Text(
+      title,
+      style: TextStyle(
+        color: theme.primaryColor,
+        fontSize: 24,
+        fontWeight: FontWeight.w900,
+      ),
+    );
+  }
+
+  String _railTitle(String? category) {
+    final raw = category?.trim();
+    if (raw == null || raw.isEmpty) return 'More Like This';
+    if (raw.toLowerCase().contains('trending')) return 'Trending';
+    if (raw.toLowerCase().contains('latest')) return 'Recommended';
+    if (raw.toLowerCase().contains('upcoming')) return 'More Like This';
+    return raw;
+  }
+
+  void _queueHeroTrailerAutoplay() {
+    _heroTrailerTimer?.cancel();
+    _heroTrailerTimer = Timer(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      _heroTrailerTimer = null;
+      _trailerController.mute?.call();
+      _trailerController.play?.call();
+      setState(() => _isHeroTrailerPlaying = true);
+    });
+  }
+
+  void _stopHeroTrailer() {
+    _heroTrailerTimer?.cancel();
+    _heroTrailerTimer = null;
+    _trailerController.pause?.call();
+    if (_isHeroTrailerPlaying) {
+      setState(() => _isHeroTrailerPlaying = false);
+    }
+  }
+
+  Future<void> _openTrailer(Content content) async {
+    _stopHeroTrailer();
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TrailerPage(
+          trailerUrl: content.teaserOrTrailerUrl,
+          isTrailerUrl: true,
+          content: content,
+        ),
+      ),
+    );
+  }
+
+  void _showGiftDialog(BuildContext context, Content movie) {
+    final theme = Theme.of(context);
+    final TextEditingController countController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: theme.cardColor,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: SizedBox(
+              width: 420,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(LucideIcons.gift,
+                          color: theme.primaryColor, size: 28),
+                      const SizedBox(width: 10),
+                      Text(
+                        "Gift This Movie",
+                        style: theme.textTheme.titleLarge
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Enter how many people you'd like to gift this movie to.",
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: theme.canvasColor),
+                  ),
+                  const SizedBox(height: 10),
+                  CustomTextField(
+                    backgroundColor: theme.scaffoldBackgroundColor,
+                    isDigits: true,
+                    controller: countController,
+                    hintText: "Number of recipients",
+                    textInputType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: Text("Cancel",
+                            style: TextStyle(color: theme.canvasColor)),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primaryColor,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                        ),
+                        onPressed: () {
+                          final count = int.tryParse(countController.text);
+                          if (count == null || count <= 0) {
+                            CustomToast.show(
+                              dialogContext,
+                              'Please enter valid number',
+                              isSuccess: false,
+                            );
+                            return;
+                          }
+
+                          Navigator.pop(dialogContext);
+                          _stopHeroTrailer();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => MovieBillingPage(
+                                movie: movie,
+                                giftCount: count,
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text("Continue",
+                            style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    ).whenComplete(countController.dispose);
+  }
+
+  String? _heroImage(Content content) {
+    final posters = content.posterUrlList ?? const <String>[];
+    if (posters.isNotEmpty) return posters.first;
+    return null;
+  }
+
+  String _releaseYearText(dynamic releaseDate) {
+    final text = releaseDate?.toString().trim() ?? '';
+    if (text.length >= 4) return text.substring(0, 4);
+    return text;
+  }
+
+  String _qualityBadge(Content content) {
+    final formats = [
+      ...(content.audioFormatList ?? const <String>[]),
+      ...(content.subtitleLanguageList ?? const <String>[]),
+    ].join(' ').toLowerCase();
+    if (formats.contains('4k') || formats.contains('uhd')) return '4K';
+    return 'HD';
+  }
+
+  // Kept as the legacy non-mobile layout reference; TV/tablet now use
+  // _buildCinematicTvView while mobile remains on _buildMobileView.
+  // ignore: unused_element
   Widget _buildDesktopView(Content content, ThemeData selectedThemeData) {
     return Stack(
       fit: StackFit.expand,
@@ -601,7 +1461,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
         : Container(color: Colors.black);
   }
 
-  Widget _buildGallery(BuildContext context, Content content) {
+  Widget _buildGallery(
+    BuildContext context,
+    Content content, {
+    bool previewAutoPlay = true,
+  }) {
     final theme = Theme.of(context);
     final posters = content.posterUrlList ?? [];
     final teaserUrl = _galleryVideoUrl(content);
@@ -638,6 +1502,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                       trailerUrl: teaserUrl,
                       content: content,
                       controller: _teaserController,
+                      autoPlay: previewAutoPlay,
+                      muted: !previewAutoPlay,
                     ),
                   ),
                 );
@@ -1571,6 +2437,72 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           },
         );
       },
+    );
+  }
+}
+
+class _MovieTvFocusableScale extends StatefulWidget {
+  const _MovieTvFocusableScale({
+    required this.child,
+    required this.onPressed,
+    this.width,
+  });
+
+  final Widget child;
+  final VoidCallback? onPressed;
+  final double? width;
+
+  @override
+  State<_MovieTvFocusableScale> createState() => _MovieTvFocusableScaleState();
+}
+
+class _MovieTvFocusableScaleState extends State<_MovieTvFocusableScale> {
+  bool _focused = false;
+  bool _hovered = false;
+
+  bool get _active => _focused || _hovered;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return FocusableActionDetector(
+      enabled: widget.onPressed != null,
+      mouseCursor: widget.onPressed == null
+          ? SystemMouseCursors.basic
+          : SystemMouseCursors.click,
+      onShowFocusHighlight: (value) {
+        if (value) {
+          Scrollable.ensureVisible(
+            context,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+          );
+        }
+        if (mounted) setState(() => _focused = value);
+      },
+      onShowHoverHighlight: (value) {
+        if (mounted) setState(() => _hovered = value);
+      },
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            widget.onPressed?.call();
+            return null;
+          },
+        ),
+      },
+      child: AnimatedScale(
+        scale: _active ? 1.055 : 1,
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOutCubic,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          width: widget.width,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
+          child: widget.child,
+        ),
+      ),
     );
   }
 }

@@ -58,6 +58,8 @@ Future<bool?> showGiftClaimDialog(
                       backgroundColor: theme.scaffoldBackgroundColor,
                       isDigits: false,
                       controller: couponCodeController,
+                      autofocus: ResponsiveWidget.isTabletOrTv(dialogContext),
+                      textInputAction: TextInputAction.done,
                       hintText: "Enter 16 Digit Number",
                       textInputType: TextInputType.text,
                       capitalization: TextCapitalization.characters,

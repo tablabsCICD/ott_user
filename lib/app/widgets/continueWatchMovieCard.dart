@@ -388,9 +388,27 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     final highlightColor = theme.brightness == Brightness.light
         ? const Color.fromARGB(255, 185, 169, 169)
         : const Color.fromARGB(255, 58, 49, 49);
-    return Stack(
-      children: [
-        MouseRegion(
+    return Stack(children: [
+      Focus(
+        canRequestFocus: ResponsiveWidget.isTabletOrTv(context),
+        onFocusChange: (hasFocus) {
+          if (ResponsiveWidget.isTabletOrTv(context)) {
+            _handleHover(hasFocus);
+          }
+        },
+        onKeyEvent: (node, event) {
+          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+          final key = event.logicalKey;
+          if (key == LogicalKeyboardKey.enter ||
+              key == LogicalKeyboardKey.select ||
+              key == LogicalKeyboardKey.space ||
+              key == LogicalKeyboardKey.gameButtonA) {
+            _playContent();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: MouseRegion(
           onEnter: (_) => _handleHover(true),
           onExit: (_) => _handleHover(false),
           child: GestureDetector(
@@ -446,11 +464,11 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
             ),
           ),
         ),
+      ),
+    ]);
 
-        /*/// ⋮ OPTIONS BUTTON
+    /*/// ⋮ OPTIONS BUTTON
         _optionButton(context, widget.movie),*/
-      ],
-    );
   }
 
   Widget _buildMediaPreview(
@@ -723,9 +741,8 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     var contentUrl = contentToPlay.contentUrl;
 
     if (contentUrl == null || contentUrl.trim().isEmpty) {
-      final fetchedContent = await context
-          .read<DashboardProvider>()
-          .getContentById(movie.id!);
+      final fetchedContent =
+          await context.read<DashboardProvider>().getContentById(movie.id!);
       if (!mounted) return;
 
       if (fetchedContent != null) {
@@ -755,8 +772,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
           content: contentToPlay,
           seasonIndex: contentToPlay.seasonId ?? 0,
           episodeIndex: contentToPlay.episodeId ?? 0,
-          seasons:
-              contentToPlay.type?.toLowerCase() == "series" ? [] : null,
+          seasons: contentToPlay.type?.toLowerCase() == "series" ? [] : null,
         ),
       ),
     ).then((_) {

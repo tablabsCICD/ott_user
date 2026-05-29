@@ -39,8 +39,7 @@ class TrailerPage extends StatefulWidget {
   State<TrailerPage> createState() => _TrailerPageState();
 }
 
-class _TrailerPageState extends State<TrailerPage>
-    with WidgetsBindingObserver {
+class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
   Player? _player;
   VideoController? _videoController;
   YoutubePlayerController? _youtubeController;
@@ -310,12 +309,16 @@ class TrailerPreview extends StatefulWidget {
   final String? trailerUrl;
   final Content content;
   final TrailerPreviewController controller;
+  final bool autoPlay;
+  final bool muted;
 
   const TrailerPreview({
     super.key,
     required this.trailerUrl,
     required this.content,
     required this.controller,
+    this.autoPlay = true,
+    this.muted = false,
   });
 
   @override
@@ -349,6 +352,16 @@ class _TrailerPreviewState extends State<TrailerPreview> {
       _youtubeController?.play();
     };
 
+    widget.controller.mute = () {
+      _player?.setVolume(0);
+      _youtubeController?.mute();
+    };
+
+    widget.controller.unmute = () {
+      _player?.setVolume(100);
+      _youtubeController?.unMute();
+    };
+
     if (widget.trailerUrl?.isNotEmpty == true) _init();
   }
 
@@ -367,6 +380,13 @@ class _TrailerPreviewState extends State<TrailerPreview> {
           loop: true,
         ),
       );
+
+      if (!widget.muted) {
+        controller.unMute();
+      }
+      if (!widget.autoPlay) {
+        controller.pause();
+      }
 
       if (_isDisposed || currentToken != _initToken) {
         controller.dispose();
@@ -421,8 +441,10 @@ class _TrailerPreviewState extends State<TrailerPreview> {
         }));
 
       await player.open(Media(_trailerUrl), play: false);
-      await player.setVolume(100);
-      await player.play();
+      await player.setVolume(widget.muted ? 0 : 100);
+      if (widget.autoPlay) {
+        await player.play();
+      }
 
       if (_isDisposed || currentToken != _initToken) {
         await player.dispose();
@@ -482,6 +504,8 @@ class _TrailerPreviewState extends State<TrailerPreview> {
     _isDisposed = true;
     widget.controller.pause = null;
     widget.controller.play = null;
+    widget.controller.mute = null;
+    widget.controller.unmute = null;
     _disposeController();
     super.dispose();
   }
@@ -726,4 +750,6 @@ class _TrailerPreviewState extends State<TrailerPreview> {
 class TrailerPreviewController {
   VoidCallback? pause;
   VoidCallback? play;
+  VoidCallback? mute;
+  VoidCallback? unmute;
 }

@@ -26,6 +26,10 @@ class CustomTextField extends StatefulWidget {
   final Widget? prefixIcon;
   final Color? backgroundColor;
   final String? Function(String?)? validator;
+  final bool autofocus;
+  final FocusNode? focusNode;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onFieldSubmitted;
 
   const CustomTextField({
     required this.controller,
@@ -49,6 +53,10 @@ class CustomTextField extends StatefulWidget {
     this.prefixIcon,
     this.backgroundColor,
     this.validator,
+    this.autofocus = false,
+    this.focusNode,
+    this.textInputAction,
+    this.onFieldSubmitted,
     super.key,
   });
 
@@ -80,11 +88,15 @@ class _CustomTextFieldState extends State<CustomTextField> {
           const SizedBox(height: 5),
           TextFormField(
             controller: widget.controller,
+            focusNode: widget.focusNode,
+            autofocus: widget.autofocus,
             obscureText: widget.isPassword ? _isObscure : false,
             keyboardType: widget.textInputType,
+            textInputAction: widget.textInputAction,
             textCapitalization: widget.capitalization,
             readOnly: widget.readOnly ?? false,
             onTap: widget.onTap == null ? null : () => widget.onTap!(),
+            onFieldSubmitted: widget.onFieldSubmitted,
             maxLines: widget.maxLine,
             cursorColor: const Color(0xFFE50914),
             inputFormatters: _buildInputFormatters(),

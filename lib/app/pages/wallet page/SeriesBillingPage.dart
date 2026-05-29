@@ -52,7 +52,11 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context).getTheme;
-    final horizontal = ResponsiveWidget.isDesktop(context) ? 200.0 : 16.0;
+    final horizontal = ResponsiveWidget.isDesktop(context)
+        ? 200.0
+        : ResponsiveWidget.isTablet(context)
+            ? 80.0
+            : 16.0;
     final totalCoins = widget.amount;
 
     return Scaffold(
@@ -253,7 +257,12 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                   title: const Text("Confirm Purchase"),
-                  content: const Text("Do you want to confirm the purchase?"),
+                  content: SizedBox(
+                    width: ResponsiveWidget.isTabletOrTv(dialogContext)
+                        ? 460
+                        : null,
+                    child: const Text("Do you want to confirm the purchase?"),
+                  ),
                   actions: [
                     TextButton(
                       onPressed:
@@ -334,12 +343,21 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                   title: const Text("Recharge Wallet"),
-                  content: TextField(
-                    controller: walletProvider.amountController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Enter amount",
-                      border: OutlineInputBorder(),
+                  content: SizedBox(
+                    width: ResponsiveWidget.isTabletOrTv(dialogContext)
+                        ? 460
+                        : null,
+                    child: TextField(
+                      controller: walletProvider.amountController,
+                      autofocus: ResponsiveWidget.isTabletOrTv(dialogContext),
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) =>
+                          FocusScope.of(dialogContext).nextFocus(),
+                      decoration: const InputDecoration(
+                        labelText: "Enter amount",
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                   ),
                   actions: [

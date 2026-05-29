@@ -178,6 +178,7 @@ class _LoginCardState extends State<LoginCard> {
                                 searchFieldInputDecoration: InputDecoration(
                                     filled: true,
                                     fillColor: theme.cardColor,
+                                    counterText: '',
                                     hintText:
                                         'Search by country name and code ..',
                                     hintStyle: const TextStyle(fontSize: 14),
@@ -206,7 +207,7 @@ class _LoginCardState extends State<LoginCard> {
                               decoration: InputDecoration(
                                 filled: true,
                                 fillColor: theme.cardColor,
-
+                                counterText: '',
                                 hintText: lang.enterMobileNumber,
                                 hintStyle: const TextStyle(fontSize: 14),
                                 // Border properties
@@ -251,7 +252,7 @@ class _LoginCardState extends State<LoginCard> {
                             //   isPhoneNumber: true,
                             //   isValidator: true,
                             // ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 25),
 
                             /// OTP input
                             if (otpSent) ...[

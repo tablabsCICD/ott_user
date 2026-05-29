@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:ott/app/pages/wallet page/PaymentPage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 
@@ -35,7 +36,11 @@ class _WalletPageState extends State<WalletPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context, listen: false).getTheme;
-    final horizontal = ResponsiveWidget.isDesktop(context) ? 200.0 : 16.0;
+    final horizontal = ResponsiveWidget.isDesktop(context)
+        ? 200.0
+        : ResponsiveWidget.isTablet(context)
+            ? 80.0
+            : 16.0;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -117,20 +122,28 @@ class _WalletPageState extends State<WalletPage> {
                               const SizedBox(height: 6),
 
                               /// CTA
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: theme.primaryColor,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
+                              _tvFocus(
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: theme.primaryColor,
+                                    minimumSize:
+                                        ResponsiveWidget.isTabletOrTv(context)
+                                            ? const Size(220, 52)
+                                            : null,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  onPressed: _showBuyDialog,
+                                  icon: const Icon(Icons.add),
+                                  label: const Text(
+                                    "Recharge Wallet",
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold),
                                   ),
                                 ),
-                                onPressed: _showBuyDialog,
-                                icon: const Icon(Icons.add),
-                                label: const Text(
-                                  "Recharge Wallet",
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
+                                onTap: _showBuyDialog,
                               ),
                             ],
                           );
@@ -340,12 +353,21 @@ class _WalletPageState extends State<WalletPage> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                   title: const Text("Recharge Wallet"),
-                  content: TextField(
-                    controller: controller,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Enter amount",
-                      border: OutlineInputBorder(),
+                  content: SizedBox(
+                    width: ResponsiveWidget.isTabletOrTv(dialogContext)
+                        ? 460
+                        : null,
+                    child: TextField(
+                      controller: controller,
+                      autofocus: ResponsiveWidget.isTabletOrTv(dialogContext),
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) =>
+                          FocusScope.of(dialogContext).nextFocus(),
+                      decoration: const InputDecoration(
+                        labelText: "Enter amount",
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                   ),
                   actions: [
@@ -356,76 +378,15 @@ class _WalletPageState extends State<WalletPage> {
                     ElevatedButton(
                       onPressed: isBusy
                           ? null
-                          : () async {
-                              final amt = double.tryParse(controller.text);
-                              if (amt == null) {
-                                CustomToast.show(
-                                  pageContext,
-                                  "Enter a valid amount",
-                                  isSuccess: false,
-                                );
-                                return;
-                              }
-                              if (amt < _minimumRechargeAmount) {
-                                CustomToast.show(
-                                  pageContext,
-                                  "Minimum recharge amount is Rs ${_minimumRechargeAmount.toStringAsFixed(0)}",
-                                  isSuccess: false,
-                                );
-                                return;
-                              }
-                              if (amt > _maximumRechargeAmount) {
-                                CustomToast.show(
-                                  pageContext,
-                                  "Maximum recharge amount is Rs ${_maximumRechargeAmount.toStringAsFixed(0)}",
-                                  isSuccess: false,
-                                );
-                                return;
-                              }
-
-                              setState(() => isProcessing = true);
-                              Navigator.pop(dialogContext);
-
-                              final paymentResult = await Navigator.push(
-                                pageContext,
-                                MaterialPageRoute(
-                                  builder: (_) => PaymentPage(amount: amt),
-                                ),
-                              );
-
-                              if (!mounted) return;
-                              if (paymentResult is Map &&
-                                  paymentResult['success'] == true) {
-                                _showWalletReflectLoader(pageContext);
-                                final result = await provider
-                                    .onPaymentVerified(
-                                      expectedAmount: amt,
-                                    )
-                                    .whenComplete(() {
-                                  if (mounted) {
-                                    Navigator.of(pageContext,
-                                            rootNavigator: true)
-                                        .pop();
-                                  }
-                                });
-                                if (!mounted) return;
-                                CustomToast.show(
-                                  pageContext,
-                                  result['message']?.toString() ??
-                                      "Wallet recharged successfully.",
-                                  isSuccess: result['success'] == true,
-                                );
-                              } else {
-                                CustomToast.show(
-                                  pageContext,
-                                  paymentResult is Map
-                                      ? paymentResult['message']?.toString() ??
-                                          "Recharge failed. Please try again."
-                                      : "Recharge failed. Please try again.",
-                                  isSuccess: false,
-                                );
-                              }
-                            },
+                          : () => _submitRecharge(
+                                provider: provider,
+                                controller: controller,
+                                dialogContext: dialogContext,
+                                pageContext: pageContext,
+                                setProcessing: (value) {
+                                  setState(() => isProcessing = value);
+                                },
+                              ),
                       child: Text(isBusy ? "Processing..." : "Proceed to pay"),
                     )
                   ],
@@ -436,6 +397,92 @@ class _WalletPageState extends State<WalletPage> {
         );
       },
     );
+  }
+
+  Widget _tvFocus(
+    Widget child, {
+    required VoidCallback onTap,
+    bool autofocus = false,
+  }) {
+    if (ResponsiveWidget.isMobile(context)) return child;
+    return OttTvFocus(
+      autofocus: autofocus,
+      onTap: onTap,
+      child: child,
+    );
+  }
+
+  Future<void> _submitRecharge({
+    required WalletProvider provider,
+    required TextEditingController controller,
+    required BuildContext dialogContext,
+    required BuildContext pageContext,
+    required ValueChanged<bool> setProcessing,
+  }) async {
+    final amt = double.tryParse(controller.text);
+    if (amt == null) {
+      CustomToast.show(
+        pageContext,
+        "Enter a valid amount",
+        isSuccess: false,
+      );
+      return;
+    }
+    if (amt < _minimumRechargeAmount) {
+      CustomToast.show(
+        pageContext,
+        "Minimum recharge amount is Rs ${_minimumRechargeAmount.toStringAsFixed(0)}",
+        isSuccess: false,
+      );
+      return;
+    }
+    if (amt > _maximumRechargeAmount) {
+      CustomToast.show(
+        pageContext,
+        "Maximum recharge amount is Rs ${_maximumRechargeAmount.toStringAsFixed(0)}",
+        isSuccess: false,
+      );
+      return;
+    }
+
+    setProcessing(true);
+    Navigator.pop(dialogContext);
+
+    final paymentResult = await Navigator.push(
+      pageContext,
+      MaterialPageRoute(
+        builder: (_) => PaymentPage(amount: amt),
+      ),
+    );
+
+    if (!mounted) return;
+    if (paymentResult is Map && paymentResult['success'] == true) {
+      _showWalletReflectLoader(pageContext);
+      final result = await provider
+          .onPaymentVerified(
+            expectedAmount: amt,
+          )
+          .whenComplete(() {
+        if (mounted) {
+          Navigator.of(pageContext, rootNavigator: true).pop();
+        }
+      });
+      if (!mounted) return;
+      CustomToast.show(
+        pageContext,
+        result['message']?.toString() ?? "Wallet recharged successfully.",
+        isSuccess: result['success'] == true,
+      );
+    } else {
+      CustomToast.show(
+        pageContext,
+        paymentResult is Map
+            ? paymentResult['message']?.toString() ??
+                "Recharge failed. Please try again."
+            : "Recharge failed. Please try again.",
+        isSuccess: false,
+      );
+    }
   }
 
   void _showWalletReflectLoader(BuildContext context) {

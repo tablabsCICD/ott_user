@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 class ResponsiveWidget extends StatelessWidget {
+  static const double mobileBreakpoint = 750;
+  static const double desktopBreakpoint = 1100;
+
   final Widget mobile;
   final Widget? tablet;
   final Widget desktop;
@@ -13,24 +16,32 @@ class ResponsiveWidget extends StatelessWidget {
   });
 
   static bool isMobile(BuildContext context) =>
-      MediaQuery.of(context).size.width < 750;
+      MediaQuery.of(context).size.width < mobileBreakpoint;
 
   static bool isTablet(BuildContext context) =>
-      MediaQuery.of(context).size.width < 1100 &&
-      MediaQuery.of(context).size.width >= 750;
+      MediaQuery.of(context).size.width < desktopBreakpoint &&
+      MediaQuery.of(context).size.width >= mobileBreakpoint;
 
   static bool isDesktop(BuildContext context) =>
-      MediaQuery.of(context).size.width >= 1100;
+      MediaQuery.of(context).size.width >= desktopBreakpoint;
+
+  static bool isTv(BuildContext context) {
+    final media = MediaQuery.of(context);
+    return media.size.width >= desktopBreakpoint &&
+        media.orientation == Orientation.landscape;
+  }
+
+  static bool isTabletOrTv(BuildContext context) => !isMobile(context);
 
   @override
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
     // If our width is more than 1100 then we consider it a desktop
-    if (size.width >= 1100) {
+    if (size.width >= desktopBreakpoint) {
       return desktop;
     }
     // If width it less then 1100 and more then 850 we consider it as tablet
-    else if (size.width >= 750 && tablet != null) {
+    else if (size.width >= mobileBreakpoint && tablet != null) {
       return tablet!;
     }
     // Or less then that we called it mobile

@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
@@ -14,6 +16,7 @@ import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
 import 'package:ott/app/pages/movie%20details%20page/component/actionButtonWidget.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
+import 'package:ott/app/provider/offline_download_provider.dart';
 import 'package:ott/app/provider/series_provider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
@@ -49,6 +52,10 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   final TrailerPreviewController _trailerController =
       TrailerPreviewController();
   final TrailerPreviewController _teaserController = TrailerPreviewController();
+  final ScrollController _tvScrollController = ScrollController();
+  final FocusNode _heroFocusNode = FocusNode(debugLabel: 'seriesHero');
+  Timer? _heroTrailerTimer;
+  bool _isHeroTrailerPlaying = false;
   final ApiHelper _apiHelper = ApiHelper();
   List<CastMember> _seasonCastList = [];
   bool _isLoadingSeasonCast = false;
@@ -67,6 +74,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   void dispose() {
     _trailerController.pause?.call();
     _teaserController.pause?.call();
+    _heroTrailerTimer?.cancel();
+    _tvScrollController.dispose();
+    _heroFocusNode.dispose();
     super.dispose();
   }
 
@@ -158,6 +168,10 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           if (series == null) return const SizedBox();
 
           List<SeasonEntity> seasons = series.seasons;
+          if (!ResponsiveWidget.isMobile(context)) {
+            return _buildCinematicTvDetails(context, series, seasons, theme);
+          }
+
           if (seasons.isEmpty) {
             return CustomScrollView(
               slivers: [
@@ -165,8 +179,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal:
-                          ResponsiveWidget.isDesktop(context) ? 64 : 16,
+                      horizontal: ResponsiveWidget.isDesktop(context) ? 64 : 16,
                       vertical: 20,
                     ),
                     child: Column(
@@ -249,6 +262,1108 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
         },
       ),
     );
+  }
+
+  Widget _buildCinematicTvDetails(
+    BuildContext context,
+    SeriesEntity series,
+    List<SeasonEntity> seasons,
+    ThemeData theme,
+  ) {
+    if (seasons.isNotEmpty && _selectedSeasonIndex >= seasons.length) {
+      _selectedSeasonIndex = 0;
+    }
+
+    final season = seasons.isEmpty ? null : seasons[_selectedSeasonIndex];
+    if (season != null &&
+        _loadedSeasonId != season.seasonId &&
+        !_isLoadingSeasonCast) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadSeasonCast(season.seasonId);
+      });
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_isHeroTrailerPlaying && _heroTrailerTimer == null) {
+        _queueHeroTrailerAutoplay();
+      }
+    });
+
+    return Shortcuts(
+      shortcuts: const {
+        SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
+        SingleActivator(LogicalKeyboardKey.goBack): DismissIntent(),
+        SingleActivator(LogicalKeyboardKey.browserBack): DismissIntent(),
+      },
+      child: Actions(
+        actions: {
+          DismissIntent: CallbackAction<DismissIntent>(
+            onInvoke: (_) {
+              if (Navigator.canPop(context)) Navigator.pop(context);
+              return null;
+            },
+          ),
+        },
+        child: FocusTraversalGroup(
+          policy: OrderedTraversalPolicy(),
+          child: ColoredBox(
+            color: Colors.black,
+            child: CustomScrollView(
+              controller: _tvScrollController,
+              slivers: [
+                SliverToBoxAdapter(
+                  child: _buildCinematicHero(context, series, seasons, theme),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      ResponsiveWidget.isDesktop(context) ? 64 : 32,
+                      8,
+                      ResponsiveWidget.isDesktop(context) ? 64 : 32,
+                      56,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (seasons.isEmpty)
+                          _buildTvSectionTitle(theme, 'Episodes coming soon')
+                        else ...[
+                          _buildTvSectionTitle(theme, 'Seasons & Episodes'),
+                          const SizedBox(height: 14),
+                          _buildTvSeasonSelector(seasons, theme),
+                          const SizedBox(height: 22),
+                          _buildTvSeasonHeader(context, season!, theme),
+                          const SizedBox(height: 18),
+                          _buildTvEpisodeRail(context, season, theme),
+                        ],
+                        const SizedBox(height: 34),
+                        _buildTvCastSection(context, season, theme),
+                        const SizedBox(height: 34),
+                        _buildTvRecommendationRails(context, theme),
+                        const SizedBox(height: 34),
+                        _buildDetailsSection(context, widget.content, theme),
+                        const SizedBox(height: 28),
+                        _buildGallery(widget.content),
+                        const SizedBox(height: 28),
+                        _buildRatingAndReviewsSection(context, widget.content),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCinematicHero(
+    BuildContext context,
+    SeriesEntity series,
+    List<SeasonEntity> seasons,
+    ThemeData theme,
+  ) {
+    final size = MediaQuery.of(context).size;
+    final heroHeight = (size.height * 0.78).clamp(560.0, 760.0);
+    final resume = _findResumeEpisode(context, seasons);
+    final trailerUrl = widget.content.teaserOrTrailerUrl;
+
+    return Focus(
+      focusNode: _heroFocusNode,
+      autofocus: true,
+      onFocusChange: (hasFocus) {
+        if (hasFocus) {
+          _queueHeroTrailerAutoplay();
+        } else {
+          _stopHeroTrailer();
+        }
+      },
+      child: SizedBox(
+        height: heroHeight,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              series.posterUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(color: Colors.black),
+            ),
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
+                  colors: [Colors.black12, Colors.black87, Colors.black],
+                  stops: [0, 0.48, 1],
+                ),
+              ),
+            ),
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.black54, Colors.transparent, Colors.black],
+                  stops: [0, 0.45, 1],
+                ),
+              ),
+            ),
+            Positioned(
+              left: ResponsiveWidget.isDesktop(context) ? 64 : 32,
+              top: MediaQuery.of(context).padding.top + 24,
+              child: _buildTvBackButton(theme),
+            ),
+            Positioned(
+              left: ResponsiveWidget.isDesktop(context) ? 64 : 32,
+              right: size.width * 0.42,
+              bottom: 54,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    series.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: ResponsiveWidget.isDesktop(context) ? 56 : 42,
+                      height: 1.02,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTvMetaRow(series, seasons, theme),
+                  const SizedBox(height: 16),
+                  Text(
+                    series.description.isNotEmpty
+                        ? series.description
+                        : (widget.content.description ?? ''),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.82),
+                      fontSize: 17,
+                      height: 1.42,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildTvActionButtons(context, seasons, resume, theme),
+                ],
+              ),
+            ),
+            Positioned(
+              right: ResponsiveWidget.isDesktop(context) ? 64 : 32,
+              bottom: 70,
+              width: ResponsiveWidget.isDesktop(context) ? 470 : 380,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 500),
+                opacity: _isHeroTrailerPlaying ? 1 : 0.74,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white.withOpacity(0.14)),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: TrailerPreview(
+                      trailerUrl: trailerUrl,
+                      content: widget.content,
+                      controller: _trailerController,
+                      autoPlay: false,
+                      muted: true,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvMetaRow(
+    SeriesEntity series,
+    List<SeasonEntity> seasons,
+    ThemeData theme,
+  ) {
+    final totalEpisodes =
+        seasons.fold<int>(0, (sum, season) => sum + season.episodes.length);
+    final releaseYear = _releaseYearText(widget.content.releaseDate);
+    final genres = (widget.content.genreList ?? const <String>[])
+        .where((item) => item.trim().isNotEmpty)
+        .take(2)
+        .join(' / ');
+    final languages = (widget.content.languageList ?? const <LanguageList>[])
+        .map((item) => item.language)
+        .whereType<String>()
+        .where((item) => item.trim().isNotEmpty)
+        .take(2)
+        .join(' / ');
+
+    final items = <String>[
+      '${(widget.content.ratings ?? 0).toStringAsFixed(1)} rating',
+      if (releaseYear.isNotEmpty) releaseYear,
+      if (genres.isNotEmpty) genres,
+      if (languages.isNotEmpty) languages,
+      if ((widget.content.ageRating ?? '').trim().isNotEmpty)
+        widget.content.ageRating!.trim(),
+      '${seasons.length} ${seasons.length == 1 ? 'season' : 'seasons'}',
+      '$totalEpisodes ${totalEpisodes == 1 ? 'episode' : 'episodes'}',
+    ];
+
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: items.map((item) => _buildTvMetaPill(item, theme)).toList(),
+    );
+  }
+
+  Widget _buildTvMetaPill(String text, ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.09),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvBackButton(ThemeData theme) {
+    return _TvFocusableScale(
+      onPressed: () {
+        if (Navigator.canPop(context)) Navigator.pop(context);
+      },
+      child: IconButton(
+        onPressed: () {
+          if (Navigator.canPop(context)) Navigator.pop(context);
+        },
+        style: IconButton.styleFrom(
+          backgroundColor: theme.primaryColor,
+          foregroundColor: Colors.white,
+          fixedSize: const Size(52, 52),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        ),
+        icon: const Icon(Icons.arrow_back_rounded, size: 28),
+      ),
+    );
+  }
+
+  Widget _buildTvActionButtons(
+    BuildContext context,
+    List<SeasonEntity> seasons,
+    _ResumeEpisode? resume,
+    ThemeData theme,
+  ) {
+    final firstPlayable = _firstPlayableEpisode(seasons);
+    return Wrap(
+      spacing: 14,
+      runSpacing: 14,
+      children: [
+        _tvActionButton(
+          theme: theme,
+          label: resume == null ? 'Watch Now' : 'Resume Watching',
+          icon: resume == null ? Icons.play_arrow_rounded : Icons.restart_alt,
+          emphasized: true,
+          onPressed: () {
+            final target = resume ?? firstPlayable;
+            if (target != null) {
+              _playEpisode(context, target.season, target.episode);
+            }
+          },
+        ),
+        _tvActionButton(
+          theme: theme,
+          label: 'Watch Trailer',
+          icon: Icons.movie_creation_outlined,
+          onPressed: _openTrailer,
+        ),
+        _buildDownloadButton(context, theme),
+        _tvActionButton(
+          theme: theme,
+          label: 'Share',
+          icon: Icons.ios_share_rounded,
+          onPressed: () => showContentShareSheet(
+            context,
+            widget.content,
+            contentType: DeepLinkContentType.series,
+            unavailableMessage: "Series details are not available yet",
+          ),
+        ),
+        _tvActionButton(
+          theme: theme,
+          label: 'Gift',
+          icon: LucideIcons.gift,
+          onPressed: () => _showGiftDialog(context, widget.content),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDownloadButton(BuildContext context, ThemeData theme) {
+    final contentId = widget.content.id;
+    final canDownload = contentId != null &&
+        widget.content.isDownloadable == true &&
+        (widget.content.contentUrl?.trim().isNotEmpty ?? false);
+    if (!canDownload) {
+      return _tvActionButton(
+        theme: theme,
+        label: 'Download',
+        icon: Icons.download_rounded,
+        onPressed: () => CustomToast.show(
+          context,
+          'Download is not available for this series.',
+          isSuccess: false,
+        ),
+      );
+    }
+
+    return Consumer<OfflineDownloadProvider>(
+      builder: (context, offlineProvider, _) {
+        final isDownloading = offlineProvider.isDownloading(contentId);
+        final isDownloaded = offlineProvider.isDownloaded(contentId);
+        final progress = offlineProvider.progressFor(contentId);
+        return _tvActionButton(
+          theme: theme,
+          label: isDownloading
+              ? 'Downloading ${(progress * 100).clamp(0, 100).toStringAsFixed(0)}%'
+              : isDownloaded
+                  ? 'Downloaded'
+                  : 'Download',
+          icon: isDownloaded ? Icons.download_done_rounded : Icons.download,
+          onPressed: isDownloading
+              ? null
+              : () async {
+                  final result = isDownloaded
+                      ? await offlineProvider.deleteContent(widget.content)
+                      : await offlineProvider.downloadContent(widget.content);
+                  if (!context.mounted) return;
+                  CustomToast.show(
+                    context,
+                    result['message']?.toString() ?? 'Download updated',
+                    isSuccess: result['success'] == true,
+                  );
+                },
+        );
+      },
+    );
+  }
+
+  Widget _tvActionButton({
+    required ThemeData theme,
+    required String label,
+    required IconData icon,
+    required VoidCallback? onPressed,
+    bool emphasized = false,
+  }) {
+    return _TvFocusableScale(
+      onPressed: onPressed,
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 24),
+        label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: emphasized
+              ? theme.primaryColor
+              : theme.primaryColor.withOpacity(0.82),
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: Colors.white.withOpacity(0.08),
+          disabledForegroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+          minimumSize: const Size(0, 56),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          shadowColor: theme.primaryColor.withOpacity(0.45),
+          elevation: emphasized ? 12 : 4,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvSeasonSelector(List<SeasonEntity> seasons, ThemeData theme) {
+    return SizedBox(
+      height: 58,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: seasons.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          final selected = index == _selectedSeasonIndex;
+          return _TvFocusableScale(
+            onPressed: () {
+              setState(() => _selectedSeasonIndex = index);
+              _loadSeasonCast(seasons[index].seasonId);
+            },
+            child: ChoiceChip(
+              selected: selected,
+              label: Text('Season ${seasons[index].seasonNumber}'),
+              selectedColor: theme.primaryColor,
+              backgroundColor: Colors.red.withOpacity(0.1),
+              labelStyle: TextStyle(
+                color: selected ? Colors.white : Colors.white.withOpacity(0.82),
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              side: BorderSide(color: Colors.white.withOpacity(0.14)),
+              onSelected: (_) {
+                setState(() => _selectedSeasonIndex = index);
+                _loadSeasonCast(seasons[index].seasonId);
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTvSeasonHeader(
+    BuildContext context,
+    SeasonEntity season,
+    ThemeData theme,
+  ) {
+    final hasPurchasedEpisode =
+        season.episodes.any((EpisodeEntity ep) => ep.isPurchased);
+    final canPurchaseSeason = !season.isSeasonPurchased && !hasPurchasedEpisode;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Season ${season.seasonNumber}: ${season.title}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                season.description,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.68),
+                  fontSize: 15,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (widget.content.isFeatured != true && canPurchaseSeason)
+          _tvActionButton(
+            theme: theme,
+            label: 'Rent Season Rs ${season.price}',
+            icon: Icons.lock_open_rounded,
+            emphasized: true,
+            onPressed: () => _purchaseSeason(context, season),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTvEpisodeRail(
+    BuildContext context,
+    SeasonEntity season,
+    ThemeData theme,
+  ) {
+    if (season.episodes.isEmpty) {
+      return Text(
+        'No episodes available yet',
+        style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 16),
+      );
+    }
+
+    return SizedBox(
+      height: 300,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: season.episodes.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 18),
+        itemBuilder: (context, index) {
+          return _buildTvEpisodeCard(
+            context,
+            season,
+            season.episodes[index],
+            theme,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTvEpisodeCard(
+    BuildContext context,
+    SeasonEntity season,
+    EpisodeEntity episode,
+    ThemeData theme,
+  ) {
+    final canPlay =
+        season.isSeasonPurchased || episode.isPurchased || episode.isFree;
+    final progress = _episodeProgress(context, season, episode);
+    final hasProgress = progress > 0.02;
+
+    return _TvFocusableScale(
+      width: 360,
+      onPressed: () {
+        if (canPlay) {
+          _playEpisode(context, season, episode);
+        } else {
+          _purchaseEpisode(context, season, episode);
+        }
+      },
+      child: Container(
+        width: 360,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.075),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(8)),
+              child: Stack(
+                children: [
+                  Image.network(
+                    episode.posterUrl,
+                    height: 190,
+                    width: 360,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 190,
+                      width: 360,
+                      color: Colors.grey.shade900,
+                      child: const Icon(Icons.broken_image,
+                          color: Colors.white54, size: 34),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.68),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Center(
+                    heightFactor: 3.1,
+                    child: Icon(
+                      canPlay ? Icons.play_circle_fill : Icons.lock_rounded,
+                      color: Colors.white,
+                      size: 54,
+                    ),
+                  ),
+                  if (hasProgress)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 5,
+                        backgroundColor: Colors.white24,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(theme.primaryColor),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          episode.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${episode.runtime} min',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.65),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    hasProgress
+                        ? 'Continue watching - ${(progress * 100).round()}%'
+                        : 'Episode ${episode.episodeNumber}',
+                    style: TextStyle(
+                      color: hasProgress
+                          ? theme.primaryColor
+                          : Colors.white.withOpacity(0.62),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    episode.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.64),
+                      height: 1.25,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvCastSection(
+    BuildContext context,
+    SeasonEntity? season,
+    ThemeData theme,
+  ) {
+    if (season == null) return const SizedBox.shrink();
+    return _buildCastSection(context, season, theme);
+  }
+
+  Widget _buildTvRecommendationRails(BuildContext context, ThemeData theme) {
+    final rows = context.watch<DashboardProvider>().dashboardData;
+    final rails = rows
+        .where((row) => (row.movies ?? const <Content>[]).isNotEmpty)
+        .take(4)
+        .toList();
+    if (rails.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final row in rails) ...[
+          _buildTvSectionTitle(theme, _railTitle(row.category)),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 250,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: (row.movies ?? const <Content>[])
+                  .where((item) => item.id != widget.content.id)
+                  .length,
+              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              itemBuilder: (context, index) {
+                final items = (row.movies ?? const <Content>[])
+                    .where((item) => item.id != widget.content.id)
+                    .toList();
+                return _buildTvRecommendationCard(context, items[index], theme);
+              },
+            ),
+          ),
+          const SizedBox(height: 28),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildTvRecommendationCard(
+    BuildContext context,
+    Content content,
+    ThemeData theme,
+  ) {
+    final image = (content.posterUrlList ?? const <String>[]).isNotEmpty
+        ? content.posterUrlList!.first
+        : '';
+    return _TvFocusableScale(
+      width: 300,
+      onPressed: () {
+        if ((content.type ?? '').toLowerCase() == 'series' &&
+            content.id != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SeriesDetailsPage(
+                seriesId: content.id!,
+                content: content,
+              ),
+            ),
+          );
+        }
+      },
+      child: SizedBox(
+        width: 300,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                image,
+                width: 300,
+                height: 170,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 300,
+                  height: 170,
+                  color: Colors.grey.shade900,
+                  child: const Icon(Icons.movie, color: Colors.white54),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              content.title ?? 'Untitled',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              [
+                if ((content.ageRating ?? '').isNotEmpty) content.ageRating,
+                if ((content.genreList ?? const <String>[]).isNotEmpty)
+                  content.genreList!.first,
+              ].whereType<String>().join('  |  '),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: Colors.white.withOpacity(0.58)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvSectionTitle(ThemeData theme, String title) {
+    return Text(
+      title,
+      style: TextStyle(
+        color: theme.primaryColor,
+        fontSize: 24,
+        fontWeight: FontWeight.w900,
+      ),
+    );
+  }
+
+  String _railTitle(String? category) {
+    final raw = category?.trim();
+    if (raw == null || raw.isEmpty) return 'More Like This';
+    if (raw.toLowerCase().contains('trending')) return 'Trending';
+    if (raw.toLowerCase().contains('latest')) return 'Recommended Series';
+    if (raw.toLowerCase().contains('upcoming')) return 'Related Content';
+    return raw;
+  }
+
+  void _queueHeroTrailerAutoplay() {
+    _heroTrailerTimer?.cancel();
+    _heroTrailerTimer = Timer(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      _heroTrailerTimer = null;
+      _trailerController.mute?.call();
+      _trailerController.play?.call();
+      setState(() => _isHeroTrailerPlaying = true);
+    });
+  }
+
+  void _stopHeroTrailer() {
+    _heroTrailerTimer?.cancel();
+    _heroTrailerTimer = null;
+    _trailerController.pause?.call();
+    if (_isHeroTrailerPlaying) {
+      setState(() => _isHeroTrailerPlaying = false);
+    }
+  }
+
+  _ResumeEpisode? _firstPlayableEpisode(List<SeasonEntity> seasons) {
+    for (final season in seasons) {
+      for (final episode in season.episodes) {
+        if (season.isSeasonPurchased || episode.isPurchased || episode.isFree) {
+          return _ResumeEpisode(season, episode);
+        }
+      }
+    }
+    return null;
+  }
+
+  _ResumeEpisode? _findResumeEpisode(
+    BuildContext context,
+    List<SeasonEntity> seasons,
+  ) {
+    _ResumeEpisode? best;
+    int bestSeconds = 0;
+    final provider = context.watch<PlayMediaProvider>();
+    for (final season in seasons) {
+      for (final episode in season.episodes) {
+        final seconds = provider.getLocalResume(
+          contentId: widget.content.id ?? widget.seriesId,
+          seasonId: season.seasonId,
+          episodeId: episode.episodeId,
+        );
+        if (seconds > bestSeconds) {
+          bestSeconds = seconds;
+          best = _ResumeEpisode(season, episode);
+        }
+      }
+    }
+    return bestSeconds > 5 ? best : null;
+  }
+
+  double _episodeProgress(
+    BuildContext context,
+    SeasonEntity season,
+    EpisodeEntity episode,
+  ) {
+    final resumeSeconds = context.watch<PlayMediaProvider>().getLocalResume(
+          contentId: widget.content.id ?? widget.seriesId,
+          seasonId: season.seasonId,
+          episodeId: episode.episodeId,
+        );
+    return episode.runtime > 0
+        ? (resumeSeconds / (episode.runtime * 60)).clamp(0.0, 1.0)
+        : 0.0;
+  }
+
+  Future<void> _playEpisode(
+    BuildContext context,
+    SeasonEntity season,
+    EpisodeEntity episode,
+  ) async {
+    _stopHeroTrailer();
+    final shouldRefresh = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PlayMediaPage(
+          videoUrl: episode.videoUrl ?? "",
+          content: widget.content,
+          seasonIndex: season.seasonId,
+          episodeIndex: episode.episodeId,
+          seasons: [season],
+        ),
+      ),
+    );
+
+    if (shouldRefresh == true && context.mounted) {
+      context.read<DashboardProvider>().getContinueWatchedMovieList("SERIES");
+    }
+  }
+
+  Future<void> _purchaseEpisode(
+    BuildContext context,
+    SeasonEntity season,
+    EpisodeEntity episode,
+  ) async {
+    _stopHeroTrailer();
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SeriesBillingPage(
+          seriesId: widget.seriesId,
+          episodeId: episode.episodeId,
+          amount: episode.price.toDouble(),
+          isSeason: false,
+          seriesTitle: widget.content.title,
+          itemTitle: episode.title,
+          rentalDuration: widget.content.rentlDuration,
+        ),
+      ),
+    );
+
+    if (result == true && mounted) {
+      CustomToast.show(context, "Episode unlocked! Enjoy watching",
+          isSuccess: true);
+    }
+  }
+
+  Future<void> _purchaseSeason(
+    BuildContext context,
+    SeasonEntity season,
+  ) async {
+    _stopHeroTrailer();
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SeriesBillingPage(
+          seriesId: widget.seriesId,
+          seasonId: season.seasonId,
+          amount: season.price.toDouble(),
+          isSeason: true,
+          seriesTitle: widget.content.title,
+          itemTitle: season.title,
+          rentalDuration: widget.content.rentlDuration,
+        ),
+      ),
+    );
+
+    if (result == true && mounted) {
+      CustomToast.show(context, "Season unlocked! Enjoy watching",
+          isSuccess: true);
+    }
+  }
+
+  Future<void> _openTrailer() async {
+    _stopHeroTrailer();
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TrailerPage(
+          trailerUrl: widget.content.teaserOrTrailerUrl,
+          isTrailerUrl: true,
+          content: widget.content,
+        ),
+      ),
+    );
+  }
+
+  void _showGiftDialog(BuildContext context, Content seriesContent) {
+    final theme = Theme.of(context);
+    final TextEditingController countController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: theme.cardColor,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: SizedBox(
+              width: 420,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(LucideIcons.gift,
+                          color: theme.primaryColor, size: 28),
+                      const SizedBox(width: 10),
+                      Text(
+                        "Gift This Series",
+                        style: theme.textTheme.titleLarge
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Enter how many people you'd like to gift this series to.",
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: theme.canvasColor),
+                  ),
+                  const SizedBox(height: 10),
+                  CustomTextField(
+                    backgroundColor: theme.scaffoldBackgroundColor,
+                    isDigits: true,
+                    controller: countController,
+                    hintText: "Number of recipients",
+                    textInputType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: Text("Cancel",
+                            style: TextStyle(color: theme.canvasColor)),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primaryColor,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                        ),
+                        onPressed: () {
+                          final count = int.tryParse(countController.text);
+                          if (count == null || count <= 0) {
+                            CustomToast.show(
+                              dialogContext,
+                              'Please enter valid number',
+                              isSuccess: false,
+                            );
+                            return;
+                          }
+
+                          Navigator.pop(dialogContext);
+                          _stopHeroTrailer();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => MovieBillingPage(
+                                movie: seriesContent,
+                                giftCount: count,
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text("Continue",
+                            style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    ).whenComplete(countController.dispose);
+  }
+
+  String _releaseYearText(dynamic releaseDate) {
+    final text = releaseDate?.toString().trim() ?? '';
+    if (text.length >= 4) return text.substring(0, 4);
+    return text;
   }
 
   // ---------------- HERO ----------------
@@ -761,7 +1876,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
         Text(
           "Cast and Crew",
           style: TextStyle(
-            color: theme.canvasColor,
+            color: ResponsiveWidget.isMobile(context)
+                ? theme.canvasColor
+                : theme.primaryColor,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -1410,5 +2527,78 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     if (teaserUrl.isNotEmpty) return teaserUrl;
 
     return content.trailerUrl?.trim() ?? '';
+  }
+}
+
+class _ResumeEpisode {
+  const _ResumeEpisode(this.season, this.episode);
+
+  final SeasonEntity season;
+  final EpisodeEntity episode;
+}
+
+class _TvFocusableScale extends StatefulWidget {
+  const _TvFocusableScale({
+    required this.child,
+    required this.onPressed,
+    this.width,
+  });
+
+  final Widget child;
+  final VoidCallback? onPressed;
+  final double? width;
+
+  @override
+  State<_TvFocusableScale> createState() => _TvFocusableScaleState();
+}
+
+class _TvFocusableScaleState extends State<_TvFocusableScale> {
+  bool _focused = false;
+  bool _hovered = false;
+
+  bool get _active => _focused || _hovered;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return FocusableActionDetector(
+      enabled: widget.onPressed != null,
+      mouseCursor: widget.onPressed == null
+          ? SystemMouseCursors.basic
+          : SystemMouseCursors.click,
+      onShowFocusHighlight: (value) {
+        if (value) {
+          Scrollable.ensureVisible(
+            context,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+          );
+        }
+        if (mounted) setState(() => _focused = value);
+      },
+      onShowHoverHighlight: (value) {
+        if (mounted) setState(() => _hovered = value);
+      },
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            widget.onPressed?.call();
+            return null;
+          },
+        ),
+      },
+      child: AnimatedScale(
+        scale: _active ? 1.055 : 1,
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOutCubic,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          width: widget.width,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
+          child: widget.child,
+        ),
+      ),
+    );
   }
 }

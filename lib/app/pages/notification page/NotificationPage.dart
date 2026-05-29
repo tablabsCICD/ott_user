@@ -6,7 +6,9 @@ import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/notification%20page/NotificationDetailPage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/data/models/response/push_notification_response.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
@@ -212,8 +214,9 @@ class _NotificationPageState extends State<NotificationPage> {
         if (index == _notifications.length) {
           return Center(
             child: TextButton(
-              onPressed:
-                  _isLoadingMore ? null : () => _loadNotifications(loadMore: true),
+              onPressed: _isLoadingMore
+                  ? null
+                  : () => _loadNotifications(loadMore: true),
               child: _isLoadingMore
                   ? const SizedBox(
                       width: 20,
@@ -228,11 +231,13 @@ class _NotificationPageState extends State<NotificationPage> {
         final item = _notifications[index];
         final isPending = item.deliveryStatus?.toUpperCase() == 'PENDING';
 
-        return Card(
+        final card = Card(
           color: theme.cardColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           child: ListTile(
-            onTap: () => _openNotification(item),
+            onTap: ResponsiveWidget.isMobile(context)
+                ? () => _openNotification(item)
+                : null,
             leading: CircleAvatar(
               backgroundColor: isPending
                   ? Colors.orange.withOpacity(0.2)
@@ -262,6 +267,15 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
             trailing: const Icon(Icons.chevron_right),
           ),
+        );
+
+        if (ResponsiveWidget.isMobile(context)) return card;
+
+        return OttTvFocus(
+          onTap: () => _openNotification(item),
+          borderRadius: 8,
+          scale: 1.02,
+          child: card,
         );
       },
     );

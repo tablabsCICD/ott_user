@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:media_kit/media_kit.dart';
@@ -376,10 +377,29 @@ class _MovieCardState extends State<MovieCard> {
 
     return Stack(
       children: [
-        MouseRegion(
-          onEnter: (_) => _handleHover(true),
-          onExit: (_) => _handleHover(false),
-          child: GestureDetector(
+        Focus(
+          canRequestFocus: ResponsiveWidget.isTabletOrTv(context),
+          onFocusChange: (hasFocus) {
+            if (ResponsiveWidget.isTabletOrTv(context)) {
+              _handleHover(hasFocus);
+            }
+          },
+          onKeyEvent: (node, event) {
+            if (event is! KeyDownEvent) return KeyEventResult.ignored;
+            final key = event.logicalKey;
+            if (key == LogicalKeyboardKey.enter ||
+                key == LogicalKeyboardKey.select ||
+                key == LogicalKeyboardKey.space ||
+                key == LogicalKeyboardKey.gameButtonA) {
+              _openDetails();
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          child: MouseRegion(
+            onEnter: (_) => _handleHover(true),
+            onExit: (_) => _handleHover(false),
+            child: GestureDetector(
             onTap: _openDetails,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
@@ -447,6 +467,7 @@ class _MovieCardState extends State<MovieCard> {
                   ),
                 ],
               ),
+            ),
             ),
           ),
         ),

@@ -179,6 +179,11 @@ class PaymentService {
     String description = 'Add Money to Wallet',
     int plan = 0,
   }) async {
+    final activeCompleter = _paymentCompleter;
+    if (activeCompleter != null && !activeCompleter.isCompleted) {
+      return activeCompleter.future;
+    }
+
     if (!isSupportedPlatform) {
       return PaymentResult(
         success: false,

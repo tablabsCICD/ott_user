@@ -9,7 +9,9 @@ import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/home%20page/category_content_page.dart';
 import 'package:ott/app/pages/madioo%20page/MadiooPage.dart';
+import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/profile%20page/component/change_language.dart';
+import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/shorts%20page/component/shortsLibraryPage.dart';
 import 'package:ott/app/pages/profile%20page/ProfilePage.dart';
 import 'package:ott/app/pages/search%20page/SearchPage.dart';
@@ -19,6 +21,7 @@ import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/continueWatchMovieCard.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/shimmer%20loader/home_shimmer.dart';
 import 'package:ott/app/widgets/shimmer%20loader/shimmer_loader.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -35,14 +38,19 @@ import '../../core/utils/sharepreferences.dart';
 import '../../provider/userProvider.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({
+    super.key,
+    this.initialSelectedType = "MOVIE",
+  });
+
+  final String initialSelectedType;
 
   @override
   _HomePageState createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> with RouteAware {
-  String selectedType = "MOVIE";
+  late String selectedType;
   bool isLoading = true;
 
 //// upcoming movie posters
@@ -75,6 +83,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
   @override
   void initState() {
     super.initState();
+    selectedType = widget.initialSelectedType;
 
     _verticalController.addListener(_updateVisibleRows);
     _connectivitySubscription =
@@ -89,6 +98,20 @@ class _HomePageState extends State<HomePage> with RouteAware {
         _updateVisibleRows();
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant HomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialSelectedType != widget.initialSelectedType &&
+        selectedType != widget.initialSelectedType) {
+      selectedType = widget.initialSelectedType;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          unawaited(_initializeData());
+        }
+      });
+    }
   }
 
   @override
@@ -125,6 +148,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
     _rowKeys.clear();
 
     _verticalController.dispose();
+    _pageController.dispose();
     _continueWatchController.dispose();
     _continueWatchActiveIndex.dispose();
     _connectivitySubscription?.cancel();
@@ -442,6 +466,14 @@ class _HomePageState extends State<HomePage> with RouteAware {
                           SizedBox(
                             height: 5,
                           ),
+                          if (ResponsiveWidget.isTabletOrTv(context) &&
+                              selectedType != 'MINI SERIES' &&
+                              selectedType != 'MADIOO')
+                            _buildTvHeroSlider(
+                              context,
+                              selectedThemeData,
+                              dashboardProvider,
+                            ),
                           SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child:
@@ -705,6 +737,346 @@ class _HomePageState extends State<HomePage> with RouteAware {
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _buildTvHeroSlider(
+    BuildContext context,
+    ThemeData theme,
+    DashboardProvider dashboardProvider,
+  ) {
+    final heroItems = dashboardProvider.dashboardData
+        .expand((row) => row.movies ?? const <Content>[])
+        .where((item) =>
+            item.id != null &&
+            (item.posterUrlList?.isNotEmpty ?? false) &&
+            (item.title?.trim().isNotEmpty ?? false))
+        .toList();
+
+    if (heroItems.isEmpty) return const SizedBox.shrink();
+
+    final height = ResponsiveWidget.isDesktop(context) ? 520.0 : 410.0;
+    final horizontalMargin = ResponsiveWidget.isDesktop(context) ? 24.0 : 14.0;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(horizontalMargin, 8, horizontalMargin, 28),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: SizedBox(
+          height: height,
+          width: double.infinity,
+          child: Focus(
+            autofocus: true,
+            onKeyEvent: (node, event) {
+              if (event is! KeyDownEvent) return KeyEventResult.ignored;
+              if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                _moveHeroSlider(heroItems.length, -1);
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                _moveHeroSlider(heroItems.length, 1);
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.enter ||
+                  event.logicalKey == LogicalKeyboardKey.select ||
+                  event.logicalKey == LogicalKeyboardKey.space ||
+                  event.logicalKey == LogicalKeyboardKey.gameButtonA) {
+                _openContentDetails(heroItems[_currentPage % heroItems.length]);
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: Stack(
+              children: [
+              PageView.builder(
+                controller: _pageController,
+                itemCount: heroItems.length,
+                onPageChanged: (index) {
+                  setState(() => _currentPage = index);
+                },
+                itemBuilder: (context, index) {
+                  final item = heroItems[index];
+                  final imageUrl = item.posterUrlList?.first ?? '';
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: theme.cardColor,
+                          alignment: Alignment.center,
+                          child: Icon(
+                            Icons.movie_creation_outlined,
+                            color: theme.canvasColor.withOpacity(0.5),
+                            size: 72,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [
+                              Colors.black,
+                              Colors.black87,
+                              Colors.black26,
+                              Colors.black87,
+                            ],
+                            stops: [0, 0.26, 0.72, 1],
+                          ),
+                        ),
+                      ),
+                      Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black38,
+                              Colors.transparent,
+                              Colors.black87,
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: ResponsiveWidget.isDesktop(context) ? 70 : 36,
+                        bottom: ResponsiveWidget.isDesktop(context) ? 58 : 34,
+                        width: ResponsiveWidget.isDesktop(context) ? 560 : 430,
+                        child: _buildTvHeroCopy(context, theme, item, index),
+                      ),
+                    ],
+                  );
+                },
+              ),
+              Positioned(
+                left: 18,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _buildHeroArrowButton(
+                    theme: theme,
+                    icon: Icons.chevron_left_rounded,
+                    onTap: () => _moveHeroSlider(heroItems.length, -1),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 18,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _buildHeroArrowButton(
+                    theme: theme,
+                    icon: Icons.chevron_right_rounded,
+                    onTap: () => _moveHeroSlider(heroItems.length, 1),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 18,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    math.min(heroItems.length, 9),
+                    (index) {
+                      final active = index == (_currentPage % heroItems.length);
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        width: active ? 26 : 8,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: active
+                              ? Colors.white
+                              : Colors.white.withOpacity(0.35),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroArrowButton({
+    required ThemeData theme,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return OttTvFocus(
+      onTap: onTap,
+      borderRadius: 999,
+      scale: 1.1,
+      child: Material(
+        color: Colors.black.withOpacity(0.42),
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox(
+            width: 54,
+            height: 54,
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 38,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _moveHeroSlider(int itemCount, int delta) {
+    if (itemCount <= 0) return;
+    final next = (_currentPage + delta) % itemCount;
+    final normalized = next < 0 ? itemCount - 1 : next;
+    if (_pageController.hasClients) {
+      _pageController.animateToPage(
+        normalized,
+        duration: const Duration(milliseconds: 360),
+        curve: Curves.easeOutCubic,
+      );
+    }
+    setState(() => _currentPage = normalized);
+  }
+
+  Widget _buildTvHeroCopy(
+    BuildContext context,
+    ThemeData theme,
+    Content item,
+    int index,
+  ) {
+    final genres =
+        item.genreList?.where((e) => e.trim().isNotEmpty).join('  -  ');
+    final meta = [
+      if (item.releaseDate != null) item.releaseDate.toString(),
+      if (genres != null && genres.isNotEmpty) genres,
+      if (item.ratings != null) '${item.ratings!.toStringAsFixed(0)} star',
+    ].join('  -  ');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: theme.primaryColor,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            '#${index + 1} Trending',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          item.title ?? '',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontSize: ResponsiveWidget.isDesktop(context) ? 46 : 34,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        if (meta.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text(
+            meta,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
+        ],
+        if ((item.description ?? '').trim().isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            item.description!,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+              height: 1.35,
+            ),
+          ),
+        ],
+        const SizedBox(height: 22),
+        Row(
+          children: [
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.primaryColor,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(142, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => _openContentDetails(item),
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: const Text(
+                'Watch Now',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+            const SizedBox(width: 12),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white.withOpacity(0.14),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(118, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => _openContentDetails(item),
+              icon: const Icon(Icons.movie_filter_rounded),
+              label: const Text(
+                'Trailer',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  void _openContentDetails(Content item) {
+    final type = item.type?.toLowerCase();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => type == 'series'
+            ? SeriesDetailsPage(
+                seriesId: item.id ?? 0,
+                content: item,
+              )
+            : MovieDetailsPage(movieId: item.id!),
+      ),
     );
   }
 

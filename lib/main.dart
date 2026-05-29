@@ -22,6 +22,7 @@ import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/provider/ticketProvider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
+import 'package:ott/app/widgets/ott_tv_app_shell.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -182,7 +183,9 @@ class _MyAppState extends State<MyApp> {
       // Navigate based on login state
       initialRoute: "/",
       onGenerateRoute: RouteGenerator.generateRoute,
-      builder: (context, child) => child ?? const SizedBox.shrink(),
+      builder: (context, child) => OttTvAppShell(
+        child: child ?? const SizedBox.shrink(),
+      ),
       /* home: SplashScreen(
         isLoggedIn: widget.isLoggedIn,
       ),*/

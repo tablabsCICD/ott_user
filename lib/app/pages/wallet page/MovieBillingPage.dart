@@ -58,7 +58,11 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context).getTheme;
-    final horizontal = ResponsiveWidget.isDesktop(context) ? 200.0 : 16.0;
+    final horizontal = ResponsiveWidget.isDesktop(context)
+        ? 200.0
+        : ResponsiveWidget.isTablet(context)
+            ? 80.0
+            : 16.0;
 
     moviePrice = double.tryParse(widget.movie.price.toString()) ?? 0.0;
     final totalCoins =
@@ -401,6 +405,8 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                         backgroundColor: theme.scaffoldBackgroundColor,
                         isDigits: true,
                         controller: couponCodeController,
+                        autofocus: ResponsiveWidget.isTabletOrTv(context),
+                        textInputAction: TextInputAction.done,
                         hintText: "Enter 16 Digit Number",
                         textInputType: TextInputType.text,
                       ),
@@ -490,7 +496,12 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                   title: const Text("Confirm Purchase"),
-                  content: const Text("Do you want to confirm the purchase?"),
+                  content: SizedBox(
+                    width: ResponsiveWidget.isTabletOrTv(dialogContext)
+                        ? 460
+                        : null,
+                    child: const Text("Do you want to confirm the purchase?"),
+                  ),
                   actions: [
                     TextButton(
                       onPressed:
@@ -632,12 +643,21 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                   title: const Text("Recharge Wallet"),
-                  content: TextField(
-                    controller: provider.amountController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Enter amount",
-                      border: OutlineInputBorder(),
+                  content: SizedBox(
+                    width: ResponsiveWidget.isTabletOrTv(dialogContext)
+                        ? 460
+                        : null,
+                    child: TextField(
+                      controller: provider.amountController,
+                      autofocus: ResponsiveWidget.isTabletOrTv(dialogContext),
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) =>
+                          FocusScope.of(dialogContext).nextFocus(),
+                      decoration: const InputDecoration(
+                        labelText: "Enter amount",
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                   ),
                   actions: [

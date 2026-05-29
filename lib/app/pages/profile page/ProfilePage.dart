@@ -24,6 +24,7 @@ import 'package:ott/app/provider/purchase_history_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/LanguageDropdown.dart';
 import 'package:ott/app/widgets/gift_claim_dialog.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/shimmer%20loader/profile_shimmer.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -653,7 +654,7 @@ class _ProfileOptionState extends State<ProfileOption> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return SizedBox(
+    final option = SizedBox(
       width: ResponsiveWidget.isMobile(context) ? double.infinity : 600,
       child: ListTile(
         dense: true,
@@ -679,6 +680,15 @@ class _ProfileOptionState extends State<ProfileOption> {
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: widget.onTap,
       ),
+    );
+
+    if (ResponsiveWidget.isMobile(context)) return option;
+
+    return OttTvFocus(
+      onTap: widget.onTap,
+      borderRadius: 12,
+      scale: 1.025,
+      child: option,
     );
   }
 }

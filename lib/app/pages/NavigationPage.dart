@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/core/constant/prefrense_constant.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
+import 'package:ott/app/pages/help%20support%20page/HelpSupportPage.dart';
+import 'package:ott/app/pages/profile%20page/component/change_language.dart';
+import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/pages/shorts%20page/ShortsPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/pages/watchlist%20page/WatchlistPage.dart';
@@ -10,10 +15,14 @@ import 'package:ott/app/pages/home%20page/HomePage.dart';
 import 'package:ott/app/pages/profile%20page/ProfilePage.dart';
 import 'package:ott/app/pages/search%20page/SearchPage.dart';
 import 'package:ott/app/pages/series%20page/SeriesListPage.dart';
+import 'package:ott/app/provider/bookmarkProvider.dart';
+import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/themeProvider.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../provider/userProvider.dart';
 
@@ -27,18 +36,44 @@ class NavigationPage extends StatefulWidget {
 class _NavigationPageState extends State<NavigationPage> {
   int _currentIndex = 0;
   bool _isExitDialogOpen = false;
+  bool _isSidebarExpanded = true;
+  String _homeContentType = "MOVIE";
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  final List<Widget> _pages = [
-    HomePage(),
-    SeriesListPage(),
-    ShortsPage(),
-    SearchPage(),
-    WatchlistPage(),
-    ProfilePage(),
-    UpcomingPage(),
-    WalletPage(),
-  ];
+  Widget _buildCurrentPage([int? pageIndex]) {
+    switch (pageIndex ?? _currentIndex) {
+      case 0:
+        return HomePage(
+          key: ValueKey(_homeContentType),
+          initialSelectedType: _homeContentType,
+        );
+      case 1:
+        return SeriesListPage();
+      case 2:
+        return ShortsPage();
+      case 3:
+        return SearchPage();
+      case 4:
+        return WatchlistPage();
+      case 5:
+        return ProfilePage();
+      case 6:
+        return UpcomingPage();
+      case 7:
+        return WalletPage();
+      case 8:
+        return const WatchlistPage(initialFilter: WatchlistFilter.downloaded);
+      case 9:
+        return const ChangeLanguage();
+      case 10:
+        return const HelpSupportPage();
+      default:
+        return HomePage(
+          key: ValueKey(_homeContentType),
+          initialSelectedType: _homeContentType,
+        );
+    }
+  }
 
   @override
   void initState() {
@@ -53,13 +88,17 @@ class _NavigationPageState extends State<NavigationPage> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final selectedThemeData = themeProvider.getTheme;
     final isMobile = ResponsiveWidget.isMobile(context);
-    final isDesktop = ResponsiveWidget.isDesktop(context);
+    final isTvLayout = ResponsiveWidget.isTabletOrTv(context);
     final lang = AppLocalizations.of(context)!;
     final userProvider = Provider.of<UserProvider>(context);
     final mobilePageIndices = [0, 1, 3, 4, 5];
     final mobileCurrentIndex = mobilePageIndices.contains(_currentIndex)
         ? mobilePageIndices.indexOf(_currentIndex)
         : 0;
+    final visiblePageIndex =
+        isMobile && !mobilePageIndices.contains(_currentIndex)
+            ? 0
+            : _currentIndex;
 
     return PopScope(
       canPop: false,
@@ -70,22 +109,24 @@ class _NavigationPageState extends State<NavigationPage> {
       child: Scaffold(
         key: _scaffoldKey,
         backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-        body: isDesktop
+        body: isTvLayout
             ? Row(
                 children: [
-                  Container(
-                    width: 250,
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    width: _isSidebarExpanded ? 250 : 86,
                     color: selectedThemeData.cardColor,
                     child: _buildDrawerContent(context),
                   ),
                   Expanded(
-                    child: _pages[_currentIndex],
+                    child: _buildCurrentPage(visiblePageIndex),
                   ),
                 ],
               )
             : Stack(
                 children: [
-                  _pages[_currentIndex],
+                  _buildCurrentPage(visiblePageIndex),
                   if (!isMobile)
                     Positioned(
                       top: 10,
@@ -102,17 +143,17 @@ class _NavigationPageState extends State<NavigationPage> {
                     ),
                 ],
               ),
-        drawer: isMobile
-            ? null
-            : Drawer(
-                child: _buildDrawerContent(context),
-              ),
+        drawer: null,
         bottomNavigationBar: isMobile
             ? BottomNavigationBar(
                 type: BottomNavigationBarType.fixed,
                 currentIndex: mobileCurrentIndex,
-                onTap: (index) =>
-                    setState(() => _currentIndex = mobilePageIndices[index]),
+                onTap: (index) => setState(() {
+                  _currentIndex = mobilePageIndices[index];
+                  if (_currentIndex == 0) {
+                    _homeContentType = "MOVIE";
+                  }
+                }),
                 backgroundColor: selectedThemeData.scaffoldBackgroundColor,
                 selectedItemColor: selectedThemeData.primaryColor,
                 unselectedItemColor: selectedThemeData.canvasColor,
@@ -251,43 +292,76 @@ class _NavigationPageState extends State<NavigationPage> {
     required int index,
     required IconData icon,
     required String title,
+    String? homeContentType,
+    VoidCallback? onTap,
   }) {
     final selectedThemeData =
         Provider.of<ThemeProvider>(context, listen: false).getTheme;
-    final isSelected = index == _currentIndex;
+    final isSelected = index == _currentIndex &&
+        (homeContentType == null || homeContentType == _homeContentType);
+    void handleTap() {
+      if (onTap != null) {
+        onTap();
+        return;
+      }
+      if (title == "Profile") {
+        Provider.of<UserProvider>(context, listen: false).setValue();
+      }
+      _navigateTo(index, homeContentType: homeContentType);
+    }
 
-    return Padding(
+    final tile = Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: 8.0,
       ),
-      child: ListTile(
-        leading: Icon(
-          icon,
-          color: isSelected
-              ? selectedThemeData.primaryColor
-              : selectedThemeData.canvasColor,
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: ListTile(
+          minLeadingWidth: 24,
+          horizontalTitleGap: 14,
+          selected: isSelected,
+          selectedTileColor: Colors.transparent,
+          focusColor: Colors.transparent,
+          hoverColor: Colors.transparent,
+          splashColor: Colors.transparent,
+          leading: Icon(
+            icon,
             color: isSelected
                 ? selectedThemeData.primaryColor
                 : selectedThemeData.canvasColor,
           ),
+          title: _isSidebarExpanded
+              ? Text(
+                  title,
+                  style: TextStyle(
+                    color: isSelected
+                        ? selectedThemeData.primaryColor
+                        : selectedThemeData.canvasColor,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                )
+              : null,
+          onTap: ResponsiveWidget.isMobile(context) ? handleTap : null,
         ),
-        onTap: () {
-          if (title == "Profile") {
-            Provider.of<UserProvider>(context, listen: false).setValue();
-          }
-          _navigateTo(index);
-        },
       ),
+    );
+
+    if (ResponsiveWidget.isMobile(context)) return tile;
+
+    return OttTvFocus(
+      onTap: handleTap,
+      borderRadius: 14,
+      scale: 1.02,
+      child: tile,
     );
   }
 
-  void _navigateTo(int index) {
+  void _navigateTo(int index, {String? homeContentType}) {
     setState(() {
       _currentIndex = index;
+      if (homeContentType != null) {
+        _homeContentType = homeContentType;
+      }
     });
     if (Navigator.canPop(context)) {
       Navigator.of(context).pop(); // Close the drawer safely
@@ -303,43 +377,80 @@ class _NavigationPageState extends State<NavigationPage> {
     return ListView(
       padding: EdgeInsets.zero,
       children: [
-        DrawerHeader(
-          decoration: BoxDecoration(
-            color: selectedThemeData.primaryColor,
-          ),
-          child: Hero(
-            tag: "logo",
-            child: ClipRRect(
-              borderRadius: BorderRadiusGeometry.circular(25),
-              child: Image.asset(
-                ImageConstant.logo,
-              ),
+        SizedBox(
+          height: 170,
+          child: DrawerHeader(
+            margin: EdgeInsets.zero,
+            decoration: BoxDecoration(
+              color: selectedThemeData.primaryColor,
+            ),
+            child: Stack(
+              children: [
+                Center(
+                  child: Hero(
+                    tag: "logo",
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(25),
+                      child: Image.asset(
+                        ImageConstant.logo,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: IconButton(
+                    tooltip: _isSidebarExpanded ? "Collapse" : "Expand",
+                    icon: Icon(
+                      _isSidebarExpanded
+                          ? Icons.menu_open_rounded
+                          : Icons.menu_rounded,
+                      color: Colors.white,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isSidebarExpanded = !_isSidebarExpanded;
+                      });
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ),
-        Row(
-          children: [
-            Expanded(
-              child: Divider(
-                color: selectedThemeData.primaryColor,
-                thickness: 1,
+        if (_isSidebarExpanded)
+          Row(
+            children: [
+              Expanded(
+                child: Divider(
+                  color: selectedThemeData.primaryColor,
+                  thickness: 1,
+                ),
               ),
-            ),
-            IconButton(
-              tooltip: "Toggle Theme",
-              icon: Icon(
-                isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round,
-                color: selectedThemeData.canvasColor,
+              IconButton(
+                tooltip: "Toggle Theme",
+                icon: Icon(
+                  isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round,
+                  color: selectedThemeData.canvasColor,
+                ),
+                onPressed: () {
+                  themeProvider.toggleTheme();
+                },
               ),
-              onPressed: () {
-                themeProvider.toggleTheme();
-              },
-            ),
-          ],
+            ],
+          ),
+        _buildDrawerTile(
+          context,
+          index: 0,
+          icon: Icons.home,
+          title: lang.home,
+          homeContentType: "MOVIE",
         ),
-        _buildDrawerTile(context, index: 0, icon: Icons.home, title: lang.home),
         _buildDrawerTile(context,
             index: 1, icon: Icons.video_library, title: lang.series),
+
         /*    _buildDrawerTile(context,
             index: 2, icon: Icons.play_circle_fill_sharp, title: 'Mini Series'), */
         _buildDrawerTile(context,
@@ -347,12 +458,83 @@ class _NavigationPageState extends State<NavigationPage> {
         _buildDrawerTile(context,
             index: 4, icon: Icons.movie, title: lang.watchlist),
         _buildDrawerTile(context,
-            index: 6, icon: Icons.upcoming, title: lang.upcoming),
-        _buildDrawerTile(context,
-            index: 7, icon: Icons.account_balance_wallet, title: lang.wallet),
+            index: 8, icon: Icons.download_rounded, title: "Downloads"),
         _buildDrawerTile(context,
             index: 5, icon: Icons.person, title: lang.profile),
+        _buildDrawerTile(context,
+            index: 9, icon: Icons.settings, title: "Settings"),
+        _buildDrawerTile(context,
+            index: 10, icon: Icons.support_agent_sharp, title: lang.help),
+        _buildDrawerTile(
+          context,
+          index: -1,
+          icon: Icons.logout,
+          title: lang.logout,
+          onTap: _showLogoutDialog,
+        ),
       ],
+    );
+  }
+
+  void _showLogoutDialog() {
+    final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
+
+    showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: theme.cardColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          title: Text(
+            'Are you sure you want Logout?',
+            style: TextStyle(color: theme.canvasColor),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child:
+                  Text(lang.cancel, style: TextStyle(color: theme.canvasColor)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                Navigator.pop(dialogContext, true);
+                await _logout();
+              },
+              child: Text(lang.logout),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('isLoggedIn');
+    final localSharePreferences = LocalSharePreferences();
+    await localSharePreferences.setBool(
+      SharedPreferencesConstant.isUserLoggedIn,
+      false,
+    );
+    await localSharePreferences.setString(
+      SharedPreferencesConstant.currentUser,
+      '',
+    );
+    if (!mounted) return;
+    Provider.of<DashboardProvider>(context, listen: false).clear();
+    Provider.of<BookmarkProvider>(context, listen: false).clear();
+    Provider.of<UserProvider>(context, listen: false).clear();
+    Provider.of<UserProvider>(context, listen: false).disposeData();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginCard()),
     );
   }
 }
