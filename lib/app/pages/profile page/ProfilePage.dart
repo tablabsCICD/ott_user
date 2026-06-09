@@ -318,7 +318,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   onTap: () {
                                     context
                                         .read<OnboardingTourProvider>()
-                                        .replayTour();
+                                        .replayTour(context: context);
                                   },
                                 ),
                                 ProfileOption(

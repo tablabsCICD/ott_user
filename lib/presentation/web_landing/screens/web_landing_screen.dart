@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -146,10 +147,10 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                       child: ProductionHouseSection(
                         key: _liveTvKey,
                         onRegister: () => _openExternal(
-                          'https://filmytell.in/productionHouse/#/login/',
+                          AppConstant.productionHouseUrl,
                         ),
                         onLearnMore: () => _openExternal(
-                          'https://filmytell.in/productionHouse/#/login/',
+                          AppConstant.productionHouseUrl,
                         ),
                       ),
                     ),
@@ -157,10 +158,10 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                       child: FinalCtaSection(
                         onWatchContent: _openLogin,
                         onPublishContent: () => _openExternal(
-                          'https://filmytell.in/productionHouse/#/login/',
+                          AppConstant.productionHouseUrl,
                         ),
                         onEarnReferrals: () => _openExternal(
-                          'https://filmytell.in/promoter/#/login/',
+                          AppConstant.promoterPortalUrl,
                         ),
                       ),
                     ),
@@ -230,10 +231,8 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
   }
 
   void _handleFooterLink(String label) {
-    const policyDocumentUrl =
-        'https://filmytell-document.s3.ap-south-1.amazonaws.com/documents/filmytell-privacy-policy-h-a-03-06-2026-1780926099693.docx';
-    const termsAndConditionUrl =
-        'https://filmytell-document.s3.ap-south-1.amazonaws.com/documents/filmytell-terms-of-use-h-a-05-06-2026-1780927123235.docx';
+    const policyDocumentUrl = AppConstant.privacyPolicy;
+    const termsAndConditionUrl = AppConstant.termsAndCondition;
 
     switch (label) {
       case 'Home':
@@ -246,17 +245,17 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
         return;
       case 'Production House':
         _openExternal(
-          'https://filmytell.in/productionHouse/#/login/',
+          AppConstant.productionHouseUrl,
         );
         return;
       case 'Promoter':
         _openExternal(
-          'https://filmytell.in/promoter/#/login/',
+          AppConstant.promoterPortalUrl,
         );
         return;
       case 'OTT Admin':
         _openExternal(
-          'https://filmytell.in/ottAdmin/',
+          '',
         );
         return;
       case 'Privacy Policy':

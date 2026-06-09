@@ -75,6 +75,25 @@ class NotificationService {
     _isInitialized = true;
   }
 
+  Future<String?> getDeviceToken() async {
+    try {
+      final token = await _messaging.getToken();
+      if (token != null && token.trim().isNotEmpty) {
+        await _persistToken(token);
+        return token;
+      }
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('FCM token read failed: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final storedToken = prefs.getString(_fcmTokenKey)?.trim();
+    return storedToken == null || storedToken.isEmpty ? null : storedToken;
+  }
+
   Future<void> _initializeLocalNotifications() async {
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');

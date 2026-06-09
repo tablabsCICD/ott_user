@@ -223,7 +223,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
         trailing: Icon(Icons.arrow_forward_ios_rounded,
             size: 16, color: theme.canvasColor.withOpacity(0.7)),
         onTap: () {
-          context.read<OnboardingTourProvider>().replayTour();
+          context.read<OnboardingTourProvider>().replayTour(context: context);
         },
       ),
     );

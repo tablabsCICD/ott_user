@@ -88,7 +88,7 @@ class _NavigationPageState extends State<NavigationPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       DeepLinkService.instance.consumePendingNavigation();
       final tourProvider = context.read<OnboardingTourProvider>();
-      unawaited(tourProvider.startFirstLaunchTour());
+      unawaited(tourProvider.startFirstLaunchTour(context: context));
     });
   }
 
@@ -128,7 +128,11 @@ class _NavigationPageState extends State<NavigationPage> {
                         curve: Curves.easeOutCubic,
                         width: _isSidebarExpanded ? 250 : 86,
                         color: selectedThemeData.cardColor,
-                        child: _buildDrawerContent(context),
+                        child: MouseRegion(
+                          onEnter: (_) => _setSidebarExpanded(true),
+                          onExit: (_) => _setSidebarExpanded(false),
+                          child: _buildDrawerContent(context),
+                        ),
                       ),
                       Expanded(
                         child: _buildCurrentPage(visiblePageIndex),
@@ -138,20 +142,6 @@ class _NavigationPageState extends State<NavigationPage> {
                 : Stack(
                     children: [
                       _buildCurrentPage(visiblePageIndex),
-                      if (!isMobile)
-                        Positioned(
-                          top: 10,
-                          left: 10,
-                          child: IconButton(
-                            onPressed: () {
-                              _scaffoldKey.currentState?.openDrawer();
-                            },
-                            icon: Icon(
-                              Icons.menu,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
                     ],
                   ),
           ],
@@ -390,6 +380,11 @@ class _NavigationPageState extends State<NavigationPage> {
     }
   }
 
+  void _setSidebarExpanded(bool expanded) {
+    if (_isSidebarExpanded == expanded) return;
+    setState(() => _isSidebarExpanded = expanded);
+  }
+
   Widget _buildDrawerContent(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final selectedThemeData = themeProvider.getTheme;
@@ -418,24 +413,6 @@ class _NavigationPageState extends State<NavigationPage> {
                         fit: BoxFit.contain,
                       ),
                     ),
-                  ),
-                ),
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: IconButton(
-                    tooltip: _isSidebarExpanded ? "Collapse" : "Expand",
-                    icon: Icon(
-                      _isSidebarExpanded
-                          ? Icons.menu_open_rounded
-                          : Icons.menu_rounded,
-                      color: Colors.white,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _isSidebarExpanded = !_isSidebarExpanded;
-                      });
-                    },
                   ),
                 ),
               ],

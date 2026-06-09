@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum FeatureTourStepId {
@@ -105,16 +106,26 @@ class OnboardingTourProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> startFirstLaunchTour() async {
+  Future<void> startFirstLaunchTour({BuildContext? context}) async {
     await initialize();
     if (_completed || _skipped || _isActive) return;
-    _activeSteps = defaultSteps;
+    _activeSteps = _stepsForContext(context);
     _start();
   }
 
-  void replayTour() {
-    _activeSteps = defaultSteps;
+  void replayTour({BuildContext? context}) {
+    _activeSteps = _stepsForContext(context);
     _start();
+  }
+
+  List<FeatureTourStep> _stepsForContext(BuildContext? context) {
+    final removeFifthStep =
+        kIsWeb || (context != null && ResponsiveWidget.isTv(context));
+    if (!removeFifthStep) return defaultSteps;
+
+    return defaultSteps
+        .where((step) => step.id != FeatureTourStepId.moreActions)
+        .toList();
   }
 
   void _start() {

@@ -1,6 +1,6 @@
 class AppConstant {
   static const String appVersion = "1.0.7";
-  static const int appBuildNumber = 17;
+  static const int appBuildNumber = 18;
   static final String GOOGLE_KEY = "AIzaSyDbIESWMKX_4TqGEiFUhbu8-PUpLnVBPrc";
   static const String razorpayKeyId = String.fromEnvironment(
     'RAZORPAY_KEY_ID',
@@ -17,9 +17,19 @@ class AppConstant {
   static const webAppLink = "https://filmytell.in";
 
   static const privacyPolicy =
-      "https://filmytell-document.s3.ap-south-1.amazonaws.com/filmytell_privacy_policy.html";
+      "https://filmytell-document.s3.ap-south-1.amazonaws.com/documents/filmytell-privacy-policy-h-a-03-06-2026-1780926099693.docx";
+  //"https://filmytell-document.s3.ap-south-1.amazonaws.com/filmytell_privacy_policy.html";
   static const termsAndCondition =
-      "https://filmytell-document.s3.ap-south-1.amazonaws.com/filmytell_privacy_policy.html";
+      "https://filmytell-document.s3.ap-south-1.amazonaws.com/documents/filmytell-terms-of-use-h-a-05-06-2026-1780927123235.docx";
+
+  static const productionHouseUrl =
+      'https://filmytell.in/productionHouse/#/login/';
+
+  static const userPortalUrl = 'https://filmytell.in/productionHouse/#/login/';
+
+  static const promoterPortalUrl = 'https://filmytell.in/promoter/#/login/';
+
+  static const adminPortalUrl = 'https://filmytell.in/ottAdmin/#/login/';
 
   final List<String> availableLanguages = [
     'Hindi',

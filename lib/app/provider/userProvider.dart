@@ -23,6 +23,7 @@ import '../../data/models/user.dart';
 import '../core/constant/api_constant.dart';
 import '../core/network/api_helper.dart';
 import '../core/services/device_type_helper.dart';
+import '../core/services/notification_service.dart';
 import '../core/services/session_manager.dart';
 import '../core/utils/sharepreferences.dart';
 import 'baseProvider.dart';
@@ -877,6 +878,7 @@ class UserProvider extends BaseProvider {
     final deviceInfo = await DeviceTypeHelper.buildSessionInfo(
       context: context,
     );
+    final deviceToken = await NotificationService.instance.getDeviceToken();
     final apiUrl = ApiConstant.verifyOTP(
       mobileNum: mobile,
       otp: otp,
@@ -885,9 +887,10 @@ class UserProvider extends BaseProvider {
       deviceType: deviceInfo.deviceType.apiValue,
       appVersion: deviceInfo.appVersion,
       deviceMetadata: deviceInfo.deviceMetadata,
+      deviceToken: deviceToken,
     );
     final apiHelper = ApiHelper();
-
+    debugPrint("✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓" + apiUrl);
     try {
       var response = await apiHelper.postApiWithoutAuthToken(apiUrl);
       if (response.statusCode == 200) {
@@ -932,8 +935,8 @@ class UserProvider extends BaseProvider {
           response.statusCode == 404) {
         return {
           'success': false,
-          'message':
-              SessionManager.extractMessage(response.body) ?? 'Error in response'
+          'message': SessionManager.extractMessage(response.body) ??
+              'Error in response'
         };
       } else {
         return {'failure': true, 'message': 'Something went wrong!'};
