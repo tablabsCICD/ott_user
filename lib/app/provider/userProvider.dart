@@ -22,6 +22,8 @@ import '../../data/models/response/addUserResponse.dart';
 import '../../data/models/user.dart';
 import '../core/constant/api_constant.dart';
 import '../core/network/api_helper.dart';
+import '../core/services/device_type_helper.dart';
+import '../core/services/session_manager.dart';
 import '../core/utils/sharepreferences.dart';
 import 'baseProvider.dart';
 
@@ -815,7 +817,7 @@ class UserProvider extends BaseProvider {
     ApiHelper apiHelper = ApiHelper();
 
     try {
-      var response = await apiHelper.postApi(apiUrl);
+      var response = await apiHelper.postApiWithoutAuthToken(apiUrl);
       if (response.statusCode == 200) {
         Map<String, dynamic> responseBody = json.decode(response.body);
         GetUserResponse addUserResponse =
@@ -825,19 +827,27 @@ class UserProvider extends BaseProvider {
 
         if (addUserResponse.success == true) {
           //log('= $addUserResponse');
-          return {'success': true, 'message': 'OTP sent'};
+          return {
+            'success': true,
+            'message': addUserResponse.message ?? 'OTP sent',
+            'data': responseBody['data'],
+          };
         } else {
           return {
             'success': false,
-            'message': 'User not found',
+            'message': addUserResponse.message ?? 'User not found',
           };
         }
       } else if (response.statusCode == 401 ||
           response.statusCode == 500 ||
           response.statusCode == 404) {
+        final responseBody = json.decode(response.body);
+        final message = responseBody is Map<String, dynamic>
+            ? responseBody['message']?.toString()
+            : null;
         return {
           'success': false,
-          'message': 'Error in response',
+          'message': message ?? 'Error in response',
         };
       } else {
         return {
@@ -859,45 +869,59 @@ class UserProvider extends BaseProvider {
   }
 
 //verify otp
-  Future<Map<String, dynamic>> verifyOTP(String mobile, String otp) async {
-    final apiUrl = ApiConstant.verifyOTP(mobile, otp);
+  Future<Map<String, dynamic>> verifyOTP(
+    String mobile,
+    String otp, {
+    BuildContext? context,
+  }) async {
+    final deviceInfo = await DeviceTypeHelper.buildSessionInfo(
+      context: context,
+    );
+    final apiUrl = ApiConstant.verifyOTP(
+      mobileNum: mobile,
+      otp: otp,
+      deviceId: deviceInfo.deviceId,
+      deviceName: deviceInfo.deviceName,
+      deviceType: deviceInfo.deviceType.apiValue,
+      appVersion: deviceInfo.appVersion,
+      deviceMetadata: deviceInfo.deviceMetadata,
+    );
     final apiHelper = ApiHelper();
 
     try {
-      var response = await apiHelper.postApi(apiUrl);
-      log('Verify OTP Response==== ${response.body}');
+      var response = await apiHelper.postApiWithoutAuthToken(apiUrl);
       if (response.statusCode == 200) {
         Map<String, dynamic> responseBody = json.decode(response.body);
         GetUserResponse addUserResponse =
             GetUserResponse.fromJson(responseBody);
+        final sessionUser =
+            _extractUser(responseBody) ?? addUserResponse.data?.user;
+        final sessionSuccess = responseBody['success'] != false;
 
-        debugPrint("data: ${addUserResponse.message}");
-        if (addUserResponse.success == true) {
-          if (addUserResponse.data != null) {
-            userObject = addUserResponse.data!.user!;
-            print("before SEtData ${userObject.firstName}");
+        if (sessionSuccess) {
+          if (sessionUser != null) {
+            await _persistAuthenticatedSession(responseBody);
+            userObject = sessionUser;
             LocalSharePreferences localSharePreferences =
                 LocalSharePreferences();
             localSharePreferences.setBool(
                 SharedPreferencesConstant.isUserLoggedIn, true);
-            print(
-                "check  SEtLogin ${await localSharePreferences.getBool(SharedPreferencesConstant.isUserLoggedIn)}");
             localSharePreferences.setString(
-                SharedPreferencesConstant.currentUser,
-                jsonEncode(addUserResponse.data!.user));
-            print(
-                "after SEtData ${await localSharePreferences.getString(SharedPreferencesConstant.currentUser)}");
+                SharedPreferencesConstant.currentUser, jsonEncode(sessionUser));
             notifyListeners();
-            return {'success': true, 'message': 'User logged in successfully'};
+            return {
+              'success': true,
+              'message':
+                  addUserResponse.message ?? 'User logged in successfully',
+              'data': responseBody['data'],
+            };
           } else {
-            debugPrint("Empty data: ${addUserResponse.message}");
             return {
               'success': false,
               'message': addUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-          debugPrint("Error: ${addUserResponse.message}");
           return {
             'success': false,
             'message': addUserResponse.message ?? 'Error in response'
@@ -906,23 +930,19 @@ class UserProvider extends BaseProvider {
       } else if (response.statusCode == 401 ||
           response.statusCode == 500 ||
           response.statusCode == 404) {
-        Map<String, dynamic> responseBody = json.decode(response.body);
-        AddUserResponse addUserResponse =
-            AddUserResponse.fromJson(responseBody);
-        debugPrint("Error: ${addUserResponse.message}");
         return {
           'success': false,
-          'message': addUserResponse.message ?? 'Error in response'
+          'message':
+              SessionManager.extractMessage(response.body) ?? 'Error in response'
         };
       } else {
         return {'failure': true, 'message': 'Something went wrong!'};
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
       return {
         'success': false,
-        'message': 'An error occurred while logging user: $error'
+        'message': 'An error occurred while logging user'
       };
     }
   }
@@ -999,45 +1019,46 @@ class UserProvider extends BaseProvider {
   }
 
 // login email
-  login(String email, String password) async {
+  login(String email, String password, {BuildContext? context}) async {
     String apiUrl = ApiConstant.login;
-    Map<String, dynamic> data = {"emailId": email, "password": password};
+    final deviceInfo = await DeviceTypeHelper.buildSessionInfo(
+      context: context,
+    );
+    final data = deviceInfo.toLoginPayload(
+      username: email,
+      password: password,
+    );
     ApiHelper apiHelper = ApiHelper();
 
     try {
-      var response = await apiHelper.postApiWithBody(apiUrl, data);
+      var response = await apiHelper.postApiWithoutBodyAndToken(apiUrl, data);
       if (response.statusCode == 200) {
         Map<String, dynamic> responseBody = json.decode(response.body);
         GetUserResponse addUserResponse =
             GetUserResponse.fromJson(responseBody);
+        final sessionUser =
+            _extractUser(responseBody) ?? addUserResponse.data?.user;
+        final sessionSuccess = responseBody['success'] != false;
 
-        debugPrint("data: ${addUserResponse.message}");
-        if (addUserResponse.success == true) {
-          if (addUserResponse.data != null) {
-            userObject = addUserResponse.data!.user!;
-            print("before SEtData ${userObject.firstName}");
+        if (sessionSuccess) {
+          if (sessionUser != null) {
+            await _persistAuthenticatedSession(responseBody);
+            userObject = sessionUser;
             LocalSharePreferences localSharePreferences =
                 LocalSharePreferences();
             localSharePreferences.setBool(
                 SharedPreferencesConstant.isUserLoggedIn, true);
-            print(
-                "check  SEtLogin ${await localSharePreferences.getBool(SharedPreferencesConstant.isUserLoggedIn)}");
             localSharePreferences.setString(
-                SharedPreferencesConstant.currentUser,
-                jsonEncode(addUserResponse.data!.user));
-            print(
-                "after SEtData ${await localSharePreferences.getString(SharedPreferencesConstant.currentUser)}");
+                SharedPreferencesConstant.currentUser, jsonEncode(sessionUser));
             notifyListeners();
             return {'success': true, 'message': 'User logged in successfully'};
           } else {
-            debugPrint("Empty data: ${addUserResponse.message}");
             return {
               'success': false,
               'message': addUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-          debugPrint("Error: ${addUserResponse.message}");
           return {
             'success': false,
             'message': addUserResponse.message ?? 'Error in response'
@@ -1172,6 +1193,68 @@ class UserProvider extends BaseProvider {
     _webFile = null;
     _uploadedImageUrl = null;
     notifyListeners();
+  }
+
+  Future<void> _persistAuthenticatedSession(
+    Map<String, dynamic> responseBody,
+  ) async {
+    final token = _findStringValue(responseBody, const [
+      'jwt',
+      'token',
+      'accessToken',
+      'access_token',
+    ]);
+    await SessionManager.instance.saveToken(token);
+
+    final sessionRecordId = _findStringValue(responseBody, const [
+      'sessionRecordId',
+      'session_record_id',
+      'recordId',
+      'record_id',
+      'sessionId',
+      'session_id',
+    ]);
+    await SessionManager.instance.saveSessionRecordId(sessionRecordId);
+  }
+
+  String? _findStringValue(dynamic value, List<String> keys) {
+    if (value is Map) {
+      for (final key in keys) {
+        final found = value[key];
+        if (found != null && found.toString().trim().isNotEmpty) {
+          return found.toString();
+        }
+      }
+      for (final child in value.values) {
+        final found = _findStringValue(child, keys);
+        if (found != null) return found;
+      }
+    } else if (value is List) {
+      for (final child in value) {
+        final found = _findStringValue(child, keys);
+        if (found != null) return found;
+      }
+    }
+    return null;
+  }
+
+  User? _extractUser(dynamic value) {
+    if (value is Map) {
+      final directUser = value['user'];
+      if (directUser is Map<String, dynamic>) {
+        return User.fromJson(directUser);
+      }
+      for (final child in value.values) {
+        final user = _extractUser(child);
+        if (user != null) return user;
+      }
+    } else if (value is List) {
+      for (final child in value) {
+        final user = _extractUser(child);
+        if (user != null) return user;
+      }
+    }
+    return null;
   }
 
   Future<void> loadCountryOptions() async {

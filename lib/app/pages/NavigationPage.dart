@@ -1,10 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
-import 'package:ott/app/core/constant/prefrense_constant.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/services/session_manager.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/help%20support%20page/HelpSupportPage.dart';
+import 'package:ott/app/pages/device%20management%20page/DeviceManagementPage.dart';
 import 'package:ott/app/pages/profile%20page/component/change_language.dart';
 import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/pages/shorts%20page/ShortsPage.dart';
@@ -17,7 +20,9 @@ import 'package:ott/app/pages/search%20page/SearchPage.dart';
 import 'package:ott/app/pages/series%20page/SeriesListPage.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
+import 'package:ott/app/provider/onboarding_tour_provider.dart';
 import 'package:ott/app/provider/themeProvider.dart';
+import 'package:ott/app/widgets/feature_tour.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -36,7 +41,7 @@ class NavigationPage extends StatefulWidget {
 class _NavigationPageState extends State<NavigationPage> {
   int _currentIndex = 0;
   bool _isExitDialogOpen = false;
-  bool _isSidebarExpanded = true;
+  bool _isSidebarExpanded = false;
   String _homeContentType = "MOVIE";
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -67,6 +72,8 @@ class _NavigationPageState extends State<NavigationPage> {
         return const ChangeLanguage();
       case 10:
         return const HelpSupportPage();
+      case 11:
+        return const DeviceManagementPage();
       default:
         return HomePage(
           key: ValueKey(_homeContentType),
@@ -80,6 +87,8 @@ class _NavigationPageState extends State<NavigationPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       DeepLinkService.instance.consumePendingNavigation();
+      final tourProvider = context.read<OnboardingTourProvider>();
+      unawaited(tourProvider.startFirstLaunchTour());
     });
   }
 
@@ -109,40 +118,44 @@ class _NavigationPageState extends State<NavigationPage> {
       child: Scaffold(
         key: _scaffoldKey,
         backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-        body: isTvLayout
-            ? Row(
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                    width: _isSidebarExpanded ? 250 : 86,
-                    color: selectedThemeData.cardColor,
-                    child: _buildDrawerContent(context),
-                  ),
-                  Expanded(
-                    child: _buildCurrentPage(visiblePageIndex),
-                  ),
-                ],
-              )
-            : Stack(
-                children: [
-                  _buildCurrentPage(visiblePageIndex),
-                  if (!isMobile)
-                    Positioned(
-                      top: 10,
-                      left: 10,
-                      child: IconButton(
-                        onPressed: () {
-                          _scaffoldKey.currentState?.openDrawer();
-                        },
-                        icon: Icon(
-                          Icons.menu,
-                          color: Colors.white,
-                        ),
+        body: Stack(
+          children: [
+            isTvLayout
+                ? Row(
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        width: _isSidebarExpanded ? 250 : 86,
+                        color: selectedThemeData.cardColor,
+                        child: _buildDrawerContent(context),
                       ),
-                    ),
-                ],
-              ),
+                      Expanded(
+                        child: _buildCurrentPage(visiblePageIndex),
+                      ),
+                    ],
+                  )
+                : Stack(
+                    children: [
+                      _buildCurrentPage(visiblePageIndex),
+                      if (!isMobile)
+                        Positioned(
+                          top: 10,
+                          left: 10,
+                          child: IconButton(
+                            onPressed: () {
+                              _scaffoldKey.currentState?.openDrawer();
+                            },
+                            icon: Icon(
+                              Icons.menu,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+          ],
+        ),
         drawer: null,
         bottomNavigationBar: isMobile
             ? BottomNavigationBar(
@@ -173,11 +186,17 @@ class _NavigationPageState extends State<NavigationPage> {
                     label: lang.minSeries,
                   ), */
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.search),
+                    icon: FeatureTourTarget(
+                      id: FeatureTourStepId.search,
+                      child: Icon(Icons.search),
+                    ),
                     label: lang.search,
                   ),
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.movie),
+                    icon: FeatureTourTarget(
+                      id: FeatureTourStepId.watchlist,
+                      child: Icon(Icons.movie),
+                    ),
                     label: lang.watchlist,
                   ),
                   // BottomNavigationBarItem(
@@ -185,7 +204,10 @@ class _NavigationPageState extends State<NavigationPage> {
                   //   label: lang.upcoming,
                   // ),
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.person),
+                    icon: FeatureTourTarget(
+                      id: FeatureTourStepId.profile,
+                      child: Icon(Icons.person),
+                    ),
                     activeIcon: Hero(
                       tag: 'profile_nav',
                       child: Container(
@@ -464,6 +486,8 @@ class _NavigationPageState extends State<NavigationPage> {
         _buildDrawerTile(context,
             index: 9, icon: Icons.settings, title: "Settings"),
         _buildDrawerTile(context,
+            index: 11, icon: Icons.devices_other, title: "Devices"),
+        _buildDrawerTile(context,
             index: 10, icon: Icons.support_agent_sharp, title: lang.help),
         _buildDrawerTile(
           context,
@@ -516,17 +540,11 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   Future<void> _logout() async {
+    await SessionManager.instance.logoutFromServer();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('isLoggedIn');
     final localSharePreferences = LocalSharePreferences();
-    await localSharePreferences.setBool(
-      SharedPreferencesConstant.isUserLoggedIn,
-      false,
-    );
-    await localSharePreferences.setString(
-      SharedPreferencesConstant.currentUser,
-      '',
-    );
+    await localSharePreferences.clearSession();
     if (!mounted) return;
     Provider.of<DashboardProvider>(context, listen: false).clear();
     Provider.of<BookmarkProvider>(context, listen: false).clear();

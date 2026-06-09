@@ -37,6 +37,8 @@ class MovieDetailsPage extends StatefulWidget {
 }
 
 class _MovieDetailsPageState extends State<MovieDetailsPage> {
+  static const double _mediaPlayerBottomMargin = 24;
+
   bool isLoading = true;
   bool _contentLoadCompleted = false;
   bool _contentLoadFailed = false;
@@ -1353,7 +1355,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                   ),
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: _mediaPlayerBottomMargin),
               Text(
                 content.title ?? "",
                 style: TextStyle(

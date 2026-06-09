@@ -202,7 +202,10 @@ class GiftProvider extends ChangeNotifier {
       ApiHelper apiHelper = ApiHelper();
       final response = await apiHelper.postApi(apiUrl);
 
-      log("API Response => ${response.statusCode} | ${response.body}");
+      log(
+        "Gift Claim API Response Received => "
+        "${response.statusCode} | ${response.body}",
+      );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseBody = json.decode(response.body);
@@ -213,19 +216,24 @@ class GiftProvider extends ChangeNotifier {
             "message": responseBody["message"] ?? "Gift saved successfully"
           };
         } else {
+          log(
+            "Gift Claim Error Response Received => "
+            "${responseBody["message"] ?? "Failed to save gift"}",
+          );
           return {
             "success": false,
             "message": responseBody["message"] ?? "Failed to save gift"
           };
         }
       } else {
+        log("Gift Claim Error Response Received => ${response.statusCode}");
         return {
           "success": false,
           "message": "Server error: ${response.statusCode}"
         };
       }
     } catch (error, stack) {
-      log("Error in saveUserGift => $error", stackTrace: stack);
+      log("Gift Claim Error Response Received => $error", stackTrace: stack);
       return {"success": false, "message": "Something went wrong: $error"};
     }
   }

@@ -15,13 +15,16 @@ import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/provider/language_provider.dart';
 import 'package:ott/app/provider/localeLanguageProvider.dart';
 import 'package:ott/app/provider/offline_download_provider.dart';
+import 'package:ott/app/provider/onboarding_tour_provider.dart';
 import 'package:ott/app/provider/playMediaProvider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
 import 'package:ott/app/provider/series_provider.dart';
+import 'package:ott/app/provider/session_device_provider.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/provider/ticketProvider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
+import 'package:ott/app/widgets/feature_tour.dart';
 import 'package:ott/app/widgets/ott_tv_app_shell.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -103,6 +106,12 @@ Future<void> main() async {
         ChangeNotifierProvider(
           create: (_) => BookmarkProvider(),
         ),
+        ChangeNotifierProvider(
+          create: (_) => SessionDeviceProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => OnboardingTourProvider(),
+        ),
       ],
       child: MyApp(
         isLoggedIn: isLoggedIn,
@@ -142,6 +151,7 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     sendNotification();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      DeepLinkService.instance.consumePendingNavigation();
       NotificationService.instance.consumePendingNavigation();
     });
   }
@@ -183,8 +193,14 @@ class _MyAppState extends State<MyApp> {
       // Navigate based on login state
       initialRoute: "/",
       onGenerateRoute: RouteGenerator.generateRoute,
-      builder: (context, child) => OttTvAppShell(
-        child: child ?? const SizedBox.shrink(),
+      builder: (context, child) => Stack(
+        fit: StackFit.expand,
+        children: [
+          OttTvAppShell(
+            child: child ?? const SizedBox.shrink(),
+          ),
+          const Positioned.fill(child: FeatureTourOverlay()),
+        ],
       ),
       /* home: SplashScreen(
         isLoggedIn: widget.isLoggedIn,

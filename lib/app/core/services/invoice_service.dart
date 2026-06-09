@@ -83,7 +83,7 @@ class InvoiceService {
           _buildSummarySection(data),
           pw.SizedBox(height: 24),
           pw.Text(
-            'Thank you for your purchase on FilmyTell.',
+            'Thank you for your purchase on Filmytell.',
             style: pw.TextStyle(
               fontSize: 12,
               color: PdfColors.grey700,
@@ -97,7 +97,7 @@ class InvoiceService {
     final pdfBytes = await pdf.save();
     final fileName = 'invoice_${sanitizedTitle}_$invoiceNumber.pdf';
 
-    final subject = 'FilmyTell Invoice $invoiceNumber';
+    final subject = 'Filmytell Invoice $invoiceNumber';
     final message = _buildShareMessage(data, invoiceNumber);
 
     return GeneratedInvoice(
@@ -238,7 +238,7 @@ class InvoiceService {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                  'FilmyTell',
+                  'Filmytell',
                   style: pw.TextStyle(
                     fontSize: 24,
                     fontWeight: pw.FontWeight.bold,
@@ -291,7 +291,7 @@ class InvoiceService {
     final user = data.user;
     final customerName =
         '${user.firstName ?? ''} ${user.lastName ?? ''}'.trim().isEmpty
-            ? 'FilmyTell User'
+            ? 'Filmytell User'
             : '${user.firstName ?? ''} ${user.lastName ?? ''}'.trim();
 
     return _buildCard(
@@ -424,8 +424,7 @@ class InvoiceService {
             value,
             style: pw.TextStyle(
               fontSize: emphasize ? 14 : 12,
-              fontWeight:
-                  emphasize ? pw.FontWeight.bold : pw.FontWeight.normal,
+              fontWeight: emphasize ? pw.FontWeight.bold : pw.FontWeight.normal,
               color: emphasize ? PdfColors.red700 : PdfColors.black,
             ),
           ),
@@ -450,7 +449,7 @@ class InvoiceService {
   }
 
   String _buildShareMessage(PurchaseInvoiceData data, String invoiceNumber) {
-    return 'FilmyTell invoice $invoiceNumber for ${data.contentTitle}. '
+    return 'Filmytell invoice $invoiceNumber for ${data.contentTitle}. '
         'Amount paid: ${_formatCurrency(data.amount * data.quantity)}.';
   }
 

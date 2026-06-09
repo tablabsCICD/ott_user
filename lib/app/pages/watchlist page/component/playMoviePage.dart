@@ -1,16 +1,20 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:ott/app/core/services/anti_piracy_service.dart';
+import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/data/models/seriesModel.dart';
 import 'package:provider/provider.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart' as youtube;
 
 import 'package:ott/app/provider/themeProvider.dart';
+import 'package:ott/app/widgets/playback_watermark_overlay.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import '../../../provider/offline_download_provider.dart';
@@ -64,6 +68,11 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   bool _isExiting = false;
   int _setupToken = 0;
   bool _isOfflinePlayback = false;
+  bool _reportedStarted = false;
+  bool _lastReportedPlaying = false;
+  String? _playbackMessage;
+  WatermarkIdentity? _watermarkIdentity;
+  String? _currentRemotePlaybackUrl;
 
   bool get _isSeries =>
       widget.content?.type?.toLowerCase() == "series" &&
@@ -74,7 +83,15 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    unawaited(AntiPiracyService.instance.enableScreenProtection());
+    unawaited(_loadWatermarkIdentity());
     unawaited(_startFullscreenPlayback());
+  }
+
+  Future<void> _loadWatermarkIdentity() async {
+    final identity = await AntiPiracyService.instance.watermarkIdentity();
+    if (!mounted || _isDisposed) return;
+    setState(() => _watermarkIdentity = identity);
   }
 
   @override
@@ -101,6 +118,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     await SystemChrome.setPreferredOrientations(const [
       DeviceOrientation.portraitUp,
     ]);
+    await AntiPiracyService.instance.disableScreenProtection();
   }
 
   Future<void> _startFullscreenPlayback() async {
@@ -127,41 +145,114 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   Future<void> _preparePlayback() async {
-    String sourceUrl = widget.videoUrl.trim();
+    String sourceUrl = await _resolveOfflineSourceUrl(widget.videoUrl.trim());
     if (sourceUrl.isEmpty) {
-      _showPlaybackError();
+      _showPlaybackError('Video unavailable');
       return;
     }
+
+    if (!_isOfflinePlayback) {
+      sourceUrl = await _refreshExpiredPlaybackUrl(sourceUrl);
+    }
+    if (!mounted || _isDisposed) return;
 
     final youtubeId = _extractYoutubeId(sourceUrl);
 
     if (youtubeId != null && youtubeId.isNotEmpty) {
       _isOfflinePlayback = false;
+      final security = await _validatePlaybackSecurity(sourceUrl);
+      if (!security) return;
       await _setupYoutubePlayer(youtubeId);
       return;
     }
 
-    final content = widget.content;
-    if (content != null) {
-      final offlinePath =
-          await context.read<OfflineDownloadProvider>().getOfflinePath(content);
-      if (offlinePath != null && offlinePath.isNotEmpty) {
-        sourceUrl = offlinePath;
-        _isOfflinePlayback = true;
-      } else {
-        _isOfflinePlayback = false;
-      }
-    }
+    final security = await _validatePlaybackSecurity(sourceUrl);
+    if (!security) return;
 
+    _currentRemotePlaybackUrl = sourceUrl;
     await _setupPlayer(sourceUrl, playFromFile: _isOfflinePlayback);
   }
 
-  void _showPlaybackError() {
+  Future<String> _resolveOfflineSourceUrl(String sourceUrl) async {
+    if (sourceUrl.isNotEmpty && await _isExistingLocalFile(sourceUrl)) {
+      _isOfflinePlayback = true;
+      return sourceUrl;
+    }
+
+    final content = widget.content;
+    if (content == null) {
+      _isOfflinePlayback = false;
+      return sourceUrl;
+    }
+
+    final offlinePath =
+        await context.read<OfflineDownloadProvider>().getOfflinePath(content);
+    if (offlinePath != null &&
+        offlinePath.trim().isNotEmpty &&
+        await _isExistingLocalFile(offlinePath)) {
+      _isOfflinePlayback = true;
+      return offlinePath.trim();
+    }
+
+    _isOfflinePlayback = false;
+    return sourceUrl;
+  }
+
+  Future<bool> _isExistingLocalFile(String value) async {
+    if (kIsWeb || value.trim().isEmpty) return false;
+
+    final fileUri = Uri.tryParse(value);
+    final path = fileUri?.scheme == 'file' ? fileUri!.toFilePath() : value;
+
+    try {
+      return File(path).exists();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<String> _refreshExpiredPlaybackUrl(String sourceUrl) async {
+    final validationMessage =
+        AntiPiracyService.instance.validatePlaybackUrl(sourceUrl);
+    if (validationMessage != 'Playback link has expired. Please try again.') {
+      return sourceUrl;
+    }
+
+    final contentId = widget.content?.id;
+    if (contentId == null) return sourceUrl;
+
+    try {
+      final dashboardProvider = context.read<DashboardProvider>();
+      await dashboardProvider.getContentById(contentId);
+      final refreshedUrl = dashboardProvider.content.contentUrl?.trim();
+      if (refreshedUrl != null && refreshedUrl.isNotEmpty) {
+        return refreshedUrl;
+      }
+    } catch (_) {}
+
+    return sourceUrl;
+  }
+
+  Future<bool> _validatePlaybackSecurity(String sourceUrl) async {
+    final result = await AntiPiracyService.instance.validateBeforePlayback(
+      content: widget.content,
+      playbackUrl: sourceUrl,
+      isOfflinePlayback: _isOfflinePlayback,
+    );
+
+    if (result.allowed) return true;
+
+    _showPlaybackError(result.message);
+    return false;
+  }
+
+  void _showPlaybackError([String message = 'Video unavailable']) {
     if (!mounted || _isDisposed) return;
 
     setState(() {
       _loading = false;
       _hasPlaybackError = true;
+      _playbackMessage = message;
     });
   }
 
@@ -172,6 +263,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       setState(() {
         _loading = true;
         _hasPlaybackError = false;
+        _playbackMessage = null;
       });
     }
 
@@ -205,7 +297,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       _handlePlayingChanged(value.isPlaying);
 
       if (value.hasError) {
-        setState(() => _hasPlaybackError = true);
+        _showPlaybackError('Failed to load video');
       }
 
       if (value.playerState == youtube.PlayerState.ended) {
@@ -239,6 +331,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       setState(() {
         _loading = true;
         _hasPlaybackError = false;
+        _playbackMessage = null;
       });
     }
 
@@ -249,7 +342,9 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     await Future.delayed(const Duration(milliseconds: 250));
     if (_isDisposed || !mounted || token != _setupToken) return;
 
-    debugPrint("MEDIA SOURCE => $url");
+    if (kDebugMode) {
+      debugPrint("MEDIA SOURCE => ${_redactedPlaybackUrl(url)}");
+    }
 
     final player = Player();
     final controller = VideoController(player);
@@ -258,18 +353,17 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       // media_kit is the underlying playback engine; the route keeps the
       // existing fullscreen, resume, continue-watching and auto-next behavior.
       await player.open(
-        Media(playFromFile ? File(url).uri.toString() : url),
+        Media(playFromFile ? _localFileMediaUri(url) : url),
         play: false,
       );
       await player.setVolume(100);
     } catch (error) {
-      debugPrint("MEDIA_KIT INIT ERROR => $error");
+      if (kDebugMode) {
+        debugPrint("MEDIA_KIT INIT ERROR => $error");
+      }
       await player.dispose();
       if (mounted && token == _setupToken) {
-        setState(() {
-          _loading = false;
-          _hasPlaybackError = true;
-        });
+        _showPlaybackError('Failed to load video');
       }
       return;
     }
@@ -304,9 +398,11 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         if (completed) _handlePlaybackCompleted();
       }))
       ..add(player.stream.error.listen((error) {
-        debugPrint("MEDIA_KIT PLAYBACK ERROR => $error");
+        if (kDebugMode) {
+          debugPrint("MEDIA_KIT PLAYBACK ERROR => $error");
+        }
         if (mounted) {
-          setState(() => _hasPlaybackError = true);
+          _showPlaybackError('Failed to load video');
         }
       }));
   }
@@ -342,6 +438,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   void _handlePlayingChanged(bool isPlaying) {
     if (_isDisposed || !mounted) return;
 
+    _reportPlaybackState(isPlaying);
+
     if (isPlaying && !_wakelockEnabled) {
       WakelockPlus.enable();
       _wakelockEnabled = true;
@@ -349,6 +447,26 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       WakelockPlus.disable();
       _wakelockEnabled = false;
     }
+  }
+
+  void _reportPlaybackState(bool isPlaying) {
+    if (isPlaying && !_reportedStarted) {
+      _reportedStarted = true;
+      _lastReportedPlaying = true;
+      unawaited(_reportSecurityEvent(PlaybackSecurityEvent.started));
+      return;
+    }
+
+    if (isPlaying == _lastReportedPlaying) return;
+
+    _lastReportedPlaying = isPlaying;
+    unawaited(
+      _reportSecurityEvent(
+        isPlaying
+            ? PlaybackSecurityEvent.resumed
+            : PlaybackSecurityEvent.paused,
+      ),
+    );
   }
 
   void _handlePositionChanged() {
@@ -371,9 +489,25 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   void _handlePlaybackCompleted() {
+    unawaited(_reportSecurityEvent(PlaybackSecurityEvent.completed));
     if (_handlingEnd || !_isSeries) return;
     _handlingEnd = true;
     unawaited(_playNextEpisode());
+  }
+
+  Future<void> _reportSecurityEvent(PlaybackSecurityEvent event) async {
+    final position =
+        _youtubeController?.value.position ?? _player?.state.position;
+    final duration = _youtubeController?.value.metaData.duration ??
+        _player?.state.duration;
+
+    await AntiPiracyService.instance.reportEvent(
+      event: event,
+      content: widget.content,
+      position: position,
+      duration: duration,
+      isOfflinePlayback: _isOfflinePlayback,
+    );
   }
 
   void _saveProgress() {
@@ -434,9 +568,12 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     _handlingEnd = false;
     final nextUrl = next.videoUrl?.trim() ?? "";
     if (nextUrl.isEmpty) {
-      _showPlaybackError();
+      _showPlaybackError('Video unavailable');
       return;
     }
+
+    final security = await _validatePlaybackSecurity(nextUrl);
+    if (!security) return;
 
     final youtubeId = _extractYoutubeId(nextUrl);
     if (youtubeId != null && youtubeId.isNotEmpty) {
@@ -640,10 +777,11 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                         ),
                       )
                     : _hasPlaybackError
-                        ? const Center(
+                        ? Center(
                             child: Text(
-                              'Video unavailable',
-                              style: TextStyle(color: Colors.white),
+                              _playbackMessage ?? 'Video unavailable',
+                              style: const TextStyle(color: Colors.white),
+                              textAlign: TextAlign.center,
                             ),
                           )
                         : ResponsiveWidget.isDesktop(context)
@@ -655,11 +793,95 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                 left: 8,
                 child: SafeArea(child: _backButton()),
               ),
+              if (!_loading && !_hasPlaybackError)
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: SafeArea(child: _downloadButton()),
+                ),
+              if (!_loading && !_hasPlaybackError && _watermarkIdentity != null)
+                Positioned.fill(
+                  child: PlaybackWatermarkOverlay(
+                    identity: _watermarkIdentity!,
+                  ),
+                ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _downloadButton() {
+    final content = widget.content;
+    final contentId = content?.id;
+    final sourceUrl = _downloadSourceUrl(content);
+
+    if (content == null ||
+        contentId == null ||
+        content.isDownloadable != true ||
+        sourceUrl.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Material(
+      color: Colors.black.withOpacity(0.48),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: () async {
+          final offlineProvider = context.read<OfflineDownloadProvider>();
+          if (offlineProvider.isDownloading(contentId)) return;
+
+          final result = offlineProvider.isDownloaded(contentId)
+              ? <String, Object>{
+                  'success': true,
+                  'message': 'Movie is already downloaded.',
+                }
+              : await offlineProvider.downloadContent(
+                  content,
+                  sourceUrl: sourceUrl,
+                );
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                result['message']?.toString() ?? 'Download updated',
+              ),
+              backgroundColor: result['success'] == true
+                  ? Colors.green.shade700
+                  : Colors.red.shade700,
+            ),
+          );
+        },
+        child: const SizedBox(
+          height: 40,
+          width: 40,
+          child: Icon(
+            Icons.download_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _downloadSourceUrl(Content? content) {
+    final currentUrl = _currentRemotePlaybackUrl?.trim() ?? '';
+    if (_isRemoteHttpUrl(currentUrl)) return currentUrl;
+
+    final widgetUrl = widget.videoUrl.trim();
+    if (_isRemoteHttpUrl(widgetUrl)) return widgetUrl;
+
+    final contentUrl = content?.contentUrl?.trim() ?? '';
+    return _isRemoteHttpUrl(contentUrl) ? contentUrl : '';
+  }
+
+  bool _isRemoteHttpUrl(String value) {
+    final uri = Uri.tryParse(value);
+    return uri?.scheme == 'https' || uri?.scheme == 'http';
   }
 
   Widget _backButton() {
@@ -722,10 +944,11 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
     if (_player == null || _videoController == null) {
       if (_hasPlaybackError) {
-        return const Center(
+        return Center(
           child: Text(
-            'Video unavailable',
-            style: TextStyle(color: Colors.white),
+            _playbackMessage ?? 'Video unavailable',
+            style: const TextStyle(color: Colors.white),
+            textAlign: TextAlign.center,
           ),
         );
       }
@@ -755,5 +978,17 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         );
       },
     );
+  }
+
+  String _redactedPlaybackUrl(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.hasQuery) return 'redacted';
+    return uri.replace(queryParameters: const {}).toString();
+  }
+
+  String _localFileMediaUri(String pathOrUri) {
+    final uri = Uri.tryParse(pathOrUri);
+    if (uri?.scheme == 'file') return pathOrUri;
+    return File(pathOrUri).uri.toString();
   }
 }

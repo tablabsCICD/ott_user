@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
@@ -6,6 +7,7 @@ import 'package:ott/app/core/services/app_update_service.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/onboarding pages/selectLanguagePage.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/presentation/web_landing/screens/web_landing_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constant/prefrense_constant.dart';
@@ -59,10 +61,19 @@ class _SplashScreenState extends State<SplashScreen> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            _isLoggedIn ? NavigationPage() : const SelectLocaleLanguagePage(),
+        builder: (_) {
+          if (_isLoggedIn) return NavigationPage();
+          if (_shouldShowWebLanding(context)) {
+            return const WebLandingScreen();
+          }
+          return const SelectLocaleLanguagePage();
+        },
       ),
     );
+  }
+
+  bool _shouldShowWebLanding(BuildContext context) {
+    return kIsWeb && MediaQuery.sizeOf(context).width >= 1024;
   }
 
   Future<void> _showUpdateDialog(AppUpdateInfo updateInfo) async {

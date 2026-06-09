@@ -1,0 +1,31 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.filmytell.ott",
+      "sha256_cert_fingerprints": [
+        "7A:0A:0A:AC:A9:40:C8:0D:22:1F:69:9B:B3:F6:75:33:C4:99:EE:8A:D3:CF:DB:28:7C:9E:E3:1C:12:92:54:B9",
+        "06:66:71:F7:24:71:A9:70:63:0D:12:80:76:AA:4A:2A:C5:4F:6A:B5:7D:59:41:8B:F8:01:78:3E:FA:20:5F:F5",
+        "DB:BA:13:1E:C1:D8:85:45:E0:98:D5:2B:6A:E0:DD:74:BB:DE:2C:99:66:83:FA:31:C7:69:3C:D7:34:C1:06:3A",
+        "6A:6E:80:7C:15:E4:39:B5:00:EA:84:B6:FF:7F:C5:97:0A:6A:3C:ED:F8:8D:E4:3C:E9:69:3A:00:AA:FD:8A:1D"
+      ]
+    }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.pdk.tkd",
+      "sha256_cert_fingerprints": [
+        "06:66:71:F7:24:71:A9:70:63:0D:12:80:76:AA:4A:2A:C5:4F:6A:B5:7D:59:41:8B:F8:01:78:3E:FA:20:5F:F5",
+        "DB:BA:13:1E:C1:D8:85:45:E0:98:D5:2B:6A:E0:DD:74:BB:DE:2C:99:66:83:FA:31:C7:69:3C:D7:34:C1:06:3A",
+        "6A:6E:80:7C:15:E4:39:B5:00:EA:84:B6:FF:7F:C5:97:0A:6A:3C:ED:F8:8D:E4:3C:E9:69:3A:00:AA:FD:8A:1D"
+      ]
+    }
+  }
+]

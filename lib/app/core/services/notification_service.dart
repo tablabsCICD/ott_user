@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:firebase_core/firebase_core.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/pages/news page/NewsScreen.dart';
 import 'package:ott/app/route/navigation_service.dart';
 import 'package:ott/app/route/routes/app_routes.dart';
@@ -186,7 +188,7 @@ class NotificationService {
 
   Future<void> handleBackground(RemoteMessage message) async {
     await _persistNotificationPayload(message);
-    _openTargetScreen(_buildNavigationPayload(message));
+    await _openTargetScreen(_buildNavigationPayload(message));
   }
 
   void consumePendingNavigation() {
@@ -196,7 +198,7 @@ class NotificationService {
     }
 
     _pendingNavigationPayload = null;
-    _openTargetScreen(payload);
+    unawaited(_openTargetScreen(payload));
   }
 
   Future<void> showLocalNotification(RemoteMessage message) async {
@@ -234,18 +236,18 @@ class NotificationService {
     try {
       final decoded = jsonDecode(payload);
       if (decoded is Map<String, dynamic>) {
-        _openTargetScreen(decoded);
+        unawaited(_openTargetScreen(decoded));
       } else if (decoded is Map) {
-        _openTargetScreen(decoded.cast<String, dynamic>());
+        unawaited(_openTargetScreen(decoded.cast<String, dynamic>()));
       }
     } catch (_) {
-      _openTargetScreen(<String, dynamic>{'rawPayload': payload});
+      unawaited(_openTargetScreen(<String, dynamic>{'rawPayload': payload}));
     }
   }
 
   Map<String, dynamic> _buildNavigationPayload(RemoteMessage message) {
     return <String, dynamic>{
-      'screen': message.data['screen'] ?? 'news',
+      'screen': message.data['screen'] ?? 'home',
       'title': message.notification?.title ?? message.data['title'] ?? 'Ott',
       'body': message.notification?.body ?? message.data['body'] ?? '',
       'payload': message.data,
@@ -260,7 +262,11 @@ class NotificationService {
     );
   }
 
-  void _openTargetScreen(Map<String, dynamic> payload) {
+  Future<void> _openTargetScreen(Map<String, dynamic> payload) async {
+    if (await _openDeepLinkFromPayload(payload)) {
+      return;
+    }
+
     final navigator = navigatorKey.currentState;
     if (navigator == null) {
       _pendingNavigationPayload = payload;
@@ -277,5 +283,52 @@ class NotificationService {
     }
 
     navigator.pushNamed(AppRoutes.notificationPage);
+  }
+
+  Future<bool> _openDeepLinkFromPayload(Map<String, dynamic> payload) async {
+    for (final candidate in _deepLinkCandidates(payload)) {
+      final handled = await DeepLinkService.instance.handleUriString(
+        candidate,
+        source: 'notification',
+      );
+      if (handled) return true;
+    }
+
+    return false;
+  }
+
+  Iterable<String> _deepLinkCandidates(Map<String, dynamic> payload) sync* {
+    const linkKeys = <String>{
+      'url',
+      'link',
+      'deepLink',
+      'deeplink',
+      'dynamicLink',
+      'giftLink',
+      'claimGiftLink',
+      'couponCode',
+      'giftCode',
+      'code',
+      'body',
+      'title',
+      'rawPayload',
+    };
+
+    for (final entry in payload.entries) {
+      final key = entry.key;
+      final value = entry.value;
+
+      if (value is Map) {
+        yield* _deepLinkCandidates(value.cast<String, dynamic>());
+        continue;
+      }
+
+      if (!linkKeys.contains(key)) continue;
+
+      final text = value?.toString().trim();
+      if (text != null && text.isNotEmpty) {
+        yield text;
+      }
+    }
   }
 }

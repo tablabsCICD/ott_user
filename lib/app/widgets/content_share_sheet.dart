@@ -155,7 +155,7 @@ class _ContentShareSheetBody extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: QrImageView(
-                data: data.deepLink.toString(),
+                data: data.qrLink.toString(),
                 size: 220,
                 version: QrVersions.auto,
                 backgroundColor: const Color(0xFF111111),
@@ -183,7 +183,7 @@ class _ContentShareSheetBody extends StatelessWidget {
 
           /// LINK TEXT
           SelectableText(
-            data.deepLink.toString(),
+            data.qrLink.toString(),
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
@@ -234,7 +234,7 @@ class _ContentShareSheetBody extends StatelessWidget {
 🎬 ${data.movie.title}
 
 Watch now 👇
-${data.deepLink}
+${data.qrLink}
 
 📲 Download App:
 Android: $playStoreLink

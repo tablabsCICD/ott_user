@@ -106,7 +106,9 @@ class Content {
     totalRevenue: _asDouble(json['totalRevenue']),
 
     languageList: (json['languageList'] as List?)
-        ?.map((e) => LanguageList.fromJson(e))
+        ?.map((e) => e is Map
+            ? LanguageList.fromJson(Map<String, dynamic>.from(e))
+            : LanguageList(language: e.toString()))
         .toList(),
 
     castList: (json['castList'] as List?)

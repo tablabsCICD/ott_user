@@ -63,6 +63,7 @@ Future<bool?> showGiftClaimDialog(
                       hintText: "Enter 16 Digit Number",
                       textInputType: TextInputType.text,
                       capitalization: TextCapitalization.characters,
+                      readOnly: true,
                     ),
                     const SizedBox(height: 24),
                     Row(

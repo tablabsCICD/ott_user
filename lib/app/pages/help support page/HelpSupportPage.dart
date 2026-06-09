@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ott/app/provider/onboarding_tour_provider.dart';
 import 'package:ott/app/provider/ticketProvider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -60,7 +61,13 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                   ), */
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      child: _buildAppTourCard(theme),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                       child: _buildFormCard(theme, lang, provider),
                     ),
                   ),
@@ -188,6 +195,36 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAppTourCard(ThemeData theme) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: CircleAvatar(
+          backgroundColor: theme.primaryColor.withOpacity(0.14),
+          child: Icon(Icons.tour_rounded, color: theme.primaryColor),
+        ),
+        title: Text(
+          'App Tour',
+          style: TextStyle(
+            color: theme.canvasColor,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        subtitle: Text(
+          'Replay the quick guide to important app features.',
+          style: TextStyle(color: theme.canvasColor.withOpacity(0.68)),
+        ),
+        trailing: Icon(Icons.arrow_forward_ios_rounded,
+            size: 16, color: theme.canvasColor.withOpacity(0.7)),
+        onTap: () {
+          context.read<OnboardingTourProvider>().replayTour();
+        },
       ),
     );
   }

@@ -21,6 +21,7 @@ import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/continueWatchMovieCard.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/feature_tour.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/shimmer%20loader/home_shimmer.dart';
 import 'package:ott/app/widgets/shimmer%20loader/shimmer_loader.dart';
@@ -35,6 +36,7 @@ import 'package:ott/app/widgets/movieCard.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/utils/sharepreferences.dart';
+import '../../provider/onboarding_tour_provider.dart';
 import '../../provider/userProvider.dart';
 
 class HomePage extends StatefulWidget {
@@ -49,7 +51,10 @@ class HomePage extends StatefulWidget {
   _HomePageState createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with RouteAware {
+class _HomePageState extends State<HomePage>
+    with RouteAware, WidgetsBindingObserver {
+  static const double _autoPlayVisibilityThreshold = 0.70;
+
   late String selectedType;
   bool isLoading = true;
 
@@ -83,6 +88,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     selectedType = widget.initialSelectedType;
 
     _verticalController.addListener(_updateVisibleRows);
@@ -130,10 +136,29 @@ class _HomePageState extends State<HomePage> with RouteAware {
   @override
   void didPopNext() {
     _refreshContinueWatching();
+    _scheduleVisibleUpdate();
+  }
+
+  @override
+  void didPushNext() {
+    _clearHomeAutoPlay('navigating away from home');
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _clearHomeAutoPlay('app lifecycle $state');
+    } else if (state == AppLifecycleState.resumed) {
+      _scheduleVisibleUpdate();
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _clearHomeAutoPlay('home disposed');
     routeObserver.unsubscribe(this);
     for (final controller in _rowControllers.values) {
       controller.dispose();
@@ -199,6 +224,11 @@ class _HomePageState extends State<HomePage> with RouteAware {
     setState(() {
       _isOffline = isOffline;
     });
+    if (isOffline) {
+      _clearHomeAutoPlay('network offline');
+    } else {
+      _scheduleVisibleUpdate();
+    }
   }
 
   void _startAutoScroll() {
@@ -275,46 +305,22 @@ class _HomePageState extends State<HomePage> with RouteAware {
     }
   }
 
-  void _updateActiveIndex(
-    ValueNotifier<int?> notifier,
+  int? _primaryVisibleIndexForRow(
     ScrollController controller,
     int itemCount,
     List<Content>? items,
   ) {
     if (!controller.hasClients || itemCount <= 0) {
-      if (notifier.value != null) {
-        notifier.value = null;
-      }
-      return;
+      return null;
     }
 
     final viewport = controller.position.viewportDimension;
     if (viewport <= 0) {
-      if (notifier.value != null) {
-        notifier.value = null;
-      }
-      return;
+      return null;
     }
 
-    final maxScrollExtent = controller.position.maxScrollExtent;
-    if (maxScrollExtent - controller.offset <= 1.0) {
-      int bestLastIndex = itemCount - 1;
-
-      if (items != null && items.isNotEmpty) {
-        for (int i = itemCount - 1; i >= 0; i--) {
-          if (i < items.length &&
-              (items[i].trailerUrl?.trim().isNotEmpty ?? false)) {
-            bestLastIndex = i;
-            break;
-          }
-        }
-      }
-
-      if (notifier.value != bestLastIndex) {
-        notifier.value = bestLastIndex;
-      }
-      return;
-    }
+    final realItemCount = items?.length ?? itemCount;
+    if (realItemCount <= 0) return null;
 
     final viewStart = controller.offset;
     final viewEnd = viewStart + viewport;
@@ -323,13 +329,16 @@ class _HomePageState extends State<HomePage> with RouteAware {
       (viewStart / MovieCard.itemExtent).floor(),
     );
     final lastCandidate = math.min(
-      itemCount - 1,
-      ((viewEnd - 0.001) / MovieCard.itemExtent).floor(),
+      realItemCount - 1,
+      math.max(
+        firstCandidate,
+        ((viewEnd - 0.001) / MovieCard.itemExtent).floor(),
+      ),
     );
+    final isAtEnd = controller.position.maxScrollExtent - controller.offset <= 1;
 
     int? bestIndex;
-    int? fallbackIndex;
-    double bestOverlap = 0;
+    double bestVisibility = 0;
 
     for (int candidate = firstCandidate;
         candidate <= lastCandidate;
@@ -337,7 +346,6 @@ class _HomePageState extends State<HomePage> with RouteAware {
       final overlap = _visibleOverlap(viewStart, viewEnd, candidate);
       if (overlap <= 0) continue;
 
-      fallbackIndex = candidate;
       final hasTrailer = items != null &&
           candidate < items.length &&
           (items[candidate].trailerUrl?.trim().isNotEmpty ?? false);
@@ -345,26 +353,53 @@ class _HomePageState extends State<HomePage> with RouteAware {
         continue;
       }
 
+      final visibility =
+          (overlap / MovieCard.itemWidth).clamp(0.0, 1.0).toDouble();
+      _logHomeAutoPlay(
+        'Visibility Percentage index=$candidate '
+        '${(visibility * 100).toStringAsFixed(0)}%',
+      );
+      if (visibility < _autoPlayVisibilityThreshold) {
+        continue;
+      }
+
       if (bestIndex == null ||
-          overlap > bestOverlap ||
-          (overlap == bestOverlap && candidate > bestIndex)) {
-        bestOverlap = overlap;
+          visibility > bestVisibility ||
+          (visibility == bestVisibility &&
+              bestIndex != null &&
+              candidate > bestIndex)) {
+        bestVisibility = visibility;
         bestIndex = candidate;
       }
     }
 
-    bestIndex ??= fallbackIndex;
-
-    if (bestIndex == null) {
-      if (notifier.value != null) {
-        notifier.value = null;
+    if (bestIndex == null && isAtEnd) {
+      final lastPlayableIndex = _lastPlayableIndex(items);
+      if (lastPlayableIndex != null) {
+        final overlap = _visibleOverlap(viewStart, viewEnd, lastPlayableIndex);
+        final visibility =
+            (overlap / MovieCard.itemWidth).clamp(0.0, 1.0).toDouble();
+        _logHomeAutoPlay(
+          'End-of-list visibility index=$lastPlayableIndex '
+          '${(visibility * 100).toStringAsFixed(0)}%',
+        );
+        if (visibility >= _autoPlayVisibilityThreshold) {
+          bestIndex = lastPlayableIndex;
+        }
       }
-      return;
     }
 
-    if (notifier.value != bestIndex) {
-      notifier.value = bestIndex;
+    return bestIndex;
+  }
+
+  int? _lastPlayableIndex(List<Content>? items) {
+    if (items == null || items.isEmpty) return null;
+    for (int index = items.length - 1; index >= 0; index--) {
+      if (items[index].trailerUrl?.trim().isNotEmpty ?? false) {
+        return index;
+      }
     }
+    return null;
   }
 
   double _visibleOverlap(double viewStart, double viewEnd, int index) {
@@ -374,7 +409,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
     return overlap <= 0 ? 0 : overlap;
   }
 
-  double? _rowCenterY(GlobalKey key) {
+  Rect? _rowRect(GlobalKey key) {
     final context = key.currentContext;
     if (context == null) return null;
 
@@ -382,52 +417,87 @@ class _HomePageState extends State<HomePage> with RouteAware {
     if (renderObject is! RenderBox || !renderObject.hasSize) return null;
 
     final position = renderObject.localToGlobal(Offset.zero);
-    final size = renderObject.size;
-    final centerY = position.dy + (size.height / 2);
-
-    return centerY;
+    return position & renderObject.size;
   }
 
   void _updateVisibleRows() {
     if (!mounted) return;
 
-    final screenHeight = MediaQuery.of(context).size.height;
+    final screenSize = MediaQuery.of(context).size;
+    final screenRect = Offset.zero & screenSize;
+    int? activeRowIndex;
+    int? activeCardIndex;
+    double bestVerticalVisibility = 0;
+
     for (final entry in _rowActiveIndexes.entries) {
       final rowIndex = entry.key;
-      final notifier = entry.value;
       final controller = _rowControllers[rowIndex];
       final itemCount = _rowItemCounts[rowIndex] ?? 0;
       final items = _rowItems[rowIndex];
       final key = _rowKeys[rowIndex];
-      final centerY = key == null ? null : _rowCenterY(key);
-      final isVisible =
-          centerY != null && centerY >= 0 && centerY <= screenHeight;
+      final rowRect = key == null ? null : _rowRect(key);
 
-      if (!isVisible || controller == null) {
-        if (notifier.value != null) {
-          notifier.value = null;
-        }
+      if (rowRect == null || controller == null || rowRect.height <= 0) {
         continue;
       }
 
-      _updateActiveIndex(notifier, controller, itemCount, items);
-    }
+      final visibleTop = math.max(rowRect.top, screenRect.top);
+      final visibleBottom = math.min(rowRect.bottom, screenRect.bottom);
+      final visibleHeight = math.max(0.0, visibleBottom - visibleTop);
+      final verticalVisibility =
+          (visibleHeight / rowRect.height).clamp(0.0, 1.0).toDouble();
+      if (verticalVisibility < _autoPlayVisibilityThreshold) {
+        continue;
+      }
 
-    if (_continueWatchItemCount > 0) {
-      final centerY = _rowCenterY(_continueWatchKey);
-      final isVisible =
-          centerY != null && centerY >= 0 && centerY <= screenHeight;
-      if (isVisible) {
-        _updateActiveIndex(
-          _continueWatchActiveIndex,
-          _continueWatchController,
-          _continueWatchItemCount,
-          _continueWatchItems,
-        );
-      } else if (_continueWatchActiveIndex.value != null) {
-        _continueWatchActiveIndex.value = null;
+      final rowPrimaryIndex = _primaryVisibleIndexForRow(
+        controller,
+        itemCount,
+        items,
+      );
+      if (rowPrimaryIndex == null) continue;
+
+      if (activeRowIndex == null ||
+          verticalVisibility > bestVerticalVisibility) {
+        activeRowIndex = rowIndex;
+        activeCardIndex = rowPrimaryIndex;
+        bestVerticalVisibility = verticalVisibility;
       }
     }
+
+    for (final entry in _rowActiveIndexes.entries) {
+      final rowIndex = entry.key;
+      final notifier = entry.value;
+      final nextValue = rowIndex == activeRowIndex ? activeCardIndex : null;
+      if (notifier.value != nextValue) {
+        notifier.value = nextValue;
+        if (nextValue != null) {
+          final activeItems = _rowItems[rowIndex];
+          final activeVideoId =
+              activeItems != null && nextValue < activeItems.length
+                  ? activeItems[nextValue].id
+                  : null;
+          _logHomeAutoPlay(
+            'Auto-play Triggered row=$rowIndex index=$nextValue '
+            'Current Active Video ID=$activeVideoId '
+            'vertical=${(bestVerticalVisibility * 100).toStringAsFixed(0)}%',
+          );
+        }
+      }
+    }
+  }
+
+  void _clearHomeAutoPlay(String reason) {
+    for (final notifier in _rowActiveIndexes.values) {
+      if (notifier.value != null) {
+        notifier.value = null;
+      }
+    }
+    _logHomeAutoPlay('Video Stopped: $reason');
+  }
+
+  void _logHomeAutoPlay(String message) {
+    debugPrint('HOME_AUTOPLAY: $message');
   }
 
   void _scheduleVisibleUpdate() {
@@ -523,7 +593,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
                                                   _rowActiveIndexes.putIfAbsent(
                                                       index,
                                                       () => ValueNotifier<int?>(
-                                                          0));
+                                                          null));
                                                   _rowItemCounts[index] =
                                                       dashboardData
                                                               .movies?.length ??
@@ -531,6 +601,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
                                                   _rowItems[index] =
                                                       dashboardData.movies ??
                                                           const <Content>[];
+                                                  _scheduleVisibleUpdate();
                                                   _rowKeys.putIfAbsent(
                                                       index, () => GlobalKey());
 
@@ -546,30 +617,6 @@ class _HomePageState extends State<HomePage> with RouteAware {
                                                   if (!controller
                                                       .hasListeners) {
                                                     controller.addListener(() {
-                                                      final rowNotifier =
-                                                          _rowActiveIndexes[
-                                                              rowIndex];
-                                                      final rowController =
-                                                          _rowControllers[
-                                                              rowIndex];
-                                                      final rowItemCount =
-                                                          _rowItemCounts[
-                                                                  rowIndex] ??
-                                                              0;
-                                                      final rowItems =
-                                                          _rowItems[rowIndex];
-
-                                                      if (rowNotifier != null &&
-                                                          rowController !=
-                                                              null) {
-                                                        _updateActiveIndex(
-                                                          rowNotifier,
-                                                          rowController,
-                                                          rowItemCount,
-                                                          rowItems,
-                                                        );
-                                                      }
-
                                                       _scheduleVisibleUpdate();
 
                                                       if (controller.position
@@ -582,13 +629,13 @@ class _HomePageState extends State<HomePage> with RouteAware {
                                                               .loadMoreRowData(
                                                                   dashboardData,
                                                                   selectedType,
-                                                                  _userId!);
+                                                                  _userId!)
+                                                              .whenComplete(
+                                                                  _scheduleVisibleUpdate);
                                                         }
                                                       }
                                                     });
                                                   }
-
-                                                  _scheduleVisibleUpdate();
 
                                                   return KeyedSubtree(
                                                     key: rowKey,
@@ -1318,57 +1365,66 @@ class _HomePageState extends State<HomePage> with RouteAware {
       titleSpacing: ResponsiveWidget.isTablet(context) ? 50 : 10,
       actions: [
         //LanguageDropdown(),
-        IconButton(
-          icon: Icon(Icons.search,
-              color: ResponsiveWidget.isDesktop(context)
-                  ? selectedThemeData.canvasColor
-                  : Colors.white),
-          tooltip: lang.search,
-          style: IconButton.styleFrom(
-              backgroundColor: ResponsiveWidget.isDesktop(context)
-                  ? Colors.white.withOpacity(0.3)
-                  : Colors.black.withOpacity(0.2)),
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => SearchPage()),
+        FeatureTourTarget(
+          id: FeatureTourStepId.search,
+          child: IconButton(
+            icon: Icon(Icons.search,
+                color: ResponsiveWidget.isDesktop(context)
+                    ? selectedThemeData.canvasColor
+                    : Colors.white),
+            tooltip: lang.search,
+            style: IconButton.styleFrom(
+                backgroundColor: ResponsiveWidget.isDesktop(context)
+                    ? Colors.white.withOpacity(0.3)
+                    : Colors.black.withOpacity(0.2)),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => SearchPage()),
+            ),
           ),
         ),
         SizedBox(
           width: 4,
         ),
-        IconButton(
-          icon: Icon(Icons.notifications_active,
-              color: ResponsiveWidget.isDesktop(context)
-                  ? selectedThemeData.canvasColor
-                  : Colors.white),
-          tooltip: lang.notification,
-          style: IconButton.styleFrom(
-              backgroundColor: ResponsiveWidget.isDesktop(context)
-                  ? Colors.white.withOpacity(0.3)
-                  : Colors.black.withOpacity(0.2)),
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => NotificationPage()),
+        FeatureTourTarget(
+          id: FeatureTourStepId.notifications,
+          child: IconButton(
+            icon: Icon(Icons.notifications_active,
+                color: ResponsiveWidget.isDesktop(context)
+                    ? selectedThemeData.canvasColor
+                    : Colors.white),
+            tooltip: lang.notification,
+            style: IconButton.styleFrom(
+                backgroundColor: ResponsiveWidget.isDesktop(context)
+                    ? Colors.white.withOpacity(0.3)
+                    : Colors.black.withOpacity(0.2)),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => NotificationPage()),
+            ),
           ),
         ),
         SizedBox(
           width: 4,
         ),
-        IconButton(
-          tooltip: lang.selectPreferredLanguage,
-          style: IconButton.styleFrom(
-            backgroundColor: ResponsiveWidget.isDesktop(context)
-                ? Colors.white.withOpacity(0.3)
-                : Colors.black.withOpacity(0.2),
-          ),
-          icon: Icon(Icons.language_sharp,
-              color: ResponsiveWidget.isDesktop(context)
-                  ? selectedThemeData.canvasColor
-                  : Colors.white),
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChangeLanguage(),
+        FeatureTourTarget(
+          id: FeatureTourStepId.language,
+          child: IconButton(
+            tooltip: lang.selectPreferredLanguage,
+            style: IconButton.styleFrom(
+              backgroundColor: ResponsiveWidget.isDesktop(context)
+                  ? Colors.white.withOpacity(0.3)
+                  : Colors.black.withOpacity(0.2),
+            ),
+            icon: Icon(Icons.language_sharp,
+                color: ResponsiveWidget.isDesktop(context)
+                    ? selectedThemeData.canvasColor
+                    : Colors.white),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ChangeLanguage(),
+              ),
             ),
           ),
         ),
@@ -1383,57 +1439,65 @@ class _HomePageState extends State<HomePage> with RouteAware {
           final user = userProvider.userObject;
           return Row(
             children: [
-              IconButton(
-                icon: Icon(Icons.account_balance_wallet,
-                    color: ResponsiveWidget.isDesktop(context)
-                        ? selectedThemeData.canvasColor
-                        : Colors.white),
-                tooltip: "${walletProvider.walletBalance}",
-                style: IconButton.styleFrom(
-                    backgroundColor: ResponsiveWidget.isDesktop(context)
-                        ? Colors.white.withOpacity(0.3)
-                        : Colors.black.withOpacity(0.2)),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => WalletPage()),
+              FeatureTourTarget(
+                id: FeatureTourStepId.wallet,
+                child: IconButton(
+                  icon: Icon(Icons.account_balance_wallet,
+                      color: ResponsiveWidget.isDesktop(context)
+                          ? selectedThemeData.canvasColor
+                          : Colors.white),
+                  tooltip: "${walletProvider.walletBalance}",
+                  style: IconButton.styleFrom(
+                      backgroundColor: ResponsiveWidget.isDesktop(context)
+                          ? Colors.white.withOpacity(0.3)
+                          : Colors.black.withOpacity(0.2)),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => WalletPage()),
+                  ),
                 ),
               ),
               SizedBox(
                 width: 4,
               ),
-              Tooltip(
-                textStyle: TextStyle(
-                  fontSize: 10,
-                  color: selectedThemeData.scaffoldBackgroundColor,
-                ),
-                message:
-                    "${userProvider.userObj.firstName} ${userProvider.userObj.lastName}",
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => ProfilePage()));
-                  },
-                  child: Hero(
-                    tag: "profile",
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white,
-                          width: 1,
+              FeatureTourTarget(
+                id: FeatureTourStepId.profile,
+                child: Tooltip(
+                  textStyle: TextStyle(
+                    fontSize: 10,
+                    color: selectedThemeData.scaffoldBackgroundColor,
+                  ),
+                  message:
+                      "${userProvider.userObj.firstName} ${userProvider.userObj.lastName}",
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => ProfilePage()));
+                    },
+                    child: Hero(
+                      tag: "profile",
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 1,
+                          ),
                         ),
-                      ),
-                      child: CircleAvatar(
-                        radius: 18,
-                        backgroundColor: selectedThemeData.canvasColor,
-                        backgroundImage:
-                            userProvider.userObj.profilePhoto == null
-                                ? AssetImage(ImageConstant.profile)
-                                : userProvider.userObj.profilePhoto!.isNotEmpty
-                                    ? NetworkImage(
-                                        userProvider.userObj.profilePhoto!,
-                                      )
-                                    : AssetImage(ImageConstant.profile),
+                        child: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: selectedThemeData.canvasColor,
+                          backgroundImage:
+                              userProvider.userObj.profilePhoto == null
+                                  ? AssetImage(ImageConstant.profile)
+                                  : userProvider.userObj.profilePhoto!.isNotEmpty
+                                      ? NetworkImage(
+                                          userProvider.userObj.profilePhoto!,
+                                        )
+                                      : AssetImage(ImageConstant.profile),
+                        ),
                       ),
                     ),
                   ),

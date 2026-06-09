@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/core/services/session_manager.dart';
 import 'package:ott/app/pages/bookmarks%20page/bookmark_page.dart';
+import 'package:ott/app/pages/device%20management%20page/DeviceManagementPage.dart';
 import 'package:ott/app/pages/gifted%20movies%20page/GiftedMoviesPage.dart';
 import 'package:ott/app/pages/help%20support%20page/HelpSupportPage.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
@@ -20,6 +22,7 @@ import 'package:ott/app/pages/watchlist%20page/WatchlistPage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
+import 'package:ott/app/provider/onboarding_tour_provider.dart';
 import 'package:ott/app/provider/purchase_history_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/LanguageDropdown.dart';
@@ -310,6 +313,15 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                 ),
                                 ProfileOption(
+                                  icon: Icons.tour_rounded,
+                                  title: 'App Tour',
+                                  onTap: () {
+                                    context
+                                        .read<OnboardingTourProvider>()
+                                        .replayTour();
+                                  },
+                                ),
+                                ProfileOption(
                                   icon: Icons.file_copy,
                                   title: lang.termsPoliciesLiscenses,
                                   onTap: () {
@@ -333,6 +345,17 @@ class _ProfilePageState extends State<ProfilePage> {
                                   icon: Icons.star,
                                   title: lang.rateUs,
                                   onTap: _openRateUs,
+                                ),
+                                ProfileOption(
+                                  icon: Icons.devices_other,
+                                  title: 'Device Management',
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const DeviceManagementPage(),
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -428,16 +451,14 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: () async {
               Navigator.of(context).pop(); // Close the dialog
 
+              await SessionManager.instance.logoutFromServer();
               final prefs = await SharedPreferences.getInstance();
               await prefs.remove('isLoggedIn');
               LocalSharePreferences localSharePreferences =
                   LocalSharePreferences();
-              localSharePreferences.setBool(
-                  SharedPreferencesConstant.isUserLoggedIn, false);
+              await localSharePreferences.clearSession();
               print(
                   "check  SEtLogin ${await localSharePreferences.getBool(SharedPreferencesConstant.isUserLoggedIn)}");
-              localSharePreferences.setString(
-                  SharedPreferencesConstant.currentUser, '');
 
               // clear all the APIs used for the user
               Provider.of<DashboardProvider>(context, listen: false).clear();

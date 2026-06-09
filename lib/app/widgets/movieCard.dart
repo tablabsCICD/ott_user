@@ -16,9 +16,11 @@ import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
+import 'package:ott/app/provider/onboarding_tour_provider.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/feature_tour.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -63,6 +65,7 @@ class _MovieCardState extends State<MovieCard> {
   bool _isPreviewPlaying = false;
   bool _isAutoPlayActive = false;
   bool _isStartingPreview = false;
+  int _previewGeneration = 0;
   Timer? _playDelayTimer;
 
   Uri? _previewUri(String? rawUrl) {
@@ -131,9 +134,9 @@ class _MovieCardState extends State<MovieCard> {
 
     final trailerUri = _previewUri(widget.movie.trailerUrl);
     if (trailerUri == null) return false;
+    final generation = _previewGeneration;
 
     final player = Player();
-    final controller = VideoController(player);
 
     try {
       _previewSubscriptions
@@ -151,7 +154,7 @@ class _MovieCardState extends State<MovieCard> {
         }))
         ..add(player.stream.error.listen((error) {
           debugPrint("Trailer playback error: $error");
-          _stopPreview();
+          _stopAndDisposePreview('stream error');
           if (_activePreviewState == this) {
             _activePreviewState = null;
           }
@@ -160,12 +163,27 @@ class _MovieCardState extends State<MovieCard> {
       await player.open(Media(trailerUri.toString()), play: false);
       await player.setVolume(_isMuted ? 0 : 100);
 
+      if (!mounted ||
+          generation != _previewGeneration ||
+          !_isPlayTriggerActive ||
+          _activePreviewState != this) {
+        for (final subscription in _previewSubscriptions) {
+          unawaited(subscription.cancel());
+        }
+        _previewSubscriptions.clear();
+        await player.dispose();
+        _logPreview('Video Disposed stale init');
+        return false;
+      }
+
+      final controller = VideoController(player);
       _previewPlayer = player;
       _videoController = controller;
 
       if (mounted) {
         setState(() => _isVideoInitialized = true);
       }
+      _logPreview('Video Initialized');
       return true;
     } catch (e) {
       debugPrint("Video init failed: $e");
@@ -176,14 +194,20 @@ class _MovieCardState extends State<MovieCard> {
   }
 
   void _disposeVideoController() {
+    _previewGeneration++;
     for (final subscription in _previewSubscriptions) {
       unawaited(subscription.cancel());
     }
     _previewSubscriptions.clear();
-    _previewPlayer?.dispose();
+    final player = _previewPlayer;
     _previewPlayer = null;
     _videoController = null;
     _isVideoInitialized = false;
+    _isPreviewPlaying = false;
+    if (player != null) {
+      unawaited(player.dispose());
+      _logPreview('Video Disposed');
+    }
   }
 
   @override
@@ -201,8 +225,7 @@ class _MovieCardState extends State<MovieCard> {
 
     if (oldWidget.movie.trailerUrl != widget.movie.trailerUrl) {
       _playDelayTimer?.cancel();
-      _stopPreview();
-      _disposeVideoController();
+      _stopAndDisposePreview('trailer url changed');
     }
   }
 
@@ -224,7 +247,7 @@ class _MovieCardState extends State<MovieCard> {
       _schedulePreview();
     } else {
       _playDelayTimer?.cancel();
-      _stopPreview();
+      _stopAndDisposePreview('hover lost');
       if (_activePreviewState == this) {
         _activePreviewState = null;
       }
@@ -245,7 +268,7 @@ class _MovieCardState extends State<MovieCard> {
       _schedulePreview();
     } else {
       _playDelayTimer?.cancel();
-      _stopPreview();
+      _stopAndDisposePreview('visibility below threshold');
       if (_activePreviewState == this) {
         _activePreviewState = null;
       }
@@ -295,6 +318,7 @@ class _MovieCardState extends State<MovieCard> {
     if (_isStartingPreview || _isPreviewPlaying) return;
 
     _isStartingPreview = true;
+    final generation = ++_previewGeneration;
     try {
       _activatePreview();
 
@@ -303,23 +327,32 @@ class _MovieCardState extends State<MovieCard> {
         if (_activePreviewState == this) {
           _activePreviewState = null;
         }
-        _stopPreview();
+        _stopAndDisposePreview('not ready');
         return;
       }
 
-      if (!_isPlayTriggerActive) {
-        _stopPreview();
+      if (!_isPlayTriggerActive ||
+          generation != _previewGeneration ||
+          _activePreviewState != this) {
+        _stopAndDisposePreview('stale start');
         return;
       }
 
       _ensureMuted();
 
       await _previewPlayer!.play();
-      if (!mounted) return;
+      if (!mounted ||
+          generation != _previewGeneration ||
+          _activePreviewState != this) {
+        _stopAndDisposePreview('stale after play');
+        return;
+      }
       setState(() => _isPreviewPlaying = true);
+      _logPreview('Video Started');
+      _logPreview('Current Active Video ID ${widget.movie.id ?? widget.index}');
     } catch (e) {
       debugPrint("Trailer play failed: $e");
-      _stopPreview();
+      _stopAndDisposePreview('play failed');
       if (_activePreviewState == this) {
         _activePreviewState = null;
       }
@@ -332,7 +365,7 @@ class _MovieCardState extends State<MovieCard> {
     if (_activePreviewState == this) return;
     final previous = _activePreviewState;
     _activePreviewState = this;
-    previous?._stopPreview(external: true);
+    previous?._stopAndDisposePreview('replaced by ${widget.movie.id}');
   }
 
   void _ensureMuted() {
@@ -359,6 +392,23 @@ class _MovieCardState extends State<MovieCard> {
     setState(() {
       _isPreviewPlaying = false;
     });
+    _logPreview(external ? 'Video Paused external' : 'Video Paused');
+  }
+
+  void _stopAndDisposePreview(String reason) {
+    _previewGeneration++;
+    _stopPreview(external: true);
+    _disposeVideoController();
+    _logPreview('Video Stopped $reason');
+  }
+
+  void _logPreview(String message) {
+    if (kDebugMode) {
+      debugPrint(
+        'HOME_AUTOPLAY_CARD: $message '
+        'id=${widget.movie.id ?? 'unknown'} index=${widget.index}',
+      );
+    }
   }
 
   @override
@@ -626,7 +676,10 @@ class _MovieCardState extends State<MovieCard> {
                       ),
                     ),
                   )
-                : _buildPriceButton(theme, lang, price),
+                : _tourWrapDownloadTarget(
+                    _buildPriceButton(theme, lang, price),
+                    movie,
+                  ),
             SizedBox(
               width: 5,
             )
@@ -670,6 +723,18 @@ class _MovieCardState extends State<MovieCard> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _tourWrapDownloadTarget(Widget child, Content movie) {
+    final canDownload = widget.index == 0 &&
+        movie.isDownloadable == true &&
+        (movie.contentUrl?.trim().isNotEmpty ?? false);
+    if (!canDownload) return child;
+
+    return FeatureTourTarget(
+      id: FeatureTourStepId.download,
+      child: child,
     );
   }
 
@@ -875,7 +940,8 @@ class _MovieCardState extends State<MovieCard> {
     return Positioned(
       top: verticalInset,
       right: horizontalInset,
-      child: SpeedDial(
+      child: _tourWrapMoreActionsTarget(
+        SpeedDial(
         openCloseDial: isDialOpen,
         onPress: () => isDialOpen.value = !isDialOpen.value,
         icon: Icons.more_vert,
@@ -962,7 +1028,17 @@ class _MovieCardState extends State<MovieCard> {
               },
             ),
         ],
+        ),
       ),
+    );
+  }
+
+  Widget _tourWrapMoreActionsTarget(Widget child) {
+    if (widget.index != 0) return child;
+
+    return FeatureTourTarget(
+      id: FeatureTourStepId.moreActions,
+      child: child,
     );
   }
 

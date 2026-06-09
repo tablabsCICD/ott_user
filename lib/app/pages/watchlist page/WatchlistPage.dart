@@ -159,6 +159,13 @@ class _WatchlistPageState extends State<WatchlistPage> {
     }
     contentToPlay.watchedPercentage ??= item.watchedPercentage;
 
+    final offlinePath = await context
+        .read<OfflineDownloadProvider>()
+        .getOfflinePath(contentToPlay);
+    if (offlinePath != null && offlinePath.trim().isNotEmpty) {
+      contentUrl = offlinePath;
+    }
+
     if (contentUrl == null || contentUrl.trim().isEmpty) {
       CustomToast.show(
         context,

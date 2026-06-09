@@ -4,14 +4,47 @@ class ApiConstant {
   /* static const String baseUrl =
       "http://ec2-43-205-217-79.ap-south-1.compute.amazonaws.com:8080/ott/"; */
 
-  static String login = "${baseUrl}user/email/login2";
+  static String login = "${baseUrl}auth/session/login";
+  static String twoStepLogin = "${baseUrl}auth/two-step/login";
+  static String twoStepVerifyOtp = "${baseUrl}auth/two-step/verify-otp";
+  static String legacyLogin = "${baseUrl}user/email/login2";
+  static String sessionLogout = "${baseUrl}auth/session/logout";
+  static String activeDevices = "${baseUrl}auth/session/devices";
+  static String forceLogoutDevice(sessionRecordId) =>
+      "${baseUrl}auth/session/devices/$sessionRecordId/logout";
+  static String validatePlaybackSecurity =
+      "${baseUrl}api/playback/security/validate";
+  static String playbackPiracyEvent = "${baseUrl}api/playback/security/event";
   static String registration = '${baseUrl}user/RegisterUser';
 
   //otp login
   static String sendOTP(mobileNum) =>
       "${baseUrl}userNew/SendOTPOnMobileWithRegistration?mobileNumber=$mobileNum";
-  static String verifyOTP(mobileNum, otp) =>
-      "${baseUrl}userNew/VerifyOtpJWT?mobileNumber=$mobileNum&otp=$otp";
+  static String verifyOTP({
+    required mobileNum,
+    required otp,
+    required deviceId,
+    required deviceName,
+    required deviceType,
+    required appVersion,
+    deviceMetadata,
+  }) {
+    final query = <String, String>{
+      'username': mobileNum.toString(),
+      'mobileNumber': mobileNum.toString(),
+      'otp': otp.toString(),
+      'deviceId': deviceId.toString(),
+      'deviceName': deviceName.toString(),
+      'deviceType': deviceType.toString(),
+      'appVersion': appVersion.toString(),
+      if (deviceMetadata != null && deviceMetadata.toString().trim().isNotEmpty)
+        'deviceMetadata': deviceMetadata.toString(),
+    };
+
+    return Uri.parse("${baseUrl}userNew/VerifyOtpJWT")
+        .replace(queryParameters: query)
+        .toString();
+  }
 
   static String getDashboardData =
       "${baseUrl}api/forUser/filter/content-list/type3?";
@@ -43,6 +76,8 @@ class ApiConstant {
       "${baseUrl}api/forUser/foruser/search/lag/gen/rating?userId=$id&language=$lang&genre=$genre&minRating=$rating";
   static String getTopTrendingContentLast7Days(userId) =>
       "${baseUrl}api/forUser/user/Content/TopTen?userId=$userId";
+  static String publicTopTenContent =
+      "${baseUrl}api/forUser/public/Content/TopTen";
 
   static String uploadImg = "${baseUrl}api/other/upload-file";
 

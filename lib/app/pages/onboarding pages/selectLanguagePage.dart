@@ -59,6 +59,7 @@ class SelectLocaleLanguagePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 40),
                   ElevatedButton(
+                    autofocus: ResponsiveWidget.isTabletOrTv(context),
                     onPressed: () {
                       Navigator.pushReplacement(
                         context,

@@ -7,6 +7,7 @@ class OttTvFocus extends StatefulWidget {
     super.key,
     required this.child,
     this.onTap,
+    this.focusNode,
     this.borderRadius = 14,
     this.autofocus = false,
     this.scale = 1.04,
@@ -15,6 +16,7 @@ class OttTvFocus extends StatefulWidget {
 
   final Widget child;
   final VoidCallback? onTap;
+  final FocusNode? focusNode;
   final double borderRadius;
   final bool autofocus;
   final double scale;
@@ -25,19 +27,36 @@ class OttTvFocus extends StatefulWidget {
 }
 
 class _OttTvFocusState extends State<OttTvFocus> {
-  final FocusNode _focusNode = FocusNode(debugLabel: 'ott-tv-focus');
+  late FocusNode _focusNode;
   bool _focused = false;
 
   @override
   void initState() {
     super.initState();
+    _focusNode = widget.focusNode ?? FocusNode(debugLabel: 'ott-tv-focus');
     _focusNode.addListener(_handleFocusChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant OttTvFocus oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusNode == widget.focusNode) return;
+
+    _focusNode.removeListener(_handleFocusChanged);
+    if (oldWidget.focusNode == null) {
+      _focusNode.dispose();
+    }
+    _focusNode = widget.focusNode ?? FocusNode(debugLabel: 'ott-tv-focus');
+    _focusNode.addListener(_handleFocusChanged);
+    _focused = _focusNode.hasFocus;
   }
 
   @override
   void dispose() {
     _focusNode.removeListener(_handleFocusChanged);
-    _focusNode.dispose();
+    if (widget.focusNode == null) {
+      _focusNode.dispose();
+    }
     super.dispose();
   }
 

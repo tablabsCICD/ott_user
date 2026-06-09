@@ -8,6 +8,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
@@ -963,13 +964,16 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   }
 
   void _shareMovie(BuildContext context, Content movie) async {
+    final shareLink = movie.id == null
+        ? (movie.trailerUrl ?? '')
+        : DeepLinkService.instance.buildMovieAppLink(movie.id!).toString();
     final String shareText = '''
 🎬 ${movie.title ?? ''}
 
 ${movie.description ?? ''}
 
 ▶️ Watch here:
-${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? ''}
+$shareLink
 
 📲 Download Filmytell App now!
 '''

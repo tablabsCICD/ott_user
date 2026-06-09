@@ -170,7 +170,7 @@ async function payoutToClient({ purchaseId, ownerId, amount, contentId }) {
     purpose: 'payout',
     queue_if_low_balance: true,
     reference_id: `content_${contentId}_purchase_${purchaseId}`,
-    narration: 'FilmyTell content payout',
+    narration: 'Filmytell content payout',
   });
 
   await payoutRepo.insert({

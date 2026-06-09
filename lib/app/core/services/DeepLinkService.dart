@@ -72,7 +72,13 @@ class DeepLinkService {
   bool get supportsUniversalLinks => true;
 
   Future<void> init() async {
-    if (_isInitialized || kIsWeb) {
+    if (_isInitialized) {
+      _isInitialized = true;
+      return;
+    }
+
+    if (kIsWeb) {
+      await _handleIncomingUri(Uri.base, source: 'initial_uri');
       _isInitialized = true;
       return;
     }
@@ -151,6 +157,8 @@ class DeepLinkService {
   }
 
   DeepLinkTarget? parseTarget(Uri uri) {
+    if (_isExpiredLink(uri)) return null;
+
     if (uri.scheme == scheme) {
       final type = _typeFromString(uri.host);
       final firstSegment =
@@ -174,13 +182,8 @@ class DeepLinkService {
 
     if ((uri.scheme == 'https' || uri.scheme == 'http') &&
         _isSupportedHttpHost(uri.host)) {
-      final pathSegments = uri.pathSegments
-          .where((segment) => segment.trim().isNotEmpty)
-          .toList(growable: false);
-      final normalizedPathSegments = pathSegments.isNotEmpty &&
-              pathSegments.first.toLowerCase() == ottPathPrefix
-          ? pathSegments.sublist(1)
-          : pathSegments;
+      final pathSegments = _httpPathSegments(uri);
+      final normalizedPathSegments = _normalizePathSegments(pathSegments);
       final pathType = normalizedPathSegments.isNotEmpty
           ? _typeFromString(normalizedPathSegments.first)
           : null;
@@ -228,9 +231,51 @@ class DeepLinkService {
     return null;
   }
 
+  Future<bool> handleUri(
+    Uri? uri, {
+    String source = 'external',
+  }) {
+    return _handleIncomingUri(uri, source: source);
+  }
+
+  Future<bool> handleUriString(
+    String? rawValue, {
+    String source = 'external',
+  }) async {
+    final uri = _uriFromText(rawValue);
+    if (uri == null) return false;
+    return _handleIncomingUri(uri, source: source);
+  }
+
   bool _isSupportedHttpHost(String rawHost) {
     final host = rawHost.trim().toLowerCase();
     return host == httpsHost || host == httpsWwwHost;
+  }
+
+  List<String> _normalizePathSegments(List<String> pathSegments) {
+    if (pathSegments.isNotEmpty &&
+        pathSegments.first.toLowerCase() == ottPathPrefix) {
+      return pathSegments.sublist(1);
+    }
+    return pathSegments;
+  }
+
+  List<String> _httpPathSegments(Uri uri) {
+    final pathSegments = uri.pathSegments
+        .where((segment) => segment.trim().isNotEmpty)
+        .toList(growable: false);
+    if (pathSegments.isNotEmpty) return pathSegments;
+
+    final fragment = uri.fragment.trim();
+    if (fragment.isEmpty) return const <String>[];
+
+    final fragmentUri = Uri.tryParse(fragment.startsWith('/')
+        ? 'https://$httpsHost$fragment'
+        : 'https://$httpsHost/$fragment');
+    return fragmentUri?.pathSegments
+            .where((segment) => segment.trim().isNotEmpty)
+            .toList(growable: false) ??
+        const <String>[];
   }
 
   void consumePendingNavigation() {
@@ -249,18 +294,18 @@ class DeepLinkService {
     _isInitialized = false;
   }
 
-  Future<void> _handleIncomingUri(Uri? uri, {required String source}) async {
+  Future<bool> _handleIncomingUri(Uri? uri, {required String source}) async {
     if (uri == null) {
-      return;
+      return false;
     }
 
     final target = parseTarget(uri);
     developer.log(
-      'Incoming URI: $uri',
+      'Deep Link Received: $uri source=$source',
       name: 'DeepLinkService',
     );
     developer.log(
-      'Extracted type: ${target?.typeName ?? 'unknown'}',
+      'Route Matched: ${target?.typeName ?? 'unknown'}',
       name: 'DeepLinkService',
     );
     developer.log(
@@ -268,29 +313,30 @@ class DeepLinkService {
       name: 'DeepLinkService',
     );
     developer.log(
-      'Extracted coupon: ${target?.couponCode ?? 'none'}',
+      'Gift Code Extracted: ${target?.couponCode ?? 'none'}',
       name: 'DeepLinkService',
     );
 
     if (target == null) {
       developer.log(
-        'Ignoring unsupported deep link: $uri',
+        'Ignoring unsupported deep link',
         name: 'DeepLinkService',
         level: 900,
       );
-      return;
+      return false;
     }
 
     if (source == 'initial_uri') {
       _pendingTarget = target;
       developer.log(
-        'Queued ${target.typeName} deep link from initial launch',
+        'Navigation Triggered: queued ${target.typeName} from initial launch',
         name: 'DeepLinkService',
       );
-      return;
+      return true;
     }
 
     await _navigateToTarget(target, source: source);
+    return true;
   }
 
   Future<void> _navigateToTarget(
@@ -308,7 +354,7 @@ class DeepLinkService {
     }
 
     developer.log(
-      'Navigating to ${target.typeName} with id=${target.id} from $source',
+      'Navigation Triggered: ${target.typeName} id=${target.id} source=$source',
       name: 'DeepLinkService',
     );
 
@@ -332,6 +378,10 @@ class DeepLinkService {
     NavigatorState navigator,
     String couponCode,
   ) async {
+    developer.log(
+      'Navigation Triggered: opening gift claim for code=$couponCode',
+      name: 'DeepLinkService',
+    );
     await showGiftClaimDialog(
       navigator.context,
       initialCouponCode: couponCode,
@@ -461,6 +511,63 @@ class DeepLinkService {
       return null;
     }
     return value;
+  }
+
+  Uri? _uriFromText(String? rawValue) {
+    final value = (rawValue ?? '').trim();
+    if (value.isEmpty) return null;
+
+    final directUri = Uri.tryParse(value);
+    if (directUri != null &&
+        (directUri.hasScheme || directUri.pathSegments.isNotEmpty)) {
+      if (directUri.hasScheme) return directUri;
+      if (directUri.path.startsWith('/')) {
+        return Uri.https(httpsHost, directUri.path, directUri.queryParameters);
+      }
+    }
+
+    final urlMatch = RegExp(
+      r"""(https?:\/\/[^\s<>"']+|myapp:\/\/[^\s<>"']+)""",
+      caseSensitive: false,
+    ).firstMatch(value);
+    if (urlMatch != null) {
+      final url = _trimTrailingPunctuation(urlMatch.group(0)!);
+      return Uri.tryParse(url);
+    }
+
+    final couponMatch = RegExp(
+      r'\bGF[A-Z0-9]{8,}\b',
+      caseSensitive: false,
+    ).firstMatch(value);
+    if (couponMatch != null) {
+      return buildGiftAppLink(couponMatch.group(0)!);
+    }
+
+    return null;
+  }
+
+  String _trimTrailingPunctuation(String value) {
+    return value.replaceFirst(RegExp(r'[),.;:!?]+$'), '');
+  }
+
+  bool _isExpiredLink(Uri uri) {
+    final raw = uri.queryParameters['expires'] ??
+        uri.queryParameters['expiry'] ??
+        uri.queryParameters['expiresAt'] ??
+        uri.queryParameters['exp'];
+    if (raw == null || raw.trim().isEmpty) return false;
+
+    final numeric = int.tryParse(raw);
+    DateTime? expiry;
+    if (numeric != null) {
+      expiry = numeric > 100000000000
+          ? DateTime.fromMillisecondsSinceEpoch(numeric, isUtc: true)
+          : DateTime.fromMillisecondsSinceEpoch(numeric * 1000, isUtc: true);
+    } else {
+      expiry = DateTime.tryParse(raw)?.toUtc();
+    }
+
+    return expiry != null && DateTime.now().toUtc().isAfter(expiry);
   }
 
   void _log(String message, Object error, StackTrace stackTrace) {
