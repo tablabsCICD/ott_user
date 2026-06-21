@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/data/models/content.dart';
+import 'package:ott/l10n/app_localizations.dart';
 
 class HeroBanner extends StatefulWidget {
   const HeroBanner({
@@ -10,13 +13,11 @@ class HeroBanner extends StatefulWidget {
     required this.items,
     required this.onWatchNow,
     required this.onPlayTrailer,
-    required this.onExplorePlans,
   });
 
   final List<Content> items;
   final ValueChanged<Content> onWatchNow;
   final ValueChanged<Content> onPlayTrailer;
-  final VoidCallback onExplorePlans;
 
   @override
   State<HeroBanner> createState() => _HeroBannerState();
@@ -25,6 +26,7 @@ class HeroBanner extends StatefulWidget {
 class _HeroBannerState extends State<HeroBanner> {
   Timer? _timer;
   int _index = 0;
+  bool _loggedFirstContentRender = false;
 
   @override
   void initState() {
@@ -39,6 +41,13 @@ class _HeroBannerState extends State<HeroBanner> {
       _index = 0;
       _startRotation();
     }
+    _logFirstContentRender();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _logFirstContentRender();
   }
 
   @override
@@ -59,6 +68,7 @@ class _HeroBannerState extends State<HeroBanner> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     final item = widget.items.isEmpty ? null : widget.items[_index];
     final poster = item == null ? null : _posterFor(item);
     final collageItems = widget.items.take(6).toList();
@@ -77,6 +87,7 @@ class _HeroBannerState extends State<HeroBanner> {
                   key: ValueKey(poster),
                   imageUrl: poster,
                   fit: BoxFit.cover,
+                  memCacheWidth: 1800,
                   fadeInDuration: const Duration(milliseconds: 250),
                   placeholder: (_, __) => _HeroFallback(theme: theme),
                   errorWidget: (_, __, ___) => _HeroFallback(theme: theme),
@@ -127,7 +138,6 @@ class _HeroBannerState extends State<HeroBanner> {
                               item: item,
                               onWatchNow: () => widget.onWatchNow(item),
                               onPlayTrailer: () => widget.onPlayTrailer(item),
-                              onExplorePlans: widget.onExplorePlans,
                             ),
                     ),
                   ),
@@ -152,6 +162,19 @@ class _HeroBannerState extends State<HeroBanner> {
     }
     return null;
   }
+
+  void _logFirstContentRender() {
+    if (_loggedFirstContentRender || widget.items.isEmpty) return;
+    _loggedFirstContentRender = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!kDebugMode) return;
+      developer.log(
+        'Hero section rendered with ${widget.items.length} items',
+        name: 'WebLandingPerformance',
+      );
+    });
+  }
 }
 
 class _HeroCopy extends StatelessWidget {
@@ -160,19 +183,18 @@ class _HeroCopy extends StatelessWidget {
     required this.item,
     required this.onWatchNow,
     required this.onPlayTrailer,
-    required this.onExplorePlans,
   });
 
   final Content item;
   final VoidCallback onWatchNow;
   final VoidCallback onPlayTrailer;
-  final VoidCallback onExplorePlans;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final genres = (item.genreList ?? const <String>[]).take(4).toList();
     final releaseYear = _releaseYear(item.releaseDate);
+    final lang = AppLocalizations.of(context)!;
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 24, end: 0),
@@ -195,17 +217,7 @@ class _HeroCopy extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'FILMYTELL PRESENTS',
-              style: TextStyle(
-                color: theme.primaryColor,
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.4,
-              ),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              item.title ?? 'Filmytell Originals',
+              item.title ?? lang.filmytellOriginals,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -228,8 +240,7 @@ class _HeroCopy extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             Text(
-              item.description ??
-                  'Discover premium Indian movies, series, and stories crafted for every screen.',
+              item.description ?? lang.premiumStoriesDefault,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -247,13 +258,21 @@ class _HeroCopy extends StatelessWidget {
                 for (final genre in genres) _GenreChip(label: genre),
               ],
             ),
-            const SizedBox(height: 34),
+            const SizedBox(height: 22),
+            if (item.price != null) ...[
+              _HeroMoviePrice(
+                price: item.price!,
+                color: theme.primaryColor,
+              ),
+              const SizedBox(height: 28),
+            ] else
+              const SizedBox(height: 12),
             Row(
               children: [
                 ElevatedButton.icon(
                   onPressed: onWatchNow,
                   icon: const Icon(Icons.play_arrow_rounded, size: 28),
-                  label: const Text('Watch Now'),
+                  label: Text(lang.watchNow),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.primaryColor,
                     foregroundColor: Colors.white,
@@ -269,7 +288,7 @@ class _HeroCopy extends StatelessWidget {
                 ElevatedButton.icon(
                   onPressed: onPlayTrailer,
                   icon: const Icon(Icons.play_circle_outline_rounded, size: 24),
-                  label: const Text('Play Trailer'),
+                  label: Text(lang.playTrailer),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.primaryColor,
                     foregroundColor: Colors.white,
@@ -301,6 +320,59 @@ class _HeroCopy extends StatelessWidget {
 
     final parsed = DateTime.tryParse(value);
     return parsed == null ? null : '${parsed.year}';
+  }
+}
+
+class _HeroMoviePrice extends StatelessWidget {
+  const _HeroMoviePrice({
+    required this.price,
+    required this.color,
+  });
+
+  final double price;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.36),
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: color.withOpacity(0.42)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.13),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.local_offer_rounded, color: color, size: 20),
+          const SizedBox(width: 9),
+          Text(
+            AppLocalizations.of(context)!.rent,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Rs ${price.toStringAsFixed(0)}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -353,12 +425,17 @@ class _FloatingPoster extends StatefulWidget {
 class _FloatingPosterState extends State<_FloatingPoster> {
   bool _hovered = false;
 
+  void _setHovered(bool value) {
+    if (!mounted) return;
+    setState(() => _hovered = value);
+  }
+
   @override
   Widget build(BuildContext context) {
     final poster = _posterFor(widget.content);
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      onEnter: (_) => _setHovered(true),
+      onExit: (_) => _setHovered(false),
       child: AnimatedScale(
         scale: _hovered ? 1.06 : 1,
         duration: const Duration(milliseconds: 190),
@@ -381,6 +458,7 @@ class _FloatingPosterState extends State<_FloatingPoster> {
                 : CachedNetworkImage(
                     imageUrl: poster,
                     fit: BoxFit.cover,
+                    memCacheWidth: 420,
                     placeholder: (_, __) => const _PosterFallback(),
                     errorWidget: (_, __, ___) => const _PosterFallback(),
                   ),

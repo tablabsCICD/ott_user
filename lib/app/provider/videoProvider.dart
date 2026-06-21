@@ -32,6 +32,7 @@ class VideoProvider extends BaseProvider {
   void _onSearchChanged() {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (isDisposed) return;
       searchContent();
     });
   }

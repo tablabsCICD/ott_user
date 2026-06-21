@@ -151,6 +151,7 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     sendNotification();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       DeepLinkService.instance.consumePendingNavigation();
       NotificationService.instance.consumePendingNavigation();
     });
@@ -160,6 +161,11 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final localeProvider = Provider.of<LocaleLanguageProvider>(context);
+    if (kDebugMode) {
+      debugPrint(
+        '[LocaleLanguage] MaterialApp rebuild locale=${localeProvider.locale.languageCode} mounted=$mounted',
+      );
+    }
     return MaterialApp(
       title: 'Filmytell',
       locale: localeProvider.locale,
@@ -193,18 +199,16 @@ class _MyAppState extends State<MyApp> {
       // Navigate based on login state
       initialRoute: "/",
       onGenerateRoute: RouteGenerator.generateRoute,
-      builder: (context, child) => Stack(
-        fit: StackFit.expand,
-        children: [
-          OttTvAppShell(
-            child: child ?? const SizedBox.shrink(),
-          ),
-          const Positioned.fill(child: FeatureTourOverlay()),
-        ],
-      ),
-      /* home: SplashScreen(
-        isLoggedIn: widget.isLoggedIn,
-      ),*/
+      builder: (context, child) {
+        final routeChild = child ?? const SizedBox.shrink();
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            kIsWeb ? routeChild : OttTvAppShell(child: routeChild),
+            const Positioned.fill(child: FeatureTourOverlay()),
+          ],
+        );
+      },
     );
   }
 

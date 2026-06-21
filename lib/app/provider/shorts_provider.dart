@@ -7,6 +7,7 @@ import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/data/models/user.dart';
+import 'baseProvider.dart';
 
 class ShortsSectionData {
   final String language;
@@ -20,7 +21,7 @@ class ShortsSectionData {
   });
 }
 
-class ShortProvider extends ChangeNotifier {
+class ShortProvider extends BaseProvider {
   List<ShortModel> shorts = [];
   List<ShortsSectionData> _shortSections = [];
   List<ShortsSectionData> get shortSections => _shortSections;

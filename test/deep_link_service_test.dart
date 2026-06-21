@@ -1,0 +1,33 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
+
+void main() {
+  group('DeepLinkService.parseTarget', () {
+    test('parses gift app link coupon code', () {
+      final target = DeepLinkService.instance.parseTarget(
+        Uri.parse('https://filmytell.in/gift/GF00233665671E55'),
+      );
+
+      expect(target?.type, DeepLinkContentType.gift);
+      expect(target?.couponCode, 'GF00233665671E55');
+    });
+
+    test('parses movie app link id', () {
+      final target = DeepLinkService.instance.parseTarget(
+        Uri.parse('https://filmytell.in/movie/1'),
+      );
+
+      expect(target?.type, DeepLinkContentType.movie);
+      expect(target?.id, 1);
+    });
+
+    test('parses www host and ott-prefixed paths', () {
+      final target = DeepLinkService.instance.parseTarget(
+        Uri.parse('https://www.filmytell.in/ott/movie/1'),
+      );
+
+      expect(target?.type, DeepLinkContentType.movie);
+      expect(target?.id, 1);
+    });
+  });
+}

@@ -6,6 +6,7 @@ import 'package:ott/app/core/services/download_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'baseProvider.dart';
 
 enum OfflineDownloadStatus { idle, downloading, completed, failed }
 
@@ -72,7 +73,7 @@ class OfflineDownloadMetadata {
   }
 }
 
-class OfflineDownloadProvider extends ChangeNotifier {
+class OfflineDownloadProvider extends BaseProvider {
   static const String _downloadedContentPrefsKey = 'offline_downloaded_movies';
   static const String _downloadMetadataPrefsKey = 'offline_download_metadata';
   final Map<int, double> _downloadProgress = {};

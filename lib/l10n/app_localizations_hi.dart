@@ -350,4 +350,299 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get logout => 'लॉगआउट';
+
+  @override
+  String get filmytellPresents => 'फिल्मीटेल प्रस्तुत करता है';
+
+  @override
+  String get filmytellOriginals => 'फिल्मीटेल ओरिजिनल्स';
+
+  @override
+  String get premiumStoriesDefault =>
+      'हर स्क्रीन के लिए तैयार की गई प्रीमियम भारतीय फिल्में, सीरीज़ और कहानियाँ खोजें।';
+
+  @override
+  String get watchNow => 'अभी देखें';
+
+  @override
+  String get playTrailer => 'ट्रेलर चलाएँ';
+
+  @override
+  String get moreDetails => 'अधिक जानकारी';
+
+  @override
+  String get trendingOnFilmytell => 'फिल्मीटेल पर ट्रेंडिंग';
+
+  @override
+  String get trendingIn => 'में ट्रेंडिंग';
+
+  @override
+  String get watchPremiumMoviesSeries =>
+      'फिल्मीटेल पर प्रीमियम फिल्में और सीरीज़ देखें।';
+
+  @override
+  String get loadMore => 'और देखें';
+
+  @override
+  String get latestContent => 'नवीनतम सामग्री';
+
+  @override
+  String get howFilmytellWorks => 'फिल्मीटेल कैसे काम करता है';
+
+  @override
+  String get viewersEntertainmentTitle => 'मनोरंजन प्रेमियों के लिए';
+
+  @override
+  String get viewersEntertainmentDescription =>
+      'अपनी पसंद की फिल्में और सीरीज़ खरीदें या उपहार दें। किसी सदस्यता की आवश्यकता नहीं है। ऑफलाइन देखने के लिए सामग्री डाउनलोड करें।';
+
+  @override
+  String get createAccountMobileOtp => 'मोबाइल OTP के साथ खाता बनाएं';
+
+  @override
+  String get browseMoviesAndSeries => 'फिल्में और सीरीज़ ब्राउज़ करें';
+
+  @override
+  String get payOnlyContentChoose => 'केवल चुनी हुई सामग्री के लिए भुगतान करें';
+
+  @override
+  String get giftMoviesFriendsFamily =>
+      'दोस्तों और परिवार को फिल्में उपहार में दें';
+
+  @override
+  String get buildWatchlistContinueWatching =>
+      'वॉचलिस्ट बनाएं और देखना जारी रखें';
+
+  @override
+  String get watchAcrossDevices => 'मोबाइल, वेब और टीवी पर देखें';
+
+  @override
+  String get payPerMovie => 'प्रति फिल्म भुगतान';
+
+  @override
+  String get movieGifting => 'फिल्म उपहार';
+
+  @override
+  String get continueWatching => 'देखना जारी रखें';
+
+  @override
+  String get multiDeviceAccess => 'मल्टी-डिवाइस एक्सेस';
+
+  @override
+  String get regionalContent => 'क्षेत्रीय सामग्री';
+
+  @override
+  String get securePlayback => 'सुरक्षित प्लेबैक';
+
+  @override
+  String get exploreContent => 'सामग्री खोजें';
+
+  @override
+  String get productionHouseWorks => 'प्रोडक्शन हाउस कैसे काम करता है';
+
+  @override
+  String get productionHousesTitle => 'प्रोडक्शन हाउस के लिए';
+
+  @override
+  String get productionHouseDescription =>
+      'अपनी सामग्री अपलोड करें, प्रबंधित करें और उससे कमाई करें।';
+
+  @override
+  String get contentManagement => 'सामग्री प्रबंधन';
+
+  @override
+  String get revenueTracking => 'राजस्व ट्रैकिंग';
+
+  @override
+  String get analyticsDashboard => 'एनालिटिक्स डैशबोर्ड';
+
+  @override
+  String get approvalWorkflow => 'अनुमोदन प्रक्रिया';
+
+  @override
+  String get releaseScheduling => 'रिलीज़ शेड्यूलिंग';
+
+  @override
+  String get secureDistribution => 'सुरक्षित वितरण';
+
+  @override
+  String get registerProductionHouse => 'प्रोडक्शन हाउस पंजीकृत करें';
+
+  @override
+  String get completeVerification => 'सत्यापन पूरा करें';
+
+  @override
+  String get uploadMoviesSeries => 'फिल्में और सीरीज़ अपलोड करें';
+
+  @override
+  String get submitForApproval => 'अनुमोदन के लिए भेजें';
+
+  @override
+  String get trackRevenuePerformance => 'राजस्व और प्रदर्शन ट्रैक करें';
+
+  @override
+  String get reachGlobalAudience => 'वैश्विक दर्शकों तक पहुँचें';
+
+  @override
+  String get learnMore => 'और जानें';
+
+  @override
+  String get mobileNumberRequired => 'मोबाइल नंबर आवश्यक है';
+
+  @override
+  String get enterAtLeast10Digits => 'कम से कम 10 अंक दर्ज करें';
+
+  @override
+  String get enterValidIndianMobile => 'मान्य भारतीय मोबाइल नंबर दर्ज करें';
+
+  @override
+  String get noQueryProvided => 'कोई प्रश्न प्रदान नहीं किया गया।';
+
+  @override
+  String get productionEnquiryTitle => 'नई प्रोडक्शन हाउस पूछताछ';
+
+  @override
+  String get userMobileNumber => 'उपयोगकर्ता का मोबाइल नंबर';
+
+  @override
+  String get query => 'प्रश्न';
+
+  @override
+  String get redirectingWhatsapp => 'व्हाट्सऐप पर भेजा जा रहा है...';
+
+  @override
+  String get unableOpenWhatsapp =>
+      'व्हाट्सऐप नहीं खोला जा सका। कृपया पुनः प्रयास करें।';
+
+  @override
+  String get haveQuestionHelp =>
+      'कोई प्रश्न है? हम आपकी शुरुआत में मदद करेंगे।';
+
+  @override
+  String get messageQueryOptional =>
+      'अपनी आवश्यकता या कोई प्रश्न लिखें (वैकल्पिक)';
+
+  @override
+  String get sendProductionEnquiry => 'प्रोडक्शन पूछताछ भेजें';
+
+  @override
+  String get opening => 'खोला जा रहा है...';
+
+  @override
+  String get sendEnquiry => 'पूछताछ भेजें';
+
+  @override
+  String get watchAnywhere => 'कहीं भी देखें';
+
+  @override
+  String get availableDevicesDescription =>
+      'फिल्मीटेल आपके पसंदीदा सभी उपकरणों पर उपलब्ध है।';
+
+  @override
+  String get startWatching => 'देखना शुरू करें';
+
+  @override
+  String get readyToStart => 'शुरू करने के लिए तैयार';
+
+  @override
+  String get startJourneyToday => 'आज ही अपनी फिल्मीटेल यात्रा शुरू करें';
+
+  @override
+  String get chooseHowUseFilmytell =>
+      'चुनें कि आप फिल्मीटेल का उपयोग कैसे करना चाहते हैं।';
+
+  @override
+  String get watchContent => 'सामग्री देखें';
+
+  @override
+  String get streamPremiumMoviesSeries =>
+      'प्रीमियम फिल्में और सीरीज़ स्ट्रीम करें।';
+
+  @override
+  String get userPortal => 'यूज़र पोर्टल';
+
+  @override
+  String get publishContent => 'सामग्री प्रकाशित करें';
+
+  @override
+  String get publishContentDescription =>
+      'अपनी रिलीज़ अपलोड करें, प्रबंधित करें और उनसे कमाई करें।';
+
+  @override
+  String get productionHousePortal => 'प्रोडक्शन हाउस पोर्टल';
+
+  @override
+  String get explore => 'अन्वेषण करें';
+
+  @override
+  String get portals => 'पोर्टल';
+
+  @override
+  String get shortcuts => 'शॉर्टकट';
+
+  @override
+  String get legal => 'कानूनी';
+
+  @override
+  String get aboutUs => 'हमारे बारे में';
+
+  @override
+  String get contactUs => 'संपर्क करें';
+
+  @override
+  String get faq => 'अक्सर पूछे जाने वाले प्रश्न';
+
+  @override
+  String get privacyPolicy => 'गोपनीयता नीति';
+
+  @override
+  String get termsConditions => 'नियम और शर्तें';
+
+  @override
+  String get allRightsReserved => '@Filmytell. सर्वाधिकार सुरक्षित।';
+
+  @override
+  String get giftAccess => 'उपहार एक्सेस';
+
+  @override
+  String get downloadOffline => 'ऑफ़लाइन डाउनलोड';
+
+  @override
+  String get unableOpenLink => 'लिंक नहीं खोला जा सका';
+
+  @override
+  String get unableOpenDocument => 'दस्तावेज़ नहीं खोला जा सका';
+
+  @override
+  String get trailerNotAvailable => 'ट्रेलर उपलब्ध नहीं है';
+
+  @override
+  String get chatWithUsWhatsapp => 'व्हाट्सऐप पर हमसे चैट करें';
+
+  @override
+  String get needHelp => 'मदद चाहिए?';
+
+  @override
+  String get trendingNow => 'अभी ट्रेंडिंग';
+
+  @override
+  String get filmytellByNumbers => 'आँकड़ों में फिल्मीटेल';
+
+  @override
+  String get users => 'उपयोगकर्ता';
+
+  @override
+  String get moviesLabel => 'फिल्में';
+
+  @override
+  String get seriesLabel => 'सीरीज़';
+
+  @override
+  String get productionHouses => 'प्रोडक्शन हाउस';
+
+  @override
+  String get growing => 'बढ़ रहा है';
+
+  @override
+  String get everyDay => 'हर दिन';
 }

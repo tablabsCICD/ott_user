@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ott/l10n/app_localizations.dart';
 
 class UserPortalSection extends StatelessWidget {
   const UserPortalSection({
@@ -13,22 +14,23 @@ class UserPortalSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final steps = const [
-      'Create Account With Mobile OTP',
-      'Browse Movies, Series & Mini Series',
-      'Pay Only For The Content You Choose',
-      'Gift Movies To Friends & Family',
-      'Build Watchlist & Continue Watching',
-      'Watch Across Mobile, Web & TV',
+    final lang = AppLocalizations.of(context)!;
+    final steps = [
+      lang.createAccountMobileOtp,
+      lang.browseMoviesAndSeries,
+      lang.payOnlyContentChoose,
+      lang.giftMoviesFriendsFamily,
+      lang.buildWatchlistContinueWatching,
+      lang.watchAcrossDevices,
     ];
-    final features = const [
-      'Pay Per Movie',
-      'Movie Gifting',
-      'Watchlist',
-      'Continue Watching',
-      'Multi-device Access',
-      'Regional Content',
-      'Secure Playback',
+    final features = [
+      lang.payPerMovie,
+      lang.movieGifting,
+      lang.watchlist,
+      lang.continueWatching,
+      lang.multiDeviceAccess,
+      lang.regionalContent,
+      lang.securePlayback,
     ];
 
     return Container(
@@ -54,7 +56,7 @@ class UserPortalSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'How Filmytell Works',
+                  lang.howFilmytellWorks,
                   style: TextStyle(
                     color: theme.primaryColor,
                     fontSize: 12,
@@ -63,9 +65,9 @@ class UserPortalSection extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
-                const Text(
-                  'For Viewers & Entertainment Lovers',
-                  style: TextStyle(
+                Text(
+                  lang.viewersEntertainmentTitle,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 40,
                     fontWeight: FontWeight.w900,
@@ -73,7 +75,7 @@ class UserPortalSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Buy or gift the movies and series you choose. No subscription needed. Download content to watch offline.',
+                  lang.viewersEntertainmentDescription,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.68),
                     fontSize: 17,
@@ -108,7 +110,7 @@ class UserPortalSection extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: const Text('Get Started'),
+                      child: Text(lang.getStarted),
                     ),
                     const SizedBox(width: 14),
                     OutlinedButton(
@@ -124,7 +126,7 @@ class UserPortalSection extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: const Text('Explore Content'),
+                      child: Text(lang.exploreContent),
                     ),
                   ],
                 ),
@@ -172,48 +174,74 @@ class _UserTimelineRow extends StatefulWidget {
 class _UserTimelineRowState extends State<_UserTimelineRow> {
   bool _hovered = false;
 
+  void _setHovered(bool value) {
+    if (!mounted) return;
+    setState(() => _hovered = value);
+  }
+
   @override
   Widget build(BuildContext context) {
+    const cardHeight = 54.0;
+    const circleSize = 34.0;
+    const rowGap = 18.0;
+    const circleTop = (cardHeight - circleSize) / 2;
+
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      onEnter: (_) => _setHovered(true),
+      onExit: (_) => _setHovered(false),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                height: 34,
-                width: 34,
-                decoration: BoxDecoration(
-                  color:
-                      _hovered ? widget.color : Colors.white.withOpacity(0.10),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: widget.color.withOpacity(0.55)),
+          SizedBox(
+            width: circleSize,
+            height: widget.isLast ? cardHeight : cardHeight + rowGap,
+            child: Stack(
+              alignment: Alignment.topCenter,
+              children: [
+                Positioned(
+                  top: circleTop + circleSize,
+                  child: widget.isLast
+                      ? const SizedBox.shrink()
+                      : Container(
+                          height: rowGap,
+                          width: 1,
+                          color: Colors.white.withOpacity(0.14),
+                        ),
                 ),
-                child: Center(
-                  child: Text(
-                    '${widget.index}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
+                Positioned(
+                  top: circleTop,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    height: circleSize,
+                    width: circleSize,
+                    decoration: BoxDecoration(
+                      color: _hovered
+                          ? widget.color
+                          : Colors.white.withOpacity(0.10),
+                      shape: BoxShape.circle,
+                      border:
+                          Border.all(color: widget.color.withOpacity(0.55)),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${widget.index}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              if (!widget.isLast)
-                Container(
-                  height: 38,
-                  width: 1,
-                  color: Colors.white.withOpacity(0.14),
-                ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              margin: EdgeInsets.only(bottom: widget.isLast ? 0 : 14),
+              height: cardHeight,
+              margin: EdgeInsets.only(bottom: widget.isLast ? 0 : rowGap),
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
               decoration: BoxDecoration(
                 color: Colors.black.withOpacity(_hovered ? 0.42 : 0.26),

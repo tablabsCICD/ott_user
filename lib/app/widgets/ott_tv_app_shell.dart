@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 
@@ -56,6 +57,7 @@ class _OttTvAppShellState extends State<OttTvAppShell> {
     } else if (key == LogicalKeyboardKey.escape ||
         key == LogicalKeyboardKey.goBack ||
         key == LogicalKeyboardKey.browserBack) {
+      if (!mounted) return false;
       Navigator.of(context).maybePop();
       return true;
     }
@@ -64,7 +66,7 @@ class _OttTvAppShellState extends State<OttTvAppShell> {
 
   @override
   Widget build(BuildContext context) {
-    if (ResponsiveWidget.isMobile(context)) {
+    if (kIsWeb || ResponsiveWidget.isMobile(context)) {
       return widget.child;
     }
 
@@ -95,6 +97,7 @@ class _OttTvAppShellState extends State<OttTvAppShell> {
         actions: <Type, Action<Intent>>{
           DismissIntent: CallbackAction<DismissIntent>(
             onInvoke: (_) {
+              if (!mounted) return null;
               Navigator.of(context).maybePop();
               return null;
             },

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ott/data/models/content.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:ott/presentation/web_landing/widgets/content_carousel.dart';
 
 class TrendingSection extends StatelessWidget {
@@ -14,8 +15,10 @@ class TrendingSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = AppLocalizations.of(context)!;
+
     return ContentCarousel(
-      title: 'Trending Now',
+      title: lang.trendingNow,
       items: items,
       numbered: true,
       onContentTap: onContentTap,

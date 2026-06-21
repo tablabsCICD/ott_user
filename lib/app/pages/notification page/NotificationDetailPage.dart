@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/data/models/response/push_notification_response.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -20,6 +22,7 @@ class NotificationDetailPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         forceMaterialTransparency: true,
         foregroundColor: theme.canvasColor,
         title: const Text(

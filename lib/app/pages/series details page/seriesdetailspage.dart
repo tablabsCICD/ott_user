@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -1373,6 +1374,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     final bool isTablet = ResponsiveWidget.isTablet(context);
 
     return SliverAppBar(
+      automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
       pinned: true,
       expandedHeight: isMobile
           ? 250

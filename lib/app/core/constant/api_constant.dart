@@ -1,9 +1,9 @@
 class ApiConstant {
   static const String baseUrl = "https://filmytell.in/ott/";
 
-  /* static const String baseUrl =
-      "http://ec2-43-205-217-79.ap-south-1.compute.amazonaws.com:8080/ott/"; */
-
+  /*  static const String baseUrl =
+      "http://ec2-13-201-5-93.ap-south-1.compute.amazonaws.com:8080/ott/";
+ */
   static String login = "${baseUrl}auth/session/login";
   static String twoStepLogin = "${baseUrl}auth/two-step/login";
   static String twoStepVerifyOtp = "${baseUrl}auth/two-step/verify-otp";
@@ -60,7 +60,7 @@ class ApiConstant {
       "${baseUrl}api/forUser/episode/$episodeId/view?userId=$userId";
 
   //update user
-  static String editUserById = "${baseUrl}userNew/updateUserBy/%7Bid%7D";
+  static String editUserById(id) => "${baseUrl}userNew/updateUserBy/$id";
   static String getUserById(id) => "${baseUrl}user/getUser/$id";
   static String deleteUserById(id) => "${baseUrl}user/deleteUserBy/$id";
 
@@ -81,6 +81,20 @@ class ApiConstant {
       "${baseUrl}api/forUser/user/Content/TopTen?userId=$userId";
   static String publicTopTenContent =
       "${baseUrl}api/forUser/public/Content/TopTen";
+  static String publicLatestContent({
+    int page = 0,
+    int size = 10,
+    String? type,
+  }) {
+    final query = <String, String>{
+      'page': page.toString(),
+      'size': size.toString(),
+      if ((type ?? '').trim().isNotEmpty) 'type': type!.trim(),
+    };
+    return Uri.parse("${baseUrl}api/forUser/public/Content/Latest")
+        .replace(queryParameters: query)
+        .toString();
+  }
 
   static String uploadImg = "${baseUrl}api/other/upload-file";
 
@@ -88,6 +102,7 @@ class ApiConstant {
   static String fetchLang = "${baseUrl}api/Languages/getAll";
   static String fetchGroupedLang = "${baseUrl}api/all/withGrouping";
   static String getLatestVersion = "${baseUrl}api/GetLatestVaersion";
+  static String legalDocumentUrls = "${baseUrl}api/legal/document-urls";
 
   static String addMoneyToWallet = "${baseUrl}add-amount";
   static String createWalletOrder(double amount, int userId) {
@@ -111,6 +126,8 @@ class ApiConstant {
       "${baseUrl}api/content/$contentId";
   static String userPushNotifications(userId, pageNo, pageSize) =>
       "${baseUrl}api/notifications/user/$userId/push?pageNo=$pageNo&pageSize=$pageSize";
+
+  static String sendEmail = "${baseUrl}api/email/send";
 
   static String raiseTicket = "${baseUrl}api/TicketRaised/add";
   static String deleteTicket(id) =>

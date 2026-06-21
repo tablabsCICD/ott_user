@@ -6,8 +6,9 @@ import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/response/purchase_history_response.dart';
+import 'baseProvider.dart';
 
-class PurchaseHistoryProvider extends ChangeNotifier {
+class PurchaseHistoryProvider extends BaseProvider {
   final ApiHelper _apiHelper = ApiHelper();
 
   bool _isLoading = false;

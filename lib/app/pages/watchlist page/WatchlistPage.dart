@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
@@ -197,6 +198,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        automaticallyImplyLeading: ResponsiveWidget.isMobile(context) ||
+            !(kIsWeb || ResponsiveWidget.isTv(context)),
         elevation: 0,
         backgroundColor: theme.primaryColor,
         foregroundColor: Colors.white,

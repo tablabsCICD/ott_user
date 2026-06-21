@@ -8,8 +8,9 @@ import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/data/models/user.dart';
+import 'baseProvider.dart';
 
-class BookmarkProvider extends ChangeNotifier {
+class BookmarkProvider extends BaseProvider {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 

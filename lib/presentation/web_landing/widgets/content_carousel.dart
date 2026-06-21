@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/data/models/content.dart';
+import 'package:ott/l10n/app_localizations.dart';
 
 class ContentCarousel extends StatefulWidget {
   const ContentCarousel({
@@ -10,12 +11,18 @@ class ContentCarousel extends StatefulWidget {
     required this.items,
     required this.onContentTap,
     this.numbered = false,
+    this.onLoadMore,
+    this.isLoadingMore = false,
+    this.hasMore = false,
   });
 
   final String title;
   final List<Content> items;
   final ValueChanged<Content> onContentTap;
   final bool numbered;
+  final VoidCallback? onLoadMore;
+  final bool isLoadingMore;
+  final bool hasMore;
 
   @override
   State<ContentCarousel> createState() => _ContentCarouselState();
@@ -25,9 +32,31 @@ class _ContentCarouselState extends State<ContentCarousel> {
   final ScrollController _controller = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_handleScroll);
+  }
+
+  @override
   void dispose() {
+    _controller.removeListener(_handleScroll);
     _controller.dispose();
     super.dispose();
+  }
+
+  void _handleScroll() {
+    if (!widget.hasMore ||
+        widget.isLoadingMore ||
+        widget.onLoadMore == null ||
+        !_controller.hasClients) {
+      return;
+    }
+
+    final remaining =
+        _controller.position.maxScrollExtent - _controller.position.pixels;
+    if (remaining < 520) {
+      widget.onLoadMore!();
+    }
   }
 
   void _scrollBy(double offset) {
@@ -95,9 +124,20 @@ class _ContentCarouselState extends State<ContentCarousel> {
                   controller: _controller,
                   padding: const EdgeInsets.symmetric(horizontal: 56),
                   scrollDirection: Axis.horizontal,
-                  itemCount: widget.items.length,
+                  itemCount: widget.items.length +
+                      (widget.isLoadingMore || widget.hasMore ? 1 : 0),
                   separatorBuilder: (_, __) => const SizedBox(width: 18),
                   itemBuilder: (context, index) {
+                    if (index >= widget.items.length) {
+                      return SizedBox(
+                        width: widget.numbered ? cardWidth + 42 : cardWidth,
+                        child: _CarouselLoadingMore(
+                          onLoadMore: widget.onLoadMore,
+                          isLoading: widget.isLoadingMore,
+                        ),
+                      );
+                    }
+
                     return SizedBox(
                       width: widget.numbered ? cardWidth + 42 : cardWidth,
                       child: _LandingPosterCard(
@@ -148,7 +188,11 @@ class _LandingPosterCardState extends State<_LandingPosterCard> {
   }
 
   void _showPreview() {
+    if (!mounted) return;
     if (_previewEntry != null) return;
+    if (MediaQuery.sizeOf(context).width < 1024) return;
+    final overlay = Overlay.maybeOf(context, rootOverlay: true);
+    if (overlay == null) return;
 
     setState(() => _hovered = true);
     _previewEntry = OverlayEntry(
@@ -172,7 +216,8 @@ class _LandingPosterCardState extends State<_LandingPosterCard> {
       },
     );
 
-    Overlay.of(context, rootOverlay: true).insert(_previewEntry!);
+    if (!mounted) return;
+    overlay.insert(_previewEntry!);
   }
 
   void _hidePreview() {
@@ -185,8 +230,10 @@ class _LandingPosterCardState extends State<_LandingPosterCard> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = AppLocalizations.of(context)!;
     final poster = _posterFor(widget.content);
     final hasRank = widget.rank != null;
+    final price = widget.content.price;
 
     return CompositedTransformTarget(
       link: _previewLink,
@@ -246,17 +293,32 @@ class _LandingPosterCardState extends State<_LandingPosterCard> {
                             child: SizedBox(
                               width: widget.width,
                               height: 226,
-                              child: poster == null
-                                  ? const _PosterFallback()
-                                  : CachedNetworkImage(
-                                      imageUrl: poster,
-                                      fit: BoxFit.cover,
-                                      memCacheWidth: 420,
-                                      placeholder: (_, __) =>
-                                          const _PosterFallback(),
-                                      errorWidget: (_, __, ___) =>
-                                          const _PosterFallback(),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  poster == null
+                                      ? const _PosterFallback()
+                                      : CachedNetworkImage(
+                                          imageUrl: poster,
+                                          fit: BoxFit.cover,
+                                          memCacheWidth: 420,
+                                          placeholder: (_, __) =>
+                                              const _PosterFallback(),
+                                          errorWidget: (_, __, ___) =>
+                                              const _PosterFallback(),
+                                        ),
+                                  Positioned(
+                                    left: 8,
+                                    bottom: 8,
+                                    child: _RentCardButton(
+                                      label: price == null
+                                          ? lang.rent
+                                          : '${lang.rent} Rs ${price.toStringAsFixed(0)}',
+                                      onTap: widget.onTap,
                                     ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -304,6 +366,67 @@ class _LandingPosterCardState extends State<_LandingPosterCard> {
   }
 }
 
+class _RentCardButton extends StatelessWidget {
+  const _RentCardButton({
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: theme.primaryColor.withOpacity(0.95),
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.36),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.local_offer_rounded,
+                color: Colors.white,
+                size: 13,
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _HoverDetailPreview extends StatelessWidget {
   const _HoverDetailPreview({
     required this.content,
@@ -318,11 +441,13 @@ class _HoverDetailPreview extends StatelessWidget {
     final theme = Theme.of(context);
     final poster = _posterFor(content);
     final year = _releaseYear(content.releaseDate);
+    final lang = AppLocalizations.of(context)!;
     final runtime =
         (content.runtime ?? 0) > 0 ? '${content.runtime} min' : null;
+    final price = content.price;
     final rankGenre = (content.genreList ?? const <String>[]).isEmpty
-        ? 'Trending on FilmyTell'
-        : 'Trending in ${(content.genreList ?? const <String>[]).first}';
+        ? lang.trendingOnFilmytell
+        : '${lang.trendingIn} ${(content.genreList ?? const <String>[]).first}';
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.86, end: 1),
@@ -424,10 +549,16 @@ class _HoverDetailPreview extends StatelessWidget {
                                     : Icons.info_outline_rounded,
                             color: theme.primaryColor,
                           ),
+                          const Spacer(),
+                          if (price != null)
+                            _PriceBadge(
+                              label: 'Rs ${price.toStringAsFixed(0)}',
+                              color: theme.primaryColor,
+                            ),
                         ],
                       ),
                       const SizedBox(height: 14),
-                      Row(
+                      /*  Row(
                         children: [
                           Icon(
                             Icons.trending_up_rounded,
@@ -449,7 +580,7 @@ class _HoverDetailPreview extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 14), */
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
@@ -467,8 +598,7 @@ class _HoverDetailPreview extends StatelessWidget {
                       ),
                       const SizedBox(height: 14),
                       Text(
-                        content.description ??
-                            'Watch premium movies and series on FilmyTell.',
+                        content.description ?? lang.watchPremiumMoviesSeries,
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -477,6 +607,21 @@ class _HoverDetailPreview extends StatelessWidget {
                           height: 1.28,
                           fontWeight: FontWeight.w700,
                         ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          _PreviewActionButton(
+                            label: lang.watchNow,
+                            icon: Icons.play_arrow_rounded,
+                            color: theme.primaryColor,
+                          ),
+                          const SizedBox(width: 10),
+                          _PreviewActionButton(
+                            label: lang.moreDetails,
+                            icon: Icons.info_outline_rounded,
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -506,6 +651,81 @@ class _HoverDetailPreview extends StatelessWidget {
     }
     final parsed = DateTime.tryParse(value);
     return parsed == null ? null : '${parsed.year}';
+  }
+}
+
+class _PriceBadge extends StatelessWidget {
+  const _PriceBadge({
+    required this.label,
+    required this.color,
+  });
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.32),
+            blurRadius: 14,
+            offset: const Offset(0, 7),
+          ),
+        ],
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 13,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _PreviewActionButton extends StatelessWidget {
+  const _PreviewActionButton({
+    required this.label,
+    required this.icon,
+    this.color,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+      decoration: BoxDecoration(
+        color: color ?? Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 18),
+          const SizedBox(width: 7),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -580,6 +800,66 @@ class _ArrowButton extends StatelessWidget {
           border: Border.all(color: Colors.white.withOpacity(0.12)),
         ),
         child: Icon(icon, color: Colors.white),
+      ),
+    );
+  }
+}
+
+class _CarouselLoadingMore extends StatelessWidget {
+  const _CarouselLoadingMore({
+    required this.onLoadMore,
+    required this.isLoading,
+  });
+
+  final VoidCallback? onLoadMore;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: InkWell(
+        onTap: isLoading ? null : onLoadMore,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 226,
+          width: 150,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.10)),
+          ),
+          child: Center(
+            child: isLoading
+                ? SizedBox(
+                    height: 26,
+                    width: 26,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.6,
+                      color: theme.primaryColor,
+                    ),
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.add_circle_outline_rounded,
+                        color: theme.primaryColor,
+                        size: 30,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        AppLocalizations.of(context)!.loadMore,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.78),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
       ),
     );
   }

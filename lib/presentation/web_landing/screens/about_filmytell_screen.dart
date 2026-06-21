@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 class AboutFilmytellScreen extends StatelessWidget {
   const AboutFilmytellScreen({super.key});
@@ -17,15 +19,17 @@ class AboutFilmytellScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               children: [
-                IconButton(
-                  onPressed: () => Navigator.maybePop(context),
-                  icon: const Icon(
-                    Icons.arrow_back_rounded,
-                    color: Colors.white,
-                    size: 26,
+                if (!(kIsWeb || ResponsiveWidget.isTv(context))) ...[
+                  IconButton(
+                    onPressed: () => Navigator.maybePop(context),
+                    icon: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: Colors.white,
+                      size: 26,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
+                  const SizedBox(width: 8),
+                ],
                 const Text(
                   'About Filmytell',
                   style: TextStyle(
@@ -72,7 +76,7 @@ class AboutFilmytellScreen extends StatelessWidget {
                   ),
                   SizedBox(height: 26),
                   Text(
-                    'Your personal theatre in your pocket.\nWatch movies, web series & mini series anytime, anywhere.',
+                    'Your personal theatre in your pocket.\nWatch movies, web series anytime, anywhere.',
                     style: TextStyle(
                       color: Color(0xFFE8E8EE),
                       fontSize: 15,
@@ -123,7 +127,6 @@ class AboutFilmytellScreen extends StatelessWidget {
                     children: [
                       _DarkChip(label: 'Movies'),
                       _DarkChip(label: 'Web Series'),
-                      _DarkChip(label: 'Mini Series'),
                       _DarkChip(label: 'Regional'),
                     ],
                   ),

@@ -73,9 +73,17 @@ class DeepLinkService {
 
   Future<void> init() async {
     if (_isInitialized) {
-      _isInitialized = true;
+      developer.log(
+        'Deep link service already initialized',
+        name: 'DeepLinkService',
+      );
       return;
     }
+
+    developer.log(
+      'Initializing deep link service. platform=${kIsWeb ? 'web' : defaultTargetPlatform.name}',
+      name: 'DeepLinkService',
+    );
 
     if (kIsWeb) {
       await _handleIncomingUri(Uri.base, source: 'initial_uri');
@@ -85,6 +93,10 @@ class DeepLinkService {
 
     try {
       final initialUri = await getInitialUri();
+      developer.log(
+        'Initial deep link uri=${initialUri?.toString() ?? 'none'}',
+        name: 'DeepLinkService',
+      );
       await _handleIncomingUri(initialUri, source: 'initial_uri');
     } on FormatException catch (error, stackTrace) {
       _log('Invalid initial deep link received', error, stackTrace);
@@ -94,6 +106,10 @@ class DeepLinkService {
 
     _linkSubscription = uriLinkStream.listen(
       (uri) {
+        developer.log(
+          'Deep link stream uri=${uri?.toString() ?? 'none'}',
+          name: 'DeepLinkService',
+        );
         unawaited(_handleIncomingUri(uri, source: 'uri_stream'));
       },
       onError: (Object error, StackTrace stackTrace) {
@@ -184,6 +200,10 @@ class DeepLinkService {
         _isSupportedHttpHost(uri.host)) {
       final pathSegments = _httpPathSegments(uri);
       final normalizedPathSegments = _normalizePathSegments(pathSegments);
+      developer.log(
+        'HTTP deep link path=${normalizedPathSegments.join('/')} query=${uri.queryParameters}',
+        name: 'DeepLinkService',
+      );
       final pathType = normalizedPathSegments.isNotEmpty
           ? _typeFromString(normalizedPathSegments.first)
           : null;

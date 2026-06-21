@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'baseProvider.dart';
 
 enum FeatureTourStepId {
   language,
@@ -26,7 +27,7 @@ class FeatureTourStep {
   final String description;
 }
 
-class OnboardingTourProvider extends ChangeNotifier {
+class OnboardingTourProvider extends BaseProvider {
   static const String _completedKey = 'feature_tour_completed';
   static const String _skippedKey = 'feature_tour_skipped';
 
@@ -97,28 +98,45 @@ class OnboardingTourProvider extends ChangeNotifier {
   Rect? rectFor(FeatureTourStepId id) => _targetRects[id];
 
   Future<void> initialize() async {
-    if (_initialized) return;
+    if (_initialized || isDisposed) return;
 
     final prefs = await SharedPreferences.getInstance();
+    if (isDisposed) return;
     _completed = prefs.getBool(_completedKey) ?? false;
     _skipped = prefs.getBool(_skippedKey) ?? false;
     _initialized = true;
+    _track('Tour Initialized completed=$_completed skipped=$_skipped');
     notifyListeners();
   }
 
   Future<void> startFirstLaunchTour({BuildContext? context}) async {
+    final contextDescription = _describeContext(context);
+    _track('Tour first launch requested context=$contextDescription');
     await initialize();
+    if (isDisposed) return;
+    if (context != null && !context.mounted) {
+      _track('Tour first launch aborted: context unmounted');
+      return;
+    }
     if (_completed || _skipped || _isActive) return;
     _activeSteps = _stepsForContext(context);
     _start();
   }
 
   void replayTour({BuildContext? context}) {
+    if (isDisposed) return;
+    if (context != null && !context.mounted) {
+      _track('Tour replay aborted: context unmounted');
+      return;
+    }
     _activeSteps = _stepsForContext(context);
     _start();
   }
 
   List<FeatureTourStep> _stepsForContext(BuildContext? context) {
+    if (context != null && !context.mounted) {
+      return defaultSteps;
+    }
     final removeFifthStep =
         kIsWeb || (context != null && ResponsiveWidget.isTv(context));
     if (!removeFifthStep) return defaultSteps;
@@ -129,6 +147,7 @@ class OnboardingTourProvider extends ChangeNotifier {
   }
 
   void _start() {
+    if (isDisposed) return;
     _targetRects.clear();
     _targetRefreshRevision += 1;
     _currentIndex = 0;
@@ -138,19 +157,24 @@ class OnboardingTourProvider extends ChangeNotifier {
   }
 
   Future<void> next() async {
-    if (!_isActive) return;
+    if (!_isActive || isDisposed) return;
     if (_currentIndex >= _activeSteps.length - 1) {
       await complete();
       return;
     }
+    if (isDisposed) return;
     _currentIndex += 1;
     notifyListeners();
   }
 
   Future<void> complete() async {
+    if (isDisposed) return;
     final prefs = await SharedPreferences.getInstance();
+    if (isDisposed) return;
     await prefs.setBool(_completedKey, true);
+    if (isDisposed) return;
     await prefs.setBool(_skippedKey, false);
+    if (isDisposed) return;
     _completed = true;
     _skipped = false;
     _isActive = false;
@@ -159,8 +183,11 @@ class OnboardingTourProvider extends ChangeNotifier {
   }
 
   Future<void> skip() async {
+    if (isDisposed) return;
     final prefs = await SharedPreferences.getInstance();
+    if (isDisposed) return;
     await prefs.setBool(_skippedKey, true);
+    if (isDisposed) return;
     _skipped = true;
     _isActive = false;
     _track('Tour Skipped');
@@ -168,6 +195,7 @@ class OnboardingTourProvider extends ChangeNotifier {
   }
 
   void registerTarget(FeatureTourStepId id, Rect rect) {
+    if (isDisposed) return;
     final previous = _targetRects[id];
     if (previous == rect) return;
     _targetRects[id] = rect;
@@ -177,14 +205,20 @@ class OnboardingTourProvider extends ChangeNotifier {
   }
 
   void unregisterTarget(FeatureTourStepId id) {
+    if (isDisposed) return;
     if (_targetRects.remove(id) != null && _isActive && currentStep.id == id) {
       notifyListeners();
     }
   }
 
   void trackFeatureClicked(FeatureTourStepId id) {
-    if (!_completed) return;
+    if (isDisposed || !_completed) return;
     _track('Feature Clicked After Tour: ${id.name}');
+  }
+
+  String _describeContext(BuildContext? context) {
+    if (context == null) return 'none';
+    return 'mounted=${context.mounted}';
   }
 
   void _track(String event) {

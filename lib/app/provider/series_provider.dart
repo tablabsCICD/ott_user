@@ -8,6 +8,7 @@ import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/response/SeriesDetailsResponse.dart';
 import 'package:ott/data/models/seriesModel.dart';
 import 'package:ott/data/models/user.dart';
+import 'baseProvider.dart';
 
 class SeriesPurchaseResult {
   const SeriesPurchaseResult({
@@ -58,7 +59,7 @@ class SeriesPurchaseResult {
   }
 }
 
-class SeriesProvider with ChangeNotifier {
+class SeriesProvider extends BaseProvider {
   final ApiHelper _apiHelper = ApiHelper();
 
   bool _isLoading = false;

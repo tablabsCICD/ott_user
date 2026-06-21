@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/bookmarks page/component/bookmark_card.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
@@ -21,6 +22,7 @@ class _BookmarkPageState extends State<BookmarkPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       context.read<BookmarkProvider>().getUserBookmarks();
       context.read<BookmarkProvider>().getUserBookmarkShort();
     });
@@ -33,6 +35,7 @@ class _BookmarkPageState extends State<BookmarkPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         title: const Text(
           "My Bookmarks",
           style: TextStyle(fontWeight: FontWeight.bold),

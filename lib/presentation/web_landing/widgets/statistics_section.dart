@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ott/l10n/app_localizations.dart';
 
 class StatisticsSection extends StatelessWidget {
   const StatisticsSection({super.key});
@@ -6,12 +7,13 @@ class StatisticsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final stats = const [
-      _StatItem(10000, '10K+', 'Users'),
-      _StatItem(500, '500+', 'Movies'),
-      _StatItem(100, '100+', 'Series'),
-      _StatItem(50, '50+', 'Production Houses'),
-      _StatItem(365, 'Growing', 'Every Day'),
+    final lang = AppLocalizations.of(context)!;
+    final stats = [
+      _StatItem(10000, '10K+', lang.users),
+      _StatItem(500, '500+', lang.moviesLabel),
+      _StatItem(100, '100+', lang.seriesLabel),
+      _StatItem(50, '50+', lang.productionHouses),
+      _StatItem(365, lang.growing, lang.everyDay),
     ];
 
     return Container(
@@ -24,9 +26,9 @@ class StatisticsSection extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Text(
-            'Filmytell By The Numbers',
-            style: TextStyle(
+          Text(
+            lang.filmytellByNumbers,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 34,
               fontWeight: FontWeight.w900,
@@ -73,8 +75,8 @@ class _CounterCard extends StatelessWidget {
       duration: const Duration(milliseconds: 1200),
       curve: Curves.easeOutCubic,
       builder: (context, value, _) {
-        final label = stat.display == 'Growing'
-            ? 'Growing'
+        final label = stat.display == AppLocalizations.of(context)!.growing
+            ? stat.display
             : stat.display.replaceFirst(
                 RegExp(r'^\d+[K]?\+?'), _format(value, stat.display));
         return Column(

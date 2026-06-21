@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/services/session_manager.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/app_update_service.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/onboarding pages/selectLanguagePage.dart';
+import 'package:ott/app/route/routes/web_navigation_routes.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/presentation/web_landing/screens/web_landing_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -14,7 +17,12 @@ import '../../core/constant/prefrense_constant.dart';
 import '../../core/utils/sharepreferences.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  const SplashScreen({
+    super.key,
+    this.initialNavigationRoute,
+  });
+
+  final WebNavigationRoute? initialNavigationRoute;
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -24,6 +32,7 @@ class _SplashScreenState extends State<SplashScreen> {
   final LocalSharePreferences _prefs = LocalSharePreferences();
   final AppUpdateService _appUpdateService = AppUpdateService();
   bool _isLoggedIn = false;
+  int _flowVersion = 0;
 
   @override
   void initState() {
@@ -32,38 +41,69 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _startFlow() async {
+    final flowVersion = ++_flowVersion;
+    final requestedPath = widget.initialNavigationRoute?.path ?? '/';
     final loggedIn =
         await _prefs.getBool(SharedPreferencesConstant.isUserLoggedIn);
+    if (!_isActiveFlow(flowVersion)) return;
+    final token = await SessionManager.instance.token;
+    if (!_isActiveFlow(flowVersion)) return;
+    final hasToken = token != null;
 
-    _isLoggedIn = loggedIn;
+    _isLoggedIn = kIsWeb ? loggedIn && hasToken : loggedIn;
+    _logWebAuth(
+      'Splash auth check requestedPath=$requestedPath loggedInFlag=$loggedIn hasToken=$hasToken authenticated=$_isLoggedIn',
+    );
 
-    // Splash delay
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
+    if (widget.initialNavigationRoute == null) {
+      // Splash delay
+      await Future.delayed(const Duration(seconds: 2));
+      if (!_isActiveFlow(flowVersion)) return;
 
-    final updateInfo = await _appUpdateService.getUpdateInfo();
-    if (!mounted) return;
+      final updateInfo = await _appUpdateService.getUpdateInfo();
+      if (!_isActiveFlow(flowVersion)) return;
 
-    final shouldShowMobileUpdateDialog =
-        updateInfo.isUpdateAvailable && ResponsiveWidget.isMobile(context);
+      final shouldShowUpdateDialog = updateInfo.isUpdateAvailable && !kIsWeb;
 
-    if (shouldShowMobileUpdateDialog) {
-      await _showUpdateDialog(updateInfo);
-      if (!mounted) return;
+      if (shouldShowUpdateDialog) {
+        await _showUpdateDialog(updateInfo);
+        if (!_isActiveFlow(flowVersion)) return;
+      }
     }
 
-    if (!mounted) return;
+    if (!_isActiveFlow(flowVersion)) return;
     final route = ModalRoute.of(context);
     if (route != null && !route.isCurrent) {
       return;
     }
 
+    final initialNavigationRoute = widget.initialNavigationRoute;
+    final isLoggedIn = _isLoggedIn;
+    final routeName = isLoggedIn
+        ? initialNavigationRoute?.path
+        : kIsWeb
+            ? '/'
+            : null;
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) {
-          if (_isLoggedIn) return NavigationPage();
-          if (_shouldShowWebLanding(context)) {
+        settings: RouteSettings(name: routeName),
+        builder: (routeContext) {
+          if (isLoggedIn) {
+            final route = initialNavigationRoute;
+            return NavigationPage(
+              initialIndex: route?.index ?? 0,
+              initialHomeContentType: route?.homeContentType ?? 'MOVIE',
+            );
+          }
+          if (_shouldShowWebLandingForContext(routeContext)) {
+            if (kIsWeb && kDebugMode) {
+              developer.log(
+                'Splash redirecting to web landing because authenticated=false',
+                name: 'WebAuthGuard',
+              );
+            }
             return const WebLandingScreen();
           }
           return const SelectLocaleLanguagePage();
@@ -72,8 +112,23 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
-  bool _shouldShowWebLanding(BuildContext context) {
+  bool _isActiveFlow(int flowVersion) {
+    return mounted && flowVersion == _flowVersion;
+  }
+
+  @override
+  void dispose() {
+    _flowVersion++;
+    super.dispose();
+  }
+
+  static bool _shouldShowWebLandingForContext(BuildContext context) {
     return kIsWeb && MediaQuery.sizeOf(context).width >= 1024;
+  }
+
+  void _logWebAuth(String message) {
+    if (!kIsWeb || !kDebugMode) return;
+    developer.log(message, name: 'WebAuthGuard');
   }
 
   Future<void> _showUpdateDialog(AppUpdateInfo updateInfo) async {

@@ -112,11 +112,16 @@ class _PromoterCard extends StatefulWidget {
 class _PromoterCardState extends State<_PromoterCard> {
   bool _hovered = false;
 
+  void _setHovered(bool value) {
+    if (!mounted) return;
+    setState(() => _hovered = value);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      onEnter: (_) => _setHovered(true),
+      onExit: (_) => _setHovered(false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 190),
         height: 70,

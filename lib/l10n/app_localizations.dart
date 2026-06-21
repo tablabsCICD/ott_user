@@ -805,6 +805,570 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Logout'**
   String get logout;
+
+  /// No description provided for @filmytellPresents.
+  ///
+  /// In en, this message translates to:
+  /// **'FILMYTELL PRESENTS'**
+  String get filmytellPresents;
+
+  /// No description provided for @filmytellOriginals.
+  ///
+  /// In en, this message translates to:
+  /// **'Filmytell Originals'**
+  String get filmytellOriginals;
+
+  /// No description provided for @premiumStoriesDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover premium Indian movies, series, and stories crafted for every screen.'**
+  String get premiumStoriesDefault;
+
+  /// No description provided for @watchNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch Now'**
+  String get watchNow;
+
+  /// No description provided for @playTrailer.
+  ///
+  /// In en, this message translates to:
+  /// **'Play Trailer'**
+  String get playTrailer;
+
+  /// No description provided for @moreDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'More Details'**
+  String get moreDetails;
+
+  /// No description provided for @trendingOnFilmytell.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending on FilmyTell'**
+  String get trendingOnFilmytell;
+
+  /// No description provided for @trendingIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending in'**
+  String get trendingIn;
+
+  /// No description provided for @watchPremiumMoviesSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch premium movies and series on FilmyTell.'**
+  String get watchPremiumMoviesSeries;
+
+  /// No description provided for @loadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get loadMore;
+
+  /// No description provided for @latestContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest Content'**
+  String get latestContent;
+
+  /// No description provided for @howFilmytellWorks.
+  ///
+  /// In en, this message translates to:
+  /// **'HOW FILMYTELL WORKS'**
+  String get howFilmytellWorks;
+
+  /// No description provided for @viewersEntertainmentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'For Entertainment Lovers'**
+  String get viewersEntertainmentTitle;
+
+  /// No description provided for @viewersEntertainmentDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy or gift the movies and series you choose. No subscription needed. Download content to watch offline.'**
+  String get viewersEntertainmentDescription;
+
+  /// No description provided for @createAccountMobileOtp.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Account With Mobile OTP'**
+  String get createAccountMobileOtp;
+
+  /// No description provided for @browseMoviesAndSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse Movies and Series'**
+  String get browseMoviesAndSeries;
+
+  /// No description provided for @payOnlyContentChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay Only For The Content You Choose'**
+  String get payOnlyContentChoose;
+
+  /// No description provided for @giftMoviesFriendsFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Gift Movies To Friends & Family'**
+  String get giftMoviesFriendsFamily;
+
+  /// No description provided for @buildWatchlistContinueWatching.
+  ///
+  /// In en, this message translates to:
+  /// **'Build Watchlist & Continue Watching'**
+  String get buildWatchlistContinueWatching;
+
+  /// No description provided for @watchAcrossDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch Across Mobile, Web & TV'**
+  String get watchAcrossDevices;
+
+  /// No description provided for @payPerMovie.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay Per Movie'**
+  String get payPerMovie;
+
+  /// No description provided for @movieGifting.
+  ///
+  /// In en, this message translates to:
+  /// **'Movie Gifting'**
+  String get movieGifting;
+
+  /// No description provided for @continueWatching.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Watching'**
+  String get continueWatching;
+
+  /// No description provided for @multiDeviceAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Multi-device Access'**
+  String get multiDeviceAccess;
+
+  /// No description provided for @regionalContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Regional Content'**
+  String get regionalContent;
+
+  /// No description provided for @securePlayback.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure Playback'**
+  String get securePlayback;
+
+  /// No description provided for @exploreContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore Content'**
+  String get exploreContent;
+
+  /// No description provided for @productionHouseWorks.
+  ///
+  /// In en, this message translates to:
+  /// **'HOW PRODUCTION HOUSE WORKS'**
+  String get productionHouseWorks;
+
+  /// No description provided for @productionHousesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'For Production House'**
+  String get productionHousesTitle;
+
+  /// No description provided for @productionHouseDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload, manage and monetize your content.'**
+  String get productionHouseDescription;
+
+  /// No description provided for @contentManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Content Management'**
+  String get contentManagement;
+
+  /// No description provided for @revenueTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue Tracking'**
+  String get revenueTracking;
+
+  /// No description provided for @analyticsDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics Dashboard'**
+  String get analyticsDashboard;
+
+  /// No description provided for @approvalWorkflow.
+  ///
+  /// In en, this message translates to:
+  /// **'Approval Workflow'**
+  String get approvalWorkflow;
+
+  /// No description provided for @releaseScheduling.
+  ///
+  /// In en, this message translates to:
+  /// **'Release Scheduling'**
+  String get releaseScheduling;
+
+  /// No description provided for @secureDistribution.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure Distribution'**
+  String get secureDistribution;
+
+  /// No description provided for @registerProductionHouse.
+  ///
+  /// In en, this message translates to:
+  /// **'Register Production House'**
+  String get registerProductionHouse;
+
+  /// No description provided for @completeVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete Verification'**
+  String get completeVerification;
+
+  /// No description provided for @uploadMoviesSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload Movies and Series'**
+  String get uploadMoviesSeries;
+
+  /// No description provided for @submitForApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit For Approval'**
+  String get submitForApproval;
+
+  /// No description provided for @trackRevenuePerformance.
+  ///
+  /// In en, this message translates to:
+  /// **'Track Revenue & Performance'**
+  String get trackRevenuePerformance;
+
+  /// No description provided for @reachGlobalAudience.
+  ///
+  /// In en, this message translates to:
+  /// **'Reach Global Audience'**
+  String get reachGlobalAudience;
+
+  /// No description provided for @learnMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn More'**
+  String get learnMore;
+
+  /// No description provided for @mobileNumberRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile number is required'**
+  String get mobileNumberRequired;
+
+  /// No description provided for @enterAtLeast10Digits.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter at least 10 digits'**
+  String get enterAtLeast10Digits;
+
+  /// No description provided for @enterValidIndianMobile.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid Indian mobile number'**
+  String get enterValidIndianMobile;
+
+  /// No description provided for @noQueryProvided.
+  ///
+  /// In en, this message translates to:
+  /// **'No query provided.'**
+  String get noQueryProvided;
+
+  /// No description provided for @productionEnquiryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New Production House Enquiry'**
+  String get productionEnquiryTitle;
+
+  /// No description provided for @userMobileNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'User Mobile Number'**
+  String get userMobileNumber;
+
+  /// No description provided for @query.
+  ///
+  /// In en, this message translates to:
+  /// **'Query'**
+  String get query;
+
+  /// No description provided for @redirectingWhatsapp.
+  ///
+  /// In en, this message translates to:
+  /// **'Redirecting to WhatsApp...'**
+  String get redirectingWhatsapp;
+
+  /// No description provided for @unableOpenWhatsapp.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open WhatsApp. Please try again.'**
+  String get unableOpenWhatsapp;
+
+  /// No description provided for @haveQuestionHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Have a question? We\'ll help you get started.'**
+  String get haveQuestionHelp;
+
+  /// No description provided for @messageQueryOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us your requirement or any doubt (Optional)'**
+  String get messageQueryOptional;
+
+  /// No description provided for @sendProductionEnquiry.
+  ///
+  /// In en, this message translates to:
+  /// **'Send production enquiry'**
+  String get sendProductionEnquiry;
+
+  /// No description provided for @opening.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening...'**
+  String get opening;
+
+  /// No description provided for @sendEnquiry.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Enquiry'**
+  String get sendEnquiry;
+
+  /// No description provided for @watchAnywhere.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch Anywhere'**
+  String get watchAnywhere;
+
+  /// No description provided for @availableDevicesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Filmytell is available across your favorite screens.'**
+  String get availableDevicesDescription;
+
+  /// No description provided for @startWatching.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Watching'**
+  String get startWatching;
+
+  /// No description provided for @readyToStart.
+  ///
+  /// In en, this message translates to:
+  /// **'READY TO START'**
+  String get readyToStart;
+
+  /// No description provided for @startJourneyToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Your Filmytell Journey Today'**
+  String get startJourneyToday;
+
+  /// No description provided for @chooseHowUseFilmytell.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how you want to use Filmytell.'**
+  String get chooseHowUseFilmytell;
+
+  /// No description provided for @watchContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch Content'**
+  String get watchContent;
+
+  /// No description provided for @streamPremiumMoviesSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch premium movies, series and mini series.'**
+  String get streamPremiumMoviesSeries;
+
+  /// No description provided for @userPortal.
+  ///
+  /// In en, this message translates to:
+  /// **'User Portal'**
+  String get userPortal;
+
+  /// No description provided for @publishContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish Content'**
+  String get publishContent;
+
+  /// No description provided for @publishContentDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload, manage and monetize your releases.'**
+  String get publishContentDescription;
+
+  /// No description provided for @productionHousePortal.
+  ///
+  /// In en, this message translates to:
+  /// **'Production House Portal'**
+  String get productionHousePortal;
+
+  /// No description provided for @explore.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore'**
+  String get explore;
+
+  /// No description provided for @portals.
+  ///
+  /// In en, this message translates to:
+  /// **'Portals'**
+  String get portals;
+
+  /// No description provided for @shortcuts.
+  ///
+  /// In en, this message translates to:
+  /// **'Shortcuts'**
+  String get shortcuts;
+
+  /// No description provided for @legal.
+  ///
+  /// In en, this message translates to:
+  /// **'Legal'**
+  String get legal;
+
+  /// No description provided for @aboutUs.
+  ///
+  /// In en, this message translates to:
+  /// **'About Us'**
+  String get aboutUs;
+
+  /// No description provided for @contactUs.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Us'**
+  String get contactUs;
+
+  /// No description provided for @faq.
+  ///
+  /// In en, this message translates to:
+  /// **'FAQ'**
+  String get faq;
+
+  /// No description provided for @privacyPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Policy'**
+  String get privacyPolicy;
+
+  /// No description provided for @termsConditions.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms & Conditions'**
+  String get termsConditions;
+
+  /// No description provided for @allRightsReserved.
+  ///
+  /// In en, this message translates to:
+  /// **'@Filmytell. All Rights Reserved.'**
+  String get allRightsReserved;
+
+  /// No description provided for @giftAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Gift access'**
+  String get giftAccess;
+
+  /// No description provided for @downloadOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Download offline'**
+  String get downloadOffline;
+
+  /// No description provided for @unableOpenLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open link'**
+  String get unableOpenLink;
+
+  /// No description provided for @unableOpenDocument.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open document'**
+  String get unableOpenDocument;
+
+  /// No description provided for @trailerNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Trailer is not available'**
+  String get trailerNotAvailable;
+
+  /// No description provided for @chatWithUsWhatsapp.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat with us on WhatsApp'**
+  String get chatWithUsWhatsapp;
+
+  /// No description provided for @needHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Need Help?'**
+  String get needHelp;
+
+  /// No description provided for @trendingNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending Now'**
+  String get trendingNow;
+
+  /// No description provided for @filmytellByNumbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Filmytell By The Numbers'**
+  String get filmytellByNumbers;
+
+  /// No description provided for @users.
+  ///
+  /// In en, this message translates to:
+  /// **'Users'**
+  String get users;
+
+  /// No description provided for @moviesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Movies'**
+  String get moviesLabel;
+
+  /// No description provided for @seriesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Series'**
+  String get seriesLabel;
+
+  /// No description provided for @productionHouses.
+  ///
+  /// In en, this message translates to:
+  /// **'Production House'**
+  String get productionHouses;
+
+  /// No description provided for @growing.
+  ///
+  /// In en, this message translates to:
+  /// **'Growing'**
+  String get growing;
+
+  /// No description provided for @everyDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Every Day'**
+  String get everyDay;
 }
 
 class _AppLocalizationsDelegate

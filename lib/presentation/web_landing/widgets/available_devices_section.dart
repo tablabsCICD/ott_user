@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ott/l10n/app_localizations.dart';
 
 class AvailableDevicesSection extends StatelessWidget {
   const AvailableDevicesSection({
@@ -99,13 +100,14 @@ class _StripTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
-          'Watch Anywhere',
-          style: TextStyle(
+        Text(
+          lang.watchAnywhere,
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 22,
             height: 1.1,
@@ -114,7 +116,7 @@ class _StripTitle extends StatelessWidget {
         ),
         const SizedBox(height: 5),
         Text(
-          'Filmytell is available across your favorite screens.',
+          lang.availableDevicesDescription,
           style: TextStyle(
             color: Colors.white.withOpacity(0.58),
             fontSize: 13,
@@ -181,11 +183,17 @@ class _StartButton extends StatefulWidget {
 class _StartButtonState extends State<_StartButton> {
   bool _hovered = false;
 
+  void _setHovered(bool value) {
+    if (!mounted) return;
+    setState(() => _hovered = value);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final lang = AppLocalizations.of(context)!;
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      onEnter: (_) => _setHovered(true),
+      onExit: (_) => _setHovered(false),
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
@@ -202,9 +210,9 @@ class _StartButtonState extends State<_StartButton> {
               ),
             ],
           ),
-          child: const Text(
-            'Start Watching',
-            style: TextStyle(
+          child: Text(
+            lang.startWatching,
+            style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w900,
             ),

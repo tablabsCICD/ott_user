@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/session_manager.dart';
+import 'package:ott/app/core/utils/image_url_utils.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/help%20support%20page/HelpSupportPage.dart';
 import 'package:ott/app/pages/device%20management%20page/DeviceManagementPage.dart';
@@ -24,25 +27,36 @@ import 'package:ott/app/provider/onboarding_tour_provider.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/feature_tour.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
+import 'package:ott/app/route/routes/web_navigation_routes.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
+import 'package:ott/presentation/web_landing/utils/post_logout_navigation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../provider/userProvider.dart';
 
 class NavigationPage extends StatefulWidget {
-  const NavigationPage({super.key});
+  const NavigationPage({
+    super.key,
+    this.initialIndex = 0,
+    this.initialHomeContentType = 'MOVIE',
+    this.startAppTourOnHome = false,
+  });
+
+  final int initialIndex;
+  final String initialHomeContentType;
+  final bool startAppTourOnHome;
 
   @override
   _NavigationPageState createState() => _NavigationPageState();
 }
 
 class _NavigationPageState extends State<NavigationPage> {
-  int _currentIndex = 0;
+  late int _currentIndex;
   bool _isExitDialogOpen = false;
   bool _isSidebarExpanded = false;
-  String _homeContentType = "MOVIE";
+  late String _homeContentType;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   Widget _buildCurrentPage([int? pageIndex]) {
@@ -72,8 +86,7 @@ class _NavigationPageState extends State<NavigationPage> {
         return const ChangeLanguage();
       case 10:
         return const HelpSupportPage();
-      case 11:
-        return const DeviceManagementPage();
+
       default:
         return HomePage(
           key: ValueKey(_homeContentType),
@@ -85,10 +98,20 @@ class _NavigationPageState extends State<NavigationPage> {
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.initialIndex;
+    _homeContentType = widget.initialHomeContentType;
+    _logWebNavigation(
+      'NavigationPage init index=$_currentIndex homeContentType=$_homeContentType',
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       DeepLinkService.instance.consumePendingNavigation();
       final tourProvider = context.read<OnboardingTourProvider>();
-      unawaited(tourProvider.startFirstLaunchTour(context: context));
+      if (widget.startAppTourOnHome) {
+        tourProvider.replayTour(context: context);
+      } else {
+        unawaited(tourProvider.startFirstLaunchTour(context: context));
+      }
     });
   }
 
@@ -100,6 +123,8 @@ class _NavigationPageState extends State<NavigationPage> {
     final isTvLayout = ResponsiveWidget.isTabletOrTv(context);
     final lang = AppLocalizations.of(context)!;
     final userProvider = Provider.of<UserProvider>(context);
+    final profilePhotoUrl =
+        normalizeNetworkImageUrl(userProvider.userObj.profilePhoto);
     final mobilePageIndices = [0, 1, 3, 4, 5];
     final mobileCurrentIndex = mobilePageIndices.contains(_currentIndex)
         ? mobilePageIndices.indexOf(_currentIndex)
@@ -110,7 +135,7 @@ class _NavigationPageState extends State<NavigationPage> {
             : _currentIndex;
 
     return PopScope(
-      canPop: false,
+      canPop: kIsWeb,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         await _handleBackNavigation();
@@ -126,7 +151,7 @@ class _NavigationPageState extends State<NavigationPage> {
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 220),
                         curve: Curves.easeOutCubic,
-                        width: _isSidebarExpanded ? 250 : 86,
+                        width: _isSidebarExpanded ? 250 : 112,
                         color: selectedThemeData.cardColor,
                         child: MouseRegion(
                           onEnter: (_) => _setSidebarExpanded(true),
@@ -212,14 +237,27 @@ class _NavigationPageState extends State<NavigationPage> {
                           radius: 12,
                           backgroundColor:
                               selectedThemeData.primaryColor.withOpacity(0.5),
-                          foregroundImage: userProvider.userObj.profilePhoto ==
-                                  null
-                              ? AssetImage(ImageConstant.profile)
-                              : userProvider.userObj.profilePhoto!.isNotEmpty
-                                  ? NetworkImage(
-                                      userProvider.userObj.profilePhoto!,
-                                    )
-                                  : AssetImage(ImageConstant.profile),
+                          child: ClipOval(
+                            child: profilePhotoUrl.isEmpty
+                                ? Image.asset(
+                                    ImageConstant.profile,
+                                    width: 24,
+                                    height: 24,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Image.network(
+                                    profilePhotoUrl,
+                                    width: 24,
+                                    height: 24,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Image.asset(
+                                      ImageConstant.profile,
+                                      width: 24,
+                                      height: 24,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                          ),
                         ),
                       ),
                     ),
@@ -369,6 +407,19 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   void _navigateTo(int index, {String? homeContentType}) {
+    final nextHomeContentType = homeContentType ?? _homeContentType;
+    if (kIsWeb) {
+      final route = WebNavigationRoutes.fromIndex(
+        index,
+        homeContentType: nextHomeContentType,
+      );
+      _logWebNavigation(
+        'Drawer requested path=${route.path} index=$index homeContentType=$nextHomeContentType',
+      );
+      Navigator.of(context).pushNamed(route.path);
+      return;
+    }
+
     setState(() {
       _currentIndex = index;
       if (homeContentType != null) {
@@ -378,6 +429,11 @@ class _NavigationPageState extends State<NavigationPage> {
     if (Navigator.canPop(context)) {
       Navigator.of(context).pop(); // Close the drawer safely
     }
+  }
+
+  void _logWebNavigation(String message) {
+    if (!kIsWeb || !kDebugMode) return;
+    developer.log(message, name: 'WebNavigation');
   }
 
   void _setSidebarExpanded(bool expanded) {
@@ -390,33 +446,44 @@ class _NavigationPageState extends State<NavigationPage> {
     final selectedThemeData = themeProvider.getTheme;
     final isDark = selectedThemeData.brightness == Brightness.dark;
     final lang = AppLocalizations.of(context)!;
+    final hideTabletLogo = ResponsiveWidget.isTablet(context);
+    final logoSize = _isSidebarExpanded ? 132.0 : 82.0;
 
     return ListView(
       padding: EdgeInsets.zero,
       children: [
         SizedBox(
-          height: 170,
+          height: hideTabletLogo ? 96 : 170,
           child: DrawerHeader(
             margin: EdgeInsets.zero,
             decoration: BoxDecoration(
-              color: selectedThemeData.primaryColor,
+              color: hideTabletLogo
+                  ? Colors.transparent
+                  : selectedThemeData.primaryColor,
             ),
-            child: Stack(
-              children: [
-                Center(
-                  child: Hero(
-                    tag: "logo",
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(25),
-                      child: Image.asset(
-                        ImageConstant.logo,
-                        fit: BoxFit.contain,
+            child: hideTabletLogo
+                ? const SizedBox.shrink()
+                : Stack(
+                    children: [
+                      Center(
+                        child: Hero(
+                          tag: "logo",
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(25),
+                            child: SizedBox(
+                              height: logoSize,
+                              width: logoSize,
+                              child: Image.asset(
+                                ImageConstant.logo,
+                                fit: BoxFit.contain,
+                                filterQuality: FilterQuality.high,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ),
-              ],
-            ),
           ),
         ),
         if (_isSidebarExpanded)
@@ -462,8 +529,6 @@ class _NavigationPageState extends State<NavigationPage> {
             index: 5, icon: Icons.person, title: lang.profile),
         _buildDrawerTile(context,
             index: 9, icon: Icons.settings, title: "Settings"),
-        _buildDrawerTile(context,
-            index: 11, icon: Icons.devices_other, title: "Devices"),
         _buildDrawerTile(context,
             index: 10, icon: Icons.support_agent_sharp, title: lang.help),
         _buildDrawerTile(
@@ -527,9 +592,6 @@ class _NavigationPageState extends State<NavigationPage> {
     Provider.of<BookmarkProvider>(context, listen: false).clear();
     Provider.of<UserProvider>(context, listen: false).clear();
     Provider.of<UserProvider>(context, listen: false).disposeData();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginCard()),
-    );
+    pushPostLogoutReplacement(context);
   }
 }

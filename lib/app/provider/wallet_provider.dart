@@ -10,8 +10,9 @@ import 'package:ott/data/models/user.dart';
 import '../core/network/api_helper.dart';
 import '../core/services/WalletService.dart';
 import '../core/utils/sharepreferences.dart';
+import 'baseProvider.dart';
 
-class WalletProvider extends ChangeNotifier {
+class WalletProvider extends BaseProvider {
   WalletProvider({
     WalletService? walletService,
   }) : _walletService = walletService ?? WalletService();

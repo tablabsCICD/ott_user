@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 // avoid conflict
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -64,6 +66,7 @@ Gift code: $couponCode
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         backgroundColor: theme.primaryColor,
         foregroundColor: Colors.white,
         centerTitle: true,

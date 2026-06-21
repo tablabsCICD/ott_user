@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/core/utils/image_url_utils.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/home%20page/category_content_page.dart';
 import 'package:ott/app/pages/madioo%20page/MadiooPage.dart';
@@ -66,7 +67,7 @@ class _HomePageState extends State<HomePage>
   bool _dataLoaded = false;
   int? _userId;
 
-  /// 🔥 NEW: Scroll controllers for each horizontal row
+  /// Scroll controllers for each horizontal row.
   final Map<int, ScrollController> _rowControllers = {};
   final Map<int, ValueNotifier<int?>> _rowActiveIndexes = {};
   final Map<int, int> _rowItemCounts = {};
@@ -291,7 +292,7 @@ class _HomePageState extends State<HomePage>
     }
   }
 
-  /// 🔥 NEW: Horizontal pagination trigger
+  /// Horizontal pagination trigger.
   void _onRowScroll(
     ScrollController controller,
     DashboardProvider provider,
@@ -335,7 +336,8 @@ class _HomePageState extends State<HomePage>
         ((viewEnd - 0.001) / MovieCard.itemExtent).floor(),
       ),
     );
-    final isAtEnd = controller.position.maxScrollExtent - controller.offset <= 1;
+    final isAtEnd =
+        controller.position.maxScrollExtent - controller.offset <= 1;
 
     int? bestIndex;
     double bestVisibility = 0;
@@ -504,6 +506,7 @@ class _HomePageState extends State<HomePage>
     if (_visibleUpdateScheduled) return;
     _visibleUpdateScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _visibleUpdateScheduled = false;
       _updateVisibleRows();
     });
@@ -613,7 +616,7 @@ class _HomePageState extends State<HomePage>
                                                       _rowKeys[index]!;
                                                   final rowIndex = index;
 
-                                                  // 🔥 Attach listener ONLY once
+                                                  // Attach listener only once.
                                                   if (!controller
                                                       .hasListeners) {
                                                     controller.addListener(() {
@@ -835,119 +838,121 @@ class _HomePageState extends State<HomePage>
             },
             child: Stack(
               children: [
-              PageView.builder(
-                controller: _pageController,
-                itemCount: heroItems.length,
-                onPageChanged: (index) {
-                  setState(() => _currentPage = index);
-                },
-                itemBuilder: (context, index) {
-                  final item = heroItems[index];
-                  final imageUrl = item.posterUrlList?.first ?? '';
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: theme.cardColor,
-                          alignment: Alignment.center,
-                          child: Icon(
-                            Icons.movie_creation_outlined,
-                            color: theme.canvasColor.withOpacity(0.5),
-                            size: 72,
+                PageView.builder(
+                  controller: _pageController,
+                  itemCount: heroItems.length,
+                  onPageChanged: (index) {
+                    setState(() => _currentPage = index);
+                  },
+                  itemBuilder: (context, index) {
+                    final item = heroItems[index];
+                    final imageUrl = item.posterUrlList?.first ?? '';
+                    return Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: theme.cardColor,
+                            alignment: Alignment.center,
+                            child: Icon(
+                              Icons.movie_creation_outlined,
+                              color: theme.canvasColor.withOpacity(0.5),
+                              size: 72,
+                            ),
                           ),
                         ),
-                      ),
-                      Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                            colors: [
-                              Colors.black,
-                              Colors.black87,
-                              Colors.black26,
-                              Colors.black87,
-                            ],
-                            stops: [0, 0.26, 0.72, 1],
+                        Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [
+                                Colors.black,
+                                Colors.black87,
+                                Colors.black26,
+                                Colors.black87,
+                              ],
+                              stops: [0, 0.26, 0.72, 1],
+                            ),
                           ),
                         ),
-                      ),
-                      Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black38,
-                              Colors.transparent,
-                              Colors.black87,
-                            ],
+                        Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black38,
+                                Colors.transparent,
+                                Colors.black87,
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      Positioned(
-                        left: ResponsiveWidget.isDesktop(context) ? 70 : 36,
-                        bottom: ResponsiveWidget.isDesktop(context) ? 58 : 34,
-                        width: ResponsiveWidget.isDesktop(context) ? 560 : 430,
-                        child: _buildTvHeroCopy(context, theme, item, index),
-                      ),
-                    ],
-                  );
-                },
-              ),
-              Positioned(
-                left: 18,
-                top: 0,
-                bottom: 0,
-                child: Center(
-                  child: _buildHeroArrowButton(
-                    theme: theme,
-                    icon: Icons.chevron_left_rounded,
-                    onTap: () => _moveHeroSlider(heroItems.length, -1),
-                  ),
-                ),
-              ),
-              Positioned(
-                right: 18,
-                top: 0,
-                bottom: 0,
-                child: Center(
-                  child: _buildHeroArrowButton(
-                    theme: theme,
-                    icon: Icons.chevron_right_rounded,
-                    onTap: () => _moveHeroSlider(heroItems.length, 1),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 18,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    math.min(heroItems.length, 9),
-                    (index) {
-                      final active = index == (_currentPage % heroItems.length);
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 220),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: active ? 26 : 8,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: active
-                              ? Colors.white
-                              : Colors.white.withOpacity(0.35),
-                          borderRadius: BorderRadius.circular(999),
+                        Positioned(
+                          left: ResponsiveWidget.isDesktop(context) ? 70 : 36,
+                          bottom: ResponsiveWidget.isDesktop(context) ? 58 : 34,
+                          width:
+                              ResponsiveWidget.isDesktop(context) ? 560 : 430,
+                          child: _buildTvHeroCopy(context, theme, item, index),
                         ),
-                      );
-                    },
+                      ],
+                    );
+                  },
+                ),
+                Positioned(
+                  left: 18,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: _buildHeroArrowButton(
+                      theme: theme,
+                      icon: Icons.chevron_left_rounded,
+                      onTap: () => _moveHeroSlider(heroItems.length, -1),
+                    ),
                   ),
                 ),
-              ),
+                Positioned(
+                  right: 18,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: _buildHeroArrowButton(
+                      theme: theme,
+                      icon: Icons.chevron_right_rounded,
+                      onTap: () => _moveHeroSlider(heroItems.length, 1),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 18,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      math.min(heroItems.length, 9),
+                      (index) {
+                        final active =
+                            index == (_currentPage % heroItems.length);
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 220),
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          width: active ? 26 : 8,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: active
+                                ? Colors.white
+                                : Colors.white.withOpacity(0.35),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1155,7 +1160,7 @@ class _HomePageState extends State<HomePage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🔴 LABEL
+          // Label
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
             child: Text(
@@ -1168,7 +1173,7 @@ class _HomePageState extends State<HomePage>
             ),
           ),
 
-          // 🎬 HORIZONTAL LIST
+          // Horizontal list
           SizedBox(
             height: 220, //270,
             child: ListView.builder(
@@ -1306,20 +1311,20 @@ class _HomePageState extends State<HomePage>
   SliverAppBar _buildSliverAppBar(
       BuildContext context, ThemeData selectedThemeData) {
     final lang = AppLocalizations.of(context)!;
+    final useTransparentAppBar = !ResponsiveWidget.isMobile(context);
 
     return SliverAppBar(
       automaticallyImplyLeading: false,
-      forceMaterialTransparency:
-          ResponsiveWidget.isDesktop(context) ? true : false,
+      forceMaterialTransparency: useTransparentAppBar,
       // expandedHeight: bannerHeight(context),
       floating: false,
       pinned: true,
       stretch: true,
       surfaceTintColor: Colors.transparent,
-      backgroundColor: ResponsiveWidget.isDesktop(context)
+      backgroundColor: useTransparentAppBar
           ? selectedThemeData.scaffoldBackgroundColor
           : selectedThemeData.primaryColor,
-      title: ResponsiveWidget.isDesktop(context)
+      title: useTransparentAppBar
           ? Text(
               "",
               style: TextStyle(
@@ -1352,7 +1357,7 @@ class _HomePageState extends State<HomePage>
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: Image.asset(
-                      ImageConstant.inAppLogo,
+                      ImageConstant.logo,
                       width: 75,
                       height: 75,
                       fit: BoxFit.contain,
@@ -1362,19 +1367,19 @@ class _HomePageState extends State<HomePage>
               ),
             ),
 
-      titleSpacing: ResponsiveWidget.isTablet(context) ? 50 : 10,
+      titleSpacing: 10,
       actions: [
         //LanguageDropdown(),
         FeatureTourTarget(
           id: FeatureTourStepId.search,
           child: IconButton(
             icon: Icon(Icons.search,
-                color: ResponsiveWidget.isDesktop(context)
+                color: useTransparentAppBar
                     ? selectedThemeData.canvasColor
                     : Colors.white),
             tooltip: lang.search,
             style: IconButton.styleFrom(
-                backgroundColor: ResponsiveWidget.isDesktop(context)
+                backgroundColor: useTransparentAppBar
                     ? Colors.white.withOpacity(0.3)
                     : Colors.black.withOpacity(0.2)),
             onPressed: () => Navigator.push(
@@ -1390,12 +1395,12 @@ class _HomePageState extends State<HomePage>
           id: FeatureTourStepId.notifications,
           child: IconButton(
             icon: Icon(Icons.notifications_active,
-                color: ResponsiveWidget.isDesktop(context)
+                color: useTransparentAppBar
                     ? selectedThemeData.canvasColor
                     : Colors.white),
             tooltip: lang.notification,
             style: IconButton.styleFrom(
-                backgroundColor: ResponsiveWidget.isDesktop(context)
+                backgroundColor: useTransparentAppBar
                     ? Colors.white.withOpacity(0.3)
                     : Colors.black.withOpacity(0.2)),
             onPressed: () => Navigator.push(
@@ -1412,12 +1417,12 @@ class _HomePageState extends State<HomePage>
           child: IconButton(
             tooltip: lang.selectPreferredLanguage,
             style: IconButton.styleFrom(
-              backgroundColor: ResponsiveWidget.isDesktop(context)
+              backgroundColor: useTransparentAppBar
                   ? Colors.white.withOpacity(0.3)
                   : Colors.black.withOpacity(0.2),
             ),
             icon: Icon(Icons.language_sharp,
-                color: ResponsiveWidget.isDesktop(context)
+                color: useTransparentAppBar
                     ? selectedThemeData.canvasColor
                     : Colors.white),
             onPressed: () => Navigator.push(
@@ -1443,12 +1448,12 @@ class _HomePageState extends State<HomePage>
                 id: FeatureTourStepId.wallet,
                 child: IconButton(
                   icon: Icon(Icons.account_balance_wallet,
-                      color: ResponsiveWidget.isDesktop(context)
+                      color: useTransparentAppBar
                           ? selectedThemeData.canvasColor
                           : Colors.white),
                   tooltip: "${walletProvider.walletBalance}",
                   style: IconButton.styleFrom(
-                      backgroundColor: ResponsiveWidget.isDesktop(context)
+                      backgroundColor: useTransparentAppBar
                           ? Colors.white.withOpacity(0.3)
                           : Colors.black.withOpacity(0.2)),
                   onPressed: () => Navigator.push(
@@ -1489,14 +1494,36 @@ class _HomePageState extends State<HomePage>
                         child: CircleAvatar(
                           radius: 18,
                           backgroundColor: selectedThemeData.canvasColor,
-                          backgroundImage:
-                              userProvider.userObj.profilePhoto == null
-                                  ? AssetImage(ImageConstant.profile)
-                                  : userProvider.userObj.profilePhoto!.isNotEmpty
-                                      ? NetworkImage(
-                                          userProvider.userObj.profilePhoto!,
-                                        )
-                                      : AssetImage(ImageConstant.profile),
+                          child: ClipOval(
+                            child: Builder(
+                              builder: (_) {
+                                final profilePhotoUrl =
+                                    normalizeNetworkImageUrl(
+                                  userProvider.userObj.profilePhoto,
+                                );
+                                if (profilePhotoUrl.isEmpty) {
+                                  return Image.asset(
+                                    ImageConstant.profile,
+                                    width: 36,
+                                    height: 36,
+                                    fit: BoxFit.cover,
+                                  );
+                                }
+                                return Image.network(
+                                  profilePhotoUrl,
+                                  width: 36,
+                                  height: 36,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Image.asset(
+                                    ImageConstant.profile,
+                                    width: 36,
+                                    height: 36,
+                                    fit: BoxFit.cover,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -1753,7 +1780,7 @@ class _HomePageState extends State<HomePage>
       //           //                   "movie"
       //           //               ? lang.watchMovie
       //           //               : lang.watchSeries)
-      //           //           : "₹${trendingMovieList[_currentPage].price}",
+      //           //           : "Rs ${trendingMovieList[_currentPage].price}",
       //           //       style: const TextStyle(
       //           //         color: Colors.white,
       //           //         fontSize: 14,

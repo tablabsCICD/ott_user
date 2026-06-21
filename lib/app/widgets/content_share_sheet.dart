@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/ShareService.dart';
@@ -241,6 +243,16 @@ Android: $playStoreLink
 Web: $webAppLink
 ''';
 
+      if (kIsWeb) {
+        await SharePlus.instance.share(
+          ShareParams(
+            text: message,
+            subject: data.movie.title ?? 'FilmyTell',
+          ),
+        );
+        return;
+      }
+
       final path = await ShareService.instance.downloadQrImage(data);
 
       await Share.shareXFiles(
@@ -248,6 +260,17 @@ Web: $webAppLink
         text: message,
       );
     } catch (e) {
+      if (kIsWeb) {
+        await Clipboard.setData(ClipboardData(text: data.qrLink.toString()));
+        if (!context.mounted) return;
+        CustomToast.show(
+          context,
+          "Share link copied to clipboard",
+          isSuccess: true,
+        );
+        return;
+      }
+
       CustomToast.show(
         context,
         "Failed to share content",

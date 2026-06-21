@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 class FaqScreen extends StatelessWidget {
   const FaqScreen({super.key});
@@ -71,15 +73,17 @@ class FaqScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               children: [
-                IconButton(
-                  onPressed: () => Navigator.maybePop(context),
-                  icon: const Icon(
-                    Icons.arrow_back_rounded,
-                    color: Colors.white,
-                    size: 26,
+                if (!(kIsWeb || ResponsiveWidget.isTv(context))) ...[
+                  IconButton(
+                    onPressed: () => Navigator.maybePop(context),
+                    icon: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: Colors.white,
+                      size: 26,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
+                  const SizedBox(width: 8),
+                ],
                 const Text(
                   'FAQ',
                   style: TextStyle(

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -191,6 +192,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
       backgroundColor: selectedThemeData.scaffoldBackgroundColor,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
+        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         forceMaterialTransparency: true,
         foregroundColor: Colors.white,
         title: !ResponsiveWidget.isMobile(context)
@@ -240,6 +242,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     return Scaffold(
       backgroundColor: selectedThemeData.scaffoldBackgroundColor,
       appBar: AppBar(
+        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         forceMaterialTransparency: true,
         foregroundColor: Colors.white,
         backgroundColor: Colors.transparent,

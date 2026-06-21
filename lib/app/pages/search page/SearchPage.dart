@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
@@ -30,6 +31,7 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     super.initState();
     Future.delayed(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
       Provider.of<VideoProvider>(context, listen: false).searchContent();
       setState(() {
         isLoading = false;
@@ -73,6 +75,8 @@ class _SearchPageState extends State<SearchPage> {
         return Scaffold(
           backgroundColor: selectedThemeData.scaffoldBackgroundColor,
           appBar: AppBar(
+            automaticallyImplyLeading:
+                !(kIsWeb || ResponsiveWidget.isTv(context)),
             toolbarHeight: 80,
             backgroundColor: ResponsiveWidget.isDesktop(context)
                 ? selectedThemeData.scaffoldBackgroundColor

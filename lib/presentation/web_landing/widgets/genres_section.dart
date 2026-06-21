@@ -77,11 +77,16 @@ class _GenreCard extends StatefulWidget {
 class _GenreCardState extends State<_GenreCard> {
   bool _hovered = false;
 
+  void _setHovered(bool value) {
+    if (!mounted) return;
+    setState(() => _hovered = value);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      onEnter: (_) => _setHovered(true),
+      onExit: (_) => _setHovered(false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 190),
         curve: Curves.easeOutCubic,

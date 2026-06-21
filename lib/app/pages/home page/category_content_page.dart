@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/widgets/movieCard.dart';
 import 'package:ott/data/models/content.dart';
@@ -116,6 +117,7 @@ class _CategoryContentPageState extends State<CategoryContentPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         backgroundColor: theme.primaryColor,
         foregroundColor: Colors.white,
         title: Text(

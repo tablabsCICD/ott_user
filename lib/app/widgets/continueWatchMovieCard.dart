@@ -81,10 +81,12 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       widget.activeIndexListenable?.addListener(_handleActiveIndexChanged);
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       context
           .read<BookmarkProvider>()
           .isBookmarked(widget.movie.id ?? 0)
           .then((value) {
+        if (!mounted) return;
         if (value) {
           context.read<BookmarkProvider>().addBookmark(widget.movie.id ?? 0);
         }

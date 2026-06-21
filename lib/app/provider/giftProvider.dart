@@ -8,8 +8,9 @@ import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/giftMasterModel.dart' hide User;
 import 'package:ott/data/models/giftRecordModel.dart';
 import 'package:ott/data/models/user.dart';
+import 'baseProvider.dart';
 
-class GiftProvider extends ChangeNotifier {
+class GiftProvider extends BaseProvider {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 

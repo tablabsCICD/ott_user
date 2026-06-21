@@ -1,14 +1,39 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/constant/prefrense_constant.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/services/session_manager.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/news%20page/NewsScreen.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
+import 'package:ott/presentation/web_landing/screens/web_landing_screen.dart';
 
 import '../../pages/onboarding pages/SplashScreen.dart';
 import 'app_routes.dart';
+import 'web_navigation_routes.dart';
 
 class RouteGenerator {
   static Route<dynamic> generateRoute(RouteSettings settings) {
+    _logRouteRequest(settings);
+
+    if (settings.name == AppRoutes.news &&
+        settings.arguments is NewsScreenArgs) {
+      final args = settings.arguments as NewsScreenArgs;
+      return buildRoute(NewsScreen(args: args), settings: settings);
+    }
+
+    final webNavigationRoute =
+        kIsWeb ? WebNavigationRoutes.fromPath(settings.name) : null;
+    if (webNavigationRoute != null) {
+      return buildRoute(
+        SplashScreen(initialNavigationRoute: webNavigationRoute),
+        settings: settings,
+      );
+    }
+
     switch (settings.name) {
       // case AppRoutes.login:
       //   return buildRoute(SignInPage(), settings: settings);
@@ -37,6 +62,18 @@ class RouteGenerator {
         );
 
       case AppRoutes.notificationPage:
+        _logRouteDecision(
+          'Protected notification route requested name=${settings.name}',
+        );
+        if (kIsWeb) {
+          return buildRoute(
+            const _WebProtectedRoute(
+              routeName: AppRoutes.notificationPage,
+              child: NotificationPage(),
+            ),
+            settings: settings,
+          );
+        }
         return buildRoute(const NotificationPage(), settings: settings);
 
       /*  case AppRoutes.home:
@@ -70,8 +107,24 @@ class RouteGenerator {
         return buildRoute(PendingContentPage(), settings: settings);*/
 
       default:
+        _logRouteDecision(
+          'Unknown route ${settings.name}; falling back to SplashScreen',
+        );
         return buildRoute(SplashScreen(), settings: settings);
     }
+  }
+
+  static void _logRouteRequest(RouteSettings settings) {
+    if (!kIsWeb || !kDebugMode) return;
+    developer.log(
+      'Requested route name=${settings.name} arguments=${settings.arguments.runtimeType}',
+      name: 'WebRoute',
+    );
+  }
+
+  static void _logRouteDecision(String message) {
+    if (!kIsWeb || !kDebugMode) return;
+    developer.log(message, name: 'WebRoute');
   }
 
   static MaterialPageRoute buildRoute(Widget child,
@@ -111,6 +164,7 @@ class RouteGenerator {
       settings: settings,
       builder: (_) => Scaffold(
         appBar: AppBar(
+          automaticallyImplyLeading: !kIsWeb,
           title: const Text('Movie not found'),
         ),
         body: const Center(
@@ -147,6 +201,7 @@ class RouteGenerator {
     return MaterialPageRoute(builder: (_) {
       return Scaffold(
         appBar: AppBar(
+          automaticallyImplyLeading: !kIsWeb,
           backgroundColor: Colors.transparent,
           title: const Text(
             'Exit App',
@@ -180,5 +235,70 @@ class RouteGenerator {
         ),
       );
     });
+  }
+}
+
+class _WebProtectedRoute extends StatefulWidget {
+  const _WebProtectedRoute({
+    required this.routeName,
+    required this.child,
+  });
+
+  final String routeName;
+  final Widget child;
+
+  @override
+  State<_WebProtectedRoute> createState() => _WebProtectedRouteState();
+}
+
+class _WebProtectedRouteState extends State<_WebProtectedRoute> {
+  bool? _authenticated;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthentication();
+  }
+
+  Future<void> _checkAuthentication() async {
+    final loggedIn = await LocalSharePreferences.localSharePreferences.getBool(
+      SharedPreferencesConstant.isUserLoggedIn,
+    );
+    final token = await SessionManager.instance.token;
+    final authenticated = loggedIn && token != null;
+    if (!mounted) return;
+    if (kDebugMode) {
+      developer.log(
+        'Protected route auth check route=${widget.routeName} loggedInFlag=$loggedIn hasToken=${token != null} authenticated=$authenticated',
+        name: 'WebAuthGuard',
+      );
+    }
+    setState(() => _authenticated = authenticated);
+    if (!authenticated) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          settings: const RouteSettings(name: '/'),
+          builder: (_) => const WebLandingScreen(),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authenticated = _authenticated;
+    if (authenticated == null) {
+      return const SizedBox.shrink();
+    }
+    if (!authenticated) {
+      if (kDebugMode) {
+        developer.log(
+          'Protected route redirecting to web landing route=${widget.routeName}',
+          name: 'WebAuthGuard',
+        );
+      }
+      return const WebLandingScreen();
+    }
+    return widget.child;
   }
 }

@@ -6,6 +6,8 @@ import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+typedef PackageInfoLoader = Future<PackageInfo> Function();
+
 class AppUpdateInfo {
   const AppUpdateInfo({
     required this.isUpdateAvailable,
@@ -23,10 +25,14 @@ class AppUpdateInfo {
 }
 
 class AppUpdateService {
-  AppUpdateService({ApiHelper? apiHelper})
-      : _apiHelper = apiHelper ?? ApiHelper();
+  AppUpdateService({
+    ApiHelper? apiHelper,
+    PackageInfoLoader? packageInfoLoader,
+  })  : _apiHelper = apiHelper ?? ApiHelper(),
+        _packageInfoLoader = packageInfoLoader ?? PackageInfo.fromPlatform;
 
   final ApiHelper _apiHelper;
+  final PackageInfoLoader _packageInfoLoader;
 
   Future<bool> isUpdateAvailable() async {
     final info = await getUpdateInfo();
@@ -102,7 +108,7 @@ class AppUpdateService {
 
   Future<PackageInfo> _currentPackageInfo() async {
     try {
-      return PackageInfo.fromPlatform();
+      return await _packageInfoLoader();
     } catch (_) {
       return PackageInfo(
         appName: 'Filmytell',

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -32,6 +33,7 @@ class _DeviceManagementPageState extends State<DeviceManagementPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         backgroundColor: theme.scaffoldBackgroundColor,
         foregroundColor: theme.canvasColor,
         title: const Text('Device Management'),

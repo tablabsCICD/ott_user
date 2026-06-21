@@ -203,7 +203,10 @@ class UserProvider extends BaseProvider {
   // Update user data
   Future<Map<String, Object>> updateUser() async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
-    String apiUrl = ApiConstant.editUserById;
+    if (user?.id == null) {
+      return {'success': false, 'message': 'User not found'};
+    }
+    String apiUrl = ApiConstant.editUserById(user!.id);
     //log("API=====$apiUrl");
     ApiHelper apiHelper = ApiHelper();
     Map<String, dynamic> data = {
@@ -232,6 +235,12 @@ class UserProvider extends BaseProvider {
         if (updateUserResponse.success == true) {
           if (updateUserResponse.data != null) {
             userObject = updateUserResponse.data!.user!;
+            firstNameController.text = userObject.firstName ?? "";
+            lastNameController.text = userObject.lastName ?? "";
+            emailController.text = userObject.emailId ?? "";
+            mobileController.text = userObject.mobileNumber ?? "";
+            dobController.text = userObject.dob ?? "";
+            profileController.text = userObject.profilePhoto ?? "";
             print("before SEtData ${user.firstName}");
             LocalSharePreferences localSharePreferences =
                 LocalSharePreferences();
@@ -284,7 +293,10 @@ class UserProvider extends BaseProvider {
   // Update user basic details data
   Future<Map<String, Object>> updateUserDetails() async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
-    String apiUrl = ApiConstant.editUserById;
+    if (user?.id == null) {
+      return {'success': false, 'message': 'User not found'};
+    }
+    String apiUrl = ApiConstant.editUserById(user!.id);
     //log("API=====$apiUrl");
     ApiHelper apiHelper = ApiHelper();
     Map<String, dynamic> data = {
@@ -365,7 +377,10 @@ class UserProvider extends BaseProvider {
   // Update user Location data
   Future<Map<String, Object>> updateUserLocation() async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
-    String apiUrl = ApiConstant.editUserById;
+    if (user?.id == null) {
+      return {'success': false, 'message': 'User not found'};
+    }
+    String apiUrl = ApiConstant.editUserById(user!.id);
     log("API=====$apiUrl");
     ApiHelper apiHelper = ApiHelper();
     Map<String, dynamic> data = {
@@ -740,12 +755,15 @@ class UserProvider extends BaseProvider {
   // Update user data
   Future<Map<String, Object>> updateUserLang(List<String> langList) async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
-    String apiUrl = ApiConstant.editUserById;
+    if (user?.id == null) {
+      return {'success': false, 'message': 'User not found'};
+    }
+    String apiUrl = ApiConstant.editUserById(user!.id);
 
     ApiHelper apiHelper = ApiHelper();
     Map<String, dynamic> data = {
       //"firstName": user!.firstName,
-      "id": user!.id,
+      "id": user.id,
       //"lastName": user.lastName,
       // "mobileNumber": user.mobileNumber,
       "languages": langList
@@ -816,9 +834,13 @@ class UserProvider extends BaseProvider {
     String apiUrl = ApiConstant.sendOTP(mobile);
 
     ApiHelper apiHelper = ApiHelper();
+    final watch = Stopwatch()..start();
 
     try {
       var response = await apiHelper.postApiWithoutAuthToken(apiUrl);
+      _logOtpPerformance(
+        'Send OTP API completed in ${watch.elapsedMilliseconds}ms',
+      );
       if (response.statusCode == 200) {
         Map<String, dynamic> responseBody = json.decode(response.body);
         GetUserResponse addUserResponse =
@@ -858,12 +880,18 @@ class UserProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } on io.SocketException {
+      _logOtpPerformance(
+        'Send OTP failed after ${watch.elapsedMilliseconds}ms: no connection',
+      );
       return {
         'success': false,
         'message':
             'No internet connection. Please check your network and try again.',
       };
     } catch (error) {
+      _logOtpPerformance(
+        'Send OTP failed after ${watch.elapsedMilliseconds}ms',
+      );
       log("Error: $error");
       return {'success': false, 'message': 'error: $error'};
     }
@@ -875,10 +903,16 @@ class UserProvider extends BaseProvider {
     String otp, {
     BuildContext? context,
   }) async {
-    final deviceInfo = await DeviceTypeHelper.buildSessionInfo(
+    final totalWatch = Stopwatch()..start();
+    final deviceInfoFuture = DeviceTypeHelper.buildSessionInfo(
       context: context,
     );
-    final deviceToken = await NotificationService.instance.getDeviceToken();
+    final deviceTokenFuture = NotificationService.instance.getDeviceToken();
+    final deviceInfo = await deviceInfoFuture;
+    final deviceToken = await deviceTokenFuture;
+    _logOtpPerformance(
+      'OTP device/session prep completed in ${totalWatch.elapsedMilliseconds}ms',
+    );
     final apiUrl = ApiConstant.verifyOTP(
       mobileNum: mobile,
       otp: otp,
@@ -892,7 +926,11 @@ class UserProvider extends BaseProvider {
     final apiHelper = ApiHelper();
     debugPrint("✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓" + apiUrl);
     try {
+      final apiWatch = Stopwatch()..start();
       var response = await apiHelper.postApiWithoutAuthToken(apiUrl);
+      _logOtpPerformance(
+        'Verify OTP API completed in ${apiWatch.elapsedMilliseconds}ms',
+      );
       if (response.statusCode == 200) {
         Map<String, dynamic> responseBody = json.decode(response.body);
         GetUserResponse addUserResponse =
@@ -912,6 +950,9 @@ class UserProvider extends BaseProvider {
             localSharePreferences.setString(
                 SharedPreferencesConstant.currentUser, jsonEncode(sessionUser));
             notifyListeners();
+            _logOtpPerformance(
+              'Verify OTP flow completed in ${totalWatch.elapsedMilliseconds}ms',
+            );
             return {
               'success': true,
               'message':
@@ -943,11 +984,19 @@ class UserProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
+      _logOtpPerformance(
+        'Verify OTP failed after ${totalWatch.elapsedMilliseconds}ms',
+      );
       return {
         'success': false,
         'message': 'An error occurred while logging user'
       };
     }
+  }
+
+  void _logOtpPerformance(String message) {
+    if (!kDebugMode) return;
+    log(message, name: 'OtpPerformance');
   }
 
   // Delete a user
@@ -1133,6 +1182,10 @@ class UserProvider extends BaseProvider {
 
   // Upload Image
   Future<void> uploadImage() async {
+    if ((!kIsWeb && _imageFile == null) || (kIsWeb && _webFile == null)) {
+      return;
+    }
+
     _isUploading = true;
     notifyListeners();
 
@@ -1142,6 +1195,12 @@ class UserProvider extends BaseProvider {
       );
 
       final request = http.MultipartRequest('POST', uri);
+      final token =
+          await LocalSharePreferences.localSharePreferences.getAuthToken();
+      if (token != null && token.trim().isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
       if (kIsWeb && _webFile != null) {
         final reader = html.FileReader();
         reader.readAsArrayBuffer(_webFile!);

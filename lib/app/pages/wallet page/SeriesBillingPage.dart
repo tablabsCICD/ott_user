@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/wallet%20page/PaymentPage.dart';
 import 'package:ott/app/provider/series_provider.dart';
@@ -65,6 +66,8 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
         slivers: [
           // -------- Wallet Header --------
           SliverAppBar(
+            automaticallyImplyLeading:
+                !(kIsWeb || ResponsiveWidget.isTv(context)),
             pinned: true,
             expandedHeight: 230,
             elevation: 0,

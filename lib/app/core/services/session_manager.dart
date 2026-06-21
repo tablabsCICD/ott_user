@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -14,6 +16,7 @@ import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/offline_download_provider.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/route/navigation_service.dart';
+import 'package:ott/presentation/web_landing/utils/post_logout_navigation.dart';
 
 class SessionManager {
   SessionManager._();
@@ -50,6 +53,7 @@ class SessionManager {
 
   Future<bool> logoutFromServer() async {
     final authToken = await token;
+    _logWebAuth('Explicit logout requested hasToken=${authToken != null}');
     if (authToken == null) return true;
     try {
       final response = await http.post(
@@ -59,8 +63,10 @@ class SessionManager {
           'Authorization': 'Bearer $authToken',
         },
       ).timeout(const Duration(seconds: 10));
+      _logWebAuth('Explicit logout response status=${response.statusCode}');
       return response.statusCode >= 200 && response.statusCode < 300;
     } catch (_) {
+      _logWebAuth('Explicit logout request failed');
       return false;
     }
   }
@@ -68,6 +74,7 @@ class SessionManager {
   Future<void> handleSessionExpired(String message) async {
     if (_handlingForcedLogout) return;
     _handlingForcedLogout = true;
+    _logWebAuth('Session expired redirect triggered message=$message');
 
     await clearLocalSession();
 
@@ -81,10 +88,9 @@ class SessionManager {
       );
     }
 
-    navigator?.pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginCard()),
-      (_) => false,
-    );
+    if (navigator != null) {
+      pushPostLogoutAndRemoveUntil(navigator);
+    }
 
     Future<void>.delayed(const Duration(seconds: 2), () {
       _handlingForcedLogout = false;
@@ -94,6 +100,9 @@ class SessionManager {
   bool isReplacementSessionResponse(http.Response response) {
     if (response.statusCode != 401) return false;
     final message = extractMessage(response.body);
+    _logWebAuth(
+      '401 response inspected replacementSession=${message == replacementSessionMessage}',
+    );
     return message == replacementSessionMessage;
   }
 
@@ -116,5 +125,10 @@ class SessionManager {
     Provider.of<UserProvider>(context, listen: false).clear();
     Provider.of<UserProvider>(context, listen: false).disposeData();
     Provider.of<OfflineDownloadProvider>(context, listen: false).clear();
+  }
+
+  void _logWebAuth(String message) {
+    if (!kIsWeb || !kDebugMode) return;
+    developer.log(message, name: 'WebAuthGuard');
   }
 }

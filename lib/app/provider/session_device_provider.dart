@@ -5,8 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/data/models/session_device.dart';
+import 'baseProvider.dart';
 
-class SessionDeviceProvider extends ChangeNotifier {
+class SessionDeviceProvider extends BaseProvider {
   final ApiHelper _apiHelper = ApiHelper();
 
   bool isLoading = false;

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
@@ -141,6 +142,7 @@ class _NotificationPageState extends State<NotificationPage> {
     return Scaffold(
       backgroundColor: selectedThemeData.scaffoldBackgroundColor,
       appBar: AppBar(
+        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         centerTitle: true,
         backgroundColor: selectedThemeData.primaryColor,
         foregroundColor: Colors.white,

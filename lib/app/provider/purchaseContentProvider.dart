@@ -13,8 +13,9 @@ import '../../data/models/response/purchesContentListResponse.dart';
 import '../core/network/api_helper.dart';
 import '../core/constant/prefrense_constant.dart';
 import '../core/utils/sharepreferences.dart';
+import 'baseProvider.dart';
 
-class PurchaseContentProvider extends ChangeNotifier {
+class PurchaseContentProvider extends BaseProvider {
   static const String _purchaseCacheKey = 'cached_purchase_content';
   final List<UserContent> _userContentList = [];
   bool _isSavingContent = false;

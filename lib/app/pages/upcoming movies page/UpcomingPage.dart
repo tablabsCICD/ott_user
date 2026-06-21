@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
@@ -39,6 +40,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         centerTitle: true,
         backgroundColor: theme.primaryColor,
         foregroundColor: Colors.white,

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -68,6 +69,7 @@ Gift code: $couponCode
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         foregroundColor: Colors.white,
         title: const Text(
           "Gifted Movies",

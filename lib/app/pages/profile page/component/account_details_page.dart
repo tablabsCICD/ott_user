@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/core/utils/image_url_utils.dart';
 import 'package:ott/app/pages/profile%20page/component/EditProfilePage.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -132,14 +133,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   }
 
   Widget _profileHeader(dynamic user, ThemeData theme) {
-    final photo = (user.profilePhoto ?? '').toString().trim();
-    final imageUri = Uri.tryParse(photo);
-    final hasValidNetworkPhoto = photo.isNotEmpty &&
-        imageUri != null &&
-        (imageUri.isScheme('http') || imageUri.isScheme('https'));
-    final ImageProvider imageProvider = hasValidNetworkPhoto
-        ? NetworkImage(photo)
-        : AssetImage(ImageConstant.profile);
+    final profilePhotoUrl = normalizeNetworkImageUrl(user.profilePhoto);
 
     return Center(
       child: Hero(
@@ -150,7 +144,27 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
             CircleAvatar(
               radius: 50,
               backgroundColor: theme.cardColor,
-              backgroundImage: imageProvider,
+              child: ClipOval(
+                child: profilePhotoUrl.isEmpty
+                    ? Image.asset(
+                        ImageConstant.profile,
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      )
+                    : Image.network(
+                        profilePhotoUrl,
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Image.asset(
+                          ImageConstant.profile,
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+              ),
             ),
             (user.verified ?? false)
                 ? Positioned(

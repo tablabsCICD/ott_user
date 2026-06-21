@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ott/l10n/app_localizations.dart';
 
 class FinalCtaSection extends StatelessWidget {
   const FinalCtaSection({
@@ -15,61 +16,74 @@ class FinalCtaSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
     final cards = [
       _CtaCardData(
         icon: Icons.play_circle_fill_rounded,
-        title: 'Watch Content',
-        body: 'Stream premium movies, series and mini series.',
-        action: 'User Portal',
+        title: lang.watchContent,
+        body: lang.streamPremiumMoviesSeries,
+        action: lang.userPortal,
         onTap: onWatchContent,
       ),
       _CtaCardData(
         icon: Icons.cloud_upload_rounded,
-        title: 'Publish Content',
-        body: 'Upload, manage and monetize your releases.',
-        action: 'Production House Portal',
+        title: lang.publishContent,
+        body: lang.publishContentDescription,
+        action: lang.productionHousePortal,
         onTap: onPublishContent,
       ),
     ];
 
     return Container(
       margin: const EdgeInsets.fromLTRB(56, 8, 56, 70),
-      padding: const EdgeInsets.all(38),
+      padding: const EdgeInsets.all(34),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFF101010),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            theme.primaryColor.withOpacity(0.58),
-            Colors.white.withOpacity(0.08),
-            Colors.black,
+            Colors.white.withOpacity(0.070),
+            Colors.white.withOpacity(0.032),
+            Colors.black.withOpacity(0.16),
           ],
         ),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        border: Border.all(color: Colors.white.withOpacity(0.11)),
         boxShadow: [
           BoxShadow(
-            color: theme.primaryColor.withOpacity(0.22),
-            blurRadius: 48,
-            offset: const Offset(0, 24),
+            color: Colors.black.withOpacity(0.28),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
       child: Column(
         children: [
-          const Text(
-            'Start Your Filmytell Journey Today',
+          Text(
+            lang.readyToStart,
             textAlign: TextAlign.center,
             style: TextStyle(
+              color: theme.primaryColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.3,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            lang.startJourneyToday,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
               color: Colors.white,
-              fontSize: 42,
+              fontSize: 40,
               height: 1.08,
               fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 12),
           Text(
-            'Choose how you want to use Filmytell.',
+            lang.chooseHowUseFilmytell,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white.withOpacity(0.74),
@@ -122,11 +136,16 @@ class _CtaCard extends StatefulWidget {
 class _CtaCardState extends State<_CtaCard> {
   bool _hovered = false;
 
+  void _setHovered(bool value) {
+    if (!mounted) return;
+    setState(() => _hovered = value);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      onEnter: (_) => _setHovered(true),
+      onExit: (_) => _setHovered(false),
       child: GestureDetector(
         onTap: widget.data.onTap,
         child: AnimatedContainer(
@@ -134,15 +153,35 @@ class _CtaCardState extends State<_CtaCard> {
           height: 230,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(_hovered ? 0.42 : 0.28),
-            borderRadius: BorderRadius.circular(12),
+            color: Colors.black.withOpacity(_hovered ? 0.42 : 0.26),
+            borderRadius: BorderRadius.circular(9),
             border: Border.all(
-                color: Colors.white.withOpacity(_hovered ? 0.22 : 0.10)),
+              color: _hovered
+                  ? widget.color.withOpacity(0.44)
+                  : Colors.white.withOpacity(0.10),
+            ),
+            boxShadow: [
+              if (_hovered)
+                BoxShadow(
+                  color: widget.color.withOpacity(0.14),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10),
+                ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(widget.data.icon, color: Colors.white, size: 38),
+              Container(
+                height: 48,
+                width: 48,
+                decoration: BoxDecoration(
+                  color: widget.color.withOpacity(_hovered ? 0.24 : 0.14),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: widget.color.withOpacity(0.32)),
+                ),
+                child: Icon(widget.data.icon, color: Colors.white, size: 28),
+              ),
               const Spacer(),
               Text(
                 widget.data.title,
@@ -164,16 +203,36 @@ class _CtaCardState extends State<_CtaCard> {
               const Spacer(),
               Row(
                 children: [
-                  Text(
-                    widget.data.action,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: widget.color.withOpacity(_hovered ? 0.22 : 0.14),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: widget.color.withOpacity(0.28)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          widget.data.action,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.arrow_forward_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.arrow_forward_rounded,
-                      color: Colors.white, size: 18),
                 ],
               ),
             ],

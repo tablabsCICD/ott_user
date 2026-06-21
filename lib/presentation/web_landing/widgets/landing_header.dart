@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/widgets/LanguageDropdown.dart';
+import 'package:ott/l10n/app_localizations.dart';
 
 class LandingHeader extends StatelessWidget {
   const LandingHeader({
@@ -20,11 +22,20 @@ class LandingHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final navItems = ['Home', 'Movies', 'Series'];
+    final lang = AppLocalizations.of(context)!;
+    final width = MediaQuery.sizeOf(context).width;
+    final showLanguageLabel = width >= 620;
+    const headerControlHeight = 46.0;
+    final navItems = [
+      (target: 'Home', label: lang.home),
+      (target: 'Movies', label: lang.movie),
+      (target: 'Series', label: lang.series),
+      (target: 'Mini Series', label: 'Mini Series'),
+    ];
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 260),
-      height: 76,
+      height: 84,
       decoration: BoxDecoration(
         color: scrolled ? Colors.black.withOpacity(0.72) : Colors.transparent,
         border: Border(
@@ -41,48 +52,80 @@ class LandingHeader extends StatelessWidget {
             ),
         ],
       ),
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-              sigmaX: scrolled ? 16 : 0, sigmaY: scrolled ? 16 : 0),
-          child: Padding(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: scrolled ? 16 : 0,
+                  sigmaY: scrolled ? 16 : 0,
+                ),
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
+          Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: 56,
             ),
-            child: Row(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: Image.asset(
-                    ImageConstant.logo,
-                    height: 75,
-                    width: 75,
-                  ),
-                ),
-                const SizedBox(width: 34),
-                for (final item in navItems)
-                  _HeaderNavItem(
-                    label: item,
-                    onTap: () => onNavigate(item),
-                  ),
-                const Spacer(),
-                ElevatedButton(
-                  onPressed: onSignUp,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 22, vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+            child: SizedBox.expand(
+              child: Row(
+                children: [
+                  SizedBox(
+                    height: 76,
+                    width: 252,
+                    child: Transform.scale(
+                      scale: 1.65,
+                      alignment: Alignment.centerLeft,
+                      child: Image.asset(
+                        ImageConstant.logo,
+                        alignment: Alignment.centerLeft,
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
+                      ),
                     ),
                   ),
-                  child: const Text('Login'),
-                ),
-              ],
+                  const SizedBox(width: 24),
+                  for (final item in navItems)
+                    _HeaderNavItem(
+                      label: item.label,
+                      onTap: () => onNavigate(item.target),
+                    ),
+                  const Spacer(),
+                  LanguageDropdown(
+                    showSelectedLabel: showLanguageLabel,
+                    foregroundColor: Colors.white,
+                    backgroundColor: Colors.white.withOpacity(0.08),
+                    constraints: const BoxConstraints.tightFor(
+                      height: headerControlHeight,
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: showLanguageLabel ? 12 : 9,
+                      vertical: 0,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: onSignUp,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.primaryColor,
+                      foregroundColor: Colors.white,
+                      fixedSize: const Size.fromHeight(headerControlHeight),
+                      padding: const EdgeInsets.symmetric(horizontal: 22),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(lang.login),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -104,11 +147,16 @@ class _HeaderNavItem extends StatefulWidget {
 class _HeaderNavItemState extends State<_HeaderNavItem> {
   bool _hovered = false;
 
+  void _setHovered(bool value) {
+    if (!mounted) return;
+    setState(() => _hovered = value);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      onEnter: (_) => _setHovered(true),
+      onExit: (_) => _setHovered(false),
       child: GestureDetector(
         onTap: widget.onTap,
         behavior: HitTestBehavior.opaque,
@@ -127,6 +175,7 @@ class _HeaderNavItemState extends State<_HeaderNavItem> {
               color: _hovered ? Colors.white : Colors.white.withOpacity(0.78),
               fontSize: 14,
               fontWeight: FontWeight.w700,
+              letterSpacing: 0,
             ),
           ),
         ),
@@ -151,11 +200,16 @@ class _IconCircle extends StatefulWidget {
 class _IconCircleState extends State<_IconCircle> {
   bool _hovered = false;
 
+  void _setHovered(bool value) {
+    if (!mounted) return;
+    setState(() => _hovered = value);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      onEnter: (_) => _setHovered(true),
+      onExit: (_) => _setHovered(false),
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(

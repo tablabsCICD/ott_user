@@ -1,6 +1,6 @@
 class AppConstant {
-  static const String appVersion = "1.0.7";
-  static const int appBuildNumber = 18;
+  static const String appVersion = "1.0.11";
+  static const int appBuildNumber = 26;
   static final String GOOGLE_KEY = "AIzaSyDbIESWMKX_4TqGEiFUhbu8-PUpLnVBPrc";
   static const String razorpayKeyId = String.fromEnvironment(
     'RAZORPAY_KEY_ID',
@@ -10,17 +10,16 @@ class AppConstant {
   static const String razorpayLogoUrl = String.fromEnvironment(
     'RAZORPAY_LOGO_URL',
     defaultValue:
-        'https://filmytell-document.s3.ap-south-1.amazonaws.com/documents/filmytell-logo-1778238183653.jpeg',
+        'https://filmytell-document.s3.ap-south-1.amazonaws.com/documents/favicon-1781181436031.png',
   );
   static const playStoreLink =
       "https://play.google.com/store/apps/details?id=com.filmytell.ott";
   static const webAppLink = "https://filmytell.in";
 
   static const privacyPolicy =
-      "https://filmytell-document.s3.ap-south-1.amazonaws.com/documents/filmytell-privacy-policy-h-a-03-06-2026-1780926099693.docx";
-  //"https://filmytell-document.s3.ap-south-1.amazonaws.com/filmytell_privacy_policy.html";
+      "https://filmytell-document.s3.ap-south-1.amazonaws.com/documents/filmytell-privacy-policy-h-a-05-06-2026-1781181202883-1781269363236.pdf";
   static const termsAndCondition =
-      "https://filmytell-document.s3.ap-south-1.amazonaws.com/documents/filmytell-terms-of-use-h-a-05-06-2026-1780927123235.docx";
+      "https://filmytell-document.s3.ap-south-1.amazonaws.com/documents/filmytell-terms-of-use-h-a-09-06-2026-1781269391191.pdf";
 
   static const productionHouseUrl =
       'https://filmytell.in/productionHouse/#/login/';
