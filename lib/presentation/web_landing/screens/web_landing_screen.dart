@@ -308,11 +308,13 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     try {
       final documentUrls =
           await LegalDocumentService.instance.getDocumentUrls();
-      await launchUrl(
-        legalDocumentViewUri(documentUrls.privacyPolicyUrl),
-        mode: LaunchMode.externalApplication,
-        webOnlyWindowName: '_blank',
-      );
+      final url = documentUrls.privacyPolicyUrl.trim().isEmpty
+          ? _privacyPolicyUrl
+          : documentUrls.privacyPolicyUrl;
+      if (mounted) {
+        setState(() => _privacyPolicyUrl = url);
+      }
+      await _openDocumentInNewTab(url);
     } catch (error) {
       if (!mounted) return;
       CustomToast.show(
@@ -327,11 +329,13 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     try {
       final documentUrls =
           await LegalDocumentService.instance.getDocumentUrls();
-      await launchUrl(
-        legalDocumentViewUri(documentUrls.termsAndConditionsUrl),
-        mode: LaunchMode.externalApplication,
-        webOnlyWindowName: '_blank',
-      );
+      final url = documentUrls.termsAndConditionsUrl.trim().isEmpty
+          ? _termsAndConditionUrl
+          : documentUrls.termsAndConditionsUrl;
+      if (mounted) {
+        setState(() => _termsAndConditionUrl = url);
+      }
+      await _openDocumentInNewTab(url);
     } catch (error) {
       if (!mounted) return;
       CustomToast.show(

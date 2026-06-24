@@ -32,7 +32,7 @@ class LoginCard extends StatefulWidget {
 
 class _LoginCardState extends State<LoginCard> with CodeAutoFill {
   static const int _otpLength = 6;
-  static const int _resendCooldownSeconds = 30;
+  static const int _resendCooldownSeconds = 10 * 60;
   static const Duration _otpAutoFillTimeout = Duration(seconds: 60);
 
   final TextEditingController _mobileController = TextEditingController();
@@ -494,7 +494,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                           : _resendOtp,
                                       child: Text(
                                         _resendSecondsRemaining > 0
-                                            ? 'Resend OTP in ${_resendSecondsRemaining}s'
+                                            ? 'Resend OTP in ${_formatResendTime(_resendSecondsRemaining)}'
                                             : 'Resend OTP',
                                       ),
                                     ),
@@ -650,7 +650,10 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
             '${lang.otpSentSuccessfully} ($mobile)',
             isSuccess: true,
           );
-          setState(() => otpSent = true);
+          setState(() {
+            otpSent = true;
+            _mobileNumberForOtp = mobile;
+          });
           _otpController.clear();
           _otpAutoFilled = false;
           _startResendCooldown();
@@ -766,6 +769,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
 
       _otpController.clear();
       _otpAutoFilled = false;
+      _mobileNumberForOtp = mobile;
       _startResendCooldown();
       await _startOtpAutoFillListener();
       CustomToast.show(
@@ -869,6 +873,14 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     final fromPhoneField = _digitsOnly(_mobileNumberForOtp);
     if (fromPhoneField.isNotEmpty) return fromPhoneField;
     return _digitsOnly(_mobileController.text);
+  }
+
+  String _formatResendTime(int seconds) {
+    final duration = Duration(seconds: seconds);
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final remainingSeconds =
+        duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$remainingSeconds';
   }
 
   String _digitsOnly(String value) {

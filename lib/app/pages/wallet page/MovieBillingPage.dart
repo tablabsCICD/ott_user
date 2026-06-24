@@ -36,6 +36,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
   double moviePrice = 0.0;
   DateTime? _startDate;
   DateTime? _endDate;
+  bool _purchaseLoaderVisible = false;
 
   static const double _minimumRechargeAmount = 100;
   static const double _maximumRechargeAmount = 100000;
@@ -519,6 +520,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                           : () async {
                               setState(() => isProcessing = true);
                               Navigator.pop(dialogContext);
+                              _showPurchaseLoader(pageContext);
 
                               try {
                                 await provider.getBalance();
@@ -578,6 +580,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                 });
 
                                 if (!mounted) return;
+                                _hidePurchaseLoader(pageContext);
                                 CustomToast.show(
                                   pageContext,
                                   "Payment successful! Enjoy your content 🎬",
@@ -601,12 +604,10 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                 }
                               } catch (error) {
                                 if (!mounted) return;
+                                _hidePurchaseLoader(pageContext);
                                 CustomToast.show(
                                   pageContext,
-                                  error.toString().replaceFirst(
-                                        'Exception: ',
-                                        '',
-                                      ),
+                                  _cleanPurchaseScreenError(error),
                                   isSuccess: false,
                                 );
                               }
@@ -624,6 +625,73 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
         );
       },
     );
+  }
+
+  void _showPurchaseLoader(BuildContext context) {
+    if (_purchaseLoaderVisible) return;
+    _purchaseLoaderVisible = true;
+    showDialog<void>(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: false,
+      builder: (_) {
+        final theme = Theme.of(context);
+        return PopScope(
+          canPop: false,
+          child: Center(
+            child: Container(
+              width: 190,
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.18),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: theme.primaryColor),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Processing purchase...',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    ).whenComplete(() => _purchaseLoaderVisible = false);
+  }
+
+  void _hidePurchaseLoader(BuildContext context) {
+    if (!_purchaseLoaderVisible) return;
+    Navigator.of(context, rootNavigator: true).pop();
+    _purchaseLoaderVisible = false;
+  }
+
+  String _cleanPurchaseScreenError(Object error) {
+    final message = error.toString().replaceFirst('Exception: ', '').trim();
+    final normalized = message.toLowerCase();
+    if (normalized.contains('transactionrequiredexception') ||
+        normalized.contains('no entitymanager with actual transaction') ||
+        normalized.contains("cannot reliably process 'remove' call") ||
+        normalized.contains('nested exception is javax.persistence')) {
+      return 'Purchase could not be completed. Please try again in a moment.';
+    }
+    return message.isEmpty ? 'Purchase failed. Please try again.' : message;
   }
 
   // ---------------- Recharge ----------------

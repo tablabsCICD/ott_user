@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:flutter/foundation.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
@@ -58,26 +59,21 @@ class AppUpdateService {
 
       final body = jsonDecode(response.body);
       final payload = _extractVersionPayload(body);
-      final latestVersion = _normalizeVersion(_firstValue(payload, const [
-        'version',
-        'appVersion',
-        'latestVersion',
-        'androidVersion',
-        'versionName',
-      ]));
-      final latestBuildNumber = _parseBuildNumber(_firstValue(payload, const [
-        'buildNumber',
-        'versionCode',
-        'appVersionCode',
-        'androidVersionCode',
-        'id',
-      ]));
-
+      final latestVersionValue = _firstValue(
+        payload,
+        _versionKeysForPlatform(defaultTargetPlatform),
+      );
+      final latestVersion = _normalizeVersion(latestVersionValue);
+      final latestBuildNumber = _parseBuildNumber(
+        _firstValue(payload, _buildKeysForPlatform(defaultTargetPlatform)),
+        fallbackVersion: latestVersionValue,
+      );
       final versionComparison = _compareVersion(latestVersion, currentVersion);
-      final updateAvailable = latestVersion.isNotEmpty &&
-          (versionComparison > 0 ||
-              (versionComparison == 0 &&
-                  latestBuildNumber > currentBuildNumber));
+      final hasNewerVersion = versionComparison > 0;
+      final hasNewerBuild = versionComparison == 0 &&
+          latestBuildNumber > currentBuildNumber;
+      final updateAvailable =
+          latestVersion.isNotEmpty && (hasNewerVersion || hasNewerBuild);
 
       log(
         'current=$currentVersion+$currentBuildNumber latest=$latestVersion+$latestBuildNumber update=$updateAvailable',
@@ -119,6 +115,74 @@ class AppUpdateService {
     }
   }
 
+  List<String> _versionKeysForPlatform(TargetPlatform platform) {
+    const commonKeys = [
+      'version',
+      'appVersion',
+      'latestVersion',
+      'versionName',
+      'app_version',
+      'latest_version',
+    ];
+
+    if (platform == TargetPlatform.iOS) {
+      return const [
+        'iosVersion',
+        'iOSVersion',
+        'iosAppVersion',
+        'iosLatestVersion',
+        'ios_version',
+        'ios_app_version',
+        'ios_latest_version',
+        ...commonKeys,
+      ];
+    }
+
+    return const [
+      'androidVersion',
+      'androidAppVersion',
+      'androidLatestVersion',
+      'android_version',
+      'android_app_version',
+      'android_latest_version',
+      ...commonKeys,
+    ];
+  }
+
+  List<String> _buildKeysForPlatform(TargetPlatform platform) {
+    const commonKeys = [
+      'buildNumber',
+      'versionCode',
+      'appVersionCode',
+      'build_number',
+      'version_code',
+      'app_version_code',
+      'id',
+    ];
+
+    if (platform == TargetPlatform.iOS) {
+      return const [
+        'iosBuildNumber',
+        'iosVersionCode',
+        'iosAppVersionCode',
+        'ios_build_number',
+        'ios_version_code',
+        'ios_app_version_code',
+        ...commonKeys,
+      ];
+    }
+
+    return const [
+      'androidBuildNumber',
+      'androidVersionCode',
+      'androidAppVersionCode',
+      'android_build_number',
+      'android_version_code',
+      'android_app_version_code',
+      ...commonKeys,
+    ];
+  }
+
   Map<String, dynamic> _extractVersionPayload(Object? body) {
     if (body is List && body.isNotEmpty) {
       return _extractVersionPayload(body.first);
@@ -133,9 +197,18 @@ class AppUpdateService {
 
     final result = body['result'];
     if (result is Map<String, dynamic>) return result;
+    if (result is List && result.isNotEmpty) {
+      return _extractVersionPayload(result.first);
+    }
 
     if (data is List && data.isNotEmpty && data.first is Map<String, dynamic>) {
       return data.first as Map<String, dynamic>;
+    }
+
+    final response = body['response'];
+    if (response is Map<String, dynamic>) return response;
+    if (response is List && response.isNotEmpty) {
+      return _extractVersionPayload(response.first);
     }
 
     return body;
@@ -143,7 +216,15 @@ class AppUpdateService {
 
   Object? _firstValue(Map<String, dynamic> source, List<String> keys) {
     for (final key in keys) {
-      final value = source[key];
+      Object? value = source[key];
+      if (value == null) {
+        for (final entry in source.entries) {
+          if (entry.key.toLowerCase() == key.toLowerCase()) {
+            value = entry.value;
+            break;
+          }
+        }
+      }
       if (value != null && value.toString().trim().isNotEmpty) {
         return value;
       }
@@ -156,8 +237,17 @@ class AppUpdateService {
     return version.split('+').first.trim();
   }
 
-  int _parseBuildNumber(Object? value) {
-    return int.tryParse((value ?? '').toString().trim()) ?? 0;
+  int _parseBuildNumber(Object? value, {Object? fallbackVersion}) {
+    final directValue = (value ?? '').toString().trim();
+    final directBuildNumber = int.tryParse(directValue);
+    if (directBuildNumber != null) return directBuildNumber;
+
+    final version = (fallbackVersion ?? '').toString().trim();
+    final buildSeparatorIndex = version.indexOf('+');
+    if (buildSeparatorIndex == -1 || buildSeparatorIndex == version.length - 1) {
+      return 0;
+    }
+    return int.tryParse(version.substring(buildSeparatorIndex + 1).trim()) ?? 0;
   }
 
   int _compareVersion(String a, String b) {

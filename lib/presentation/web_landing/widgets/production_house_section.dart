@@ -17,7 +17,7 @@ class ProductionHouseSection extends StatelessWidget {
   final VoidCallback onRegister;
   final VoidCallback onLearnMore;
 
-  static final Uri _whatsAppUri = Uri.parse('https://wa.me/919112012291');
+  static final Uri _whatsAppUri = Uri.parse('https://wa.me/919075919666');
 
   Future<void> _openWhatsApp(BuildContext context) async {
     final opened = await launchUrl(

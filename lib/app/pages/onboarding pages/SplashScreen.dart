@@ -60,14 +60,16 @@ class _SplashScreenState extends State<SplashScreen> {
       await Future.delayed(const Duration(seconds: 2));
       if (!_isActiveFlow(flowVersion)) return;
 
-      final updateInfo = await _appUpdateService.getUpdateInfo();
-      if (!_isActiveFlow(flowVersion)) return;
-
-      final shouldShowUpdateDialog = updateInfo.isUpdateAvailable && !kIsWeb;
-
-      if (shouldShowUpdateDialog) {
-        await _showUpdateDialog(updateInfo);
+      if (_supportsUpdateDialog) {
+        final updateInfo = await _appUpdateService.getUpdateInfo();
         if (!_isActiveFlow(flowVersion)) return;
+
+        final shouldShowUpdateDialog = updateInfo.isUpdateAvailable;
+
+        if (shouldShowUpdateDialog) {
+          await _showUpdateDialog(updateInfo);
+          if (!_isActiveFlow(flowVersion)) return;
+        }
       }
     }
 
@@ -131,6 +133,12 @@ class _SplashScreenState extends State<SplashScreen> {
     developer.log(message, name: 'WebAuthGuard');
   }
 
+  bool get _supportsUpdateDialog {
+    if (kIsWeb) return false;
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+  }
+
   Future<void> _showUpdateDialog(AppUpdateInfo updateInfo) async {
     await showDialog<void>(
       context: context,
@@ -174,19 +182,25 @@ class _SplashScreenState extends State<SplashScreen> {
       backgroundColor: theme.primaryColor,
       body: SafeArea(
           child: Stack(fit: StackFit.expand, children: [
-        ResponsiveWidget.isMobile(context)
+        kIsWeb
             ? Hero(
-                tag: 'logo',
-                child: Image.asset(
-                  ImageConstant.fullScreenLogo,
-                  fit: BoxFit.cover,
-                ),
-              )
-            : Hero(
                 tag: 'logo',
                 child: Image.asset(
                   ImageConstant.webFullScreenLogo,
                   fit: BoxFit.cover,
+                ),
+              )
+            : Center(
+                child: FractionallySizedBox(
+                  widthFactor: 0.8,
+                  heightFactor: 0.8,
+                  child: Hero(
+                    tag: 'logo',
+                    child: Image.asset(
+                      ImageConstant.fullScreenLogo,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
                 ),
               ),
         /* Align(

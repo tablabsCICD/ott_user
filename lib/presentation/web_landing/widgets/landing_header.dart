@@ -75,19 +75,20 @@ class LandingHeader extends StatelessWidget {
                 children: [
                   SizedBox(
                     height: 76,
-                    width: 252,
-                    child: Transform.scale(
-                      scale: 1.65,
+                    width: 76,
+                    child: Align(
                       alignment: Alignment.centerLeft,
                       child: Image.asset(
                         ImageConstant.logo,
+                        height: 76,
+                        width: 76,
                         alignment: Alignment.centerLeft,
                         fit: BoxFit.contain,
                         filterQuality: FilterQuality.high,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 24),
+                  const SizedBox(width: 32),
                   for (final item in navItems)
                     _HeaderNavItem(
                       label: item.label,

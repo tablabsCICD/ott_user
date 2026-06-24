@@ -82,11 +82,18 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       final documentUrls =
           await LegalDocumentService.instance.getDocumentUrls();
-      await launchUrl(
+      final opened = await launchUrl(
         legalDocumentViewUri(documentUrls.privacyPolicyUrl),
         mode: LaunchMode.externalApplication,
         webOnlyWindowName: '_blank',
       );
+      if (!opened && mounted) {
+        CustomToast.show(
+          context,
+          'Unable to open privacy policy page right now.',
+          isSuccess: false,
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       CustomToast.show(
@@ -101,11 +108,18 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       final documentUrls =
           await LegalDocumentService.instance.getDocumentUrls();
-      await launchUrl(
+      final opened = await launchUrl(
         legalDocumentViewUri(documentUrls.termsAndConditionsUrl),
         mode: LaunchMode.externalApplication,
         webOnlyWindowName: '_blank',
       );
+      if (!opened && mounted) {
+        CustomToast.show(
+          context,
+          'Unable to open terms and condition right now.',
+          isSuccess: false,
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       CustomToast.show(

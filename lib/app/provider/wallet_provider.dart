@@ -282,12 +282,27 @@ class WalletProvider extends BaseProvider {
       debugPrint("Error: $error");
       return {
         'success': false,
-        'message': error.toString(),
+        'message': _cleanWalletError(error),
       };
     } finally {
       _isDeductingBalance = false;
       notifyListeners();
     }
+  }
+
+  String _cleanWalletError(Object error) {
+    final message = error.toString().replaceFirst('Exception: ', '');
+    final normalized = message.toLowerCase();
+    if (normalized.contains('transactionrequiredexception') ||
+        normalized.contains('no entitymanager with actual transaction') ||
+        normalized.contains("cannot reliably process 'remove' call") ||
+        normalized.contains('nested exception is javax.persistence')) {
+      return 'Wallet payment could not be completed. Please try again in a moment.';
+    }
+    if (message.trim().isEmpty) {
+      return 'Wallet payment failed. Please try again.';
+    }
+    return message;
   }
 
   Wallet _wallet = Wallet();
