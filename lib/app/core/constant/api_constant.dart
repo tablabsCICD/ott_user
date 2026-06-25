@@ -101,7 +101,7 @@ class ApiConstant {
   // get all languges
   static String fetchLang = "${baseUrl}api/Languages/getAll";
   static String fetchGroupedLang = "${baseUrl}api/all/withGrouping";
-  static String getLatestVersion = "${baseUrl}api/GetLatestVaersion";
+  static String getLatestVersion = "${baseUrl}api/GetLatestVersionIos";
   static String legalDocumentUrls = "${baseUrl}api/legal/document-urls";
 
   static String addMoneyToWallet = "${baseUrl}add-amount";

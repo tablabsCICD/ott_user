@@ -44,6 +44,7 @@ class NotificationService {
 
   static const String _fcmTokenKey = 'fcm_token';
   static const String _notificationPayloadKey = 'last_notification_payload';
+  static const String _defaultTopic = 'all';
 
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
@@ -77,6 +78,10 @@ class NotificationService {
 
   Future<String?> getDeviceToken() async {
     try {
+      if (!await _waitForAppleApnsToken()) {
+        return _storedToken();
+      }
+
       final token = await _messaging.getToken();
       if (token != null && token.trim().isNotEmpty) {
         await _persistToken(token);
@@ -89,6 +94,25 @@ class NotificationService {
       }
     }
 
+    return _storedToken();
+  }
+
+  Future<void> subscribeToDefaultTopic() async {
+    try {
+      if (!await _waitForAppleApnsToken()) {
+        return;
+      }
+
+      await _subscribeToDefaultTopic();
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('Default notification topic setup failed: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    }
+  }
+
+  Future<String?> _storedToken() async {
     final prefs = await SharedPreferences.getInstance();
     final storedToken = prefs.getString(_fcmTokenKey)?.trim();
     return storedToken == null || storedToken.isEmpty ? null : storedToken;
@@ -149,9 +173,12 @@ class NotificationService {
 
   Future<void> _setupTokenHandlers() async {
     try {
-      final token = await _messaging.getToken();
-      debugPrint("******FCM Token******** $token");
-      await _persistToken(token);
+      if (await _waitForAppleApnsToken()) {
+        final token = await _messaging.getToken();
+        debugPrint("******FCM Token******** $token");
+        await _persistToken(token);
+        await subscribeToDefaultTopic();
+      }
     } catch (error, stackTrace) {
       if (kDebugMode) {
         debugPrint('FCM token fetch failed: $error');
@@ -161,6 +188,7 @@ class NotificationService {
 
     _messaging.onTokenRefresh.listen((newToken) async {
       await _persistToken(newToken);
+      await subscribeToDefaultTopic();
       if (kDebugMode) {
         debugPrint('FCM token refreshed: $newToken');
       }
@@ -170,6 +198,40 @@ class NotificationService {
         debugPrintStack(stackTrace: stackTrace);
       }
     });
+  }
+
+  Future<bool> _waitForAppleApnsToken() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
+      return true;
+    }
+
+    for (var attempt = 0; attempt < 20; attempt++) {
+      final token = await _messaging.getAPNSToken();
+      if (token != null && token.trim().isNotEmpty) {
+        if (kDebugMode) {
+          debugPrint('APNs token is available.');
+        }
+        return true;
+      }
+
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
+
+    if (kDebugMode) {
+      debugPrint('APNs token is not available yet; FCM token fetch deferred.');
+    }
+    return false;
+  }
+
+  Future<void> _subscribeToDefaultTopic() async {
+    try {
+      await _messaging.subscribeToTopic(_defaultTopic);
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('Default notification topic subscribe failed: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    }
   }
 
   Future<void> _persistToken(String? token) async {

@@ -32,11 +32,11 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAXj3ySHGWSkyox8MEqVsGas_hEeOG4-38',
-    appId: '1:573981988871:ios:6de664bc7f6355642072a2',
-    messagingSenderId: '573981988871',
+    apiKey: 'AIzaSyD7KqwMowOdGg8qaU7VmBN8Rxgh6TceLgk',
+    appId: '1:244052932353:ios:61fc3e0efa66d5a9f6cd00',
+    messagingSenderId: '244052932353',
     projectId: 'fimlytell',
-    storageBucket: 'netflix-ott-1198d.firebasestorage.app',
+    storageBucket: 'fimlytell.firebasestorage.app',
     iosBundleId: 'com.filmytell.ott',
   );
 

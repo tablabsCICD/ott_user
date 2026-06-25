@@ -213,6 +213,10 @@ class _MyAppState extends State<MyApp> {
   }
 
   sendNotification() async {
-    await FirebaseMessaging.instance.subscribeToTopic('all');
+    if (kIsWeb) {
+      return;
+    }
+
+    await NotificationService.instance.subscribeToDefaultTopic();
   }
 }
