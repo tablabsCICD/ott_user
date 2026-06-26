@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/services/session_manager.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/app_update_service.dart';
@@ -112,6 +113,11 @@ class _SplashScreenState extends State<SplashScreen> {
         },
       ),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        DeepLinkService.instance.consumePendingNavigation();
+      }
+    });
   }
 
   bool _isActiveFlow(int flowVersion) {

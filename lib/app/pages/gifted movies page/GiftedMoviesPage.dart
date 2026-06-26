@@ -48,7 +48,7 @@ class _GiftedMoviesPageState extends State<GiftedMoviesPage> {
 You have received a Filmytell gift: $movieTitle
 
 Claim gift:
-$fallbackLink
+$giftLink
 
 Fallback link:
 $fallbackLink
