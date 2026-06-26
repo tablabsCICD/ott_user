@@ -29,5 +29,17 @@ void main() {
       expect(target?.type, DeepLinkContentType.movie);
       expect(target?.id, 1);
     });
+
+    test('parses the production universal-link paths', () {
+      final movieTarget = DeepLinkService.instance.parseTarget(
+        Uri.parse('https://filmytell.in/movie/1'),
+      );
+      final giftTarget = DeepLinkService.instance.parseTarget(
+        Uri.parse('https://filmytell.in/gift/GF00233665671E55'),
+      );
+
+      expect(movieTarget?.id, 1);
+      expect(giftTarget?.couponCode, 'GF00233665671E55');
+    });
   });
 }

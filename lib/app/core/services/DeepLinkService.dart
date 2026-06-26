@@ -418,7 +418,7 @@ class DeepLinkService {
     await dashboardProvider.getContentById(movieId);
     final content = dashboardProvider.content;
 
-    if (content.id == null || content.id! <= 0) {
+    if (content.id != movieId) {
       developer.log(
         'Movie content could not be loaded for id=$movieId',
         name: 'DeepLinkService',
