@@ -1,13 +1,10 @@
 import 'dart:io';
 
-/// Copies Android Digital Asset Links into the generated web build before a
-/// Firebase Hosting deployment. Flutter does not copy hidden web directories.
+/// Copies static compliance files into the generated web build before a
+/// Firebase Hosting deployment.
 void main() {
   final webBuildDirectory = Directory('build/web');
   final webEntrypoint = File('${webBuildDirectory.path}/index.html');
-  final source = File('web/.well-known/assetlinks.json');
-  final destination =
-      File('${webBuildDirectory.path}/.well-known/assetlinks.json');
 
   if (!webEntrypoint.existsSync()) {
     stderr.writeln(
@@ -17,13 +14,34 @@ void main() {
     return;
   }
 
-  if (!source.existsSync()) {
-    stderr.writeln('Missing Android Asset Links file: ${source.path}.');
-    exitCode = 1;
+  if (!_copyRequiredFile(
+    source: File('web/.well-known/assetlinks.json'),
+    destination: File('${webBuildDirectory.path}/.well-known/assetlinks.json'),
+    label: 'Android Digital Asset Links file',
+  )) {
     return;
   }
+  if (!_copyRequiredFile(
+    source: File('web/account-delete.html'),
+    destination: File('${webBuildDirectory.path}/account-delete.html'),
+    label: 'account deletion page',
+  )) {
+    return;
+  }
+}
 
+bool _copyRequiredFile({
+  required File source,
+  required File destination,
+  required String label,
+}) {
+  if (!source.existsSync()) {
+    stderr.writeln('Missing $label: ${source.path}.');
+    exitCode = 1;
+    return false;
+  }
   destination.parent.createSync(recursive: true);
   source.copySync(destination.path);
-  stdout.writeln('Staged Android Digital Asset Links file.');
+  stdout.writeln('Staged $label.');
+  return true;
 }

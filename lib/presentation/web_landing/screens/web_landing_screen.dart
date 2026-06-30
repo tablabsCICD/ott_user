@@ -392,6 +392,9 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
       case 'Terms & Conditions':
         _openTerms();
         return;
+      case 'Account Deletion':
+        _openExternal(AppConstant.accountDeletionUrl);
+        return;
       case 'About Us':
         if (!mounted) return;
         Navigator.push(

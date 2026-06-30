@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Delete your Filmytell account and request deletion of associated personal data.">
+  <title>Delete Filmytell Account</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <style>
+    :root {
+      color-scheme: light;
+      --brand: #d71920;
+      --ink: #171717;
+      --muted: #5f6368;
+      --line: #e6e8eb;
+      --surface: #ffffff;
+      --soft: #f7f8fa;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--soft);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.55;
+    }
+
+    main {
+      width: min(920px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 40px 0;
+    }
+
+    header,
+    section {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 28px;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      color: var(--brand);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2 {
+      margin: 0 0 12px;
+      line-height: 1.2;
+    }
+
+    h1 {
+      font-size: clamp(30px, 5vw, 46px);
+    }
+
+    h2 {
+      font-size: 22px;
+    }
+
+    p {
+      margin: 0 0 14px;
+      color: var(--muted);
+    }
+
+    ol,
+    ul {
+      margin: 10px 0 0;
+      padding-left: 22px;
+      color: var(--muted);
+    }
+
+    li {
+      margin: 8px 0;
+    }
+
+    a {
+      color: var(--brand);
+      font-weight: 700;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .button {
+      display: inline-block;
+      border-radius: 8px;
+      padding: 12px 16px;
+      background: var(--brand);
+      color: #ffffff;
+      text-decoration: none;
+    }
+
+    .button.secondary {
+      background: transparent;
+      color: var(--brand);
+      border: 1px solid #efb8bb;
+    }
+
+    .note {
+      border-left: 4px solid var(--brand);
+      padding: 12px 14px;
+      background: #fff5f5;
+      color: #4a2020;
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 4px 0 24px;
+      text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      main {
+        width: min(100% - 24px, 920px);
+        padding: 20px 0;
+      }
+
+      header,
+      section {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="brand">Filmytell</div>
+      <h1>Delete Your Filmytell Account</h1>
+      <p>
+        Use this page to delete your Filmytell account or request deletion of the personal data connected with your account.
+      </p>
+      <div class="actions">
+        <a class="button" href="mailto:support@filmytell.com?subject=Filmytell%20Account%20Deletion%20Request&body=Please%20delete%20my%20Filmytell%20account.%0A%0ARegistered%20mobile%20number%3A%0ARegistered%20email%20address%3A%0AReason%20(optional)%3A">Email Deletion Request</a>
+        <a class="button secondary" href="https://filmytell.com/">Open Filmytell</a>
+      </div>
+    </header>
+
+    <section>
+      <h2>Delete From The App</h2>
+      <ol>
+        <li>Open the Filmytell app and sign in to your account.</li>
+        <li>Go to Profile, then Account Details.</li>
+        <li>Choose Delete in the Account Deletion section.</li>
+        <li>Confirm the deletion request. After completion, you will be logged out.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Request Deletion By Email</h2>
+      <p>
+        If you cannot access the app, email <a href="mailto:support@filmytell.com">support@filmytell.com</a> from your registered email address, or include your registered mobile number so we can verify the account.
+      </p>
+      <p>
+        We will process verified deletion requests and confirm once the account deletion is complete.
+      </p>
+    </section>
+
+    <section>
+      <h2>Data Deleted Or Retained</h2>
+      <ul>
+        <li>Deleted: profile details, account login details, preferences, and other personal account information associated with your Filmytell account.</li>
+        <li>Retained when required: purchase history, payment records, wallet transactions, support tickets, fraud-prevention records, tax records, and legal compliance records.</li>
+        <li>Retention period: legally required records may be retained for the period required by applicable law, business accounting, dispute resolution, security, or fraud-prevention obligations.</li>
+      </ul>
+      <p class="note">
+        Deleting your account may remove access to purchased content, watch history, saved items, wallet access, and other account-based services.
+      </p>
+    </section>
+
+    <section>
+      <h2>Need Help?</h2>
+      <p>
+        Contact Filmytell support at <a href="mailto:support@filmytell.com">support@filmytell.com</a>.
+      </p>
+    </section>
+
+    <footer>
+      Last updated: 29 June 2026
+    </footer>
+  </main>
+</body>
+</html>
