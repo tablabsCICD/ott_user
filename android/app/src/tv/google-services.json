@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "244052932353",
+    "project_id": "fimlytell",
+    "storage_bucket": "fimlytell.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:244052932353:android:ec31ccf2f925bac8f6cd00",
+        "android_client_info": {
+          "package_name": "com.filmytell.ott"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCoRIntuHNkS2CuYZsoCjWmEMN4lYcg_Ug"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

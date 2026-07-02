@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ott/app/widgets/ott_tv_app_shell.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 class OttTvFocus extends StatefulWidget {
@@ -12,6 +13,9 @@ class OttTvFocus extends StatefulWidget {
     this.autofocus = false,
     this.scale = 1.04,
     this.padding = EdgeInsets.zero,
+    this.focusColor,
+    this.semanticLabel,
+    this.onFocusChange,
   });
 
   final Widget child;
@@ -21,6 +25,9 @@ class OttTvFocus extends StatefulWidget {
   final bool autofocus;
   final double scale;
   final EdgeInsetsGeometry padding;
+  final Color? focusColor;
+  final String? semanticLabel;
+  final ValueChanged<bool>? onFocusChange;
 
   @override
   State<OttTvFocus> createState() => _OttTvFocusState();
@@ -63,6 +70,7 @@ class _OttTvFocusState extends State<OttTvFocus> {
   void _handleFocusChanged() {
     if (!mounted) return;
     setState(() => _focused = _focusNode.hasFocus);
+    widget.onFocusChange?.call(_focusNode.hasFocus);
     if (_focusNode.hasFocus) {
       Scrollable.ensureVisible(
         context,
@@ -76,10 +84,7 @@ class _OttTvFocusState extends State<OttTvFocus> {
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.select ||
-        key == LogicalKeyboardKey.enter ||
-        key == LogicalKeyboardKey.space ||
-        key == LogicalKeyboardKey.gameButtonA) {
+    if (widget.onTap != null && OttTvRemoteKey.activate.contains(key)) {
       widget.onTap?.call();
       return KeyEventResult.handled;
     }
@@ -88,6 +93,9 @@ class _OttTvFocusState extends State<OttTvFocus> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final focusColor = widget.focusColor ?? theme.primaryColor;
+
     if (ResponsiveWidget.isMobile(context)) {
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -96,7 +104,7 @@ class _OttTvFocusState extends State<OttTvFocus> {
       );
     }
 
-    return Focus(
+    final focusable = Focus(
       focusNode: _focusNode,
       autofocus: widget.autofocus,
       onKeyEvent: _handleKey,
@@ -115,12 +123,34 @@ class _OttTvFocusState extends State<OttTvFocus> {
               padding: widget.padding,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(widget.borderRadius),
+                border: Border.all(
+                  color: _focused ? focusColor : Colors.transparent,
+                  width: 2,
+                ),
+                boxShadow: _focused
+                    ? [
+                        BoxShadow(
+                          color: focusColor.withValues(alpha: 0.36),
+                          blurRadius: 16,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
               ),
               child: widget.child,
             ),
           ),
         ),
       ),
+    );
+
+    if (widget.semanticLabel == null) return focusable;
+
+    return Semantics(
+      button: widget.onTap != null,
+      focusable: true,
+      label: widget.semanticLabel,
+      child: focusable,
     );
   }
 }

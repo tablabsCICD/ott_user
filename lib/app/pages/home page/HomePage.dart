@@ -368,7 +368,6 @@ class _HomePageState extends State<HomePage>
       if (bestIndex == null ||
           visibility > bestVisibility ||
           (visibility == bestVisibility &&
-              bestIndex != null &&
               candidate > bestIndex)) {
         bestVisibility = visibility;
         bestIndex = candidate;

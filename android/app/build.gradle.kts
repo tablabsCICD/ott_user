@@ -49,6 +49,28 @@ android {
         versionName = flutter.versionName
     }
 
+    flavorDimensions += "platform"
+
+    productFlavors {
+        create("mobile") {
+            dimension = "platform"
+            applicationId = "com.filmytell.ott"
+            versionCode = 30
+            versionName = "1.0.14"
+            resValue("string", "app_name", "Filmytell")
+            manifestPlaceholders["appAuthRedirectScheme"] = "com.filmytell.ott"
+        }
+
+        create("tv") {
+            dimension = "platform"
+            applicationId = "com.filmytell.ott"
+            versionCode = 31
+            versionName = "1.0.15"
+            resValue("string", "app_name", "Filmytell")
+            manifestPlaceholders["appAuthRedirectScheme"] = "com.filmytell.ott"
+        }
+    }
+
     // 🔐 Release signing config
     signingConfigs {
         if (hasReleaseKeystore) {

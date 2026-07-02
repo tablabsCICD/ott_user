@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/bookmarks page/component/bookmark_card.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
@@ -207,9 +208,14 @@ class _BookmarkPageState extends State<BookmarkPage> {
   ) {
     final selected = selectedFilter == value;
 
+    void selectSegment() => setState(() => selectedFilter = value);
+
     return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => selectedFilter = value),
+      child: OttTvFocus(
+        onTap: selectSegment,
+        borderRadius: 30,
+        scale: 1.02,
+        semanticLabel: label,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           decoration: BoxDecoration(

@@ -3,6 +3,56 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 
+class OttTvRemoteKey {
+  static final Set<LogicalKeyboardKey> up = {
+    LogicalKeyboardKey.arrowUp,
+  };
+
+  static final Set<LogicalKeyboardKey> down = {
+    LogicalKeyboardKey.arrowDown,
+  };
+
+  static final Set<LogicalKeyboardKey> left = {
+    LogicalKeyboardKey.arrowLeft,
+  };
+
+  static final Set<LogicalKeyboardKey> right = {
+    LogicalKeyboardKey.arrowRight,
+  };
+
+  static final Set<LogicalKeyboardKey> activate = {
+    LogicalKeyboardKey.select,
+    LogicalKeyboardKey.enter,
+    LogicalKeyboardKey.space,
+    LogicalKeyboardKey.gameButtonA,
+  };
+
+  static final Set<LogicalKeyboardKey> back = {
+    LogicalKeyboardKey.escape,
+    LogicalKeyboardKey.goBack,
+    LogicalKeyboardKey.browserBack,
+    LogicalKeyboardKey.gameButtonB,
+  };
+
+  static final Set<LogicalKeyboardKey> menu = {
+    LogicalKeyboardKey.contextMenu,
+    LogicalKeyboardKey.gameButtonStart,
+  };
+
+  static final Set<LogicalKeyboardKey> playPause = {
+    LogicalKeyboardKey.mediaPlayPause,
+    LogicalKeyboardKey.mediaPlay,
+    LogicalKeyboardKey.mediaPause,
+  };
+
+  static bool isDirectional(LogicalKeyboardKey key) {
+    return up.contains(key) ||
+        down.contains(key) ||
+        left.contains(key) ||
+        right.contains(key);
+  }
+}
+
 class OttTvAppShell extends StatefulWidget {
   const OttTvAppShell({
     super.key,
@@ -24,12 +74,6 @@ class _OttTvAppShellState extends State<OttTvAppShell> {
     super.dispose();
   }
 
-  void _handleRawKey(RawKeyEvent event) {
-    if (event is! RawKeyDownEvent) return;
-
-    _moveFocusForKey(event.logicalKey);
-  }
-
   KeyEventResult _handleFocusKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     return _moveFocusForKey(event.logicalKey)
@@ -38,25 +82,25 @@ class _OttTvAppShellState extends State<OttTvAppShell> {
   }
 
   bool _moveFocusForKey(LogicalKeyboardKey key) {
-    if (key == LogicalKeyboardKey.arrowUp) {
-      FocusManager.instance.primaryFocus
-          ?.focusInDirection(TraversalDirection.up);
+    final primaryFocus = FocusManager.instance.primaryFocus;
+    if (primaryFocus == null) {
+      _keyboardNode.requestFocus();
+      return false;
+    }
+
+    if (OttTvRemoteKey.up.contains(key)) {
+      primaryFocus.focusInDirection(TraversalDirection.up);
       return true;
-    } else if (key == LogicalKeyboardKey.arrowDown) {
-      FocusManager.instance.primaryFocus
-          ?.focusInDirection(TraversalDirection.down);
+    } else if (OttTvRemoteKey.down.contains(key)) {
+      primaryFocus.focusInDirection(TraversalDirection.down);
       return true;
-    } else if (key == LogicalKeyboardKey.arrowLeft) {
-      FocusManager.instance.primaryFocus
-          ?.focusInDirection(TraversalDirection.left);
+    } else if (OttTvRemoteKey.left.contains(key)) {
+      primaryFocus.focusInDirection(TraversalDirection.left);
       return true;
-    } else if (key == LogicalKeyboardKey.arrowRight) {
-      FocusManager.instance.primaryFocus
-          ?.focusInDirection(TraversalDirection.right);
+    } else if (OttTvRemoteKey.right.contains(key)) {
+      primaryFocus.focusInDirection(TraversalDirection.right);
       return true;
-    } else if (key == LogicalKeyboardKey.escape ||
-        key == LogicalKeyboardKey.goBack ||
-        key == LogicalKeyboardKey.browserBack) {
+    } else if (OttTvRemoteKey.back.contains(key)) {
       if (!mounted) return false;
       Navigator.of(context).maybePop();
       return true;
@@ -89,9 +133,11 @@ class _OttTvAppShellState extends State<OttTvAppShell> {
         SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
         SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
         SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.gameButtonA): ActivateIntent(),
         SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
         SingleActivator(LogicalKeyboardKey.goBack): DismissIntent(),
         SingleActivator(LogicalKeyboardKey.browserBack): DismissIntent(),
+        SingleActivator(LogicalKeyboardKey.gameButtonB): DismissIntent(),
       },
       child: Actions(
         actions: <Type, Action<Intent>>{
@@ -113,10 +159,14 @@ class _OttTvAppShellState extends State<OttTvAppShell> {
       ),
     );
 
-    return RawKeyboardListener(
+    return KeyboardListener(
       focusNode: _keyboardNode,
       autofocus: true,
-      onKey: _handleRawKey,
+      onKeyEvent: (event) {
+        if (event is KeyDownEvent) {
+          _moveFocusForKey(event.logicalKey);
+        }
+      },
       child: Focus(
         autofocus: true,
         onKeyEvent: _handleFocusKey,

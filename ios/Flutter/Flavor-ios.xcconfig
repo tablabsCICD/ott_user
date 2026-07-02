@@ -1,0 +1,6 @@
+// Filmytell iOS flavor marker.
+//
+// The iOS bundle identifier remains com.filmytell.ott. Use the Flutter
+// target entrypoint for builds:
+// flutter build ios -t lib/main_ios.dart --dart-define=FLAVOR=ios
+FILMYTELL_FLAVOR=ios

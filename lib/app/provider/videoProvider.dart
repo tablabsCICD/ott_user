@@ -1,8 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/request/saveRatingAndReview.dart';
 import 'package:ott/data/models/response/getRatingsAndReview.dart';
 import 'package:ott/data/models/response/saveRatingAndReview.dart';

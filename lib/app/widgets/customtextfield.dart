@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:ott/app/provider/themeProvider.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 import 'package:wc_form_validators/wc_form_validators.dart';
 
@@ -66,6 +68,48 @@ class CustomTextField extends StatefulWidget {
 
 class _CustomTextFieldState extends State<CustomTextField> {
   bool _isObscure = true;
+  late FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = widget.focusNode ?? FocusNode(debugLabel: 'custom-text-field');
+    _focusNode.addListener(_handleFocusChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant CustomTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusNode == widget.focusNode) return;
+
+    _focusNode.removeListener(_handleFocusChanged);
+    if (oldWidget.focusNode == null) {
+      _focusNode.dispose();
+    }
+    _focusNode = widget.focusNode ?? FocusNode(debugLabel: 'custom-text-field');
+    _focusNode.addListener(_handleFocusChanged);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChanged);
+    if (widget.focusNode == null) {
+      _focusNode.dispose();
+    }
+    super.dispose();
+  }
+
+  void _handleFocusChanged() {
+    if (!_isTvInput || !_focusNode.hasFocus) return;
+    _showTextInputKeyboard();
+  }
+
+  bool get _isTvInput => !kIsWeb && ResponsiveWidget.isTv(context);
+
+  void _showTextInputKeyboard() {
+    _focusNode.requestFocus();
+    SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,61 +130,93 @@ class _CustomTextFieldState extends State<CustomTextField> {
               ),
             ),
           const SizedBox(height: 5),
-          TextFormField(
-            controller: widget.controller,
-            focusNode: widget.focusNode,
-            autofocus: widget.autofocus,
-            obscureText: widget.isPassword ? _isObscure : false,
-            keyboardType: widget.textInputType,
-            textInputAction: widget.textInputAction,
-            textCapitalization: widget.capitalization,
-            readOnly: widget.readOnly ?? false,
-            onTap: widget.onTap == null ? null : () => widget.onTap!(),
-            onFieldSubmitted: widget.onFieldSubmitted,
-            maxLines: widget.maxLine,
-            cursorColor: const Color(0xFFE50914),
-            inputFormatters: _buildInputFormatters(),
-            validator: _buildValidator(),
-            style: TextStyle(color: selectedTheme.canvasColor, fontSize: 14),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: widget.backgroundColor ?? selectedTheme.cardColor,
-              hintText: widget.hintText,
-              hintStyle: TextStyle(
-                color: selectedTheme.canvasColor,
-                fontSize: 14,
-              ),
-              border: OutlineInputBorder(
-                borderSide: const BorderSide(color: Colors.transparent),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: Colors.transparent),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: selectedTheme.primaryColor),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              suffixIcon: widget.isPassword
-                  ? IconButton(
-                      icon: Icon(
-                        _isObscure ? Icons.visibility : Icons.visibility_off,
-                        color: selectedTheme.canvasColor,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _isObscure = !_isObscure;
-                        });
-                      },
-                    )
-                  : (widget.suffixIcon != null
-                      ? Icon(
-                          widget.suffixIcon,
-                          color: selectedTheme.canvasColor,
+          Shortcuts(
+            shortcuts: const <ShortcutActivator, Intent>{
+              SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+              SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+              SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+              SingleActivator(LogicalKeyboardKey.gameButtonA):
+                  ActivateIntent(),
+            },
+            child: Actions(
+              actions: <Type, Action<Intent>>{
+                ActivateIntent: CallbackAction<ActivateIntent>(
+                  onInvoke: (_) {
+                    if (_isTvInput) {
+                      _showTextInputKeyboard();
+                    }
+                    return null;
+                  },
+                ),
+              },
+              child: TextFormField(
+                controller: widget.controller,
+                focusNode: _focusNode,
+                autofocus: widget.autofocus,
+                obscureText: widget.isPassword ? _isObscure : false,
+                keyboardType: widget.textInputType,
+                textInputAction: widget.textInputAction,
+                textCapitalization: widget.capitalization,
+                readOnly: widget.readOnly ?? false,
+                onTap: () {
+                  if (_isTvInput) {
+                    _showTextInputKeyboard();
+                  }
+                  widget.onTap?.call();
+                },
+                onFieldSubmitted: widget.onFieldSubmitted,
+                maxLines: widget.maxLine,
+                cursorColor: const Color(0xFFE50914),
+                inputFormatters: _buildInputFormatters(),
+                validator: _buildValidator(),
+                style:
+                    TextStyle(color: selectedTheme.canvasColor, fontSize: 14),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: widget.backgroundColor ?? selectedTheme.cardColor,
+                  hintText: widget.hintText,
+                  hintStyle: TextStyle(
+                    color: selectedTheme.canvasColor,
+                    fontSize: 14,
+                  ),
+                  border: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Colors.transparent),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: Colors.transparent),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: selectedTheme.primaryColor,
+                      width: _isTvInput ? 2 : 1,
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  suffixIcon: widget.isPassword
+                      ? IconButton(
+                          icon: Icon(
+                            _isObscure
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                            color: selectedTheme.canvasColor,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isObscure = !_isObscure;
+                            });
+                          },
                         )
-                      : null),
-              prefixIcon: widget.prefixIcon,
+                      : (widget.suffixIcon != null
+                          ? Icon(
+                              widget.suffixIcon,
+                              color: selectedTheme.canvasColor,
+                            )
+                          : null),
+                  prefixIcon: widget.prefixIcon,
+                ),
+              ),
             ),
           ),
         ],
@@ -180,7 +256,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
   }
 
   List<TextInputFormatter> _buildInputFormatters() {
-    if (widget.isPhoneNumber) {
+    if (widget.isPhoneNumber || widget.isDigits) {
       return [FilteringTextInputFormatter.digitsOnly];
     }
 

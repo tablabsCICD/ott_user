@@ -10,7 +10,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/constant/prefrense_constant.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
-import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/offline_download_provider.dart';

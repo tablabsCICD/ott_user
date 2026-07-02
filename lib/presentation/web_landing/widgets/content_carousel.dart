@@ -587,7 +587,7 @@ class _HoverDetailPreview extends StatelessWidget {
                         children: [
                           _MetaPill(
                             label:
-                                '${(content.ratings ?? 0).toStringAsFixed(1)}',
+                                (content.ratings ?? 0).toStringAsFixed(1),
                           ),
                           if ((content.ageRating ?? '').trim().isNotEmpty)
                             _MetaPill(label: content.ageRating!),

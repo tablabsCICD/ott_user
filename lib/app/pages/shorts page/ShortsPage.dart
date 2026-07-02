@@ -4,6 +4,7 @@ import 'package:ott/app/pages/shorts%20page/component/shortsLibraryPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 
@@ -46,7 +47,10 @@ class _ShortsPageState extends State<ShortsPage> {
           ),
         ),
         actions: [
-          GestureDetector(
+          OttTvFocus(
+            borderRadius: 12,
+            scale: 1.06,
+            semanticLabel: "Wallet balance",
             onTap: () {
               Navigator.push(
                 context,

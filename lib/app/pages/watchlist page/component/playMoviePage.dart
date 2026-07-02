@@ -8,6 +8,8 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ott/app/core/services/anti_piracy_service.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
+import 'package:ott/app/widgets/ott_tv_app_shell.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/data/models/seriesModel.dart';
 import 'package:provider/provider.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -185,6 +187,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       return sourceUrl;
     }
 
+    if (!mounted) return sourceUrl;
     final offlinePath =
         await context.read<OfflineDownloadProvider>().getOfflinePath(content);
     if (offlinePath != null &&
@@ -498,8 +501,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   Future<void> _reportSecurityEvent(PlaybackSecurityEvent event) async {
     final position =
         _youtubeController?.value.position ?? _player?.state.position;
-    final duration = _youtubeController?.value.metaData.duration ??
-        _player?.state.duration;
+    final duration =
+        _youtubeController?.value.metaData.duration ?? _player?.state.duration;
 
     await AntiPiracyService.instance.reportEvent(
       event: event,
@@ -515,8 +518,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
     final position =
         _youtubeController?.value.position ?? _player?.state.position;
-    final duration = _youtubeController?.value.metaData.duration ??
-        _player?.state.duration;
+    final duration =
+        _youtubeController?.value.metaData.duration ?? _player?.state.duration;
 
     if (position == null || duration == null) return;
 
@@ -683,24 +686,20 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
 
     final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.select ||
-        key == LogicalKeyboardKey.enter ||
-        key == LogicalKeyboardKey.space ||
-        key == LogicalKeyboardKey.gameButtonA) {
+    if (OttTvRemoteKey.activate.contains(key) ||
+        OttTvRemoteKey.playPause.contains(key)) {
       _togglePlayback();
       return KeyEventResult.handled;
     }
-    if (key == LogicalKeyboardKey.arrowRight) {
+    if (OttTvRemoteKey.right.contains(key)) {
       _seekBy(const Duration(seconds: 10));
       return KeyEventResult.handled;
     }
-    if (key == LogicalKeyboardKey.arrowLeft) {
+    if (OttTvRemoteKey.left.contains(key)) {
       _seekBy(const Duration(seconds: -10));
       return KeyEventResult.handled;
     }
-    if (key == LogicalKeyboardKey.escape ||
-        key == LogicalKeyboardKey.goBack ||
-        key == LogicalKeyboardKey.browserBack) {
+    if (OttTvRemoteKey.back.contains(key)) {
       unawaited(_handleExit());
       return KeyEventResult.handled;
     }
@@ -755,10 +754,11 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>().getTheme;
 
-    return WillPopScope(
-      onWillPop: () async {
-        await _handleExit();
-        return false;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        unawaited(_handleExit());
       },
       child: Scaffold(
         backgroundColor: Colors.black,
@@ -825,10 +825,12 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
 
     return Material(
-      color: Colors.black.withOpacity(0.48),
+      color: Colors.black.withValues(alpha: 0.48),
       shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
+      child: OttTvFocus(
+        borderRadius: 24,
+        scale: 1.1,
+        semanticLabel: "Download",
         onTap: () async {
           final offlineProvider = context.read<OfflineDownloadProvider>();
           if (offlineProvider.isDownloading(contentId)) return;
@@ -855,13 +857,17 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             ),
           );
         },
-        child: const SizedBox(
-          height: 40,
-          width: 40,
-          child: Icon(
-            Icons.download_rounded,
-            color: Colors.white,
-            size: 20,
+        child: const Material(
+          color: Colors.transparent,
+          shape: CircleBorder(),
+          child: SizedBox(
+            height: 40,
+            width: 40,
+            child: Icon(
+              Icons.download_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
         ),
       ),
@@ -886,18 +892,24 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
   Widget _backButton() {
     return Material(
-      color: Colors.black.withOpacity(0.45),
+      color: Colors.black.withValues(alpha: 0.45),
       shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
+      child: OttTvFocus(
+        borderRadius: 22,
+        scale: 1.1,
+        semanticLabel: "Back",
         onTap: _handleExit,
-        child: const SizedBox(
-          height: 36,
-          width: 36,
-          child: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Colors.white,
-            size: 18,
+        child: const Material(
+          color: Colors.transparent,
+          shape: CircleBorder(),
+          child: SizedBox(
+            height: 36,
+            width: 36,
+            child: Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
           ),
         ),
       ),

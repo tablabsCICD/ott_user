@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/provider/videoProvider.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/shimmer%20loader/comming_soon_shimmer.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/content.dart';
@@ -103,117 +104,126 @@ class _UpcomingPageState extends State<UpcomingPage> {
   Widget _upcomingCard(BuildContext context, Content item) {
     final theme = Theme.of(context);
 
-    return InkWell(
-      onTap: () {
-        _openDetails(item);
-      },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          children: [
-            // 🎞 Poster
-            Positioned.fill(
-              child: Image.network(
-                item.posterUrlList?.first ?? '',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(color: Colors.black26),
-              ),
-            ),
+    void openDetails() => _openDetails(item);
 
-            // 🌑 Gradient overlay
-            Positioned.fill(
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black54,
-                      Colors.black87,
-                    ],
-                  ),
+    final card = ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Stack(
+        children: [
+          // 🎞 Poster
+          Positioned.fill(
+            child: Image.network(
+              item.posterUrlList?.first ?? '',
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(color: Colors.black26),
+            ),
+          ),
+
+          // 🌑 Gradient overlay
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black54,
+                    Colors.black87,
+                  ],
                 ),
               ),
             ),
+          ),
 
-            // 📄 Content
-            Positioned(
-              left: 12,
-              right: 12,
-              bottom: 12,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title
-                  Text(
-                    item.title ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+          // 📄 Content
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 12,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title
+                Text(
+                  item.title ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                // Release date
+                Row(
+                  children: [
+                    const Icon(Icons.date_range,
+                        size: 12, color: Colors.white70),
+                    const SizedBox(width: 4),
+                    Text(
+                      item.releaseDate ?? '',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                // 🔔 Notify Me button
+                SizedBox(
+                  height: 28,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      CustomToast.show(
+                        context,
+                        "You’ll be notified on release day",
+                        isSuccess: true,
+                      );
+                    },
+                    icon: const Icon(
+                      Icons.notifications_active,
+                      size: 14,
                       color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
                     ),
-                  ),
-
-                  const SizedBox(height: 4),
-
-                  // Release date
-                  Row(
-                    children: [
-                      const Icon(Icons.date_range,
-                          size: 12, color: Colors.white70),
-                      const SizedBox(width: 4),
-                      Text(
-                        item.releaseDate ?? '',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // 🔔 Notify Me button
-                  SizedBox(
-                    height: 28,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        CustomToast.show(
-                          context,
-                          "You’ll be notified on release day",
-                          isSuccess: true,
-                        );
-                      },
-                      icon: const Icon(
-                        Icons.notifications_active,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                      label: Text(
-                        AppLocalizations.of(context)!.notifyMe,
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryColor,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        minimumSize: Size.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
+                    label: Text(
+                      AppLocalizations.of(context)!.notifyMe,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.primaryColor,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      minimumSize: Size.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
+    );
+
+    if (ResponsiveWidget.isMobile(context)) {
+      return InkWell(onTap: openDetails, child: card);
+    }
+
+    return OttTvFocus(
+      onTap: openDetails,
+      borderRadius: 16,
+      scale: 1.04,
+      semanticLabel: item.title,
+      child: card,
     );
   }
 
@@ -223,7 +233,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.upcoming_outlined,
-              size: 80, color: theme.canvasColor.withOpacity(0.6)),
+              size: 80, color: theme.canvasColor.withValues(alpha: 0.6)),
           const SizedBox(height: 12),
           Text(
             "No upcoming content",

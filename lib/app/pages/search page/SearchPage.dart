@@ -26,6 +26,7 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   bool isLoading = true;
+  final FocusNode _searchFocusNode = FocusNode(debugLabel: 'search-field');
 
   @override
   void initState() {
@@ -37,6 +38,12 @@ class _SearchPageState extends State<SearchPage> {
         isLoading = false;
       });
     });
+  }
+
+  @override
+  void dispose() {
+    _searchFocusNode.dispose();
+    super.dispose();
   }
 
   @override
@@ -89,11 +96,26 @@ class _SearchPageState extends State<SearchPage> {
                   : ResponsiveWidget.isTablet(context)
                       ? 400
                       : double.infinity,
-              child: CustomTextField(
-                controller: provider.searchContentController,
-                hintText: lang.searchContent,
-                prefixIcon: const Icon(Icons.search),
-                textInputType: TextInputType.text,
+              child: OttTvFocus(
+                borderRadius: 10,
+                scale: 1.03,
+                semanticLabel: lang.searchContent,
+                onTap: () {
+                  _searchFocusNode.requestFocus();
+                  provider.searchContentController.selection =
+                      TextSelection.collapsed(
+                    offset: provider.searchContentController.text.length,
+                  );
+                },
+                child: CustomTextField(
+                  controller: provider.searchContentController,
+                  focusNode: _searchFocusNode,
+                  hintText: lang.searchContent,
+                  prefixIcon: const Icon(Icons.search),
+                  textInputType: TextInputType.text,
+                  textInputAction: TextInputAction.search,
+                  onFieldSubmitted: (_) => provider.searchContent(),
+                ),
               ),
             ),
             actions: [
@@ -250,52 +272,129 @@ class _SearchPageState extends State<SearchPage> {
           // Inside _SearchPageState's build method where `body:` is assigned:
           body: isLoading
               ? SearchShimmer()
-              : provider.filteredContentList.isEmpty
-                  ? Center(
-                      child: Text(
-                        lang.noContentFound,
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w500),
-                      ),
-                    )
-                  : ResponsiveWidget.isMobile(context)
-                      ? ListView.builder(
+              : ResponsiveWidget.isMobile(context)
+                  ? provider.filteredContentList.isEmpty
+                      ? Center(
+                          child: Text(
+                            lang.noContentFound,
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w500),
+                          ),
+                        )
+                      : ListView.builder(
                           itemCount: provider.filteredContentList.length,
                           itemBuilder: (context, index) {
                             final movie = provider.filteredContentList[index];
                             return SearchMovieCard(movie: movie);
                           },
                         )
-                      : CustomScrollView(
-                          slivers: [
-                            SliverPadding(
-                              padding: const EdgeInsets.all(8.0),
-                              sliver: SliverGrid(
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) {
-                                    final movie =
-                                        provider.filteredContentList[index];
-                                    return SearchMovieCard(movie: movie);
-                                  },
-                                  childCount:
-                                      provider.filteredContentList.length,
-                                ),
-                                gridDelegate:
-                                    SliverGridDelegateWithMaxCrossAxisExtent(
-                                  maxCrossAxisExtent:
-                                      ResponsiveWidget.isDesktop(context)
-                                          ? 500
-                                          : 550,
-                                  mainAxisSpacing: 5,
-                                  crossAxisSpacing: 8,
-                                  childAspectRatio: 7 / 3,
-                                ),
+                  : CustomScrollView(
+                      slivers: [
+                        _buildSearchSuggestionsSliver(
+                          context,
+                          provider,
+                          genreSet,
+                          languageSet,
+                        ),
+                        if (provider.filteredContentList.isEmpty)
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Center(
+                              child: Text(
+                                lang.noContentFound,
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500),
                               ),
                             ),
-                          ],
-                        ),
+                          )
+                        else
+                          SliverPadding(
+                            padding: const EdgeInsets.all(8.0),
+                            sliver: SliverGrid(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final movie =
+                                      provider.filteredContentList[index];
+                                  return SearchMovieCard(movie: movie);
+                                },
+                                childCount: provider.filteredContentList.length,
+                              ),
+                              gridDelegate:
+                                  SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent:
+                                    ResponsiveWidget.isDesktop(context)
+                                        ? 500
+                                        : 550,
+                                mainAxisSpacing: 5,
+                                crossAxisSpacing: 8,
+                                childAspectRatio: 7 / 3,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
         );
       },
+    );
+  }
+
+  Widget _buildSearchSuggestionsSliver(
+    BuildContext context,
+    VideoProvider provider,
+    Set<String> genres,
+    Set<String> languages,
+  ) {
+    final query = provider.searchContentController.text.trim().toLowerCase();
+    final suggestions = query.isEmpty
+        ? <String>[
+            ...genres.take(8),
+            ...languages.take(4),
+          ]
+        : provider.filteredContentList
+            .map((item) => item.title?.trim() ?? '')
+            .where((title) => title.isNotEmpty)
+            .take(12)
+            .toList();
+
+    if (suggestions.isEmpty) return const SliverToBoxAdapter();
+
+    final theme = Theme.of(context);
+    return SliverToBoxAdapter(
+      child: SizedBox(
+        height: 58,
+        child: ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          scrollDirection: Axis.horizontal,
+          itemCount: suggestions.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 10),
+          itemBuilder: (context, index) {
+            final suggestion = suggestions[index];
+            return OttTvFocus(
+              borderRadius: 18,
+              scale: 1.06,
+              semanticLabel: suggestion,
+              onTap: () {
+                provider.searchContentController.text = suggestion;
+                provider.searchContentController.selection =
+                    TextSelection.collapsed(offset: suggestion.length);
+                provider.searchContent();
+              },
+              child: Chip(
+                backgroundColor: theme.cardColor,
+                side: BorderSide(color: theme.primaryColor.withOpacity(0.45)),
+                label: Text(
+                  suggestion,
+                  style: TextStyle(
+                    color: theme.canvasColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }

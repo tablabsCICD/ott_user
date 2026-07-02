@@ -210,7 +210,7 @@ class UserProvider extends BaseProvider {
     //log("API=====$apiUrl");
     ApiHelper apiHelper = ApiHelper();
     Map<String, dynamic> data = {
-      "id": user!.id,
+      "id": user.id,
       "emailId": emailController.text.trim(),
       "firstName": firstNameController.text.trim(),
       "lastName": lastNameController.text.trim(),
@@ -300,7 +300,7 @@ class UserProvider extends BaseProvider {
     //log("API=====$apiUrl");
     ApiHelper apiHelper = ApiHelper();
     Map<String, dynamic> data = {
-      "id": user!.id,
+      "id": user.id,
       "emailId": emailController.text,
       "firstName": firstNameController.text,
       "lastName": lastNameController.text,
@@ -384,7 +384,7 @@ class UserProvider extends BaseProvider {
     log("API=====$apiUrl");
     ApiHelper apiHelper = ApiHelper();
     Map<String, dynamic> data = {
-      "id": user!.id,
+      "id": user.id,
       "emailId": user.emailId,
       //  "mobileNumber": user.mobileNumber,
       "country": countryController.text,
@@ -924,7 +924,7 @@ class UserProvider extends BaseProvider {
       deviceToken: deviceToken,
     );
     final apiHelper = ApiHelper();
-    debugPrint("✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓" + apiUrl);
+    debugPrint("✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓$apiUrl");
     try {
       final apiWatch = Stopwatch()..start();
       var response = await apiHelper.postApiWithoutAuthToken(apiUrl);

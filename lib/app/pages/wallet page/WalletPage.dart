@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 import 'package:ott/app/pages/wallet page/PaymentPage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
+import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
+import 'package:ott/data/models/response/walletHistory.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 
@@ -20,9 +22,17 @@ class WalletPage extends StatefulWidget {
 class _WalletPageState extends State<WalletPage> {
   DateTime? _startDate;
   DateTime? _endDate;
+  final FocusNode _rechargeButtonFocusNode =
+      FocusNode(debugLabel: 'wallet-recharge');
 
   static const double _minimumRechargeAmount = 100;
   static const double _maximumRechargeAmount = 100000;
+
+  @override
+  void dispose() {
+    _rechargeButtonFocusNode.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -127,6 +137,7 @@ class _WalletPageState extends State<WalletPage> {
                               /// CTA
                               _tvFocus(
                                 ElevatedButton.icon(
+                                  focusNode: _rechargeButtonFocusNode,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.white,
                                     foregroundColor: theme.primaryColor,
@@ -147,6 +158,7 @@ class _WalletPageState extends State<WalletPage> {
                                   ),
                                 ),
                                 onTap: _showBuyDialog,
+                                focusNode: _rechargeButtonFocusNode,
                               ),
                             ],
                           );
@@ -157,6 +169,10 @@ class _WalletPageState extends State<WalletPage> {
                 ],
               ),
             ),
+          ),
+
+          Consumer<WalletProvider>(
+            builder: (_, p, __) => _buildWalletSummarySliver(theme, p),
           ),
 
           /// -------- Header + Filter --------
@@ -197,7 +213,9 @@ class _WalletPageState extends State<WalletPage> {
                     final tx = list[i];
                     final isCredit = tx.action?.toLowerCase() == "credit";
 
-                    return Container(
+                    return _tvTransactionFocus(
+                      tx,
+                      Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: theme.cardColor,
@@ -290,11 +308,30 @@ class _WalletPageState extends State<WalletPage> {
                           ),
                         ],
                       ),
+                      ),
                     );
                   },
                 ),
               );
             },
+          ),
+
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(horizontal, 18, horizontal, 8),
+            sliver: const SliverToBoxAdapter(
+              child: Text(
+                "Withdraw History",
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+
+          Consumer<WalletProvider>(
+            builder: (_, p, __) => _buildWithdrawHistorySliver(
+              theme,
+              p,
+              horizontal,
+            ),
           ),
 
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -338,6 +375,7 @@ class _WalletPageState extends State<WalletPage> {
 
   void _showBuyDialog() {
     final controller = TextEditingController();
+    final amountFocusNode = FocusNode(debugLabel: 'wallet-recharge-amount');
     final pageContext = context;
 
     showDialog(
@@ -360,26 +398,46 @@ class _WalletPageState extends State<WalletPage> {
                     width: ResponsiveWidget.isTabletOrTv(dialogContext)
                         ? 460
                         : null,
-                    child: TextField(
+                    child: CustomTextField(
                       controller: controller,
+                      focusNode: amountFocusNode,
                       autofocus: ResponsiveWidget.isTabletOrTv(dialogContext),
-                      keyboardType: TextInputType.number,
+                      hintText: "Enter amount",
+                      textInputType: TextInputType.number,
+                      isDigits: true,
                       textInputAction: TextInputAction.done,
-                      onSubmitted: (_) =>
+                      onFieldSubmitted: (_) =>
                           FocusScope.of(dialogContext).nextFocus(),
-                      decoration: const InputDecoration(
-                        labelText: "Enter amount",
-                        border: OutlineInputBorder(),
-                      ),
                     ),
                   ),
                   actions: [
-                    TextButton(
+                    _dialogActionFocus(
+                      dialogContext,
+                      TextButton(
                         onPressed:
                             isBusy ? null : () => Navigator.pop(dialogContext),
-                        child: const Text("Cancel")),
-                    ElevatedButton(
-                      onPressed: isBusy
+                        child: const Text("Cancel"),
+                      ),
+                      onTap: isBusy ? null : () => Navigator.pop(dialogContext),
+                    ),
+                    _dialogActionFocus(
+                      dialogContext,
+                      ElevatedButton(
+                        onPressed: isBusy
+                            ? null
+                            : () => _submitRecharge(
+                                  provider: provider,
+                                  controller: controller,
+                                  dialogContext: dialogContext,
+                                  pageContext: pageContext,
+                                  setProcessing: (value) {
+                                    setState(() => isProcessing = value);
+                                  },
+                                ),
+                        child:
+                            Text(isBusy ? "Processing..." : "Proceed to pay"),
+                      ),
+                      onTap: isBusy
                           ? null
                           : () => _submitRecharge(
                                 provider: provider,
@@ -390,7 +448,6 @@ class _WalletPageState extends State<WalletPage> {
                                   setState(() => isProcessing = value);
                                 },
                               ),
-                      child: Text(isBusy ? "Processing..." : "Proceed to pay"),
                     )
                   ],
                 );
@@ -399,21 +456,284 @@ class _WalletPageState extends State<WalletPage> {
           },
         );
       },
-    );
+    ).whenComplete(() {
+      amountFocusNode.dispose();
+      controller.dispose();
+    });
   }
 
   Widget _tvFocus(
     Widget child, {
     required VoidCallback onTap,
     bool autofocus = false,
+    FocusNode? focusNode,
   }) {
     if (ResponsiveWidget.isMobile(context)) return child;
     return OttTvFocus(
       autofocus: autofocus,
+      focusNode: focusNode,
       onTap: onTap,
+      scale: 1.06,
       child: child,
     );
   }
+
+  Widget _dialogActionFocus(
+    BuildContext context,
+    Widget child, {
+    required VoidCallback? onTap,
+  }) {
+    if (ResponsiveWidget.isMobile(context)) return child;
+    return OttTvFocus(
+      onTap: onTap,
+      borderRadius: 8,
+      scale: 1.06,
+      child: child,
+    );
+  }
+
+  SliverToBoxAdapter _buildWalletSummarySliver(
+    ThemeData theme,
+    WalletProvider provider,
+  ) {
+    final transactions = provider.filteredTransactionHistory;
+    final totalRevenue = transactions
+        .where((tx) => tx.action?.toLowerCase() == "credit")
+        .fold<double>(0, (sum, tx) => sum + (tx.amount ?? 0));
+    final pendingAmount = transactions
+        .where((tx) => (tx.status ?? '').toLowerCase().contains('pending'))
+        .fold<double>(0, (sum, tx) => sum + (tx.amount ?? 0));
+    final withdrawAmount = transactions
+        .where((tx) => tx.action?.toLowerCase() != "credit")
+        .fold<double>(0, (sum, tx) => sum + (tx.amount ?? 0));
+
+    final cards = [
+      _WalletMetric(
+        label: 'Wallet Balance',
+        value: _money(provider.walletBalance),
+        icon: Icons.account_balance_wallet,
+      ),
+      _WalletMetric(
+        label: 'Total Revenue',
+        value: _money(totalRevenue),
+        icon: Icons.trending_up,
+      ),
+      _WalletMetric(
+        label: 'Pending Amount',
+        value: _money(pendingAmount),
+        icon: Icons.schedule,
+      ),
+      _WalletMetric(
+        label: 'Withdraw History',
+        value: _money(withdrawAmount),
+        icon: Icons.history,
+      ),
+    ];
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: ResponsiveWidget.isDesktop(context)
+              ? 200
+              : ResponsiveWidget.isTablet(context)
+                  ? 80
+                  : 16,
+          vertical: 16,
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth > 900 ? 4 : 2;
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: cards.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: columns == 4 ? 2.25 : 2.6,
+              ),
+              itemBuilder: (context, index) {
+                final item = cards[index];
+                return OttTvFocus(
+                  borderRadius: 14,
+                  scale: 1.06,
+                  semanticLabel: '${item.label} ${item.value}',
+                  onTap: () {},
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: theme.canvasColor.withOpacity(0.08),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(item.icon, color: theme.primaryColor, size: 28),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                item.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: theme.canvasColor.withOpacity(0.68),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                item.value,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: theme.canvasColor,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWithdrawHistorySliver(
+    ThemeData theme,
+    WalletProvider provider,
+    double horizontal,
+  ) {
+    final withdrawList = provider.filteredTransactionHistory
+        .where((tx) => tx.action?.toLowerCase() != "credit")
+        .toList();
+
+    if (withdrawList.isEmpty) {
+      return SliverPadding(
+        padding: EdgeInsets.symmetric(horizontal: horizontal),
+        sliver: const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Text("No withdraw transactions"),
+          ),
+        ),
+      );
+    }
+
+    return SliverPadding(
+      padding: EdgeInsets.symmetric(horizontal: horizontal),
+      sliver: SliverList.separated(
+        itemCount: withdrawList.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (_, i) => _tvTransactionFocus(
+          withdrawList[i],
+          _plainTransactionTile(theme, withdrawList[i]),
+        ),
+      ),
+    );
+  }
+
+  Widget _tvTransactionFocus(Transactions tx, Widget child) {
+    if (ResponsiveWidget.isMobile(context)) return child;
+    return OttTvFocus(
+      borderRadius: 14,
+      scale: 1.04,
+      semanticLabel: '${tx.status ?? 'Transaction'} ${tx.amount ?? 0}',
+      onTap: () {},
+      child: child,
+    );
+  }
+
+  Widget _plainTransactionTile(ThemeData theme, Transactions tx) {
+    final isCredit = tx.action?.toLowerCase() == "credit";
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 15,
+            backgroundColor: theme.scaffoldBackgroundColor,
+            foregroundColor: isCredit ? Colors.green : Colors.red,
+            child: Text(
+              '₹',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tx.status ?? "",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: theme.canvasColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  DateFormat('dd MMM yyyy • hh:mm a').format(
+                    DateTime.fromMillisecondsSinceEpoch(tx.date ?? 0),
+                  ),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.canvasColor.withOpacity(0.6),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  tx.reason?.toString() ?? "",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.canvasColor.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            "${isCredit ? "+" : "-"}${tx.amount?.toStringAsFixed(0) ?? "0"}",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: isCredit ? Colors.green : Colors.red,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _money(double value) => '₹ ${value.toStringAsFixed(0)}';
 
   Future<void> _submitRecharge({
     required WalletProvider provider,
@@ -507,4 +827,16 @@ class _WalletPageState extends State<WalletPage> {
       ),
     );
   }
+}
+
+class _WalletMetric {
+  const _WalletMetric({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
 }

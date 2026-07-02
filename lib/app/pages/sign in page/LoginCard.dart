@@ -40,6 +40,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
   final FocusNode _mobileFocusNode = FocusNode(debugLabel: 'login-mobile');
   final FocusNode _otpFocusNode = FocusNode(debugLabel: 'login-otp');
   final FocusNode _submitFocusNode = FocusNode(debugLabel: 'login-submit');
+  final FocusNode _backFocusNode = FocusNode(debugLabel: 'login-back');
+  final FocusNode _resendFocusNode = FocusNode(debugLabel: 'login-resend');
   final List<FocusNode> _keypadFocusNodes = List.generate(
     12,
     (index) => FocusNode(debugLabel: 'login-tv-keypad-$index'),
@@ -93,6 +95,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     _mobileFocusNode.dispose();
     _otpFocusNode.dispose();
     _submitFocusNode.dispose();
+    _backFocusNode.dispose();
+    _resendFocusNode.dispose();
     for (final node in _keypadFocusNodes) {
       node.dispose();
     }
@@ -129,8 +133,14 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     if (!mounted) return;
     if (_otpFocusNode.hasFocus) {
       setState(() => _editingOtp = true);
+      if (_useTvKeypad(context)) {
+        _showTextInputKeyboard(_otpFocusNode);
+      }
     } else if (_mobileFocusNode.hasFocus) {
       setState(() => _editingOtp = false);
+      if (_useTvKeypad(context) && !otpSent) {
+        _showTextInputKeyboard(_mobileFocusNode);
+      }
     }
   }
 
@@ -218,16 +228,25 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.start,
                                     children: [
-                                      IconButton(
-                                        onPressed: () {
-                                          Navigator.pushReplacement(
-                                              context,
-                                              MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      LoginCard()));
-                                        },
-                                        icon: Icon(
-                                          Icons.arrow_back_ios_new_sharp,
+                                      FocusTraversalOrder(
+                                        order: const NumericFocusOrder(0),
+                                        child: _TvFocusFrame(
+                                          focusNode: _backFocusNode,
+                                          enabled: useTvKeypad,
+                                          child: IconButton(
+                                            focusNode: _backFocusNode,
+                                            tooltip: 'Back',
+                                            onPressed: () {
+                                              Navigator.pushReplacement(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          LoginCard()));
+                                            },
+                                            icon: Icon(
+                                              Icons.arrow_back_ios_new_sharp,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -277,6 +296,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                               .digitsOnly,
                                           LengthLimitingTextInputFormatter(10),
                                         ],
+                                        onTap: () => _showTextInputKeyboard(
+                                            _mobileFocusNode),
                                         textInputAction: TextInputAction.done,
                                         onChanged: (value) {
                                           _mobileNumberForOtp =
@@ -484,18 +505,26 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                     ),
                                   ],
                                   const SizedBox(height: 10),
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: TextButton(
-                                      onPressed: isLoading ||
-                                              _authRequestInFlight ||
-                                              _resendSecondsRemaining > 0
-                                          ? null
-                                          : _resendOtp,
-                                      child: Text(
-                                        _resendSecondsRemaining > 0
-                                            ? 'Resend OTP in ${_formatResendTime(_resendSecondsRemaining)}'
-                                            : 'Resend OTP',
+                                  FocusTraversalOrder(
+                                    order: const NumericFocusOrder(19),
+                                    child: Align(
+                                      alignment: Alignment.centerRight,
+                                      child: _TvFocusFrame(
+                                        focusNode: _resendFocusNode,
+                                        enabled: useTvKeypad,
+                                        child: TextButton(
+                                          focusNode: _resendFocusNode,
+                                          onPressed: isLoading ||
+                                                  _authRequestInFlight ||
+                                                  _resendSecondsRemaining > 0
+                                              ? null
+                                              : _resendOtp,
+                                          child: Text(
+                                            _resendSecondsRemaining > 0
+                                                ? 'Resend OTP in ${_formatResendTime(_resendSecondsRemaining)}'
+                                                : 'Resend OTP',
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -802,7 +831,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
 
     try {
       final appSignature = await SmsAutoFill().getAppSignature;
-      debugPrint("✅✅✅AppSignature:  " + appSignature);
+      debugPrint("✅✅✅AppSignature:  $appSignature");
       if (kDebugMode && appSignature.isNotEmpty) {
         debugPrint('Android SMS Retriever app signature: $appSignature');
       }
@@ -962,7 +991,7 @@ class _TvFocusFrame extends StatelessWidget {
       builder: (context, _) {
         final focused = focusNode.hasFocus;
         return AnimatedScale(
-          scale: focused ? 1.025 : 1,
+          scale: focused ? 1.06 : 1,
           duration: const Duration(milliseconds: 140),
           curve: Curves.easeOutCubic,
           child: AnimatedContainer(
@@ -1037,7 +1066,7 @@ class _TvNumberPad extends StatelessWidget {
             focusNode: focusNodes[index],
             onTap: key.onTap,
             borderRadius: 8,
-            scale: 1.03,
+            scale: 1.06,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: theme.cardColor,
