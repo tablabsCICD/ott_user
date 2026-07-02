@@ -1,10 +1,12 @@
+import 'package:flutter/foundation.dart';
+
 class AppConstant {
   static const String appVersion = "1.0.0";
   static const int appBuildNumber = 2;
   static final String GOOGLE_KEY = "AIzaSyDbIESWMKX_4TqGEiFUhbu8-PUpLnVBPrc";
   static const String razorpayKeyId = String.fromEnvironment(
     'RAZORPAY_KEY_ID',
-    defaultValue: 'rzp_test_qds9tiF6d4FFtb',
+    defaultValue: 'rzp_live_T7KP6YnJcCZgxP',
   );
   static const String razorpayMerchantName = 'Filmytell';
   static const String razorpayLogoUrl = String.fromEnvironment(
@@ -14,7 +16,19 @@ class AppConstant {
   );
   static const playStoreLink =
       "https://play.google.com/store/apps/details?id=com.filmytell.ott";
-  static const webAppLink = "https://filmytell.in";
+  static const appStoreLink = String.fromEnvironment(
+    'APP_STORE_URL',
+    defaultValue: '',
+  );
+  static const webAppLink = "https://filmytell.com";
+  static const accountDeletionUrl = "https://filmytell.com/account-delete.html";
+
+  static String get platformStoreLink {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      return appStoreLink.isNotEmpty ? appStoreLink : webAppLink;
+    }
+    return playStoreLink;
+  }
 
   static const privacyPolicy =
       "https://filmytell-document.s3.ap-south-1.amazonaws.com/documents/filmytell-privacy-policy-h-a-05-06-2026-1781181202883-1781269363236.pdf";
@@ -22,13 +36,13 @@ class AppConstant {
       "https://filmytell-document.s3.ap-south-1.amazonaws.com/documents/filmytell-terms-of-use-h-a-09-06-2026-1781269391191.pdf";
 
   static const productionHouseUrl =
-      'https://filmytell.in/productionHouse/#/login/';
+      'https://filmytell.com/productionHouse/#/login/';
 
-  static const userPortalUrl = 'https://filmytell.in/productionHouse/#/login/';
+  static const userPortalUrl = 'https://filmytell.com/';
 
-  static const promoterPortalUrl = 'https://filmytell.in/promoter/#/login/';
+  static const promoterPortalUrl = 'https://filmytell.com/promoter/#/login/';
 
-  static const adminPortalUrl = 'https://filmytell.in/ottAdmin/#/login/';
+  static const adminPortalUrl = 'https://filmytell.com/ottAdmin/#/login/';
 
   final List<String> availableLanguages = [
     'Hindi',

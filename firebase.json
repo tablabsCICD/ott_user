@@ -41,7 +41,11 @@
   "hosting": {
     "public": "build/web",
     "predeploy": [
+<<<<<<< HEAD
       "dart run tool/stage_apple_app_site_association.dart"
+=======
+      "dart run tool/stage_android_assetlinks.dart"
+>>>>>>> fcc9f288c16a4e002f73a2a45dd50d350258f092
     ],
     "ignore": [
       "firebase.json",
@@ -55,7 +59,11 @@
     ],
     "headers": [
       {
+<<<<<<< HEAD
         "source": "/.well-known/apple-app-site-association",
+=======
+        "source": "/.well-known/assetlinks.json",
+>>>>>>> fcc9f288c16a4e002f73a2a45dd50d350258f092
         "headers": [
           {
             "key": "Content-Type",

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/core/services/session_manager.dart';
 import 'package:ott/app/core/utils/image_url_utils.dart';
 import 'package:ott/app/pages/profile%20page/component/EditProfilePage.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/presentation/web_landing/utils/post_logout_navigation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AccountDetailsPage extends StatefulWidget {
   const AccountDetailsPage({super.key});
@@ -15,6 +19,8 @@ class AccountDetailsPage extends StatefulWidget {
 }
 
 class _AccountDetailsPageState extends State<AccountDetailsPage> {
+  bool _isDeletingAccount = false;
+
   @override
   void initState() {
     super.initState();
@@ -121,6 +127,10 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                           _editButtons(theme),
                         ],
                       ),
+                      const SizedBox(height: 18),
+                      _sectionTitle(theme, "Account Deletion"),
+                      const SizedBox(height: 10),
+                      _deleteAccountCard(theme, userProvider),
                     ],
                   ),
                 ),
@@ -222,6 +232,170 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
         ),
       ],
     );
+  }
+
+  Widget _deleteAccountCard(ThemeData theme, UserProvider userProvider) {
+    return _card(
+      theme: theme,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.redAccent,
+              size: 22,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                "Delete your Filmytell account and personal profile data. Purchases, wallet activity, support tickets, and records required for legal, tax, security, or fraud-prevention purposes may be retained as required by law.",
+                style: TextStyle(
+                  color: theme.canvasColor.withOpacity(0.74),
+                  height: 1.45,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _isDeletingAccount ? null : _openDeletionPage,
+                icon: const Icon(Icons.open_in_new, size: 18),
+                label: const Text("Deletion Info"),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.primaryColor,
+                  side: BorderSide(color: theme.primaryColor.withOpacity(0.45)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _isDeletingAccount
+                    ? null
+                    : () => _confirmAndDeleteAccount(userProvider),
+                icon: _isDeletingAccount
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.delete_forever, size: 18),
+                label: Text(_isDeletingAccount ? "Deleting..." : "Delete"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _openDeletionPage() async {
+    final opened = await launchUrl(
+      Uri.parse(AppConstant.accountDeletionUrl),
+      mode: LaunchMode.externalApplication,
+      webOnlyWindowName: '_blank',
+    );
+
+    if (!opened && mounted) {
+      CustomToast.show(
+        context,
+        "Unable to open account deletion page right now.",
+        isSuccess: false,
+      );
+    }
+  }
+
+  Future<void> _confirmAndDeleteAccount(UserProvider userProvider) async {
+    final id = userProvider.userObj.id ?? 0;
+    if (id <= 0) {
+      CustomToast.show(
+        context,
+        "Unable to find your account. Please log in again.",
+        isSuccess: false,
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        final theme = Theme.of(dialogContext);
+        return AlertDialog(
+          backgroundColor: theme.scaffoldBackgroundColor,
+          title: const Text("Delete account?"),
+          content: Text(
+            "This will permanently delete your Filmytell account. You will be logged out after the request is completed.",
+            style: TextStyle(color: theme.canvasColor.withOpacity(0.78)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(
+                "Cancel",
+                style: TextStyle(color: theme.canvasColor),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text("Delete"),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isDeletingAccount = true);
+    try {
+      await userProvider.deleteUser(id);
+      await SessionManager.instance.clearLocalSession();
+      userProvider.clear();
+      userProvider.disposeData();
+      if (!mounted) return;
+      CustomToast.show(
+        context,
+        "Your account has been deleted.",
+        isSuccess: true,
+      );
+      pushPostLogoutReplacement(context);
+    } catch (_) {
+      if (!mounted) return;
+      CustomToast.show(
+        context,
+        "Unable to delete account right now. Please try again.",
+        isSuccess: false,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isDeletingAccount = false);
+      }
+    }
   }
 
   Widget _actionButton(

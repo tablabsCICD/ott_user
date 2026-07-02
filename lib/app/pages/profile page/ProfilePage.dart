@@ -143,7 +143,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (!launched) {
         launched = await launchUrl(
-          Uri.parse(AppConstant.playStoreLink),
+          Uri.parse(AppConstant.platformStoreLink),
           mode: LaunchMode.externalApplication,
         );
       }

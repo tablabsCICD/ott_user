@@ -96,6 +96,10 @@ class FooterSection extends StatelessWidget {
                               lang.termsConditions,
                               'Terms & Conditions',
                             ),
+                            _FooterLinkData(
+                              'Account Deletion',
+                              'Account Deletion',
+                            ),
                           ],
                           onOpenLink: onOpenLink,
                         ),
