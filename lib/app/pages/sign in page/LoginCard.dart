@@ -366,6 +366,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                       theme,
                                       lang.enterMobileNumber,
                                     ),
+                                    enabled: false,
+
                                     initialCountryCode:
                                         'IN', // Default to India
                                     validator: (phone) {

@@ -105,6 +105,8 @@ class ApiConstant {
   static String legalDocumentUrls = "${baseUrl}api/legal/document-urls";
 
   static String addMoneyToWallet = "${baseUrl}add-amount";
+  static String verifyAppleIapPurchase =
+      "${baseUrl}api/apple-iap/verify-wallet-purchase";
   static String createWalletOrder(double amount, int userId) {
     final normalizedAmount =
         amount == amount.truncateToDouble() ? amount.toInt() : amount;
@@ -118,6 +120,7 @@ class ApiConstant {
       "${baseUrl}wallet/balance/$userId";
   static String walletHistory(userId) =>
       "${baseUrl}api/walletHistory/user/%7BuserId%7D?userId=$userId";
+  static String walletHistoryV2(userId) => "${baseUrl}wallet/history/$userId";
 
   static String saveRatingAndReview = "${baseUrl}api/saveRatingAndRewiew";
   static String deleteRatingAndReview(id) =>

@@ -7,6 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/services/AppleIapService.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/core/services/notification_service.dart';
@@ -72,6 +73,9 @@ Future<void> main() async {
         ),
         ChangeNotifierProvider(
           create: (context) => WalletProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => AppleIapService(),
         ),
         ChangeNotifierProvider(
           create: (context) => TicketProvider(),

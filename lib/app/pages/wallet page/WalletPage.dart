@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:ott/app/pages/wallet page/AppleWalletRechargeScreen.dart';
 import 'package:ott/app/pages/wallet page/PaymentPage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
@@ -23,6 +24,9 @@ class _WalletPageState extends State<WalletPage> {
 
   static const double _minimumRechargeAmount = 100;
   static const double _maximumRechargeAmount = 100000;
+
+  bool get _isIosWallet =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
   void initState() {
@@ -138,7 +142,7 @@ class _WalletPageState extends State<WalletPage> {
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                   ),
-                                  onPressed: _showBuyDialog,
+                                  onPressed: _handleRechargeTap,
                                   icon: const Icon(Icons.add),
                                   label: const Text(
                                     "Recharge Wallet",
@@ -146,7 +150,7 @@ class _WalletPageState extends State<WalletPage> {
                                         TextStyle(fontWeight: FontWeight.bold),
                                   ),
                                 ),
-                                onTap: _showBuyDialog,
+                                onTap: _handleRechargeTap,
                               ),
                             ],
                           );
@@ -158,6 +162,14 @@ class _WalletPageState extends State<WalletPage> {
               ),
             ),
           ),
+
+          if (_isIosWallet)
+            const SliverToBoxAdapter(
+              child: AppleWalletRechargeScreen(
+                showAppBar: false,
+                popOnSuccess: false,
+              ),
+            ),
 
           /// -------- Header + Filter --------
           SliverPadding(
@@ -336,6 +348,25 @@ class _WalletPageState extends State<WalletPage> {
   //   );
   // }
 
+  Future<void> _handleRechargeTap() async {
+    if (_isIosWallet) {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const AppleWalletRechargeScreen(),
+        ),
+      );
+      if (!mounted) return;
+      if (result == true) {
+        final provider = Provider.of<WalletProvider>(context, listen: false);
+        await provider.refreshWalletData();
+      }
+      return;
+    }
+
+    _showBuyDialog();
+  }
+
   void _showBuyDialog() {
     final controller = TextEditingController();
     final pageContext = context;
@@ -463,8 +494,8 @@ class _WalletPageState extends State<WalletPage> {
       _showWalletReflectLoader(pageContext);
       final result = await provider
           .onPaymentVerified(
-            expectedAmount: amt,
-          )
+        expectedAmount: amt,
+      )
           .whenComplete(() {
         if (mounted) {
           Navigator.of(pageContext, rootNavigator: true).pop();
