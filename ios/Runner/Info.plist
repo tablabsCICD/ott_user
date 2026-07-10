@@ -69,6 +69,8 @@
 	<string>Filmytell uses your photo library only when you choose an image for your profile or a support attachment.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Filmytell uses your approximate location while the app is open to help auto-fill address details when you request it.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Filmytell uses your location only when you choose Use Current Location to auto-fill your address details; it does not track your location in the background.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSExceptionDomains</key>

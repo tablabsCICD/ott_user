@@ -206,6 +206,7 @@
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				534DE4F31D0E493E9290EB84 /* [CP] Embed Pods Frameworks */,
+				A18B8D5D2E1F4A11A5D5F001 /* Generate Missing Framework dSYMs */,
 				D10E72258F0383783188C34D /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
@@ -335,6 +336,22 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build";
+		};
+		A18B8D5D2E1F4A11A5D5F001 /* Generate Missing Framework dSYMs */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Generate Missing Framework dSYMs";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/bin/sh \"${PROJECT_DIR}/scripts/generate_missing_framework_dsyms.sh\"\n";
+			showEnvVarsInLog = 0;
 		};
 		A5917AB45562BE5ECA4C8C61 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
