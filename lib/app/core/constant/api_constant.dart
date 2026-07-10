@@ -1,5 +1,5 @@
 class ApiConstant {
-  static const String baseUrl = "https://filmytell.in/ott2/";
+  static const String baseUrl = "https://filmytell.in/ott/";
 
   /*  static const String baseUrl =
       "http://ec2-13-201-5-93.ap-south-1.compute.amazonaws.com:8080/ott/";
