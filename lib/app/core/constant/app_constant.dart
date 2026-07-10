@@ -16,6 +16,10 @@ class AppConstant {
   );
   static const playStoreLink =
       "https://play.google.com/store/apps/details?id=com.filmytell.ott";
+  static const filmytellPartnerPlayStoreLink =
+      "https://play.google.com/store/apps/details?id=com.filmytell.partner";
+  static const filmytell_partner_playStoreLink =
+      filmytellPartnerPlayStoreLink;
   static const appStoreLink = String.fromEnvironment(
     'APP_STORE_URL',
     defaultValue: '',

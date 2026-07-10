@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/l10n/app_localizations.dart';
+import 'package:ott/presentation/web_landing/widgets/play_store_button.dart';
 
 class UserPortalSection extends StatelessWidget {
   const UserPortalSection({
@@ -95,7 +97,10 @@ class UserPortalSection extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 30),
-                Row(
+                Wrap(
+                  spacing: 14,
+                  runSpacing: 12,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     ElevatedButton(
                       onPressed: onGetStarted,
@@ -112,7 +117,6 @@ class UserPortalSection extends StatelessWidget {
                       ),
                       child: Text(lang.getStarted),
                     ),
-                    const SizedBox(width: 14),
                     OutlinedButton(
                       onPressed: onExplorePlans,
                       style: OutlinedButton.styleFrom(
@@ -127,6 +131,10 @@ class UserPortalSection extends StatelessWidget {
                         ),
                       ),
                       child: Text(lang.exploreContent),
+                    ),
+                    const PlayStoreButton(
+                      appName: 'Filmytell',
+                      playStoreUrl: AppConstant.playStoreLink,
                     ),
                   ],
                 ),
@@ -219,8 +227,7 @@ class _UserTimelineRowState extends State<_UserTimelineRow> {
                           ? widget.color
                           : Colors.white.withOpacity(0.10),
                       shape: BoxShape.circle,
-                      border:
-                          Border.all(color: widget.color.withOpacity(0.55)),
+                      border: Border.all(color: widget.color.withOpacity(0.55)),
                     ),
                     child: Center(
                       child: Text(
