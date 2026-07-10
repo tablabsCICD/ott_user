@@ -5,7 +5,7 @@ void main() {
   group('DeepLinkService.parseTarget', () {
     test('parses gift app link coupon code', () {
       final target = DeepLinkService.instance.parseTarget(
-        Uri.parse('https://filmytell.in/gift/GF00233665671E55'),
+        Uri.parse('https://filmytell.com/gift/GF00233665671E55'),
       );
 
       expect(target?.type, DeepLinkContentType.gift);
@@ -14,7 +14,7 @@ void main() {
 
     test('parses movie app link id', () {
       final target = DeepLinkService.instance.parseTarget(
-        Uri.parse('https://filmytell.in/movie/1'),
+        Uri.parse('https://filmytell.com/movie/1'),
       );
 
       expect(target?.type, DeepLinkContentType.movie);
@@ -23,7 +23,7 @@ void main() {
 
     test('parses www host and ott-prefixed paths', () {
       final target = DeepLinkService.instance.parseTarget(
-        Uri.parse('https://www.filmytell.in/ott/movie/1'),
+        Uri.parse('https://www.filmytell.com/ott/movie/1'),
       );
 
       expect(target?.type, DeepLinkContentType.movie);
@@ -32,10 +32,10 @@ void main() {
 
     test('parses the production universal-link paths', () {
       final movieTarget = DeepLinkService.instance.parseTarget(
-        Uri.parse('https://filmytell.in/movie/1'),
+        Uri.parse('https://filmytell.com/movie/1'),
       );
       final giftTarget = DeepLinkService.instance.parseTarget(
-        Uri.parse('https://filmytell.in/gift/GF00233665671E55'),
+        Uri.parse('https://filmytell.com/gift/GF00233665671E55'),
       );
 
       expect(movieTarget?.id, 1);

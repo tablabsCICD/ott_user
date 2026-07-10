@@ -56,8 +56,8 @@ class DeepLinkService {
   static const String seriesHost = 'series';
   static const String shortHost = 'short';
   static const String giftHost = 'gift';
-  static const String httpsHost = 'filmytell.in';
-  static const String httpsWwwHost = 'www.filmytell.in';
+  static const String httpsHost = 'filmytell.com';
+  static const String httpsWwwHost = 'www.filmytell.com';
   static const String ottPathPrefix = 'ott';
   static const String androidPackageName = 'com.filmytell.ott';
   static const String playStoreUrl =

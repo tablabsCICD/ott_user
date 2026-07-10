@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:ott/app/pages/wallet page/wallet_recharge_summary_dialog.dart';
 import 'package:ott/app/core/services/AppleIapService.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
@@ -248,19 +249,36 @@ class _AppleWalletRechargeScreenState extends State<AppleWalletRechargeScreen> {
       }
 
       if (!mounted) return;
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text(message.title),
-          content: Text(message.message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
+      if (message.type == AppleIapDialogType.success &&
+          message.requestedAmount != null &&
+          message.creditedAmount != null) {
+        await showDialog<void>(
+          context: context,
+          builder: (_) => WalletRechargeSummaryDialog(
+            requestedAmount: message.requestedAmount!,
+            creditedAmount: message.creditedAmount!,
+            deductionAmount: message.deductionAmount,
+            deductionPercentage: message.deductionPercentage,
+            deductionLabel: 'Apple Charges',
+            paymentGateway: message.paymentGateway,
+            settlementType: message.settlementType,
+          ),
+        );
+      } else {
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(message.title),
+            content: Text(message.message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
 
       if (!mounted) return;
       if (message.type == AppleIapDialogType.success && widget.popOnSuccess) {

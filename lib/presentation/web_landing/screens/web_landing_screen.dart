@@ -419,7 +419,7 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
       'Facebook' => 'facebook',
       _ => label.toLowerCase().replaceAll(' ', '-'),
     };
-    _openExternal('https://filmytell.in/$slug/');
+    _openExternal('https://filmytell.com/$slug/');
   }
 
   Future<void> _openTrailer(Content content) async {

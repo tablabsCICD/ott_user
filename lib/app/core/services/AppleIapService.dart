@@ -33,11 +33,27 @@ class AppleIapUserMessage {
     required this.type,
     required this.title,
     required this.message,
+    this.requestedAmount,
+    this.creditedAmount,
+    this.deductionAmount,
+    this.deductionPercentage,
+    this.deductionReason,
+    this.operatingSystem,
+    this.paymentGateway,
+    this.settlementType,
   });
 
   final AppleIapDialogType type;
   final String title;
   final String message;
+  final double? requestedAmount;
+  final double? creditedAmount;
+  final double? deductionAmount;
+  final double? deductionPercentage;
+  final String? deductionReason;
+  final String? operatingSystem;
+  final String? paymentGateway;
+  final String? settlementType;
 }
 
 class AppleIapService extends ChangeNotifier {
@@ -325,8 +341,16 @@ class AppleIapService extends ChangeNotifier {
       final creditedAmount = result.creditedAmount ?? walletAmount.toDouble();
       _setMessage(
         AppleIapDialogType.success,
-        'Wallet recharged',
-        '\u20B9${creditedAmount.toStringAsFixed(0)} has been added to your wallet.',
+        'Wallet Recharge Successful',
+        '\u20B9${creditedAmount.toStringAsFixed(2)} has been added to your wallet.',
+        requestedAmount: result.requestedAmount ?? walletAmount.toDouble(),
+        creditedAmount: creditedAmount,
+        deductionAmount: result.deductionAmount,
+        deductionPercentage: result.deductionPercentage,
+        deductionReason: result.deductionReason,
+        operatingSystem: result.operatingSystem,
+        paymentGateway: result.paymentGateway,
+        settlementType: result.settlementType,
       );
     } catch (error) {
       _isPurchasing = false;
@@ -355,11 +379,27 @@ class AppleIapService extends ChangeNotifier {
     String title,
     String message, {
     bool notify = true,
+    double? requestedAmount,
+    double? creditedAmount,
+    double? deductionAmount,
+    double? deductionPercentage,
+    String? deductionReason,
+    String? operatingSystem,
+    String? paymentGateway,
+    String? settlementType,
   }) {
     _pendingMessage = AppleIapUserMessage(
       type: type,
       title: title,
       message: message,
+      requestedAmount: requestedAmount,
+      creditedAmount: creditedAmount,
+      deductionAmount: deductionAmount,
+      deductionPercentage: deductionPercentage,
+      deductionReason: deductionReason,
+      operatingSystem: operatingSystem,
+      paymentGateway: paymentGateway,
+      settlementType: settlementType,
     );
     _errorMessage = type == AppleIapDialogType.success ||
             type == AppleIapDialogType.pending ||

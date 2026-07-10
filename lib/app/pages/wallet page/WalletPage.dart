@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:ott/app/pages/wallet page/AppleWalletRechargeScreen.dart';
 import 'package:ott/app/pages/wallet page/PaymentPage.dart';
+import 'package:ott/app/pages/wallet page/wallet_recharge_summary_dialog.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
+import 'package:ott/data/models/response/addWalletResponse.dart';
+import 'package:ott/data/models/response/walletHistory.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 
@@ -208,6 +211,10 @@ class _WalletPageState extends State<WalletPage> {
                   itemBuilder: (_, i) {
                     final tx = list[i];
                     final isCredit = tx.action?.toLowerCase() == "credit";
+                    final requestedAmount = tx.requestedAmount ?? tx.amount;
+                    final creditedAmount = tx.creditedAmount ?? tx.amount;
+                    final deductionAmount = tx.deductionAmount ?? 0;
+                    final hasDeduction = deductionAmount > 0;
 
                     return Container(
                       padding: const EdgeInsets.all(14),
@@ -242,7 +249,7 @@ class _WalletPageState extends State<WalletPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  tx.status ?? "",
+                                  _walletHistoryTitle(tx),
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: theme.canvasColor,
@@ -281,19 +288,75 @@ class _WalletPageState extends State<WalletPage> {
                                     // )
                                   ],
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  tx.reason ?? "",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: theme.canvasColor.withOpacity(0.6),
-                                  ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 14,
+                                  runSpacing: 6,
+                                  children: [
+                                    if (requestedAmount != null)
+                                      _HistoryMetric(
+                                        label: 'Requested',
+                                        value: _formatMoney(requestedAmount),
+                                      ),
+                                    if (hasDeduction)
+                                      _HistoryMetric(
+                                        label: 'Apple Deduction',
+                                        value:
+                                            _formatMoney(deductionAmount),
+                                      ),
+                                    if (creditedAmount != null)
+                                      _HistoryMetric(
+                                        label: hasDeduction
+                                            ? 'Wallet Credited'
+                                            : 'Credited',
+                                        value: _formatMoney(creditedAmount),
+                                      ),
+                                    if ((tx.settlementType ?? '')
+                                        .trim()
+                                        .isNotEmpty)
+                                      _HistoryMetric(
+                                        label: 'Settlement',
+                                        value:
+                                            _formatLabel(tx.settlementType!),
+                                      ),
+                                    if ((tx.paymentGateway ?? '')
+                                        .trim()
+                                        .isNotEmpty)
+                                      _HistoryMetric(
+                                        label: 'Gateway',
+                                        value:
+                                            _formatLabel(tx.paymentGateway!),
+                                      ),
+                                    if ((tx.operatingSystem ?? '')
+                                        .trim()
+                                        .isNotEmpty)
+                                      _HistoryMetric(
+                                        label: 'OS',
+                                        value:
+                                            _formatLabel(tx.operatingSystem!),
+                                      ),
+                                  ],
                                 ),
+                                if ((tx.deductionReason ?? tx.reason ?? '')
+                                    .toString()
+                                    .trim()
+                                    .isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    (tx.deductionReason ?? tx.reason)
+                                        .toString(),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color:
+                                          theme.canvasColor.withOpacity(0.6),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
                           Text(
-                            "${isCredit ? "+" : "-"}${tx.amount?.toStringAsFixed(0) ?? "0"}",
+                            "${isCredit ? "+" : "-"}${(creditedAmount ?? tx.amount ?? 0).toStringAsFixed(0)}",
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -502,6 +565,15 @@ class _WalletPageState extends State<WalletPage> {
         }
       });
       if (!mounted) return;
+      if (result['success'] == true) {
+        await _showWalletRechargeSuccess(
+          requestedAmount: amt,
+          walletResponse: result['walletResponse'] is AddWalletAmountResponse
+              ? result['walletResponse'] as AddWalletAmountResponse
+              : null,
+        );
+        if (!mounted) return;
+      }
       CustomToast.show(
         pageContext,
         result['message']?.toString() ?? "Wallet recharged successfully.",
@@ -536,6 +608,94 @@ class _WalletPageState extends State<WalletPage> {
           ],
         ),
       ),
+    );
+  }
+
+  String _walletHistoryTitle(Transactions tx) {
+    if ((tx.action ?? '').toLowerCase() == 'credit') {
+      return 'Wallet Recharge';
+    }
+    final status = tx.status?.trim();
+    return status == null || status.isEmpty ? 'Wallet Transaction' : status;
+  }
+
+  String _formatMoney(double value) {
+    final decimals = value.truncateToDouble() == value ? 0 : 2;
+    return '\u20B9${value.toStringAsFixed(decimals)}';
+  }
+
+  String _formatLabel(String value) {
+    final normalized = value.trim().replaceAll('_', ' ').toLowerCase();
+    if (normalized.isEmpty) return value;
+    return normalized
+        .split(' ')
+        .map((word) => word.isEmpty
+            ? word
+            : '${word[0].toUpperCase()}${word.substring(1)}')
+        .join(' ');
+  }
+
+  Future<void> _showWalletRechargeSuccess({
+    required double requestedAmount,
+    AddWalletAmountResponse? walletResponse,
+  }) {
+    final data = walletResponse?.data;
+    final creditedAmount = data?.creditedAmount ?? requestedAmount;
+    final deductionAmount = data?.deductionAmount;
+    final deductionPercentage = data?.deductionPercentage;
+
+    return showDialog<void>(
+      context: context,
+      builder: (_) => WalletRechargeSummaryDialog(
+        requestedAmount: data?.requestedAmount ?? requestedAmount,
+        creditedAmount: creditedAmount,
+        deductionAmount: deductionAmount,
+        deductionPercentage: deductionPercentage,
+        deductionLabel: (deductionAmount ?? 0) > 0
+            ? data?.deductionReason ?? 'Apple Deduction'
+            : null,
+        paymentGateway: data?.paymentGateway,
+        settlementType: data?.settlementType,
+      ),
+    );
+  }
+}
+
+class _HistoryMetric extends StatelessWidget {
+  const _HistoryMetric({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: theme.canvasColor.withOpacity(0.54),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 12,
+            color: theme.canvasColor,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
     );
   }
 }

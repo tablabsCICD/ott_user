@@ -51,6 +51,14 @@ class Transactions {
   dynamic movieStartDate;
   dynamic movieEndDate;
   String? action;
+  double? requestedAmount;
+  double? creditedAmount;
+  double? deductionAmount;
+  double? deductionPercentage;
+  String? deductionReason;
+  String? operatingSystem;
+  String? paymentGateway;
+  String? settlementType;
 
   Transactions({
     this.id,
@@ -63,6 +71,14 @@ class Transactions {
     this.movieStartDate,
     this.movieEndDate,
     this.action,
+    this.requestedAmount,
+    this.creditedAmount,
+    this.deductionAmount,
+    this.deductionPercentage,
+    this.deductionReason,
+    this.operatingSystem,
+    this.paymentGateway,
+    this.settlementType,
   });
 
   factory Transactions.fromJson(Map<String, dynamic> json) => Transactions(
@@ -76,6 +92,16 @@ class Transactions {
         movieStartDate: json["movieStartDate"],
         movieEndDate: json["movieEndDate"],
         action: json["action"],
+        requestedAmount:
+            _asDouble(json["requestedAmount"] ?? json["walletAmount"]),
+        creditedAmount: _asDouble(json["creditedAmount"]),
+        deductionAmount: _asDouble(json["deductionAmount"]),
+        deductionPercentage: _asDouble(json["deductionPercentage"]),
+        deductionReason:
+            (json["deductionReason"] ?? json["reason"])?.toString(),
+        operatingSystem: json["operatingSystem"]?.toString(),
+        paymentGateway: json["paymentGateway"]?.toString(),
+        settlementType: json["settlementType"]?.toString(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -89,6 +115,14 @@ class Transactions {
         "movieStartDate": movieStartDate,
         "movieEndDate": movieEndDate,
         "action": action,
+        "requestedAmount": requestedAmount,
+        "creditedAmount": creditedAmount,
+        "deductionAmount": deductionAmount,
+        "deductionPercentage": deductionPercentage,
+        "deductionReason": deductionReason,
+        "operatingSystem": operatingSystem,
+        "paymentGateway": paymentGateway,
+        "settlementType": settlementType,
       };
 }
 

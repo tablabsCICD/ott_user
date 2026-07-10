@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
+import 'package:ott/data/models/response/addWalletResponse.dart';
 import 'package:ott/data/models/response/getWalletAmount.dart';
 import 'package:ott/data/models/response/walletHistory.dart';
 import 'package:ott/data/models/response/withdrawAmountResponse.dart';
@@ -15,12 +17,28 @@ class AppleIapWalletVerificationResult {
     required this.message,
     this.walletBalance,
     this.creditedAmount,
+    this.requestedAmount,
+    this.deductionAmount,
+    this.deductionPercentage,
+    this.deductionReason,
+    this.operatingSystem,
+    this.paymentGateway,
+    this.settlementType,
+    this.transactionId,
   });
 
   final bool success;
   final String message;
   final double? walletBalance;
   final double? creditedAmount;
+  final double? requestedAmount;
+  final double? deductionAmount;
+  final double? deductionPercentage;
+  final String? deductionReason;
+  final String? operatingSystem;
+  final String? paymentGateway;
+  final String? settlementType;
+  final String? transactionId;
 }
 
 class WalletService {
@@ -51,6 +69,37 @@ class WalletService {
     return GetWalletAmountResponse.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
     );
+  }
+
+  Future<AddWalletAmountResponse> addWalletAmount(double amount) async {
+    final user = await _getUser();
+    if (user?.id == null) {
+      throw Exception('User not found');
+    }
+
+    final body = <String, dynamic>{
+      'amount': amount,
+      'userId': user!.id,
+    };
+    final operatingSystem = WalletPlatform.operatingSystem;
+    if (operatingSystem != null) {
+      body['operatingSystem'] = operatingSystem;
+    }
+
+    final response = await _apiHelper.postApiWithBody(
+      ApiConstant.addMoneyToWallet,
+      body,
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to add wallet amount');
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Wallet credit returned an invalid response');
+    }
+
+    return AddWalletAmountResponse.fromJson(decoded);
   }
 
   Future<WalletHistory> getTransactionHistory() async {
@@ -115,6 +164,10 @@ class WalletService {
       {
         'userId': user!.id,
         'platform': 'IOS',
+        'productId': productId,
+        'transactionId': transactionId,
+        'walletAmount': walletAmount,
+        'receiptData': receiptData,
         'product_id': productId,
         'transaction_id': transactionId,
         'wallet_amount': walletAmount,
@@ -133,7 +186,19 @@ class WalletService {
       );
     }
 
-    final success = body['success'] == true;
+    final success = body['success'] != false;
+    final data = body['data'] is Map<String, dynamic>
+        ? body['data'] as Map<String, dynamic>
+        : <String, dynamic>{};
+    final creditedAmount =
+        _asDouble(body['creditedAmount'] ?? data['creditedAmount']);
+    final requestedAmount =
+        _asDouble(body['requestedAmount'] ?? data['requestedAmount']) ??
+            walletAmount.toDouble();
+    final deductionAmount = _asDouble(
+          body['deductionAmount'] ?? data['deductionAmount'],
+        ) ??
+        (creditedAmount == null ? null : requestedAmount - creditedAmount);
     final result = AppleIapWalletVerificationResult(
       success: success,
       message: body['message']?.toString() ??
@@ -147,7 +212,30 @@ class WalletService {
                 ? (body['data'] as Map<String, dynamic>)['balance']
                 : null),
       ),
-      creditedAmount: _asDouble(body['creditedAmount'] ?? walletAmount),
+      creditedAmount: creditedAmount ?? walletAmount.toDouble(),
+      requestedAmount: requestedAmount,
+      deductionAmount: deductionAmount,
+      deductionPercentage: _asDouble(
+            body['deductionPercentage'] ?? data['deductionPercentage'],
+          ) ??
+          (deductionAmount == null || requestedAmount <= 0
+              ? null
+              : (deductionAmount / requestedAmount) * 100),
+      deductionReason:
+          (body['deductionReason'] ?? data['deductionReason'])?.toString() ??
+              'iOS payment gateway charges',
+      operatingSystem:
+          (body['operatingSystem'] ?? data['operatingSystem'])?.toString() ??
+              'IOS',
+      paymentGateway:
+          (body['paymentGateway'] ?? data['paymentGateway'])?.toString() ??
+              'APPLE',
+      settlementType:
+          (body['settlementType'] ?? data['settlementType'])?.toString() ??
+              'MONTHLY',
+      transactionId:
+          (body['transactionId'] ?? data['transactionId'] ?? transactionId)
+              ?.toString(),
     );
 
     if (!result.success) {
