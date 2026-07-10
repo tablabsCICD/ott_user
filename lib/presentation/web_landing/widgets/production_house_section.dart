@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/email_service.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/l10n/app_localizations.dart';
+import 'package:ott/presentation/web_landing/widgets/play_store_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProductionHouseSection extends StatelessWidget {
@@ -594,8 +596,7 @@ class _TimelineRowState extends State<_TimelineRow> {
                           ? widget.color
                           : Colors.white.withOpacity(0.10),
                       shape: BoxShape.circle,
-                      border:
-                          Border.all(color: widget.color.withOpacity(0.55)),
+                      border: Border.all(color: widget.color.withOpacity(0.55)),
                     ),
                     child: Center(
                       child: Text(

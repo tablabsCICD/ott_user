@@ -14,6 +14,9 @@ class AppConstant {
   );
   static const playStoreLink =
       "https://play.google.com/store/apps/details?id=com.filmytell.ott";
+  static const filmytellPartnerPlayStoreLink =
+      "https://play.google.com/store/apps/details?id=com.filmytell.partner";
+
   static const webAppLink = "https://filmytell.com";
   static const accountDeletionUrl = "https://filmytell.com/account-delete.html";
 
