@@ -65,7 +65,8 @@ class WalletProvider extends BaseProvider {
     };
   }
 
-  Future<Map<String, Object>> onPaymentVerified({double? expectedAmount}) async {
+  Future<Map<String, Object>> onPaymentVerified(
+      {double? expectedAmount}) async {
     if (_isAddingBalance) {
       return {
         'success': false,
@@ -108,9 +109,8 @@ class WalletProvider extends BaseProvider {
 
         return {
           'success': false,
-          'message':
-              fallbackResult['message']?.toString() ??
-                  'Payment was verified, but the wallet balance has not updated yet. Please check again in a moment.',
+          'message': fallbackResult['message']?.toString() ??
+              'Payment was verified, but the wallet balance has not updated yet. Please check again in a moment.',
         };
       }
 
@@ -139,10 +139,7 @@ class WalletProvider extends BaseProvider {
 
       final response = await ApiHelper().postApiWithBody(
         apiUrl,
-        {
-          'amount': amount,
-          'userId': user!.id,
-        },
+        {'amount': amount, 'userId': user!.id, "operatingSystem": "Android"},
       );
 
       if (response.statusCode != 200) {
@@ -205,7 +202,11 @@ class WalletProvider extends BaseProvider {
     String apiUrl = ApiConstant.addMoneyToWallet;
     print(apiUrl);
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
-    Map<String, dynamic> mapData = {"amount": amount, "userId": user!.id};
+    Map<String, dynamic> mapData = {
+      "amount": amount,
+      "userId": user!.id,
+      "operatingSystem": "Android"
+    };
     ApiHelper apiHelper = ApiHelper();
 
     try {

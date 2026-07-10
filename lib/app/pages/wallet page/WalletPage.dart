@@ -21,7 +21,7 @@ class _WalletPageState extends State<WalletPage> {
   DateTime? _startDate;
   DateTime? _endDate;
 
-  static const double _minimumRechargeAmount = 100;
+  static const double _minimumRechargeAmount = 1;
   static const double _maximumRechargeAmount = 100000;
 
   @override
@@ -463,8 +463,8 @@ class _WalletPageState extends State<WalletPage> {
       _showWalletReflectLoader(pageContext);
       final result = await provider
           .onPaymentVerified(
-            expectedAmount: amt,
-          )
+        expectedAmount: amt,
+      )
           .whenComplete(() {
         if (mounted) {
           Navigator.of(pageContext, rootNavigator: true).pop();

@@ -196,17 +196,11 @@ class _SplashScreenState extends State<SplashScreen> {
                   fit: BoxFit.cover,
                 ),
               )
-            : Center(
-                child: FractionallySizedBox(
-                  widthFactor: 0.8,
-                  heightFactor: 0.8,
-                  child: Hero(
-                    tag: 'logo',
-                    child: Image.asset(
-                      ImageConstant.fullScreenLogo,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
+            : Hero(
+                tag: 'logo',
+                child: Image.asset(
+                  ImageConstant.fullScreenLogo,
+                  fit: BoxFit.cover,
                 ),
               ),
         /* Align(
