@@ -18,6 +18,10 @@ class AppConstant {
       "https://play.google.com/store/apps/details?id=com.filmytell.partner";
 
   static const webAppLink = "https://filmytell.com";
+  static const facebookUrl =
+      "https://www.facebook.com/profile.php?id=61591490073891";
+  static const instagramUrl = "https://www.instagram.com/filmytell/";
+  static const xUrl = "https://x.com/Filmytell";
   static const accountDeletionUrl = "https://filmytell.com/account-delete.html";
 
   static const privacyPolicy =

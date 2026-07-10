@@ -395,6 +395,15 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
       case 'Account Deletion':
         _openExternal(AppConstant.accountDeletionUrl);
         return;
+      case 'Facebook':
+        _openExternal(AppConstant.facebookUrl);
+        return;
+      case 'Instagram':
+        _openExternal(AppConstant.instagramUrl);
+        return;
+      case 'X (Twitter)':
+        _openExternal(AppConstant.xUrl);
+        return;
       case 'About Us':
         if (!mounted) return;
         Navigator.push(
@@ -419,7 +428,7 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
       'Facebook' => 'facebook',
       _ => label.toLowerCase().replaceAll(' ', '-'),
     };
-    _openExternal('https://filmytell.in/$slug/');
+    _openExternal('https://filmytell.com/$slug/');
   }
 
   Future<void> _openTrailer(Content content) async {
