@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/services/invoice_service.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/gifted%20movies%20page/GiftedMoviesPage.dart';
+import 'package:ott/app/pages/wallet%20page/AppleWalletRechargeScreen.dart';
 import 'package:ott/app/pages/wallet%20page/PaymentPage.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
@@ -259,25 +261,26 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                           const SizedBox(height: 10),
 
                           /// Gift Card Link
-                          Center(
-                            child: InkWell(
-                              onTap: _showGiftDialog,
-                              child: Text.rich(
-                                TextSpan(
-                                  style: TextStyle(color: theme.canvasColor),
-                                  children: [
-                                    const TextSpan(text: 'Have a '),
-                                    TextSpan(
-                                      text: widget.movie.title ?? "",
-                                      style:
-                                          TextStyle(color: theme.primaryColor),
-                                    ),
-                                    const TextSpan(text: ' Gift Card?')
-                                  ],
+                          if (!WalletPlatform.isIOS)
+                            Center(
+                              child: InkWell(
+                                onTap: _showGiftDialog,
+                                child: Text.rich(
+                                  TextSpan(
+                                    style: TextStyle(color: theme.canvasColor),
+                                    children: [
+                                      const TextSpan(text: 'Have a '),
+                                      TextSpan(
+                                        text: widget.movie.title ?? "",
+                                        style: TextStyle(
+                                            color: theme.primaryColor),
+                                      ),
+                                      const TextSpan(text: ' Gift Card?')
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -369,6 +372,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
 
   // ---------------- Gift Dialog ----------------
   void _showGiftDialog() {
+    if (WalletPlatform.isIOS) return;
     final theme = Theme.of(context);
     final couponCodeController = TextEditingController();
 
@@ -479,6 +483,14 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
     int movieID,
     int giftCount,
   ) {
+    if (WalletPlatform.isIOS && giftCount > 0) {
+      CustomToast.show(
+        context,
+        'Gift purchases are currently unavailable on iOS.',
+        isSuccess: false,
+      );
+      return;
+    }
     final pageContext = context;
     final theme = Theme.of(context);
     showDialog(
@@ -696,6 +708,16 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
 
   // ---------------- Recharge ----------------
   void _showRechargeDialog(BuildContext context) {
+    if (WalletPlatform.isIOS) {
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => const AppleWalletRechargeScreen(),
+        ),
+      );
+      return;
+    }
+
     final pageContext = context;
     final theme = Theme.of(context);
     showDialog(
@@ -785,12 +807,11 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                               if (!mounted) return;
                               if (result is Map && result['success'] == true) {
                                 _showWalletReflectLoader(pageContext);
-                                final addResult =
-                                    await provider
-                                        .onPaymentVerified(
-                                          expectedAmount: amount,
-                                        )
-                                        .whenComplete(() {
+                                final addResult = await provider
+                                    .onPaymentVerified(
+                                  expectedAmount: amount,
+                                )
+                                    .whenComplete(() {
                                   if (mounted) {
                                     Navigator.of(pageContext,
                                             rootNavigator: true)

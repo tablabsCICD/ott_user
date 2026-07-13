@@ -11,6 +11,7 @@ import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/route/navigation_service.dart';
 import 'package:ott/app/route/routes/app_routes.dart';
 import 'package:ott/app/widgets/gift_claim_dialog.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:provider/provider.dart';
 import 'package:uni_links/uni_links.dart';
@@ -389,6 +390,13 @@ class DeepLinkService {
         await _openShortDetails(navigator, target.id!);
         return;
       case DeepLinkContentType.gift:
+        if (WalletPlatform.isIOS) {
+          developer.log(
+            'Gift deep links are disabled on iOS',
+            name: 'DeepLinkService',
+          );
+          return;
+        }
         await _openGiftClaimDialog(navigator, target.couponCode!);
         return;
     }

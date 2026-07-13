@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/giftMasterModel.dart' hide User;
@@ -29,6 +30,12 @@ class GiftProvider extends BaseProvider {
   /// Save user gift (send gift purchase request to API)
   Future<Map<String, dynamic>> saveUserGift(
       Content content, int giftCount) async {
+    if (WalletPlatform.isIOS) {
+      return {
+        "success": false,
+        "message": "Gift purchases are currently unavailable on iOS."
+      };
+    }
     if (_isSavingGift) {
       return {
         "success": false,
@@ -191,6 +198,12 @@ class GiftProvider extends BaseProvider {
 
   /// use gift by coupon
   Future<Map<String, dynamic>> useGiftByCoupon(String couponCode) async {
+    if (WalletPlatform.isIOS) {
+      return {
+        "success": false,
+        "message": "Gift code redemption is currently unavailable on iOS."
+      };
+    }
     try {
       User? user = await LocalSharePreferences.localSharePreferences.getUser();
 

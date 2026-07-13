@@ -8,6 +8,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
@@ -452,28 +453,30 @@ class _MovieCardState extends State<MovieCard> {
             onEnter: (_) => _handleHover(true),
             onExit: (_) => _handleHover(false),
             child: GestureDetector(
-            onTap: _openDetails,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOut,
-              width: cardWidth,
-              margin: EdgeInsets.only(
-                left: cardMargin,
-                right: cardMargin,
-                bottom: cardMargin,
-                top: showPreview ? 4 : 12, // 👈 selected card moves slightly up
-              ),
-              //    margin: EdgeInsets.all(cardMargin),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: showPreview
-                      ? highlightColor
-                      : theme.canvasColor.withValues(alpha: 0.2),
-                  width: showPreview ? 2.5 : 1,
+              onTap: _openDetails,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                width: cardWidth,
+                margin: EdgeInsets.only(
+                  left: cardMargin,
+                  right: cardMargin,
+                  bottom: cardMargin,
+                  top: showPreview
+                      ? 4
+                      : 12, // 👈 selected card moves slightly up
                 ),
-                /*  boxShadow: showPreview
+                //    margin: EdgeInsets.all(cardMargin),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: showPreview
+                        ? highlightColor
+                        : theme.canvasColor.withValues(alpha: 0.2),
+                    width: showPreview ? 2.5 : 1,
+                  ),
+                  /*  boxShadow: showPreview
                     ? [
                         BoxShadow(
                           color: highlightColor.withValues(alpha: 0.12),
@@ -483,43 +486,43 @@ class _MovieCardState extends State<MovieCard> {
                         ),
                       ]
                     : null, */
-              ),
-              child: Column(
-                children: [
-                  /// 🎬 POSTER + PROGRESS BAR STACK
-                  Expanded(
-                    flex: 8,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: theme.cardColor, width: 1),
-                          left: BorderSide(color: theme.cardColor, width: 1),
-                          right: BorderSide(color: theme.cardColor, width: 1),
+                ),
+                child: Column(
+                  children: [
+                    /// 🎬 POSTER + PROGRESS BAR STACK
+                    Expanded(
+                      flex: 8,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: theme.cardColor, width: 1),
+                            left: BorderSide(color: theme.cardColor, width: 1),
+                            right: BorderSide(color: theme.cardColor, width: 1),
+                          ),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(12),
-                        ),
-                        child: _buildMediaPreview(
-                          posterUrl,
-                          theme,
-                          widget.movie,
-                          showPreview,
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(12),
+                          ),
+                          child: _buildMediaPreview(
+                            posterUrl,
+                            theme,
+                            widget.movie,
+                            showPreview,
+                          ),
                         ),
                       ),
                     ),
-                  ),
 
-                  /// 📄 DETAILS SECTION
-                  Expanded(
-                    flex: 3,
-                    child: _buildContentSection(theme, lang),
-                  ),
-                ],
+                    /// 📄 DETAILS SECTION
+                    Expanded(
+                      flex: 3,
+                      child: _buildContentSection(theme, lang),
+                    ),
+                  ],
+                ),
               ),
-            ),
             ),
           ),
         ),
@@ -770,9 +773,8 @@ class _MovieCardState extends State<MovieCard> {
     var contentUrl = contentToPlay.contentUrl;
 
     if (contentUrl == null || contentUrl.trim().isEmpty) {
-      final fetchedContent = await context
-          .read<DashboardProvider>()
-          .getContentById(movie.id!);
+      final fetchedContent =
+          await context.read<DashboardProvider>().getContentById(movie.id!);
       if (!mounted) return;
 
       if (fetchedContent != null) {
@@ -944,92 +946,92 @@ class _MovieCardState extends State<MovieCard> {
       right: horizontalInset,
       child: _tourWrapMoreActionsTarget(
         SpeedDial(
-        openCloseDial: isDialOpen,
-        onPress: () => isDialOpen.value = !isDialOpen.value,
-        icon: Icons.more_vert,
-        activeIcon: Icons.close,
-        backgroundColor: theme.primaryColor,
-        foregroundColor: Colors.white,
-        overlayColor: Colors.black,
-        overlayOpacity: 0.3,
-        elevation: 2,
-        direction: SpeedDialDirection.down,
-        buttonSize: Size(buttonSize, buttonSize),
-        childrenButtonSize: Size(buttonSize, compactOverlay ? 32 : 35),
-        spacing: 2,
-        children: [
-          movie.isRental!
-              ? SpeedDialChild()
-              : SpeedDialChild(
-                  label: isBookmarked ? "Remove Bookmark" : "Bookmark",
-                  labelBackgroundColor: theme.cardColor,
-                  labelStyle: TextStyle(
-                    color: theme.canvasColor,
-                    fontSize: 10,
+          openCloseDial: isDialOpen,
+          onPress: () => isDialOpen.value = !isDialOpen.value,
+          icon: Icons.more_vert,
+          activeIcon: Icons.close,
+          backgroundColor: theme.primaryColor,
+          foregroundColor: Colors.white,
+          overlayColor: Colors.black,
+          overlayOpacity: 0.3,
+          elevation: 2,
+          direction: SpeedDialDirection.down,
+          buttonSize: Size(buttonSize, buttonSize),
+          childrenButtonSize: Size(buttonSize, compactOverlay ? 32 : 35),
+          spacing: 2,
+          children: [
+            movie.isRental!
+                ? SpeedDialChild()
+                : SpeedDialChild(
+                    label: isBookmarked ? "Remove Bookmark" : "Bookmark",
+                    labelBackgroundColor: theme.cardColor,
+                    labelStyle: TextStyle(
+                      color: theme.canvasColor,
+                      fontSize: 10,
+                    ),
+                    child: Icon(
+                      isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                    backgroundColor: theme.primaryColor,
+                    onTap: () async {
+                      final bool wasBookmarked =
+                          bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
+
+                      await bookmarkProvider.toggleBookmark(movie);
+
+                      CustomToast.show(
+                        context,
+                        wasBookmarked
+                            ? "${movie.title} removed from bookmarks"
+                            : "${movie.title} added to bookmarks",
+                        isSuccess: true,
+                      );
+
+                      isDialOpen.value = false;
+                    },
                   ),
-                  child: Icon(
-                    isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                    size: 14,
-                    color: Colors.white,
-                  ),
-                  backgroundColor: theme.primaryColor,
-                  onTap: () async {
-                    final bool wasBookmarked =
-                        bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
 
-                    await bookmarkProvider.toggleBookmark(movie);
-
-                    CustomToast.show(
-                      context,
-                      wasBookmarked
-                          ? "${movie.title} removed from bookmarks"
-                          : "${movie.title} added to bookmarks",
-                      isSuccess: true,
-                    );
-
-                    isDialOpen.value = false;
-                  },
-                ),
-
-          /// 🔗 Share
-          SpeedDialChild(
-            label: "Share",
-            labelBackgroundColor: theme.cardColor,
-            labelStyle: TextStyle(
-              color: theme.canvasColor,
-              fontSize: 10,
-            ),
-            child: const Icon(Icons.share, size: 14, color: Colors.white),
-            backgroundColor: theme.primaryColor,
-            onTap: () {
-              isDialOpen.value = false;
-              showContentShareSheet(
-                context,
-                movie,
-                contentType: _shareContentTypeFor(movie),
-                unavailableMessage: "Content details are not available yet",
-              );
-            },
-          ),
-
-          /// 🎁 Gift (movies only)
-          if (!isSeries)
+            /// 🔗 Share
             SpeedDialChild(
-              label: "Gift",
+              label: "Share",
               labelBackgroundColor: theme.cardColor,
               labelStyle: TextStyle(
                 color: theme.canvasColor,
                 fontSize: 10,
               ),
-              child:
-                  const Icon(LucideIcons.gift, size: 14, color: Colors.white),
+              child: const Icon(Icons.share, size: 14, color: Colors.white),
               backgroundColor: theme.primaryColor,
               onTap: () {
                 isDialOpen.value = false;
-                _showGiftDialog(context, movie, countController);
+                showContentShareSheet(
+                  context,
+                  movie,
+                  contentType: _shareContentTypeFor(movie),
+                  unavailableMessage: "Content details are not available yet",
+                );
               },
             ),
-        ],
+
+            /// 🎁 Gift (movies only)
+            if (!isSeries && !WalletPlatform.isIOS)
+              SpeedDialChild(
+                label: "Gift",
+                labelBackgroundColor: theme.cardColor,
+                labelStyle: TextStyle(
+                  color: theme.canvasColor,
+                  fontSize: 10,
+                ),
+                child:
+                    const Icon(LucideIcons.gift, size: 14, color: Colors.white),
+                backgroundColor: theme.primaryColor,
+                onTap: () {
+                  isDialOpen.value = false;
+                  _showGiftDialog(context, movie, countController);
+                },
+              ),
+          ],
         ),
       ),
     );
@@ -1049,6 +1051,7 @@ class _MovieCardState extends State<MovieCard> {
     Content movie,
     TextEditingController countController,
   ) {
+    if (WalletPlatform.isIOS) return;
     final theme = Theme.of(context);
 
     showDialog(

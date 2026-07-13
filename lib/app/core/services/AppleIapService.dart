@@ -26,6 +26,7 @@ enum AppleIapDialogType {
   unavailable,
   pending,
   restored,
+  verification,
 }
 
 class AppleIapUserMessage {
@@ -100,10 +101,14 @@ class AppleIapService extends ChangeNotifier {
   List<ProductDetails> _products = [];
   Set<String> _notFoundProductIds = {};
   final Set<String> _creditedPurchaseKeys = {};
+  final Set<String> _verificationInProgress = {};
 
   bool _isAvailable = false;
   bool _isLoadingProducts = false;
   bool _isPurchasing = false;
+  bool _isVerifying = false;
+  bool _isRestoring = false;
+  bool _initialized = false;
   String? _activeProductId;
   String? _errorMessage;
   AppleIapUserMessage? _pendingMessage;
@@ -111,6 +116,10 @@ class AppleIapService extends ChangeNotifier {
   bool get isAvailable => _isAvailable;
   bool get isLoadingProducts => _isLoadingProducts;
   bool get isPurchasing => _isPurchasing;
+  bool get isVerifying => _isVerifying;
+  bool get isRestoring => _isRestoring;
+  bool get isBusy =>
+      _isLoadingProducts || _isPurchasing || _isVerifying || _isRestoring;
   String? get activeProductId => _activeProductId;
   String? get errorMessage => _errorMessage;
   AppleIapUserMessage? get pendingMessage => _pendingMessage;
@@ -131,6 +140,9 @@ class AppleIapService extends ChangeNotifier {
       notifyListeners();
       return;
     }
+
+    if (_initialized) return;
+    _initialized = true;
 
     _purchaseSubscription ??= _iap.purchaseStream.listen(
       _handlePurchaseUpdates,
@@ -182,7 +194,11 @@ class AppleIapService extends ChangeNotifier {
         return;
       }
 
-      _products = List<ProductDetails>.from(response.productDetails)
+      // StoreKit returns only products available for sale to this storefront.
+      // Never synthesize purchasable products from locally configured amounts.
+      _products = response.productDetails
+          .where((product) => productIds.contains(product.id))
+          .toList()
         ..sort((a, b) => _walletAmountFor(a.id).compareTo(
               _walletAmountFor(b.id),
             ));
@@ -211,7 +227,7 @@ class AppleIapService extends ChangeNotifier {
   }
 
   Future<void> buyProduct(ProductDetails product) async {
-    if (!_isAvailable) {
+    if (!_isAvailable || !_products.any((item) => item.id == product.id)) {
       _setMessage(
         AppleIapDialogType.unavailable,
         'Products unavailable',
@@ -220,6 +236,8 @@ class AppleIapService extends ChangeNotifier {
       return;
     }
 
+    if (isBusy) return;
+
     _isPurchasing = true;
     _activeProductId = product.id;
     _errorMessage = null;
@@ -227,7 +245,16 @@ class AppleIapService extends ChangeNotifier {
 
     try {
       final purchaseParam = PurchaseParam(productDetails: product);
-      await _iap.buyConsumable(purchaseParam: purchaseParam);
+      final launched = await _iap.buyConsumable(purchaseParam: purchaseParam);
+      if (!launched) {
+        _isPurchasing = false;
+        _activeProductId = null;
+        _setMessage(
+          AppleIapDialogType.failed,
+          'Purchase could not start',
+          'Apple could not start this purchase. Please try again.',
+        );
+      }
     } catch (error) {
       _isPurchasing = false;
       _activeProductId = null;
@@ -239,10 +266,43 @@ class AppleIapService extends ChangeNotifier {
     }
   }
 
+  Future<void> restorePurchases() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS || isBusy) {
+      return;
+    }
+
+    _isRestoring = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      // Consumables are not generally restorable from purchase history, but
+      // StoreKit will redeliver unfinished transactions. Those transactions
+      // are reverified by the purchase stream before they are completed.
+      await _iap.restorePurchases();
+      _setMessage(
+        AppleIapDialogType.pending,
+        'Purchases checked',
+        'Any unfinished Apple purchases will be verified automatically.',
+        notify: false,
+      );
+    } catch (error) {
+      _setMessage(
+        AppleIapDialogType.network,
+        'Restore failed',
+        'Unable to check Apple purchases. Please check your connection and try again.',
+        notify: false,
+      );
+    } finally {
+      _isRestoring = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> _handlePurchaseUpdates(
     List<PurchaseDetails> purchases,
   ) async {
     for (final purchase in purchases) {
+      var shouldComplete = false;
       switch (purchase.status) {
         case PurchaseStatus.pending:
           _isPurchasing = true;
@@ -254,7 +314,7 @@ class AppleIapService extends ChangeNotifier {
           );
           break;
         case PurchaseStatus.purchased:
-          await _verifyPurchase(purchase);
+          shouldComplete = await _verifyPurchase(purchase);
           break;
         case PurchaseStatus.error:
           _isPurchasing = false;
@@ -271,9 +331,10 @@ class AppleIapService extends ChangeNotifier {
                     ? 'Your purchase was cancelled.'
                     : 'Apple could not complete the purchase.'),
           );
+          shouldComplete = true;
           break;
         case PurchaseStatus.restored:
-          await _verifyPurchase(purchase);
+          shouldComplete = await _verifyPurchase(purchase, restored: true);
           break;
         case PurchaseStatus.canceled:
           _isPurchasing = false;
@@ -283,10 +344,14 @@ class AppleIapService extends ChangeNotifier {
             'Purchase cancelled',
             'Your purchase was cancelled.',
           );
+          shouldComplete = true;
           break;
       }
 
-      if (purchase.pendingCompletePurchase) {
+      // A successful backend verification is the only condition that permits
+      // completing a paid transaction. Failed verification stays unfinished
+      // so StoreKit can redeliver it for a later retry.
+      if (shouldComplete && purchase.pendingCompletePurchase) {
         await _completePurchase(purchase);
       }
     }
@@ -300,7 +365,10 @@ class AppleIapService extends ChangeNotifier {
     }
   }
 
-  Future<void> _verifyPurchase(PurchaseDetails purchase) async {
+  Future<bool> _verifyPurchase(
+    PurchaseDetails purchase, {
+    bool restored = false,
+  }) async {
     final walletAmount = _walletAmountFor(purchase.productID);
     if (walletAmount <= 0) {
       _isPurchasing = false;
@@ -310,22 +378,38 @@ class AppleIapService extends ChangeNotifier {
         'Invalid product',
         'This Apple wallet product is not available.',
       );
-      return;
+      return false;
     }
 
-    final purchaseId =
-        purchase.purchaseID ?? purchase.verificationData.localVerificationData;
-    final purchaseKey = purchaseId.isNotEmpty
-        ? purchaseId
-        : purchase.verificationData.serverVerificationData;
+    final purchaseId = purchase.purchaseID?.trim() ?? '';
+    final receiptData = purchase.verificationData.serverVerificationData.trim();
+    final purchaseKey = purchaseId.isNotEmpty ? purchaseId : receiptData;
+
+    if (purchaseId.isEmpty || receiptData.isEmpty) {
+      _isPurchasing = false;
+      _activeProductId = null;
+      _setMessage(
+        AppleIapDialogType.failed,
+        'Invalid receipt',
+        'Apple returned incomplete purchase data. The wallet was not credited.',
+      );
+      return false;
+    }
 
     if (_creditedPurchaseKeys.contains(purchaseKey)) {
       _isPurchasing = false;
       _activeProductId = null;
       notifyListeners();
-      return;
+      return true;
     }
+    if (!_verificationInProgress.add(purchaseKey)) return false;
 
+    _isVerifying = true;
+    _setMessage(
+      AppleIapDialogType.verification,
+      'Verifying purchase',
+      'Your Apple purchase is being verified securely.',
+    );
     try {
       // Apple IAP only collects payment. The backend verifies Apple purchase
       // data before crediting the Filmytell wallet.
@@ -333,15 +417,15 @@ class AppleIapService extends ChangeNotifier {
         productId: purchase.productID,
         transactionId: purchaseId,
         walletAmount: walletAmount,
-        receiptData: purchase.verificationData.serverVerificationData,
+        receiptData: receiptData,
       );
       _creditedPurchaseKeys.add(purchaseKey);
       _isPurchasing = false;
       _activeProductId = null;
       final creditedAmount = result.creditedAmount ?? walletAmount.toDouble();
       _setMessage(
-        AppleIapDialogType.success,
-        'Wallet Recharge Successful',
+        restored ? AppleIapDialogType.restored : AppleIapDialogType.success,
+        restored ? 'Purchase Restored' : 'Wallet Recharge Successful',
         '\u20B9${creditedAmount.toStringAsFixed(2)} has been added to your wallet.',
         requestedAmount: result.requestedAmount ?? walletAmount.toDouble(),
         creditedAmount: creditedAmount,
@@ -352,14 +436,25 @@ class AppleIapService extends ChangeNotifier {
         paymentGateway: result.paymentGateway,
         settlementType: result.settlementType,
       );
+      return true;
     } catch (error) {
       _isPurchasing = false;
       _activeProductId = null;
+      final isNetworkFailure = error is TimeoutException;
       _setMessage(
-        AppleIapDialogType.network,
-        'Wallet credit failed',
-        'Payment succeeded, but wallet credit failed. Please contact support.',
+        isNetworkFailure
+            ? AppleIapDialogType.network
+            : AppleIapDialogType.failed,
+        'Verification failed',
+        isNetworkFailure
+            ? 'The verification service could not be reached. The wallet was not credited. Use Restore Purchases to retry.'
+            : 'Apple could not validate this receipt. The wallet was not credited. Please contact support if the purchase appears in your Apple history.',
       );
+      return false;
+    } finally {
+      _verificationInProgress.remove(purchaseKey);
+      _isVerifying = false;
+      notifyListeners();
     }
   }
 
@@ -403,7 +498,8 @@ class AppleIapService extends ChangeNotifier {
     );
     _errorMessage = type == AppleIapDialogType.success ||
             type == AppleIapDialogType.pending ||
-            type == AppleIapDialogType.restored
+            type == AppleIapDialogType.restored ||
+            type == AppleIapDialogType.verification
         ? null
         : message;
     if (notify) notifyListeners();

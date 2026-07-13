@@ -9,6 +9,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
@@ -944,7 +945,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
           ),
 
           /// 🎁 Gift (movies only)
-          if (!isSeries)
+          if (!isSeries && !WalletPlatform.isIOS)
             SpeedDialChild(
               label: "Gift",
               labelBackgroundColor: theme.cardColor,
@@ -1004,6 +1005,7 @@ $shareLink
     Content movie,
     TextEditingController countController,
   ) {
+    if (WalletPlatform.isIOS) return;
     final theme = Theme.of(context);
 
     showDialog(

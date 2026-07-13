@@ -72,6 +72,12 @@ class WalletService {
   }
 
   Future<AddWalletAmountResponse> addWalletAmount(double amount) async {
+    if (WalletPlatform.isIOS) {
+      throw StateError(
+        'Direct wallet recharge is unavailable on iOS. Use Apple In-App Purchase.',
+      );
+    }
+
     final user = await _getUser();
     if (user?.id == null) {
       throw Exception('User not found');
@@ -166,13 +172,8 @@ class WalletService {
         'userId': user!.id,
         'platform': 'IOS',
         'productId': productId,
-        'transactionId': transactionId,
-        'walletAmount': walletAmount,
-        'receiptData': receiptData,
-        'product_id': productId,
         'transaction_id': transactionId,
-        'wallet_amount': walletAmount,
-        'receipt_data': receiptData,
+        'verificationData': receiptData,
       },
     ).timeout(const Duration(seconds: 30));
 
@@ -187,10 +188,11 @@ class WalletService {
       );
     }
 
-    final success = body['success'] != false;
     final data = body['data'] is Map<String, dynamic>
         ? body['data'] as Map<String, dynamic>
         : <String, dynamic>{};
+    // Never interpret an ambiguous 200 response as a verified purchase.
+    final success = body['success'] == true || data['success'] == true;
     final creditedAmount =
         _asDouble(body['creditedAmount'] ?? data['creditedAmount']);
     final requestedAmount =
@@ -234,13 +236,19 @@ class WalletService {
       settlementType:
           (body['settlementType'] ?? data['settlementType'])?.toString() ??
               'MONTHLY',
-      transactionId:
-          (body['transactionId'] ?? data['transactionId'] ?? transactionId)
-              ?.toString(),
+      transactionId: (body['transactionId'] ??
+              body['transaction_id'] ??
+              data['transactionId'] ??
+              data['transaction_id'] ??
+              transactionId)
+          .toString(),
     );
 
     if (!result.success) {
       throw Exception(result.message);
+    }
+    if (result.transactionId != transactionId) {
+      throw Exception('Apple verification returned a different transaction');
     }
 
     return result;

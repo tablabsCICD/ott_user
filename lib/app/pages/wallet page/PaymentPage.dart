@@ -59,7 +59,7 @@ class _PaymentPageState extends State<PaymentPage> {
           PaymentResult(
             success: false,
             message:
-                'Razorpay checkout is only available on web, Android, and iOS.',
+                'Razorpay checkout is only available on web and Android.',
           ),
         );
         return;

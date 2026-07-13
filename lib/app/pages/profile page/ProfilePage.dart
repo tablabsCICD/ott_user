@@ -6,6 +6,7 @@ import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/services/legal_document_service.dart';
 import 'package:ott/app/core/services/session_manager.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/core/utils/image_url_utils.dart';
 import 'package:ott/app/core/utils/legal_document_url_utils.dart';
 import 'package:ott/app/pages/bookmarks%20page/bookmark_page.dart';
@@ -300,28 +301,29 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                               ],
                             ),
-                            profileCard(
-                              lang.gifts,
-                              [
-                                ProfileOption(
-                                  icon: Icons.history_sharp,
-                                  title: lang.giftedByYou,
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            GiftedMoviesPage()),
+                            if (!WalletPlatform.isIOS)
+                              profileCard(
+                                lang.gifts,
+                                [
+                                  ProfileOption(
+                                    icon: Icons.history_sharp,
+                                    title: lang.giftedByYou,
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              GiftedMoviesPage()),
+                                    ),
                                   ),
-                                ),
-                                ProfileOption(
-                                  icon: LucideIcons.gift,
-                                  title: lang.claimGiftCard,
-                                  onTap: () {
-                                    showGiftClaimDialog(context);
-                                  },
-                                ),
-                              ],
-                            ),
+                                  ProfileOption(
+                                    icon: LucideIcons.gift,
+                                    title: lang.claimGiftCard,
+                                    onTap: () {
+                                      showGiftClaimDialog(context);
+                                    },
+                                  ),
+                                ],
+                              ),
                             profileCard(
                               lang.feedbackAndInformation,
                               [

@@ -26,6 +26,7 @@ class AppleWalletRechargeScreen extends StatefulWidget {
 
 class _AppleWalletRechargeScreenState extends State<AppleWalletRechargeScreen> {
   bool _initialized = false;
+  bool _isRefreshingWallet = false;
 
   @override
   void initState() {
@@ -45,7 +46,7 @@ class _AppleWalletRechargeScreenState extends State<AppleWalletRechargeScreen> {
       builder: (context, iapService, walletProvider, _) {
         _handlePendingMessage(iapService, walletProvider);
 
-        final body = RefreshIndicator(
+        final content = RefreshIndicator(
           onRefresh: iapService.loadProducts,
           child: ListView(
             padding: EdgeInsets.fromLTRB(
@@ -80,8 +81,51 @@ class _AppleWalletRechargeScreenState extends State<AppleWalletRechargeScreen> {
                 _buildUnavailableState(context, iapService)
               else
                 _buildPackageGrid(context, iapService),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed:
+                    iapService.isBusy ? null : iapService.restorePurchases,
+                icon: iapService.isRestoring
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.restore),
+                label: const Text('Restore Purchases'),
+              ),
             ],
           ),
+        );
+        final body = Stack(
+          children: [
+            content,
+            if (iapService.isVerifying || _isRefreshingWallet)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: Colors.black26,
+                  child: Center(
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: 12),
+                            Text(
+                              iapService.isVerifying
+                                  ? 'Verifying Apple purchase...'
+                                  : 'Refreshing wallet...',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         );
 
         if (!widget.showAppBar) return body;
@@ -153,15 +197,16 @@ class _AppleWalletRechargeScreenState extends State<AppleWalletRechargeScreen> {
   ) {
     final isWide = ResponsiveWidget.isDesktop(context) ||
         ResponsiveWidget.isTablet(context);
-    final productById = {
-      for (final ProductDetails product in iapService.products)
-        product.id: product
+    final packageById = {
+      for (final package in AppleIapService.packages)
+        package.productId: package,
     };
-    final cards = AppleIapService.packages.map((package) {
+    final cards = iapService.products.map((product) {
+      final package = packageById[product.id]!;
       return _AppleWalletPackageCard(
         package: package,
-        product: productById[package.productId],
-        isBusy: iapService.isPurchasing,
+        product: product,
+        isBusy: iapService.isBusy,
         isActive: iapService.activeProductId == package.productId,
         onBuy: (product) => iapService.buyProduct(product),
       );
@@ -238,18 +283,24 @@ class _AppleWalletRechargeScreenState extends State<AppleWalletRechargeScreen> {
     WalletProvider walletProvider,
   ) {
     final message = iapService.pendingMessage;
-    if (message == null) return;
+    if (message == null || message.type == AppleIapDialogType.verification) {
+      return;
+    }
 
     iapService.consumeMessage();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
 
-      if (message.type == AppleIapDialogType.success) {
+      if (message.type == AppleIapDialogType.success ||
+          message.type == AppleIapDialogType.restored) {
+        setState(() => _isRefreshingWallet = true);
         await walletProvider.refreshWalletData();
+        if (mounted) setState(() => _isRefreshingWallet = false);
       }
 
       if (!mounted) return;
-      if (message.type == AppleIapDialogType.success &&
+      if ((message.type == AppleIapDialogType.success ||
+              message.type == AppleIapDialogType.restored) &&
           message.requestedAmount != null &&
           message.creditedAmount != null) {
         await showDialog<void>(
@@ -281,7 +332,9 @@ class _AppleWalletRechargeScreenState extends State<AppleWalletRechargeScreen> {
       }
 
       if (!mounted) return;
-      if (message.type == AppleIapDialogType.success && widget.popOnSuccess) {
+      if ((message.type == AppleIapDialogType.success ||
+              message.type == AppleIapDialogType.restored) &&
+          widget.popOnSuccess) {
         Navigator.of(context).pop(true);
       }
     });

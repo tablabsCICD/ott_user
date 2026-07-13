@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/wallet%20page/PaymentPage.dart';
+import 'package:ott/app/pages/wallet%20page/AppleWalletRechargeScreen.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/provider/series_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -328,6 +330,16 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
   }
 
   void _showRechargeDialog(BuildContext context) {
+    if (WalletPlatform.isIOS) {
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => const AppleWalletRechargeScreen(),
+        ),
+      );
+      return;
+    }
+
     final pageContext = context;
     final theme = Theme.of(context);
     showDialog(

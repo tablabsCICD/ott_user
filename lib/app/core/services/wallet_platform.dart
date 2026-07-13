@@ -3,6 +3,9 @@ import 'package:flutter/foundation.dart';
 class WalletPlatform {
   const WalletPlatform._();
 
+  static bool get isIOS =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
   static String? get operatingSystem {
     if (kIsWeb) return 'WEB';
 

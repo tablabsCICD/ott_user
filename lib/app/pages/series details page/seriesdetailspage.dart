@@ -9,6 +9,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
@@ -606,12 +607,13 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
             unavailableMessage: "Series details are not available yet",
           ),
         ),
-        _tvActionButton(
-          theme: theme,
-          label: 'Gift',
-          icon: LucideIcons.gift,
-          onPressed: () => _showGiftDialog(context, widget.content),
-        ),
+        if (!WalletPlatform.isIOS)
+          _tvActionButton(
+            theme: theme,
+            label: 'Gift',
+            icon: LucideIcons.gift,
+            onPressed: () => _showGiftDialog(context, widget.content),
+          ),
       ],
     );
   }
@@ -1259,6 +1261,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   }
 
   void _showGiftDialog(BuildContext context, Content seriesContent) {
+    if (WalletPlatform.isIOS) return;
     final theme = Theme.of(context);
     final TextEditingController countController = TextEditingController();
 
@@ -1534,6 +1537,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   }
 
   Widget _buildGifting(BuildContext context, Content seriesContent) {
+    if (WalletPlatform.isIOS) return const SizedBox.shrink();
     final theme = Theme.of(context);
     final TextEditingController countController = TextEditingController();
 
