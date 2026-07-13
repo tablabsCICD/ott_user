@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 class AppConstant {
   static const String appVersion = "1.0.0";
-  static const int appBuildNumber = 8;
+  static const int appBuildNumber = 9;
   static final String GOOGLE_KEY = "AIzaSyDbIESWMKX_4TqGEiFUhbu8-PUpLnVBPrc";
   static const String razorpayKeyId = String.fromEnvironment(
     'RAZORPAY_KEY_ID',
@@ -18,8 +18,7 @@ class AppConstant {
       "https://play.google.com/store/apps/details?id=com.filmytell.ott";
   static const filmytellPartnerPlayStoreLink =
       "https://play.google.com/store/apps/details?id=com.filmytell.partner";
-  static const filmytell_partner_playStoreLink =
-      filmytellPartnerPlayStoreLink;
+  static const filmytell_partner_playStoreLink = filmytellPartnerPlayStoreLink;
   static const appStoreLink = String.fromEnvironment(
     'APP_STORE_URL',
     defaultValue: '',

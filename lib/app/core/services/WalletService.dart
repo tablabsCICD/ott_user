@@ -80,6 +80,7 @@ class WalletService {
     final body = <String, dynamic>{
       'amount': amount,
       'userId': user!.id,
+      //"operatingSystem": "IOS"
     };
     final operatingSystem = WalletPlatform.operatingSystem;
     if (operatingSystem != null) {
