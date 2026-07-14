@@ -90,7 +90,7 @@ class WalletService {
     };
     final operatingSystem = WalletPlatform.operatingSystem;
     if (operatingSystem != null) {
-      body['operatingSystem'] = operatingSystem;
+      //body['operatingSystem'] = operatingSystem;
     }
 
     final response = await _apiHelper.postApiWithBody(
