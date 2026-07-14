@@ -301,9 +301,13 @@ class AntiPiracyApiClient {
         final normalizedKey = key.toLowerCase().replaceAll(RegExp(r'[-_]'), '');
         final sensitive = normalizedKey == 'authorization' ||
             normalizedKey.contains('token') ||
+            normalizedKey == 'playbackurl' ||
             normalizedKey == 'signedurl' ||
             normalizedKey == 'signature' ||
-            normalizedKey == 'sessionid';
+            normalizedKey == 'sessionid' ||
+            normalizedKey == 'cloudfrontpolicy' ||
+            normalizedKey == 'cloudfrontsignature' ||
+            normalizedKey == 'cloudfrontkeypairid';
         return MapEntry(
           key,
           sensitive ? '<redacted>' : _redactSensitiveFields(rawValue),

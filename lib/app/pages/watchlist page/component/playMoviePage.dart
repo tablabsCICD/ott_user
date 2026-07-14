@@ -13,6 +13,7 @@ import 'package:ott/app/core/services/anti_piracy_service.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/core/services/session_manager.dart';
 import 'package:ott/app/provider/secure_playback_controller.dart';
+import 'package:ott/data/models/anti_piracy_models.dart';
 import 'package:ott/data/models/seriesModel.dart';
 import 'package:provider/provider.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -35,6 +36,16 @@ String? _extractYoutubeId(String urlOrId) {
 
   final looksLikeVideoId = RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(value);
   return looksLikeVideoId ? value : null;
+}
+
+String _resolvePlaybackCountryCode() {
+  final countryCode =
+      WidgetsBinding.instance.platformDispatcher.locale.countryCode;
+  final normalized = countryCode?.trim().toUpperCase();
+  if (normalized != null && RegExp(r'^[A-Z]{2}$').hasMatch(normalized)) {
+    return normalized;
+  }
+  return 'IN';
 }
 
 class PlayMediaPage extends StatefulWidget {
@@ -282,7 +293,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     final controller = SecurePlaybackController(
       contentId: contentId,
       originalPlaybackUrl: sourceUrl,
-      country: 'IN',
+      country: _resolvePlaybackCountryCode(),
       mediaLoader: _loadSecureMedia,
       pausePlayer: _pauseActivePlayer,
     );
@@ -312,23 +323,23 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   Future<SecureMediaRestoreResult> _loadSecureMedia(
-    String signedUrl, {
+    SignedPlaybackResponse authorization, {
     required bool isRefresh,
   }) async {
     SecurityDebugLog.event(
       'PLAYER',
       isRefresh
-          ? 'Received refreshed signedUrl; reinitializing media_kit.'
-          : 'Received signedUrl; initializing media_kit now.',
+          ? 'Received refreshed CloudFront cookies; reinitializing media_kit.'
+          : 'Received CloudFront signed-cookie authorization; initializing media_kit now.',
     );
-    final signedUri = Uri.tryParse(signedUrl);
+    final playbackUri = Uri.tryParse(authorization.playbackUrl);
     SecurityDebugLog.diagnostic(
-      'SIGNED_MEDIA_METADATA validUri=${signedUri != null} '
-      'scheme=${signedUri?.scheme ?? '<missing>'} '
-      'host=${signedUri?.host ?? '<missing>'} '
-      'path=${signedUri?.path ?? '<missing>'} '
-      'hasQuery=${signedUri?.hasQuery ?? false} '
-      'queryKeys=${signedUri?.queryParameters.keys.toList() ?? const <String>[]}',
+      'SIGNED_MEDIA_METADATA validUri=${playbackUri != null} '
+      'scheme=${playbackUri?.scheme ?? '<missing>'} '
+      'host=${playbackUri?.host ?? '<missing>'} '
+      'authorizationType=${authorization.authorizationType} '
+      'cookieNames=${authorization.cookies.keys.toList()} '
+      'cookieValuesRedacted=true',
     );
     final previous = _player?.state;
     final position = previous?.position ?? Duration.zero;
@@ -338,7 +349,11 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     final audioTrack = previous?.track.audio;
     final subtitleTrack = previous?.track.subtitle;
 
-    await _setupPlayer(signedUrl, diagnoseSignedHls: true);
+    await _setupPlayer(
+      authorization.playbackUrl,
+      httpHeaders: {'Cookie': authorization.cookieHeader},
+      diagnoseSignedHls: true,
+    );
     final player = _player;
     if (player == null || _hasPlaybackError) {
       SecurityDebugLog.event(
@@ -362,7 +377,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
     SecurityDebugLog.event(
       'PLAYER',
-      'media_kit accepted the signed source; URL remains redacted.',
+      'media_kit accepted the cookie-authorized source; URL and cookies remain redacted.',
     );
     return SecureMediaRestoreResult(isPlaying: player.state.playing);
   }
@@ -470,6 +485,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     String url, {
     bool playFromFile = false,
     bool diagnoseSignedHls = false,
+    Map<String, String>? httpHeaders,
   }) async {
     final token = ++_setupToken;
 
@@ -489,7 +505,10 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     if (_isDisposed || !mounted || token != _setupToken) return;
 
     if (kDebugMode && diagnoseSignedHls) {
-      await _probeSignedHls(url);
+      await _probeSignedHls(
+        url,
+        cookieHeader: httpHeaders?['Cookie'],
+      );
       if (_isDisposed || !mounted || token != _setupToken) return;
     }
 
@@ -500,7 +519,10 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       // media_kit is the underlying playback engine; the route keeps the
       // existing fullscreen, resume, continue-watching and auto-next behavior.
       await player.open(
-        Media(playFromFile ? _localFileMediaUri(url) : url),
+        Media(
+          playFromFile ? _localFileMediaUri(url) : url,
+          httpHeaders: httpHeaders,
+        ),
         play: false,
       );
       await player.setVolume(100);
@@ -541,8 +563,11 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     await _resumeAndPlay(token);
   }
 
-  Future<void> _probeSignedHls(String signedUrl) async {
-    final uri = Uri.tryParse(signedUrl);
+  Future<void> _probeSignedHls(
+    String playbackUrl, {
+    required String? cookieHeader,
+  }) async {
+    final uri = Uri.tryParse(playbackUrl);
     if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
       SecurityDebugLog.event(
         'HLS_PROBE',
@@ -553,14 +578,22 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
     SecurityDebugLog.event(
       'HLS_PROBE',
-      'Requesting the signed top-level HLS resource before media_kit opens it.',
+      'Requesting the top-level HLS resource with redacted CloudFront cookies before media_kit opens it.',
     );
+    if (cookieHeader == null || cookieHeader.isEmpty) {
+      SecurityDebugLog.event(
+        'HLS_PROBE',
+        'CloudFront cookie header is missing; the protected request was not sent.',
+      );
+      return;
+    }
     try {
       final response = await http.get(
         uri,
-        headers: const {
+        headers: {
           'Accept': 'application/vnd.apple.mpegurl, application/x-mpegURL, */*',
           'Range': 'bytes=0-65535',
+          'Cookie': cookieHeader,
         },
       ).timeout(const Duration(seconds: 10));
       final contentType = response.headers['content-type'] ?? '<missing>';
@@ -592,7 +625,6 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           .toList(growable: false);
       var relativeUris = 0;
       var absoluteUris = 0;
-      var signedChildUris = 0;
       for (final value in mediaUris) {
         final child = Uri.tryParse(value);
         if (child == null) continue;
@@ -601,26 +633,12 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         } else {
           relativeUris++;
         }
-        final keys = child.queryParameters.keys
-            .map((key) => key.toLowerCase())
-            .toSet();
-        if (keys.contains('signature') &&
-            keys.contains('key-pair-id') &&
-            keys.contains('expires')) {
-          signedChildUris++;
-        }
       }
       SecurityDebugLog.diagnostic(
         'HLS_PLAYLIST_CHECK validM3u8=$isHls childUriCount=${mediaUris.length} '
         'relativeChildUris=$relativeUris absoluteChildUris=$absoluteUris '
-        'signedChildUris=$signedChildUris',
+        'cookieAuthorizationApplied=true',
       );
-      if (mediaUris.isNotEmpty && signedChildUris == 0) {
-        SecurityDebugLog.event(
-          'HLS_PROBE',
-          'The playlist children do not contain CloudFront signing parameters. Signed cookies or backend playlist rewriting may be required.',
-        );
-      }
     } catch (error, stackTrace) {
       SecurityDebugLog.exception('HLS_PROBE_NETWORK', error, stackTrace);
     }

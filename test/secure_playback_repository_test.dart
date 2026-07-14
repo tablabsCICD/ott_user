@@ -58,10 +58,19 @@ class _PlaybackApi extends AntiPiracyApiClient {
     SignedPlaybackRequest request,
   ) async {
     this.request = request;
+    final expiresAt = DateTime.now().toUtc().add(const Duration(minutes: 10));
     return SignedPlaybackResponse(
-      signedUrl: 'https://cdn.example.com/master.m3u8?redacted=1',
+      playbackUrl: 'https://cdn.example.com/master.m3u8',
+      signedUrl: 'https://cdn.example.com/master.m3u8',
+      authorizationType: SignedPlaybackResponse.cloudFrontSignedCookies,
+      cookies: const {
+        'CloudFront-Policy': 'policy',
+        'CloudFront-Signature': 'signature',
+        'CloudFront-Key-Pair-Id': 'key-pair',
+      },
       sessionId: 'session-id',
-      expiresAt: DateTime.now().toUtc().add(const Duration(minutes: 10)),
+      expiresAt: expiresAt,
+      expiresAtEpochSeconds: expiresAt.millisecondsSinceEpoch ~/ 1000,
     );
   }
 }

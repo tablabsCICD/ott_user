@@ -86,6 +86,7 @@ class BookmarkProvider extends BaseProvider {
   Future<bool> removeBookmarkShort(int shortId) async {
     try {
       final user = await _getUser();
+
       if (user == null) return false;
 
       final url = ApiConstant.removeBookmarkShort(user.id, shortId);

@@ -37,15 +37,28 @@ void main() {
 
     test('parses valid signed playback response as UTC', () async {
       final expiry = DateTime.now().toUtc().add(const Duration(minutes: 10));
+      final expiryEpoch = expiry.millisecondsSinceEpoch ~/ 1000;
+      late http.Request capturedRequest;
       final api = AntiPiracyApiClient(
-        client: MockClient((_) async => http.Response(
+        client: MockClient((request) async {
+          capturedRequest = request;
+          return http.Response(
               jsonEncode({
-                'signedUrl': 'https://cdn.example.com/master.m3u8?token=secret',
+                'signedUrl': 'https://cdn.example.com/master.m3u8',
+                'playbackUrl': 'https://cdn.example.com/master.m3u8',
+                'authorizationType': 'CLOUDFRONT_SIGNED_COOKIES',
+                'cookies': {
+                  'CloudFront-Policy': 'policy',
+                  'CloudFront-Signature': 'signature',
+                  'CloudFront-Key-Pair-Id': 'key-pair',
+                },
                 'sessionId': 'session-1',
                 'expiresAt': expiry.toIso8601String(),
+                'expiresAtEpochSeconds': expiryEpoch,
               }),
               200,
-            )),
+            );
+        }),
         tokenProvider: () async => 'token',
       );
 
@@ -65,6 +78,21 @@ void main() {
 
       expect(result.sessionId, 'session-1');
       expect(result.expiresAt.isUtc, isTrue);
+      expect(result.playbackUrl, 'https://cdn.example.com/master.m3u8');
+      final requestBody = jsonDecode(capturedRequest.body) as Map;
+      expect(requestBody['contentId'], isA<String>());
+      expect(requestBody.keys, containsAll(<String>[
+        'contentId',
+        'deviceId',
+        'playbackUrl',
+        'country',
+        'deviceIntegrity',
+      ]));
+      expect(
+        result.cookieHeader,
+        'CloudFront-Policy=policy; CloudFront-Signature=signature; '
+        'CloudFront-Key-Pair-Id=key-pair',
+      );
     });
 
     test('maps 401 and 403 without exposing backend body', () async {
@@ -98,47 +126,75 @@ void main() {
   });
 
   group('SignedPlaybackResponse', () {
-    test('accepts fractional Unix epoch seconds from the backend', () {
-      const epochSeconds = 1784015010.3254907;
+    test('accepts signed-cookie response and epoch expiry', () {
+      final now = DateTime.now().toUtc();
+      final epochSeconds =
+          now.add(const Duration(minutes: 10)).millisecondsSinceEpoch ~/ 1000;
       final response = SignedPlaybackResponse.fromJson(
         {
-          'signedUrl': 'https://cdn.example.com/master.m3u8?token=secret',
+          'signedUrl': 'https://cdn.example.com/master.m3u8',
+          'playbackUrl': 'https://cdn.example.com/master.m3u8',
+          'authorizationType': 'CLOUDFRONT_SIGNED_COOKIES',
+          'cookies': {
+            'CloudFront-Policy': 'policy',
+            'CloudFront-Signature': 'signature',
+            'CloudFront-Key-Pair-Id': 'key-pair',
+          },
           'sessionId': 'session',
-          'expiresAt': epochSeconds,
+          'expiresAt': DateTime.fromMillisecondsSinceEpoch(
+            epochSeconds * 1000,
+            isUtc: true,
+          ).toIso8601String(),
+          'expiresAtEpochSeconds': epochSeconds,
         },
-        now: DateTime.fromMillisecondsSinceEpoch(
-          1784014000000,
-          isUtc: true,
-        ),
+        now: now,
       );
 
       expect(response.expiresAt.isUtc, isTrue);
-      expect(
-        response.expiresAt.microsecondsSinceEpoch,
-        (epochSeconds * 1000000).round(),
-      );
+      expect(response.expiresAtEpochSeconds, epochSeconds);
+      expect(response.isValidAt(now), isTrue);
     });
 
-    test('rejects non-HTTPS and expired responses', () {
+    test('rejects missing cookie authorization and expired responses', () {
       expect(
         () => SignedPlaybackResponse.fromJson({
-          'signedUrl': 'http://cdn.example.com/master.m3u8',
+          'signedUrl': 'https://cdn.example.com/master.m3u8',
+          'playbackUrl': 'https://cdn.example.com/master.m3u8',
           'sessionId': 'session',
-          'expiresAt': DateTime.now()
-              .toUtc()
-              .add(const Duration(minutes: 5))
-              .toIso8601String(),
+          'expiresAtEpochSeconds':
+              DateTime.now().millisecondsSinceEpoch ~/ 1000 + 300,
         }),
         throwsFormatException,
       );
       expect(
         () => SignedPlaybackResponse.fromJson({
           'signedUrl': 'https://cdn.example.com/master.m3u8',
+          'playbackUrl': 'https://cdn.example.com/master.m3u8',
+          'authorizationType': 'CLOUDFRONT_SIGNED_COOKIES',
+          'cookies': {
+            'CloudFront-Policy': 'policy\r\ninjected-header: value',
+            'CloudFront-Signature': 'signature',
+            'CloudFront-Key-Pair-Id': 'key-pair',
+          },
           'sessionId': 'session',
-          'expiresAt': DateTime.now()
-              .toUtc()
-              .subtract(const Duration(seconds: 1))
-              .toIso8601String(),
+          'expiresAtEpochSeconds':
+              DateTime.now().millisecondsSinceEpoch ~/ 1000 + 300,
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => SignedPlaybackResponse.fromJson({
+          'signedUrl': 'https://cdn.example.com/master.m3u8',
+          'playbackUrl': 'https://cdn.example.com/master.m3u8',
+          'authorizationType': 'CLOUDFRONT_SIGNED_COOKIES',
+          'cookies': {
+            'CloudFront-Policy': 'policy',
+            'CloudFront-Signature': 'signature',
+            'CloudFront-Key-Pair-Id': 'key-pair',
+          },
+          'sessionId': 'session',
+          'expiresAtEpochSeconds':
+              DateTime.now().millisecondsSinceEpoch ~/ 1000 - 1,
         }),
         throwsFormatException,
       );

@@ -116,23 +116,83 @@ class SignedPlaybackRequest {
 
 class SignedPlaybackResponse {
   const SignedPlaybackResponse({
+    required this.playbackUrl,
     required this.signedUrl,
+    required this.authorizationType,
+    required this.cookies,
     required this.sessionId,
     required this.expiresAt,
+    required this.expiresAtEpochSeconds,
   });
 
+  static const cloudFrontSignedCookies = 'CLOUDFRONT_SIGNED_COOKIES';
+  static const requiredCookieNames = <String>{
+    'CloudFront-Policy',
+    'CloudFront-Signature',
+    'CloudFront-Key-Pair-Id',
+  };
+
+  final String playbackUrl;
   final String signedUrl;
+  final String authorizationType;
+  final Map<String, String> cookies;
   final String sessionId;
   final DateTime expiresAt;
+  final int expiresAtEpochSeconds;
+
+  String get cookieHeader =>
+      requiredCookieNames.map((name) => '$name=${cookies[name]}').join('; ');
+
+  bool get isValid => isValidAt(DateTime.now().toUtc());
+
+  bool isValidAt(DateTime now) {
+    final uri = Uri.tryParse(playbackUrl);
+    return uri != null &&
+        uri.scheme == 'https' &&
+        uri.host.isNotEmpty &&
+        authorizationType == cloudFrontSignedCookies &&
+        sessionId.isNotEmpty &&
+        expiresAtEpochSeconds > now.toUtc().millisecondsSinceEpoch ~/ 1000 &&
+        requiredCookieNames.every((name) {
+          final value = cookies[name];
+          return value != null &&
+              value.isNotEmpty &&
+              !value.contains(RegExp(r'[;\r\n]'));
+        });
+  }
 
   factory SignedPlaybackResponse.fromJson(
     Map<String, dynamic> json, {
     DateTime? now,
   }) {
-    final signedUrl = (json['signedUrl'] ?? '').toString().trim();
-    final uri = Uri.tryParse(signedUrl);
+    final playbackUrl = (json['playbackUrl'] ?? '').toString().trim();
+    final uri = Uri.tryParse(playbackUrl);
     if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
       throw const FormatException('Invalid secure playback URL.');
+    }
+
+    final signedUrl = (json['signedUrl'] ?? '').toString().trim();
+    final authorizationType =
+        (json['authorizationType'] ?? '').toString().trim();
+    if (authorizationType != cloudFrontSignedCookies) {
+      throw const FormatException('Unsupported playback authorization.');
+    }
+
+    final rawCookies = json['cookies'];
+    if (rawCookies is! Map) {
+      throw const FormatException('Missing CloudFront playback cookies.');
+    }
+    final cookies = rawCookies.map(
+      (key, value) => MapEntry(key.toString(), value.toString().trim()),
+    );
+    final cookiesValid = requiredCookieNames.every((name) {
+      final value = cookies[name];
+      return value != null &&
+          value.isNotEmpty &&
+          !value.contains(RegExp(r'[;\r\n]'));
+    });
+    if (!cookiesValid) {
+      throw const FormatException('Invalid CloudFront playback cookies.');
     }
 
     final sessionId = (json['sessionId'] ?? '').toString().trim();
@@ -140,49 +200,35 @@ class SignedPlaybackResponse {
       throw const FormatException('Missing secure playback session.');
     }
 
-    final expiresAt = _parseExpiry(json['expiresAt']);
+    final rawEpoch = json['expiresAtEpochSeconds'];
+    final epochNumber =
+        rawEpoch is num ? rawEpoch : num.tryParse(rawEpoch?.toString() ?? '');
+    final expiresAtEpochSeconds = epochNumber?.toInt() ?? 0;
+    DateTime? expiresAt;
+    if (expiresAtEpochSeconds > 0) {
+      try {
+        expiresAt = DateTime.fromMillisecondsSinceEpoch(
+          expiresAtEpochSeconds * 1000,
+          isUtc: true,
+        );
+      } on ArgumentError {
+        expiresAt = null;
+      }
+    }
     if (expiresAt == null ||
         !expiresAt.isAfter((now ?? DateTime.now()).toUtc())) {
-      throw const FormatException('Secure playback URL has expired.');
+      throw const FormatException('Secure playback authorization has expired.');
     }
 
     return SignedPlaybackResponse(
+      playbackUrl: playbackUrl,
       signedUrl: signedUrl,
+      authorizationType: authorizationType,
+      cookies: Map<String, String>.unmodifiable(cookies),
       sessionId: sessionId,
       expiresAt: expiresAt,
+      expiresAtEpochSeconds: expiresAtEpochSeconds,
     );
-  }
-
-  static DateTime? _parseExpiry(dynamic rawValue) {
-    if (rawValue == null) return null;
-
-    final numericValue = rawValue is num
-        ? rawValue
-        : num.tryParse(rawValue.toString().trim());
-    if (numericValue != null && numericValue.isFinite) {
-      final absoluteValue = numericValue.abs();
-      late final int microsecondsSinceEpoch;
-      if (absoluteValue >= 100000000000000) {
-        // Unix microseconds.
-        microsecondsSinceEpoch = numericValue.round();
-      } else if (absoluteValue >= 100000000000) {
-        // Unix milliseconds.
-        microsecondsSinceEpoch = (numericValue * 1000).round();
-      } else {
-        // Unix seconds, including fractional seconds returned by the backend.
-        microsecondsSinceEpoch = (numericValue * 1000000).round();
-      }
-      try {
-        return DateTime.fromMicrosecondsSinceEpoch(
-          microsecondsSinceEpoch,
-          isUtc: true,
-        );
-      } on RangeError {
-        return null;
-      }
-    }
-
-    return DateTime.tryParse(rawValue.toString().trim())?.toUtc();
   }
 }
 
@@ -264,7 +310,7 @@ class WatermarkData {
         '${local.year} '
         '${local.hour.toString().padLeft(2, '0')}:'
         '${local.minute.toString().padLeft(2, '0')}';
-    return '$identity • $shortDevice • $date';
+    return '$identity • $date';
   }
 
   static String maskEmail(String value) {

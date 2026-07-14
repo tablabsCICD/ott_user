@@ -27,7 +27,7 @@ class SecureMediaRestoreResult {
 }
 
 typedef SecureMediaLoader = Future<SecureMediaRestoreResult> Function(
-  String signedUrl, {
+  SignedPlaybackResponse authorization, {
   required bool isRefresh,
 });
 typedef SecureMediaPauser = Future<void> Function();
@@ -65,7 +65,7 @@ class SecurePlaybackController extends ChangeNotifier {
 
   SecurePlaybackState _state = SecurePlaybackState.preparingSecurity;
   SecurePlaybackState get state => _state;
-  String? _currentSignedUrl;
+  SignedPlaybackResponse? _currentAuthorization;
   String? _sessionId;
   DateTime? _expiresAt;
   WatermarkData? _watermark;
@@ -104,16 +104,16 @@ class SecurePlaybackController extends ChangeNotifier {
           response.expiresAt.difference(DateTime.now().toUtc()).inSeconds;
       SecurityDebugLog.event(
         'FLOW',
-        'Signed URL validated in memory; expires in approximately $secondsUntilExpiry seconds.',
+        'Signed-cookie authorization validated in memory; expires in approximately $secondsUntilExpiry seconds.',
       );
       _applySession(response);
       _analytics.bindSession(response.sessionId);
       _setState(SecurePlaybackState.initializingPlayer);
       SecurityDebugLog.event(
         'PLAYER',
-        'Calling the media loader with signedUrl. The original URL is not sent to the protected player.',
+        'Calling the media loader with the authorized playback URL and CloudFront cookie header.',
       );
-      final restored = await _mediaLoader(response.signedUrl, isRefresh: false);
+      final restored = await _mediaLoader(response, isRefresh: false);
       if (_disposed) return;
       SecurityDebugLog.event(
         'PLAYER',
@@ -184,7 +184,7 @@ class SecurePlaybackController extends ChangeNotifier {
         'REFRESH',
         'New signed response validated; replacing the player media source.',
       );
-      final restored = await _mediaLoader(response.signedUrl, isRefresh: true);
+      final restored = await _mediaLoader(response, isRefresh: true);
       if (_disposed) return;
       await _analytics.stopCurrentSession();
       _applySession(response);
@@ -250,7 +250,9 @@ class SecurePlaybackController extends ChangeNotifier {
   }
 
   Future<void> onForeground() async {
-    if (_disposed || _currentSignedUrl == null || _expiresAt == null) return;
+    if (_disposed || _currentAuthorization == null || _expiresAt == null) {
+      return;
+    }
     if (DateTime.now().toUtc().isAfter(_expiresAt!.subtract(refreshLead))) {
       await refreshNow();
     }
@@ -293,7 +295,7 @@ class SecurePlaybackController extends ChangeNotifier {
       _watermark = value;
       SecurityDebugLog.event(
         'WATERMARK',
-        'Watermark received and retained in memory; signature is not logged.',
+        'Watermark loaded successfully; protected credential values remain redacted.',
       );
       notifyListeners();
     } catch (error, stackTrace) {
@@ -311,7 +313,7 @@ class SecurePlaybackController extends ChangeNotifier {
   }
 
   void _applySession(SignedPlaybackResponse response) {
-    _currentSignedUrl = response.signedUrl;
+    _currentAuthorization = response;
     _sessionId = response.sessionId;
     _expiresAt = response.expiresAt;
     _failure = null;
@@ -320,6 +322,13 @@ class SecurePlaybackController extends ChangeNotifier {
 
   Future<void> _handleFailure(SecurePlaybackException error) async {
     if (_disposed) return;
+    _refreshTimer?.cancel();
+    _watermarkTimer?.cancel();
+    _refreshTimer = null;
+    _watermarkTimer = null;
+    _currentAuthorization = null;
+    _sessionId = null;
+    _expiresAt = null;
     _failure = error.failure;
     _errorMessage = error.userMessage;
     SecurityDebugLog.event(
@@ -352,7 +361,7 @@ class SecurePlaybackController extends ChangeNotifier {
     _watermarkTimer?.cancel();
     _refreshTimer = null;
     _watermarkTimer = null;
-    _currentSignedUrl = null;
+    _currentAuthorization = null;
     _sessionId = null;
     _expiresAt = null;
     _watermark = null;
