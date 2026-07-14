@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:ott/app/core/services/WalletService.dart';
+import 'package:ott/app/core/services/apple_receipt_service.dart';
 
 class AppleWalletPackage {
   const AppleWalletPackage({
@@ -61,8 +62,11 @@ class AppleIapService extends ChangeNotifier {
   AppleIapService({
     InAppPurchase? inAppPurchase,
     WalletService? walletService,
+    AppleReceiptService? receiptService,
   })  : _iap = inAppPurchase ?? InAppPurchase.instance,
-        _walletService = walletService ?? WalletService();
+        _walletService = walletService ?? WalletService(),
+        _receiptService =
+            receiptService ?? AppleReceiptService(inAppPurchase: inAppPurchase);
 
   static const List<AppleWalletPackage> packages = [
     AppleWalletPackage(
@@ -96,6 +100,7 @@ class AppleIapService extends ChangeNotifier {
 
   final InAppPurchase _iap;
   final WalletService _walletService;
+  final AppleReceiptService _receiptService;
 
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
   List<ProductDetails> _products = [];
@@ -382,10 +387,9 @@ class AppleIapService extends ChangeNotifier {
     }
 
     final purchaseId = purchase.purchaseID?.trim() ?? '';
-    final receiptData = purchase.verificationData.serverVerificationData.trim();
-    final purchaseKey = purchaseId.isNotEmpty ? purchaseId : receiptData;
+    final purchaseKey = purchaseId;
 
-    if (purchaseId.isEmpty || receiptData.isEmpty) {
+    if (purchaseId.isEmpty) {
       _isPurchasing = false;
       _activeProductId = null;
       _setMessage(
@@ -411,6 +415,11 @@ class AppleIapService extends ChangeNotifier {
       'Your Apple purchase is being verified securely.',
     );
     try {
+      // The plugin uses StoreKit 2 by default, where serverVerificationData is
+      // a transaction JWS. This backend uses Apple's legacy verifyReceipt API,
+      // so it must receive the base64 app receipt from the application bundle.
+      final receiptData = await _receiptService.loadBase64AppReceipt();
+
       // Apple IAP only collects payment. The backend verifies Apple purchase
       // data before crediting the Filmytell wallet.
       final result = await _walletService.verifyAppleIapPurchase(

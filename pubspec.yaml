@@ -75,6 +75,7 @@ dependencies:
   media_kit_libs_video: ^1.0.7
   cached_network_image: ^3.4.1
   in_app_purchase: ^3.2.3
+  in_app_purchase_storekit: ^0.4.8+1
 
 
 dev_dependencies:
