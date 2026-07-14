@@ -36,8 +36,18 @@ class MainActivity : FlutterActivity() {
                 "deviceIntegrity" -> {
                     result.success(
                         mapOf(
-                            "rootedOrJailbroken" to isRootedDevice(),
+                            "rooted" to isRootedDevice(),
+                            "jailbroken" to false,
+                            "emulator" to isEmulator(),
                             "screenCaptured" to false
+                        )
+                    )
+                }
+                "deviceIdentity" -> {
+                    result.success(
+                        mapOf(
+                            "deviceName" to "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}".trim(),
+                            "osVersion" to "Android ${android.os.Build.VERSION.RELEASE}"
                         )
                     )
                 }
@@ -64,5 +74,18 @@ class MainActivity : FlutterActivity() {
         )
 
         return rootPaths.any { File(it).exists() }
+    }
+
+    private fun isEmulator(): Boolean {
+        val fingerprint = android.os.Build.FINGERPRINT.lowercase()
+        val model = android.os.Build.MODEL.lowercase()
+        val product = android.os.Build.PRODUCT.lowercase()
+        return fingerprint.startsWith("generic") ||
+            fingerprint.contains("emulator") ||
+            model.contains("google_sdk") ||
+            model.contains("emulator") ||
+            model.contains("android sdk built for") ||
+            product.contains("sdk") ||
+            product.contains("emulator")
     }
 }

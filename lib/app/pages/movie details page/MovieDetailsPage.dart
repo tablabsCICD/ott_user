@@ -2270,6 +2270,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
             padding: EdgeInsets.only(bottom: 16.0),
             child: TextField(
               maxLines: 9,
+              textCapitalization: TextCapitalization.sentences,
+              inputFormatters: [CapitalizeSentencesTextInputFormatter()],
               style: TextStyle(
                 // Input text color
                 color: Colors.white,

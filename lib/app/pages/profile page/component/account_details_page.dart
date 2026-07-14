@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/services/session_manager.dart';
 import 'package:ott/app/core/utils/image_url_utils.dart';
+import 'package:ott/app/core/utils/text_capitalization_formatter.dart';
 import 'package:ott/app/pages/profile%20page/component/EditProfilePage.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -477,6 +479,10 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                       TextFormField(
                         controller: provider.officeBuildingController,
                         maxLines: 2,
+                        textCapitalization: TextCapitalization.words,
+                        inputFormatters: [
+                          CapitalizeWordsTextInputFormatter(),
+                        ],
                         cursorColor: selectedThemeData.primaryColor,
                         onChanged: provider.searchAddressSuggestions,
                         decoration: InputDecoration(
@@ -734,6 +740,12 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           TextFormField(
             controller: controller,
             keyboardType: keyboardType,
+            textCapitalization: keyboardType == TextInputType.number
+                ? TextCapitalization.none
+                : TextCapitalization.words,
+            inputFormatters: keyboardType == TextInputType.number
+                ? [FilteringTextInputFormatter.digitsOnly]
+                : [CapitalizeWordsTextInputFormatter()],
             cursorColor: selectedThemeData.primaryColor,
             onChanged: onChanged,
             onFieldSubmitted: onFieldSubmitted,

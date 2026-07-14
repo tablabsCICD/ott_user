@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/utils/text_capitalization_formatter.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/email_service.dart';
 import 'package:ott/app/core/services/legal_document_service.dart';
@@ -694,6 +695,8 @@ Submitted At: $submittedAt''';
                   const SizedBox(height: 22),
                   TextFormField(
                     controller: _nameController,
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [CapitalizeWordsTextInputFormatter()],
                     enabled: !_sending,
                     textInputAction: TextInputAction.next,
                     style: const TextStyle(
@@ -742,6 +745,8 @@ Submitted At: $submittedAt''';
                   const SizedBox(height: 14),
                   TextFormField(
                     controller: _subjectController,
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [CapitalizeWordsTextInputFormatter()],
                     enabled: !_sending,
                     textInputAction: TextInputAction.next,
                     style: const TextStyle(
@@ -758,6 +763,10 @@ Submitted At: $submittedAt''';
                   const SizedBox(height: 14),
                   TextFormField(
                     controller: _messageController,
+                    textCapitalization: TextCapitalization.sentences,
+                    inputFormatters: [
+                      CapitalizeSentencesTextInputFormatter(),
+                    ],
                     enabled: !_sending,
                     minLines: 4,
                     maxLines: 6,

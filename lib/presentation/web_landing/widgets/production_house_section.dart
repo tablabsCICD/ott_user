@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ott/app/core/utils/text_capitalization_formatter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
@@ -365,12 +366,20 @@ Submitted At: $submittedAt''';
     List<TextInputFormatter>? inputFormatters,
     int minLines = 1,
     int maxLines = 1,
+    TextCapitalization textCapitalization = TextCapitalization.none,
   }) {
     return TextFormField(
       controller: controller,
       enabled: !_sending,
       keyboardType: keyboardType,
-      inputFormatters: inputFormatters,
+      inputFormatters: [
+        ...?inputFormatters,
+        if (textCapitalization == TextCapitalization.words)
+          CapitalizeWordsTextInputFormatter(),
+        if (textCapitalization == TextCapitalization.sentences)
+          CapitalizeSentencesTextInputFormatter(),
+      ],
+      textCapitalization: textCapitalization,
       minLines: minLines,
       maxLines: maxLines,
       textInputAction:
@@ -484,6 +493,7 @@ Submitted At: $submittedAt''';
                 accentColor: theme.primaryColor,
                 minLines: 2,
                 maxLines: 4,
+                textCapitalization: TextCapitalization.sentences,
                 validator: (value) => _validateRequired(
                   value,
                   'Please enter message',

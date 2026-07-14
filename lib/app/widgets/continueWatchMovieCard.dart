@@ -9,6 +9,8 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/utils/direct_trailer_source.dart';
+import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
@@ -62,8 +64,9 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   bool _isStartingPreview = false;
   Timer? _playDelayTimer;
 
-  Uri? _previewUri(String? rawUrl) {
-    final value = rawUrl?.trim() ?? '';
+  String? _directPreviewUrl(String? rawUrl) {
+    final value = DirectTrailerSource.fromBackend(rawUrl);
+    if (value == null) return null;
     final uri = Uri.tryParse(value);
     if (uri == null || !uri.hasScheme) return null;
 
@@ -71,7 +74,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     final isYoutube = host.contains('youtube.com') || host == 'youtu.be';
     if (isYoutube) return null;
 
-    return uri;
+    return value;
   }
 
   @override
@@ -130,8 +133,8 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   Future<bool> _ensureVideoInitialized() async {
     if (_isVideoInitialized) return true;
 
-    final trailerUri = _previewUri(widget.movie.trailerUrl);
-    if (trailerUri == null) return false;
+    final trailerUrl = _directPreviewUrl(widget.movie.trailerUrl);
+    if (trailerUrl == null) return false;
 
     final player = Player();
     final controller = VideoController(player);
@@ -158,7 +161,11 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
           }
         }));
 
-      await player.open(Media(trailerUri.toString()), play: false);
+      SecurityDebugLog.event(
+        'TRAILER',
+        'Continue-watching preview is using the direct backend trailer URL.',
+      );
+      await player.open(Media(trailerUrl), play: false);
       await player.setVolume(_isMuted ? 0 : 100);
 
       _previewPlayer = player;

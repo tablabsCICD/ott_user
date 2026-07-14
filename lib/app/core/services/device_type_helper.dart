@@ -1,12 +1,10 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:ott/app/core/constant/prefrense_constant.dart';
+import 'package:ott/app/core/services/device_identity_service.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 import 'device_runtime.dart';
@@ -139,17 +137,7 @@ class DeviceTypeHelper {
   }
 
   static Future<String> getOrCreateDeviceId() async {
-    final prefs = await SharedPreferences.getInstance();
-    final existing = prefs.getString(SharedPreferencesConstant.sessionDeviceId);
-    if (existing != null && existing.trim().isNotEmpty) {
-      return existing;
-    }
-
-    final random = Random.secure();
-    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
-    final encoded = base64Url.encode(bytes).replaceAll('=', '');
-    final value = 'ft-${DateTime.now().microsecondsSinceEpoch}-$encoded';
-    await prefs.setString(SharedPreferencesConstant.sessionDeviceId, value);
-    return value;
+    final identity = await DeviceIdentityService.instance.getIdentity();
+    return identity.deviceId;
   }
 }

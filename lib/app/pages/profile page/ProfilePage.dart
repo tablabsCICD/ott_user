@@ -11,6 +11,7 @@ import 'package:ott/app/core/utils/legal_document_url_utils.dart';
 import 'package:ott/app/pages/bookmarks%20page/bookmark_page.dart';
 import 'package:ott/app/pages/gifted%20movies%20page/GiftedMoviesPage.dart';
 import 'package:ott/app/pages/help%20support%20page/HelpSupportPage.dart';
+import 'package:ott/app/pages/device%20management%20page/DeviceManagementPage.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/app/pages/profile%20page/component/EditProfilePage.dart';
@@ -294,6 +295,19 @@ class _ProfilePageState extends State<ProfilePage> {
                                       MaterialPageRoute(
                                         builder: (context) =>
                                             const AccountDetailsPage(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                ProfileOption(
+                                  icon: Icons.devices_other_outlined,
+                                  title: 'Registered Devices',
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const DeviceManagementPage(),
                                       ),
                                     );
                                   },

@@ -2299,6 +2299,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
             padding: const EdgeInsets.only(bottom: 16.0),
             child: TextField(
               maxLines: 9,
+              textCapitalization: TextCapitalization.sentences,
+              inputFormatters: [CapitalizeSentencesTextInputFormatter()],
               style: const TextStyle(color: Colors.white),
               controller: provider.reviewController,
               decoration: const InputDecoration(

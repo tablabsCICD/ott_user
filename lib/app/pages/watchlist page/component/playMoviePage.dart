@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -6,8 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:http/http.dart' as http;
+import 'package:ott/app/core/network/anti_piracy_api_client.dart';
 import 'package:ott/app/core/services/anti_piracy_service.dart';
-import 'package:ott/app/provider/dashboardProvider.dart';
+import 'package:ott/app/core/utils/security_debug_log.dart';
+import 'package:ott/app/core/services/session_manager.dart';
+import 'package:ott/app/provider/secure_playback_controller.dart';
 import 'package:ott/data/models/seriesModel.dart';
 import 'package:provider/provider.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -15,6 +20,7 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart' as youtube;
 
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/playback_watermark_overlay.dart';
+import 'package:ott/app/widgets/video_skip_controls.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import '../../../provider/offline_download_provider.dart';
@@ -68,11 +74,11 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   bool _isExiting = false;
   int _setupToken = 0;
   bool _isOfflinePlayback = false;
-  bool _reportedStarted = false;
-  bool _lastReportedPlaying = false;
   String? _playbackMessage;
-  WatermarkIdentity? _watermarkIdentity;
   String? _currentRemotePlaybackUrl;
+  SecurePlaybackController? _securePlaybackController;
+  bool _handlingSecureAuthenticationFailure = false;
+  Duration? _lastLoggedDuration;
 
   bool get _isSeries =>
       widget.content?.type?.toLowerCase() == "series" &&
@@ -82,16 +88,13 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   @override
   void initState() {
     super.initState();
+    SecurityDebugLog.event(
+      'ROUTE',
+      'PlayMediaPage.initState reached from the Watch Movie route.',
+    );
     WidgetsBinding.instance.addObserver(this);
     unawaited(AntiPiracyService.instance.enableScreenProtection());
-    unawaited(_loadWatermarkIdentity());
     unawaited(_startFullscreenPlayback());
-  }
-
-  Future<void> _loadWatermarkIdentity() async {
-    final identity = await AntiPiracyService.instance.watermarkIdentity();
-    if (!mounted || _isDisposed) return;
-    setState(() => _watermarkIdentity = identity);
   }
 
   @override
@@ -101,7 +104,10 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         state == AppLifecycleState.detached) {
       unawaited(_player?.pause());
       _youtubeController?.pause();
+      unawaited(_securePlaybackController?.onBackground());
       _saveProgress();
+    } else if (state == AppLifecycleState.resumed) {
+      unawaited(_securePlaybackController?.onForeground());
     }
   }
 
@@ -122,9 +128,28 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   Future<void> _startFullscreenPlayback() async {
-    await _enterLandscapePlayback();
+    SecurityDebugLog.event(
+      'FLOW',
+      'Fullscreen player startup began.',
+    );
+    try {
+      await _enterLandscapePlayback();
+      SecurityDebugLog.event(
+        'PLAYER',
+        'Landscape fullscreen mode was enabled.',
+      );
+    } catch (_) {
+      SecurityDebugLog.event(
+        'PLAYER',
+        'Fullscreen/orientation setup is unavailable; continuing secure playback.',
+      );
+    }
     if (!mounted || _isDisposed) return;
 
+    SecurityDebugLog.event(
+      'FLOW',
+      'Calling secure playback preparation.',
+    );
     await _preparePlayback();
     if (!mounted || _isDisposed) return;
 
@@ -145,32 +170,59 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   Future<void> _preparePlayback() async {
+    SecurityDebugLog.event(
+      'FLOW',
+      'Resolving the media source before requesting signed access.',
+    );
     String sourceUrl = await _resolveOfflineSourceUrl(widget.videoUrl.trim());
     if (sourceUrl.isEmpty) {
+      SecurityDebugLog.event(
+        'FLOW',
+        'Secure playback stopped because the media source is empty.',
+      );
       _showPlaybackError('Video unavailable');
       return;
     }
 
-    if (!_isOfflinePlayback) {
-      sourceUrl = await _refreshExpiredPlaybackUrl(sourceUrl);
-    }
-    if (!mounted || _isDisposed) return;
-
     final youtubeId = _extractYoutubeId(sourceUrl);
 
     if (youtubeId != null && youtubeId.isNotEmpty) {
-      _isOfflinePlayback = false;
-      final security = await _validatePlaybackSecurity(sourceUrl);
-      if (!security) return;
+      SecurityDebugLog.event(
+        'FLOW',
+        'External YouTube source identified; using the existing YouTube player path.',
+      );
       await _setupYoutubePlayer(youtubeId);
       return;
     }
 
-    final security = await _validatePlaybackSecurity(sourceUrl);
-    if (!security) return;
+    if (_isOfflinePlayback) {
+      SecurityDebugLog.event(
+        'FLOW',
+        'Signed API was not called because an existing offline file was selected.',
+      );
+      // Existing downloaded files are local media and do not have a CloudFront
+      // URL to sign. Online protected content always follows the secure flow.
+      await _setupPlayer(sourceUrl, playFromFile: true);
+      return;
+    }
 
-    _currentRemotePlaybackUrl = sourceUrl;
-    await _setupPlayer(sourceUrl, playFromFile: _isOfflinePlayback);
+    final contentId = _isSeries ? widget.episodeIndex : widget.content?.id;
+    if (contentId == null) {
+      SecurityDebugLog.event(
+        'FLOW',
+        'Signed API was not called because the content ID is missing.',
+      );
+      _showPlaybackError('The requested content was not found.');
+      return;
+    }
+    SecurityDebugLog.event(
+      'FLOW',
+      'Online protected content identified; starting the anti-piracy API flow.',
+    );
+    await _startSecurePlayback(
+      sourceUrl: sourceUrl,
+      contentId: contentId.toString(),
+    );
   }
 
   Future<String> _resolveOfflineSourceUrl(String sourceUrl) async {
@@ -185,6 +237,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       return sourceUrl;
     }
 
+    if (!mounted) return sourceUrl;
     final offlinePath =
         await context.read<OfflineDownloadProvider>().getOfflinePath(content);
     if (offlinePath != null &&
@@ -211,39 +264,112 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
   }
 
-  Future<String> _refreshExpiredPlaybackUrl(String sourceUrl) async {
-    final validationMessage =
-        AntiPiracyService.instance.validatePlaybackUrl(sourceUrl);
-    if (validationMessage != 'Playback link has expired. Please try again.') {
-      return sourceUrl;
+  Future<void> _startSecurePlayback({
+    required String sourceUrl,
+    required String contentId,
+  }) async {
+    SecurityDebugLog.event(
+      'PLAYER',
+      'Protected player route is calling SecurePlaybackController.start().',
+    );
+    final previous = _securePlaybackController;
+    if (previous != null) {
+      previous.removeListener(_onSecurePlaybackChanged);
+      await previous.stop();
+      previous.dispose();
     }
-
-    final contentId = widget.content?.id;
-    if (contentId == null) return sourceUrl;
-
-    try {
-      final dashboardProvider = context.read<DashboardProvider>();
-      await dashboardProvider.getContentById(contentId);
-      final refreshedUrl = dashboardProvider.content.contentUrl?.trim();
-      if (refreshedUrl != null && refreshedUrl.isNotEmpty) {
-        return refreshedUrl;
-      }
-    } catch (_) {}
-
-    return sourceUrl;
+    _currentRemotePlaybackUrl = sourceUrl;
+    final controller = SecurePlaybackController(
+      contentId: contentId,
+      originalPlaybackUrl: sourceUrl,
+      country: 'IN',
+      mediaLoader: _loadSecureMedia,
+      pausePlayer: _pauseActivePlayer,
+    );
+    _securePlaybackController = controller;
+    controller.addListener(_onSecurePlaybackChanged);
+    await controller.start();
   }
 
-  Future<bool> _validatePlaybackSecurity(String sourceUrl) async {
-    final result = await AntiPiracyService.instance.validateBeforePlayback(
-      content: widget.content,
-      playbackUrl: sourceUrl,
-      isOfflinePlayback: _isOfflinePlayback,
+  void _onSecurePlaybackChanged() {
+    if (!mounted || _isDisposed) return;
+    final controller = _securePlaybackController;
+    if (controller == null) return;
+    if (controller.failure == SecurePlaybackFailure.unauthenticated &&
+        !_handlingSecureAuthenticationFailure) {
+      _handlingSecureAuthenticationFailure = true;
+      unawaited(
+        SessionManager.instance.handleSessionExpired(
+            'Your session has expired. Please sign in again.'),
+      );
+    }
+    setState(() {
+      _playbackMessage = controller.errorMessage;
+      _hasPlaybackError =
+          controller.state == SecurePlaybackState.accessDenied ||
+              controller.state == SecurePlaybackState.playbackError;
+    });
+  }
+
+  Future<SecureMediaRestoreResult> _loadSecureMedia(
+    String signedUrl, {
+    required bool isRefresh,
+  }) async {
+    SecurityDebugLog.event(
+      'PLAYER',
+      isRefresh
+          ? 'Received refreshed signedUrl; reinitializing media_kit.'
+          : 'Received signedUrl; initializing media_kit now.',
     );
+    final signedUri = Uri.tryParse(signedUrl);
+    SecurityDebugLog.diagnostic(
+      'SIGNED_MEDIA_METADATA validUri=${signedUri != null} '
+      'scheme=${signedUri?.scheme ?? '<missing>'} '
+      'host=${signedUri?.host ?? '<missing>'} '
+      'path=${signedUri?.path ?? '<missing>'} '
+      'hasQuery=${signedUri?.hasQuery ?? false} '
+      'queryKeys=${signedUri?.queryParameters.keys.toList() ?? const <String>[]}',
+    );
+    final previous = _player?.state;
+    final position = previous?.position ?? Duration.zero;
+    final wasPlaying = previous?.playing ?? true;
+    final volume = previous?.volume ?? 100;
+    final rate = previous?.rate ?? 1;
+    final audioTrack = previous?.track.audio;
+    final subtitleTrack = previous?.track.subtitle;
 
-    if (result.allowed) return true;
+    await _setupPlayer(signedUrl, diagnoseSignedHls: true);
+    final player = _player;
+    if (player == null || _hasPlaybackError) {
+      SecurityDebugLog.event(
+        'PLAYER',
+        'media_kit could not initialize the signed media source.',
+      );
+      throw StateError('Secure media initialization failed');
+    }
 
-    _showPlaybackError(result.message);
-    return false;
+    if (isRefresh) {
+      if (position > Duration.zero) await player.seek(position);
+      await player.setVolume(volume);
+      await player.setRate(rate);
+      if (audioTrack != null) await player.setAudioTrack(audioTrack);
+      if (subtitleTrack != null) await player.setSubtitleTrack(subtitleTrack);
+      if (wasPlaying) {
+        await player.play();
+      } else {
+        await player.pause();
+      }
+    }
+    SecurityDebugLog.event(
+      'PLAYER',
+      'media_kit accepted the signed source; URL remains redacted.',
+    );
+    return SecureMediaRestoreResult(isPlaying: player.state.playing);
+  }
+
+  Future<void> _pauseActivePlayer() async {
+    await _player?.pause();
+    _youtubeController?.pause();
   }
 
   void _showPlaybackError([String message = 'Video unavailable']) {
@@ -258,6 +384,14 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
   Future<void> _setupYoutubePlayer(String videoId) async {
     final token = ++_setupToken;
+
+    final secureController = _securePlaybackController;
+    if (secureController != null) {
+      secureController.removeListener(_onSecurePlaybackChanged);
+      await secureController.stop();
+      secureController.dispose();
+      _securePlaybackController = null;
+    }
 
     if (mounted) {
       setState(() {
@@ -297,6 +431,10 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       _handlePlayingChanged(value.isPlaying);
 
       if (value.hasError) {
+        SecurityDebugLog.event(
+          'PLAYER',
+          'YouTube player reported a sanitized playback error.',
+        );
         _showPlaybackError('Failed to load video');
       }
 
@@ -313,6 +451,10 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
 
     _youtubeController = controller;
+    SecurityDebugLog.event(
+      'PLAYER',
+      'YouTube player initialized without exposing the source URL.',
+    );
 
     if (mounted && token == _setupToken) {
       setState(() => _loading = false);
@@ -324,7 +466,11 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     );
   }
 
-  Future<void> _setupPlayer(String url, {bool playFromFile = false}) async {
+  Future<void> _setupPlayer(
+    String url, {
+    bool playFromFile = false,
+    bool diagnoseSignedHls = false,
+  }) async {
     final token = ++_setupToken;
 
     if (mounted) {
@@ -342,8 +488,9 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     await Future.delayed(const Duration(milliseconds: 250));
     if (_isDisposed || !mounted || token != _setupToken) return;
 
-    if (kDebugMode) {
-      debugPrint("MEDIA SOURCE => ${_redactedPlaybackUrl(url)}");
+    if (kDebugMode && diagnoseSignedHls) {
+      await _probeSignedHls(url);
+      if (_isDisposed || !mounted || token != _setupToken) return;
     }
 
     final player = Player();
@@ -357,10 +504,16 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         play: false,
       );
       await player.setVolume(100);
-    } catch (error) {
-      if (kDebugMode) {
-        debugPrint("MEDIA_KIT INIT ERROR => $error");
-      }
+    } catch (error, stackTrace) {
+      SecurityDebugLog.exception(
+        'MEDIA_KIT_OPEN',
+        error,
+        stackTrace,
+      );
+      SecurityDebugLog.event(
+        'PLAYER',
+        'media_kit initialization failed; sanitized details are in HTTP_DIAGNOSTIC.',
+      );
       await player.dispose();
       if (mounted && token == _setupToken) {
         _showPlaybackError('Failed to load video');
@@ -376,12 +529,101 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     _player = player;
     _videoController = controller;
     _bindPlayerStreams(player);
+    SecurityDebugLog.event(
+      'PLAYER',
+      'media_kit open completed and player streams were attached.',
+    );
 
     if (mounted && token == _setupToken) {
       setState(() => _loading = false);
     }
 
     await _resumeAndPlay(token);
+  }
+
+  Future<void> _probeSignedHls(String signedUrl) async {
+    final uri = Uri.tryParse(signedUrl);
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+      SecurityDebugLog.event(
+        'HLS_PROBE',
+        'Signed media URL is not a valid HTTPS URL.',
+      );
+      return;
+    }
+
+    SecurityDebugLog.event(
+      'HLS_PROBE',
+      'Requesting the signed top-level HLS resource before media_kit opens it.',
+    );
+    try {
+      final response = await http.get(
+        uri,
+        headers: const {
+          'Accept': 'application/vnd.apple.mpegurl, application/x-mpegURL, */*',
+          'Range': 'bytes=0-65535',
+        },
+      ).timeout(const Duration(seconds: 10));
+      final contentType = response.headers['content-type'] ?? '<missing>';
+      final cloudFrontResult = response.headers['x-cache'] ?? '<missing>';
+      SecurityDebugLog.diagnostic(
+        'HLS_PROBE_RESPONSE status=${response.statusCode} '
+        'contentType=$contentType bytes=${response.bodyBytes.length} '
+        'cloudFrontXCache=$cloudFrontResult',
+      );
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        final errorBody = utf8.decode(
+          response.bodyBytes.take(2048).toList(growable: false),
+          allowMalformed: true,
+        );
+        SecurityDebugLog.exception(
+          'HLS_PROBE_HTTP_${response.statusCode}',
+          errorBody.isEmpty ? 'CloudFront returned an empty error body.' : errorBody,
+        );
+        return;
+      }
+
+      final playlist = utf8.decode(response.bodyBytes, allowMalformed: true);
+      final isHls = playlist.trimLeft().startsWith('#EXTM3U');
+      final mediaUris = playlist
+          .split(RegExp(r'\r?\n'))
+          .map((line) => line.trim())
+          .where((line) => line.isNotEmpty && !line.startsWith('#'))
+          .toList(growable: false);
+      var relativeUris = 0;
+      var absoluteUris = 0;
+      var signedChildUris = 0;
+      for (final value in mediaUris) {
+        final child = Uri.tryParse(value);
+        if (child == null) continue;
+        if (child.hasScheme) {
+          absoluteUris++;
+        } else {
+          relativeUris++;
+        }
+        final keys = child.queryParameters.keys
+            .map((key) => key.toLowerCase())
+            .toSet();
+        if (keys.contains('signature') &&
+            keys.contains('key-pair-id') &&
+            keys.contains('expires')) {
+          signedChildUris++;
+        }
+      }
+      SecurityDebugLog.diagnostic(
+        'HLS_PLAYLIST_CHECK validM3u8=$isHls childUriCount=${mediaUris.length} '
+        'relativeChildUris=$relativeUris absoluteChildUris=$absoluteUris '
+        'signedChildUris=$signedChildUris',
+      );
+      if (mediaUris.isNotEmpty && signedChildUris == 0) {
+        SecurityDebugLog.event(
+          'HLS_PROBE',
+          'The playlist children do not contain CloudFront signing parameters. Signed cookies or backend playlist rewriting may be required.',
+        );
+      }
+    } catch (error, stackTrace) {
+      SecurityDebugLog.exception('HLS_PROBE_NETWORK', error, stackTrace);
+    }
   }
 
   void _bindPlayerStreams(Player player) {
@@ -392,14 +634,34 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       }))
       ..add(player.stream.position.listen((_) => _handlePositionChanged()))
       ..add(player.stream.duration.listen((_) {
+        final duration = player.state.duration;
+        if (duration != _lastLoggedDuration) {
+          _lastLoggedDuration = duration;
+          SecurityDebugLog.event(
+            'PLAYER',
+            'Media duration updated to ${duration.inMilliseconds} ms.',
+          );
+        }
         if (mounted) setState(() {});
       }))
+      ..add(player.stream.buffering.listen((isBuffering) {
+        SecurityDebugLog.event(
+          'PLAYER',
+          'media_kit buffering=$isBuffering positionMs=${player.state.position.inMilliseconds}.',
+        );
+      }))
       ..add(player.stream.completed.listen((completed) {
-        if (completed) _handlePlaybackCompleted();
+        if (completed) {
+          SecurityDebugLog.event('PLAYER', 'media_kit reported completion.');
+          _handlePlaybackCompleted();
+        }
       }))
       ..add(player.stream.error.listen((error) {
-        if (kDebugMode) {
-          debugPrint("MEDIA_KIT PLAYBACK ERROR => $error");
+        SecurityDebugLog.exception('MEDIA_KIT_STREAM', error);
+        final isForbidden = error.toString().contains('403');
+        if (isForbidden && _securePlaybackController != null) {
+          unawaited(_securePlaybackController!.handlePlayerHttp403());
+          return;
         }
         if (mounted) {
           _showPlaybackError('Failed to load video');
@@ -426,7 +688,15 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       await _player!.seek(Duration(seconds: resumeSeconds));
     }
 
+    SecurityDebugLog.event(
+      'PLAYER',
+      'Requesting media_kit play at positionMs=${_player!.state.position.inMilliseconds}.',
+    );
     await _player!.play();
+    SecurityDebugLog.event(
+      'PLAYER',
+      'media_kit play returned playing=${_player!.state.playing} buffering=${_player!.state.buffering}.',
+    );
     if (_isDisposed || token != _setupToken) return;
 
     _progressTimer = Timer.periodic(
@@ -438,7 +708,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   void _handlePlayingChanged(bool isPlaying) {
     if (_isDisposed || !mounted) return;
 
-    _reportPlaybackState(isPlaying);
+    _securePlaybackController?.onPlayingChanged(isPlaying);
 
     if (isPlaying && !_wakelockEnabled) {
       WakelockPlus.enable();
@@ -447,26 +717,6 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       WakelockPlus.disable();
       _wakelockEnabled = false;
     }
-  }
-
-  void _reportPlaybackState(bool isPlaying) {
-    if (isPlaying && !_reportedStarted) {
-      _reportedStarted = true;
-      _lastReportedPlaying = true;
-      unawaited(_reportSecurityEvent(PlaybackSecurityEvent.started));
-      return;
-    }
-
-    if (isPlaying == _lastReportedPlaying) return;
-
-    _lastReportedPlaying = isPlaying;
-    unawaited(
-      _reportSecurityEvent(
-        isPlaying
-            ? PlaybackSecurityEvent.resumed
-            : PlaybackSecurityEvent.paused,
-      ),
-    );
   }
 
   void _handlePositionChanged() {
@@ -489,25 +739,10 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   void _handlePlaybackCompleted() {
-    unawaited(_reportSecurityEvent(PlaybackSecurityEvent.completed));
+    unawaited(_securePlaybackController?.stop());
     if (_handlingEnd || !_isSeries) return;
     _handlingEnd = true;
     unawaited(_playNextEpisode());
-  }
-
-  Future<void> _reportSecurityEvent(PlaybackSecurityEvent event) async {
-    final position =
-        _youtubeController?.value.position ?? _player?.state.position;
-    final duration = _youtubeController?.value.metaData.duration ??
-        _player?.state.duration;
-
-    await AntiPiracyService.instance.reportEvent(
-      event: event,
-      content: widget.content,
-      position: position,
-      duration: duration,
-      isOfflinePlayback: _isOfflinePlayback,
-    );
   }
 
   void _saveProgress() {
@@ -515,8 +750,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
     final position =
         _youtubeController?.value.position ?? _player?.state.position;
-    final duration = _youtubeController?.value.metaData.duration ??
-        _player?.state.duration;
+    final duration =
+        _youtubeController?.value.metaData.duration ?? _player?.state.duration;
 
     if (position == null || duration == null) return;
 
@@ -572,14 +807,14 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       return;
     }
 
-    final security = await _validatePlaybackSecurity(nextUrl);
-    if (!security) return;
-
     final youtubeId = _extractYoutubeId(nextUrl);
     if (youtubeId != null && youtubeId.isNotEmpty) {
       await _setupYoutubePlayer(youtubeId);
     } else {
-      await _setupPlayer(nextUrl);
+      await _startSecurePlayback(
+        sourceUrl: nextUrl,
+        contentId: next.episodeId.toString(),
+      );
     }
   }
 
@@ -588,6 +823,10 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     _isDisposed = true;
     _setupToken++;
     WidgetsBinding.instance.removeObserver(this);
+    final secureController = _securePlaybackController;
+    secureController?.removeListener(_onSecurePlaybackChanged);
+    secureController?.dispose();
+    _securePlaybackController = null;
     _disposePlayerSync(saveProgress: true);
     unawaited(_restorePortraitPlayback());
     super.dispose();
@@ -670,6 +909,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   Future<void> _handleExit() async {
     if (_isExiting) return;
     _isExiting = true;
+    await _securePlaybackController?.stop();
     await _disposePlayer(saveProgress: true);
     await _restorePortraitPlayback();
     if (mounted) {
@@ -728,32 +968,42 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     final youtubeController = _youtubeController;
     if (youtubeController != null) {
       final duration = youtubeController.value.metaData.duration;
-      final next = youtubeController.value.position + delta;
-      final clamped = next < Duration.zero
-          ? Duration.zero
-          : duration > Duration.zero && next > duration
-              ? duration
-              : next;
-      youtubeController.seekTo(clamped);
+      youtubeController.seekTo(
+        boundedSeekPosition(
+          position: youtubeController.value.position,
+          duration: duration,
+          offset: delta,
+        ),
+      );
       return;
     }
 
     final player = _player;
     if (player != null) {
       final duration = player.state.duration;
-      final next = player.state.position + delta;
-      final clamped = next < Duration.zero
-          ? Duration.zero
-          : duration > Duration.zero && next > duration
-              ? duration
-              : next;
-      unawaited(player.seek(clamped));
+      unawaited(
+        player.seek(
+          boundedSeekPosition(
+            position: player.state.position,
+            duration: duration,
+            offset: delta,
+          ),
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>().getTheme;
+    final secureState = _securePlaybackController?.state;
+    final secureLoading =
+        secureState == SecurePlaybackState.preparingSecurity ||
+            secureState == SecurePlaybackState.requestingPlaybackAccess ||
+            secureState == SecurePlaybackState.initializingPlayer ||
+            secureState == SecurePlaybackState.refreshingUrl;
+    final showLoading = _loading || secureLoading;
+    final watermark = _securePlaybackController?.watermark;
 
     return WillPopScope(
       onWillPop: () async {
@@ -770,20 +1020,14 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             fit: StackFit.expand,
             children: [
               Positioned.fill(
-                child: _loading
+                child: showLoading
                     ? Center(
                         child: CircularProgressIndicator(
                           color: theme.primaryColor,
                         ),
                       )
                     : _hasPlaybackError
-                        ? Center(
-                            child: Text(
-                              _playbackMessage ?? 'Video unavailable',
-                              style: const TextStyle(color: Colors.white),
-                              textAlign: TextAlign.center,
-                            ),
-                          )
+                        ? _secureErrorView()
                         : ResponsiveWidget.isDesktop(context)
                             ? _desktopPlayer()
                             : _mobilePlayer(),
@@ -793,20 +1037,57 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                 left: 8,
                 child: SafeArea(child: _backButton()),
               ),
-              if (!_loading && !_hasPlaybackError)
+              if (!showLoading && !_hasPlaybackError)
+                Positioned.fill(
+                  child: Center(
+                    child: VideoSkipControls(
+                      onBackward: () => _seekBy(const Duration(seconds: -10)),
+                      onForward: () => _seekBy(const Duration(seconds: 10)),
+                      gap: ResponsiveWidget.isMobile(context) ? 82 : 120,
+                    ),
+                  ),
+                ),
+              if (!showLoading && !_hasPlaybackError)
                 Positioned(
                   top: 12,
                   right: 12,
                   child: SafeArea(child: _downloadButton()),
                 ),
-              if (!_loading && !_hasPlaybackError && _watermarkIdentity != null)
+              if (!showLoading && !_hasPlaybackError && watermark != null)
                 Positioned.fill(
                   child: PlaybackWatermarkOverlay(
-                    identity: _watermarkIdentity!,
+                    watermark: watermark,
                   ),
                 ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _secureErrorView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.lock_outline, color: Colors.white70, size: 42),
+            const SizedBox(height: 12),
+            Text(
+              _playbackMessage ?? 'Video unavailable',
+              style: const TextStyle(color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+            if (_securePlaybackController != null) ...[
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => unawaited(_securePlaybackController!.start()),
+                child: const Text('Retry'),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -825,7 +1106,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
 
     return Material(
-      color: Colors.black.withOpacity(0.48),
+      color: Colors.black.withValues(alpha: 0.48),
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
@@ -886,7 +1167,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
   Widget _backButton() {
     return Material(
-      color: Colors.black.withOpacity(0.45),
+      color: Colors.black.withValues(alpha: 0.45),
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
@@ -978,12 +1259,6 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         );
       },
     );
-  }
-
-  String _redactedPlaybackUrl(String url) {
-    final uri = Uri.tryParse(url);
-    if (uri == null || !uri.hasQuery) return 'redacted';
-    return uri.replace(queryParameters: const {}).toString();
   }
 
   String _localFileMediaUri(String pathOrUri) {

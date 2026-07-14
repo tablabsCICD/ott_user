@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ott/app/core/utils/text_capitalization_formatter.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:provider/provider.dart';
 import 'package:wc_form_validators/wc_form_validators.dart';
+
+export 'package:ott/app/core/utils/text_capitalization_formatter.dart';
 
 class CustomTextField extends StatefulWidget {
   final TextEditingController controller;
@@ -93,7 +96,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
             obscureText: widget.isPassword ? _isObscure : false,
             keyboardType: widget.textInputType,
             textInputAction: widget.textInputAction,
-            textCapitalization: widget.capitalization,
+            textCapitalization: _effectiveCapitalization,
             readOnly: widget.readOnly ?? false,
             onTap: widget.onTap == null ? null : () => widget.onTap!(),
             onFieldSubmitted: widget.onFieldSubmitted,
@@ -186,49 +189,33 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
     return [
       if (widget.maxLine == 1) FilteringTextInputFormatter.singleLineFormatter,
-      if (widget.capitalization == TextCapitalization.words)
+      if (_effectiveCapitalization == TextCapitalization.words)
         CapitalizeWordsTextInputFormatter(),
+      if (_effectiveCapitalization == TextCapitalization.sentences)
+        CapitalizeSentencesTextInputFormatter(),
     ];
   }
-}
 
-class CapitalizeWordsTextInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final text = newValue.text;
-    if (text.isEmpty) return newValue;
-
-    final buffer = StringBuffer();
-    var shouldCapitalize = true;
-
-    for (var i = 0; i < text.length; i++) {
-      final char = text[i];
-      if (RegExp(r'\s').hasMatch(char)) {
-        shouldCapitalize = true;
-        buffer.write(char);
-        continue;
-      }
-
-      if (shouldCapitalize) {
-        buffer.write(char.toUpperCase());
-        shouldCapitalize = false;
-      } else {
-        buffer.write(char);
-      }
+  TextCapitalization get _effectiveCapitalization {
+    if (widget.capitalization != TextCapitalization.none) {
+      return widget.capitalization;
     }
-
-    final formatted = buffer.toString();
-    if (formatted == text) return newValue;
-
-    return newValue.copyWith(
-      text: formatted,
-      selection: TextSelection.collapsed(
-        offset: newValue.selection.baseOffset.clamp(0, formatted.length),
-      ),
-      composing: TextRange.empty,
-    );
+    if (widget.isPassword ||
+        widget.isEmail ||
+        widget.isPhoneNumber ||
+        widget.isDigits ||
+        widget.textInputType == TextInputType.emailAddress ||
+        widget.textInputType == TextInputType.phone ||
+        widget.textInputType == TextInputType.number ||
+        widget.textInputType == TextInputType.url) {
+      return TextCapitalization.none;
+    }
+    if (widget.isName || widget.textInputType == TextInputType.name) {
+      return TextCapitalization.words;
+    }
+    if (widget.maxLine > 1 || widget.textInputType == TextInputType.multiline) {
+      return TextCapitalization.sentences;
+    }
+    return TextCapitalization.none;
   }
 }

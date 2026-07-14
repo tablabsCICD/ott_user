@@ -9,11 +9,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/constant/prefrense_constant.dart';
+import 'package:ott/app/core/repositories/secure_playback_repository.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
-import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/offline_download_provider.dart';
+import 'package:ott/app/provider/secure_playback_controller.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/route/navigation_service.dart';
 import 'package:ott/presentation/web_landing/utils/post_logout_navigation.dart';
@@ -48,10 +49,14 @@ class SessionManager {
   }
 
   Future<void> clearLocalSession() async {
+    await SecurePlaybackSessionRegistry.instance.stopAll();
+    SecurePlaybackRepository.instance.markRegistrationUnknown();
     await LocalSharePreferences.localSharePreferences.clearSession();
   }
 
   Future<bool> logoutFromServer() async {
+    await SecurePlaybackSessionRegistry.instance.stopAll();
+    SecurePlaybackRepository.instance.markRegistrationUnknown();
     final authToken = await token;
     _logWebAuth('Explicit logout requested hasToken=${authToken != null}');
     if (authToken == null) return true;
