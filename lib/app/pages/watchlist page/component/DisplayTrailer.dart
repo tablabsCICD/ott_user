@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:ott/app/core/utils/direct_trailer_source.dart';
+import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:ott/app/widgets/video_skip_controls.dart';
 
 import '../../../../data/models/content.dart';
 import '../../../core/constant/api_constant.dart';
@@ -49,7 +52,8 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
   bool _historySaved = false;
   bool _hasError = false;
 
-  String get _trailerUrl => widget.trailerUrl?.trim() ?? '';
+  String get _trailerUrl =>
+      DirectTrailerSource.fromBackend(widget.trailerUrl) ?? '';
   bool get _hasUrl => _trailerUrl.isNotEmpty;
   String? get _youtubeId => _extractYoutubeId(_trailerUrl);
 
@@ -71,6 +75,10 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
   }
 
   Future<void> _initPlayer() async {
+    SecurityDebugLog.event(
+      'TRAILER',
+      'Initializing trailer from the direct backend URL; signed playback API is intentionally bypassed.',
+    );
     final youtubeId = _youtubeId;
     if (youtubeId != null && youtubeId.isNotEmpty) {
       _youtubeController = YoutubePlayerController(
@@ -125,6 +133,10 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
           if (mounted) setState(() => _hasError = true);
         }));
 
+      SecurityDebugLog.event(
+        'TRAILER',
+        'Passing the direct backend trailer URL to media_kit.',
+      );
       await player.open(Media(_trailerUrl), play: true);
       await player.setVolume(100);
 
@@ -161,6 +173,31 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
 
       await ApiHelper().postApiWithBody(ApiConstant.saveViewHistory, body);
     } catch (_) {}
+  }
+
+  void _seekBy(Duration offset) {
+    final youtube = _youtubeController;
+    if (youtube != null) {
+      youtube.seekTo(
+        boundedSeekPosition(
+          position: youtube.value.position,
+          duration: youtube.value.metaData.duration,
+          offset: offset,
+        ),
+      );
+      return;
+    }
+    final player = _player;
+    if (player == null) return;
+    unawaited(
+      player.seek(
+        boundedSeekPosition(
+          position: player.state.position,
+          duration: player.state.duration,
+          offset: offset,
+        ),
+      ),
+    );
   }
 
   Future<void> _disposePlayer() async {
@@ -246,7 +283,19 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
         builder: (context, player) {
           return AspectRatio(
             aspectRatio: 16 / 9,
-            child: player,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                player,
+                Center(
+                  child: VideoSkipControls(
+                    onBackward: () => _seekBy(const Duration(seconds: -10)),
+                    onForward: () => _seekBy(const Duration(seconds: 10)),
+                    gap: 92,
+                  ),
+                ),
+              ],
+            ),
           );
         },
       );
@@ -299,6 +348,13 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
               },
             ),
           ),
+          Center(
+            child: VideoSkipControls(
+              onBackward: () => _seekBy(const Duration(seconds: -10)),
+              onForward: () => _seekBy(const Duration(seconds: 10)),
+              gap: 92,
+            ),
+          ),
         ],
       ),
     );
@@ -335,7 +391,8 @@ class _TrailerPreviewState extends State<TrailerPreview> {
   bool _hasError = false;
   int _initToken = 0;
 
-  String get _trailerUrl => widget.trailerUrl?.trim() ?? '';
+  String get _trailerUrl =>
+      DirectTrailerSource.fromBackend(widget.trailerUrl) ?? '';
   String? get _youtubeId => _extractYoutubeId(_trailerUrl);
 
   @override
@@ -368,6 +425,10 @@ class _TrailerPreviewState extends State<TrailerPreview> {
   Future<void> _init() async {
     if (_trailerUrl.isEmpty) return;
 
+    SecurityDebugLog.event(
+      'TRAILER',
+      'Initializing embedded trailer directly; no signed URL is requested.',
+    );
     final currentToken = ++_initToken;
     final youtubeId = _youtubeId;
     if (youtubeId != null && youtubeId.isNotEmpty) {
@@ -440,6 +501,10 @@ class _TrailerPreviewState extends State<TrailerPreview> {
           }
         }));
 
+      SecurityDebugLog.event(
+        'TRAILER',
+        'Passing the direct backend trailer URL to the embedded media_kit player.',
+      );
       await player.open(Media(_trailerUrl), play: false);
       await player.setVolume(widget.muted ? 0 : 100);
       if (widget.autoPlay) {
@@ -516,6 +581,31 @@ class _TrailerPreviewState extends State<TrailerPreview> {
     return "${two(d.inMinutes.remainder(60))}:${two(d.inSeconds.remainder(60))}";
   }
 
+  void _seekPreviewBy(Duration offset) {
+    final youtube = _youtubeController;
+    if (youtube != null) {
+      youtube.seekTo(
+        boundedSeekPosition(
+          position: youtube.value.position,
+          duration: youtube.value.metaData.duration,
+          offset: offset,
+        ),
+      );
+      return;
+    }
+    final player = _player;
+    if (player == null) return;
+    unawaited(
+      player.seek(
+        boundedSeekPosition(
+          position: player.state.position,
+          duration: player.state.duration,
+          offset: offset,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_hasError) {
@@ -579,6 +669,16 @@ class _TrailerPreviewState extends State<TrailerPreview> {
                       player.state.playing ? player.pause() : player.play();
                       setState(() {});
                     },
+                  ),
+                ),
+                Center(
+                  child: VideoSkipControls(
+                    onBackward: () =>
+                        _seekPreviewBy(const Duration(seconds: -10)),
+                    onForward: () =>
+                        _seekPreviewBy(const Duration(seconds: 10)),
+                    gap: 72,
+                    compact: true,
                   ),
                 ),
                 Positioned(
@@ -739,6 +839,17 @@ class _TrailerPreviewState extends State<TrailerPreview> {
                   ),
                 ),
               ),
+              if (_showControls)
+                Center(
+                  child: VideoSkipControls(
+                    onBackward: () =>
+                        _seekPreviewBy(const Duration(seconds: -10)),
+                    onForward: () =>
+                        _seekPreviewBy(const Duration(seconds: 10)),
+                    gap: 72,
+                    compact: true,
+                  ),
+                ),
             ],
           ),
         ),

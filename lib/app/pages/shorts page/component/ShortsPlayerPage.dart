@@ -13,6 +13,7 @@ import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/widgets/shimmer%20loader/shimmer_loader.dart';
+import 'package:ott/app/widgets/video_skip_controls.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
@@ -398,6 +399,16 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         !_isMetaExpanded && (titleText.length > 36 || hasDescription);
     return Stack(
       children: [
+        Positioned.fill(
+          child: Center(
+            child: VideoSkipControls(
+              onBackward: () => _seekBy(const Duration(seconds: -10)),
+              onForward: () => _seekBy(const Duration(seconds: 10)),
+              gap: 78,
+              compact: true,
+            ),
+          ),
+        ),
         Positioned(
           left: 16,
           bottom: 80,
@@ -815,6 +826,20 @@ ${short.durationSec ?? ''}
     controller.state.playing ? controller.pause() : controller.play();
   }
 
+  void _seekBy(Duration offset) {
+    final controller = _controller;
+    if (controller == null) return;
+    unawaited(
+      controller.seek(
+        boundedSeekPosition(
+          position: controller.state.position,
+          duration: controller.state.duration,
+          offset: offset,
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleDoubleTapLike() async {
     final controller = _controller;
     if (controller == null || _parts.isEmpty) {
@@ -906,9 +931,9 @@ ${short.durationSec ?? ''}
       top: MediaQuery.of(context).padding.top + 12,
       left: 12,
       child: InkWell(
-      onTap: () {
-        _controller?.pause();
-        Navigator.pop(context);
+        onTap: () {
+          _controller?.pause();
+          Navigator.pop(context);
         },
         child: const CircleAvatar(
           radius: 18,
