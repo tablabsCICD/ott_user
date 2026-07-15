@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:ott/app/provider/session_device_provider.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
-import 'package:ott/data/models/session_device.dart';
+import 'package:ott/data/models/anti_piracy_models.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 class DeviceManagementPage extends StatefulWidget {
@@ -86,7 +86,7 @@ class _DeviceManagementPageState extends State<DeviceManagementPage> {
 class _DeviceCard extends StatelessWidget {
   const _DeviceCard({required this.device});
 
-  final SessionDevice device;
+  final DeviceBinding device;
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +98,7 @@ class _DeviceCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: theme.primaryColor.withOpacity(0.18)),
+        border: Border.all(color: theme.primaryColor.withValues(alpha: 0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,7 +110,7 @@ class _DeviceCard extends StatelessWidget {
                 width: isMobile ? 42 : 54,
                 height: isMobile ? 42 : 54,
                 decoration: BoxDecoration(
-                  color: theme.primaryColor.withOpacity(0.14),
+                  color: theme.primaryColor.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -139,7 +139,7 @@ class _DeviceCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    if (device.isCurrent)
+                    if (device.current)
                       Text(
                         'Current device',
                         style: TextStyle(
@@ -148,12 +148,15 @@ class _DeviceCard extends StatelessWidget {
                         ),
                       ),
                     const SizedBox(height: 10),
-                    _MetaLine(label: 'Login', value: device.loginTime),
+                    _MetaLine(label: 'OS', value: device.osVersion),
                     _MetaLine(
-                      label: 'Last access',
-                      value: device.lastAccessTime,
+                      label: 'Authorization',
+                      value: device.blocked
+                          ? 'Blocked'
+                          : device.authorized
+                              ? 'Authorized'
+                              : 'Unknown',
                     ),
-                    _MetaLine(label: 'App version', value: device.appVersion),
                   ],
                 ),
               ),
@@ -164,15 +167,15 @@ class _DeviceCard extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: OttTvFocus(
               borderRadius: 10,
-              onTap: device.isCurrent
+              onTap: device.current
                   ? null
-                  : () => _logoutDevice(context, device.id),
+                  : () => _confirmRemoveDevice(context, device.deviceId),
               child: ElevatedButton.icon(
-                onPressed: device.isCurrent
+                onPressed: device.current
                     ? null
-                    : () => _logoutDevice(context, device.id),
-                icon: const Icon(Icons.logout, size: 18),
-                label: const Text('Logout Device'),
+                    : () => _confirmRemoveDevice(context, device.deviceId),
+                icon: const Icon(Icons.delete_outline, size: 18),
+                label: const Text('Remove Device'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.primaryColor,
                   foregroundColor: Colors.white,
@@ -192,13 +195,36 @@ class _DeviceCard extends StatelessWidget {
     );
   }
 
-  Future<void> _logoutDevice(BuildContext context, String id) async {
+  Future<void> _confirmRemoveDevice(
+    BuildContext context,
+    String deviceId,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Remove device?'),
+        content: const Text(
+          'This device will no longer be authorized for protected playback.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
     final provider = context.read<SessionDeviceProvider>();
-    final success = await provider.logoutDevice(id);
+    final success = await provider.removeDevice(deviceId);
     if (!context.mounted) return;
     CustomToast.show(
       context,
-      success ? 'Device logged out successfully.' : provider.errorMessage ?? '',
+      success ? 'Device removed successfully.' : provider.errorMessage ?? '',
       isSuccess: success,
     );
   }
@@ -226,7 +252,7 @@ class _TypeBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: theme.primaryColor.withOpacity(0.16),
+        color: theme.primaryColor.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -255,7 +281,7 @@ class _MetaLine extends StatelessWidget {
       child: Text(
         '$label: $value',
         style: TextStyle(
-          color: theme.canvasColor.withOpacity(0.72),
+          color: theme.canvasColor.withValues(alpha: 0.72),
           fontWeight: FontWeight.w500,
         ),
       ),
