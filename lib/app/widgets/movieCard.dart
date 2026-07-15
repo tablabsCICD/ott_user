@@ -7,6 +7,7 @@ import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:video_player/video_player.dart' as native_video;
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/utils/direct_trailer_source.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
@@ -60,6 +61,7 @@ class _MovieCardState extends State<MovieCard> {
   static _MovieCardState? _activePreviewState;
   Player? _previewPlayer;
   VideoController? _videoController;
+  native_video.VideoPlayerController? _androidPreviewController;
   final List<StreamSubscription<dynamic>> _previewSubscriptions = [];
   bool _isHovered = false;
   bool _isMuted = true;
@@ -69,6 +71,7 @@ class _MovieCardState extends State<MovieCard> {
   bool _isStartingPreview = false;
   int _previewGeneration = 0;
   Timer? _playDelayTimer;
+  Future<void>? _previewStartFuture;
 
   String? _directPreviewUrl(String? rawUrl) {
     final value = DirectTrailerSource.fromBackend(rawUrl);
@@ -132,6 +135,7 @@ class _MovieCardState extends State<MovieCard> {
       _isMuted = !_isMuted;
     });
     player?.setVolume(_isMuted ? 0 : 100);
+    _androidPreviewController?.setVolume(_isMuted ? 0 : 1);
   }
 
   Future<bool> _ensureVideoInitialized() async {
@@ -140,6 +144,33 @@ class _MovieCardState extends State<MovieCard> {
     final trailerUrl = _directPreviewUrl(widget.movie.trailerUrl);
     if (trailerUrl == null) return false;
     final generation = _previewGeneration;
+
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      final controller = native_video.VideoPlayerController.networkUrl(
+        Uri.parse(trailerUrl),
+      );
+      try {
+        await controller.initialize();
+        await controller.setLooping(true);
+        await controller.setVolume(_isMuted ? 0 : 1);
+        if (!mounted ||
+            generation != _previewGeneration ||
+            !_isPlayTriggerActive ||
+            _activePreviewState != this) {
+          await controller.dispose();
+          return false;
+        }
+        _androidPreviewController = controller;
+        setState(() => _isVideoInitialized = true);
+        _logPreview('Android ExoPlayer trailer initialized');
+        return true;
+      } catch (error, stackTrace) {
+        debugPrint(
+            'Android trailer initialization failed: $error\n$stackTrace');
+        await controller.dispose();
+        return false;
+      }
+    }
 
     final player = Player();
 
@@ -209,13 +240,51 @@ class _MovieCardState extends State<MovieCard> {
     }
     _previewSubscriptions.clear();
     final player = _previewPlayer;
+    final androidController = _androidPreviewController;
     _previewPlayer = null;
     _videoController = null;
+    _androidPreviewController = null;
     _isVideoInitialized = false;
     _isPreviewPlaying = false;
     if (player != null) {
       unawaited(player.dispose());
       _logPreview('Video Disposed');
+    }
+    if (androidController != null) {
+      unawaited(androidController.dispose());
+      _logPreview('Android ExoPlayer trailer disposed');
+    }
+  }
+
+  Future<void> _disposePreviewBeforeSecurePlayback() async {
+    _playDelayTimer?.cancel();
+    _previewGeneration++;
+    await _previewStartFuture;
+    for (final subscription in _previewSubscriptions) {
+      await subscription.cancel();
+    }
+    _previewSubscriptions.clear();
+    final player = _previewPlayer;
+    final androidController = _androidPreviewController;
+    _previewPlayer = null;
+    _videoController = null;
+    _androidPreviewController = null;
+    _isVideoInitialized = false;
+    _isPreviewPlaying = false;
+    if (_activePreviewState == this) _activePreviewState = null;
+    if (player != null) {
+      SecurityDebugLog.event(
+        'TRAILER',
+        'Awaiting MovieCard preview disposal before secure playback.',
+      );
+      await player.dispose();
+      SecurityDebugLog.event(
+        'TRAILER',
+        'MovieCard preview disposal completed before secure playback.',
+      );
+    }
+    if (androidController != null) {
+      await androidController.dispose();
     }
   }
 
@@ -307,14 +376,24 @@ class _MovieCardState extends State<MovieCard> {
     if (!_isPlayTriggerActive) return;
 
     if (_isAutoPlayActive && !_isHovered) {
-      _startPreviewIfEligible();
+      _beginPreviewStart();
       return;
     }
 
     _playDelayTimer = Timer(const Duration(milliseconds: 250), () {
       _playDelayTimer = null;
-      _startPreviewIfEligible();
+      _beginPreviewStart();
     });
+  }
+
+  void _beginPreviewStart() {
+    final future = _startPreviewIfEligible();
+    _previewStartFuture = future;
+    unawaited(future.whenComplete(() {
+      if (identical(_previewStartFuture, future)) {
+        _previewStartFuture = null;
+      }
+    }));
   }
 
   bool get _isPlayTriggerActive {
@@ -349,7 +428,12 @@ class _MovieCardState extends State<MovieCard> {
 
       _ensureMuted();
 
-      await _previewPlayer!.play();
+      final androidController = _androidPreviewController;
+      if (androidController != null) {
+        await androidController.play();
+      } else {
+        await _previewPlayer!.play();
+      }
       if (!mounted ||
           generation != _previewGeneration ||
           _activePreviewState != this) {
@@ -379,20 +463,27 @@ class _MovieCardState extends State<MovieCard> {
 
   void _ensureMuted() {
     final player = _previewPlayer;
-    if (player == null) return;
+    final androidController = _androidPreviewController;
+    if (player == null && androidController == null) return;
     if (!_isMuted) {
       setState(() => _isMuted = true);
     }
-    player.setVolume(0);
+    player?.setVolume(0);
+    androidController?.setVolume(0);
   }
 
   void _stopPreview({bool external = false}) {
     final player = _previewPlayer;
-    if (player == null || !_isVideoInitialized) return;
+    final androidController = _androidPreviewController;
+    if ((player == null && androidController == null) || !_isVideoInitialized) {
+      return;
+    }
 
     try {
-      player.pause();
-      player.seek(Duration.zero);
+      player?.pause();
+      player?.seek(Duration.zero);
+      androidController?.pause();
+      androidController?.seekTo(Duration.zero);
     } catch (e) {
       debugPrint("Trailer stop failed: $e");
     }
@@ -541,6 +632,13 @@ class _MovieCardState extends State<MovieCard> {
 
   Widget _buildMediaPreview(
       String? posterUrl, ThemeData theme, Content content, bool showPreview) {
+    final androidController = _androidPreviewController;
+    if (showPreview &&
+        _isVideoInitialized &&
+        androidController != null &&
+        androidController.value.isInitialized) {
+      return native_video.VideoPlayer(androidController);
+    }
     if (showPreview && _isVideoInitialized && _videoController != null) {
       return Stack(
         children: [
@@ -822,6 +920,8 @@ class _MovieCardState extends State<MovieCard> {
       'ROUTE',
       'Media source is available; opening PlayMediaPage with the URL redacted.',
     );
+    await _disposePreviewBeforeSecurePlayback();
+    if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(

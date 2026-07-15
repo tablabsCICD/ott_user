@@ -12,6 +12,7 @@ import 'package:ott/app/pages/profile%20page/component/change_language.dart';
 import 'package:ott/app/pages/search%20page/SearchPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
+import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
@@ -43,8 +44,10 @@ class _SeriesListView extends StatefulWidget {
   State<_SeriesListView> createState() => _SeriesListViewState();
 }
 
-class _SeriesListViewState extends State<_SeriesListView> {
+class _SeriesListViewState extends State<_SeriesListView>
+    with RouteAware, WidgetsBindingObserver {
   static const String _seriesType = 'SERIES';
+  static const double _autoPlayVisibilityThreshold = 0.70;
 
   final ScrollController _verticalController = ScrollController();
   final Map<int, ScrollController> _rowControllers = {};
@@ -56,10 +59,15 @@ class _SeriesListViewState extends State<_SeriesListView> {
   bool _isLoading = true;
   bool _visibleUpdateScheduled = false;
   int? _userId;
+  PageRoute<dynamic>? _route;
+  bool _routeIsActive = true;
+  bool _appIsActive = true;
+  bool get _pageIsActive => _routeIsActive && _appIsActive;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _verticalController.addListener(_updateVisibleRows);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -68,7 +76,45 @@ class _SeriesListViewState extends State<_SeriesListView> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<dynamic> && route != _route) {
+      if (_route != null) routeObserver.unsubscribe(this);
+      _route = route;
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  void _clearAutoPlay() {
+    for (final notifier in _rowActiveIndexes.values) {
+      notifier.value = null;
+    }
+  }
+
+  @override
+  void didPushNext() {
+    _routeIsActive = false;
+    _clearAutoPlay();
+  }
+
+  @override
+  void didPopNext() {
+    _routeIsActive = true;
+    _scheduleVisibleUpdate();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appIsActive = state == AppLifecycleState.resumed;
+    _pageIsActive ? _scheduleVisibleUpdate() : _clearAutoPlay();
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    routeObserver.unsubscribe(this);
+    _clearAutoPlay();
     for (final controller in _rowControllers.values) {
       controller.dispose();
     }
@@ -119,22 +165,6 @@ class _SeriesListViewState extends State<_SeriesListView> {
       return;
     }
 
-    final maxScrollExtent = controller.position.maxScrollExtent;
-    if (maxScrollExtent - controller.offset <= 1.0) {
-      int bestLastIndex = itemCount - 1;
-      if (items != null && items.isNotEmpty) {
-        for (int i = itemCount - 1; i >= 0; i--) {
-          if (i < items.length &&
-              (items[i].trailerUrl?.trim().isNotEmpty ?? false)) {
-            bestLastIndex = i;
-            break;
-          }
-        }
-      }
-      if (notifier.value != bestLastIndex) notifier.value = bestLastIndex;
-      return;
-    }
-
     final viewStart = controller.offset;
     final viewEnd = viewStart + viewport;
     final firstCandidate = math.max(
@@ -147,7 +177,6 @@ class _SeriesListViewState extends State<_SeriesListView> {
     );
 
     int? bestIndex;
-    int? fallbackIndex;
     double bestOverlap = 0;
 
     for (int candidate = firstCandidate;
@@ -156,11 +185,13 @@ class _SeriesListViewState extends State<_SeriesListView> {
       final overlap = _visibleOverlap(viewStart, viewEnd, candidate);
       if (overlap <= 0) continue;
 
-      fallbackIndex = candidate;
       final hasTrailer = items != null &&
           candidate < items.length &&
           (items[candidate].trailerUrl?.trim().isNotEmpty ?? false);
       if (!hasTrailer) continue;
+
+      final visibility = overlap / MovieCard.itemExtent;
+      if (visibility < _autoPlayVisibilityThreshold) continue;
 
       if (bestIndex == null ||
           overlap > bestOverlap ||
@@ -170,7 +201,6 @@ class _SeriesListViewState extends State<_SeriesListView> {
       }
     }
 
-    bestIndex ??= fallbackIndex;
     if (notifier.value != bestIndex) notifier.value = bestIndex;
   }
 
@@ -181,7 +211,7 @@ class _SeriesListViewState extends State<_SeriesListView> {
     return overlap <= 0 ? 0 : overlap;
   }
 
-  double? _rowCenterY(GlobalKey key) {
+  Rect? _rowRect(GlobalKey key) {
     final context = key.currentContext;
     if (context == null) return null;
 
@@ -189,11 +219,14 @@ class _SeriesListViewState extends State<_SeriesListView> {
     if (renderObject is! RenderBox || !renderObject.hasSize) return null;
 
     final position = renderObject.localToGlobal(Offset.zero);
-    return position.dy + (renderObject.size.height / 2);
+    return position & renderObject.size;
   }
 
   void _updateVisibleRows() {
-    if (!mounted) return;
+    if (!mounted || !_pageIsActive) {
+      _clearAutoPlay();
+      return;
+    }
 
     final screenHeight = MediaQuery.of(context).size.height;
     for (final entry in _rowActiveIndexes.entries) {
@@ -203,9 +236,14 @@ class _SeriesListViewState extends State<_SeriesListView> {
       final itemCount = _rowItemCounts[rowIndex] ?? 0;
       final items = _rowItems[rowIndex];
       final key = _rowKeys[rowIndex];
-      final centerY = key == null ? null : _rowCenterY(key);
-      final isVisible =
-          centerY != null && centerY >= 0 && centerY <= screenHeight;
+      final rect = key == null ? null : _rowRect(key);
+      final visibleHeight = rect == null
+          ? 0.0
+          : (math.min(rect.bottom, screenHeight) - math.max(rect.top, 0.0))
+              .clamp(0.0, rect.height);
+      final visibility =
+          rect == null || rect.height <= 0 ? 0.0 : visibleHeight / rect.height;
+      final isVisible = visibility >= _autoPlayVisibilityThreshold;
 
       if (!isVisible || controller == null) {
         if (notifier.value != null) notifier.value = null;

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:video_player/video_player.dart' as native_video;
 import 'package:http/http.dart' as http;
 import 'package:ott/app/core/network/anti_piracy_api_client.dart';
 import 'package:ott/app/core/services/anti_piracy_service.dart';
@@ -70,11 +71,16 @@ class PlayMediaPage extends StatefulWidget {
 
 class _PlayMediaPageState extends State<PlayMediaPage>
     with WidgetsBindingObserver {
+  static int _nextPlayerId = 0;
+
   Player? _player;
+  native_video.VideoPlayerController? _androidSecurePlayer;
+  int? _activePlayerId;
   VideoController? _videoController;
   youtube.YoutubePlayerController? _youtubeController;
   final List<StreamSubscription<dynamic>> _playerSubscriptions = [];
   Timer? _progressTimer;
+  Timer? _controlsHideTimer;
 
   bool _loading = true;
   bool _hasPlaybackError = false;
@@ -89,6 +95,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   String? _currentRemotePlaybackUrl;
   SecurePlaybackController? _securePlaybackController;
   bool _handlingSecureAuthenticationFailure = false;
+  bool _controlsVisible = true;
+  bool _isSeeking = false;
   Duration? _lastLoggedDuration;
 
   bool get _isSeries =>
@@ -114,6 +122,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
       unawaited(_player?.pause());
+      unawaited(_androidSecurePlayer?.pause());
       _youtubeController?.pause();
       unawaited(_securePlaybackController?.onBackground());
       _saveProgress();
@@ -342,20 +351,28 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       'cookieValuesRedacted=true',
     );
     final previous = _player?.state;
-    final position = previous?.position ?? Duration.zero;
-    final wasPlaying = previous?.playing ?? true;
-    final volume = previous?.volume ?? 100;
-    final rate = previous?.rate ?? 1;
+    final androidPrevious = _androidSecurePlayer?.value;
+    final position =
+        androidPrevious?.position ?? previous?.position ?? Duration.zero;
+    final wasPlaying = androidPrevious?.isPlaying ?? previous?.playing ?? true;
+    final volume = androidPrevious == null
+        ? previous?.volume ?? 100
+        : androidPrevious.volume * 100;
+    final rate = androidPrevious?.playbackSpeed ?? previous?.rate ?? 1;
     final audioTrack = previous?.track.audio;
     final subtitleTrack = previous?.track.subtitle;
 
     await _setupPlayer(
       authorization.playbackUrl,
-      httpHeaders: {'Cookie': authorization.cookieHeader},
+      httpHeaders: {
+        'Cookie': authorization.cookieHeader,
+        'User-Agent': 'FilmyTell/1.0',
+      },
       diagnoseSignedHls: true,
     );
     final player = _player;
-    if (player == null || _hasPlaybackError) {
+    final androidPlayer = _androidSecurePlayer;
+    if ((player == null && androidPlayer == null) || _hasPlaybackError) {
       SecurityDebugLog.event(
         'PLAYER',
         'media_kit could not initialize the signed media source.',
@@ -364,26 +381,42 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
 
     if (isRefresh) {
-      if (position > Duration.zero) await player.seek(position);
-      await player.setVolume(volume);
-      await player.setRate(rate);
-      if (audioTrack != null) await player.setAudioTrack(audioTrack);
-      if (subtitleTrack != null) await player.setSubtitleTrack(subtitleTrack);
-      if (wasPlaying) {
-        await player.play();
+      if (androidPlayer != null) {
+        if (position > Duration.zero) await androidPlayer.seekTo(position);
+        await androidPlayer.setVolume((volume / 100).clamp(0.0, 1.0));
+        await androidPlayer.setPlaybackSpeed(rate);
+        if (wasPlaying) {
+          await androidPlayer.play();
+        } else {
+          await androidPlayer.pause();
+        }
       } else {
-        await player.pause();
+        if (position > Duration.zero) await player!.seek(position);
+        await player!.setVolume(volume);
+        await player.setRate(rate);
+        if (audioTrack != null) await player.setAudioTrack(audioTrack);
+        if (subtitleTrack != null) {
+          await player.setSubtitleTrack(subtitleTrack);
+        }
+        if (wasPlaying) {
+          await player.play();
+        } else {
+          await player.pause();
+        }
       }
     }
     SecurityDebugLog.event(
       'PLAYER',
       'media_kit accepted the cookie-authorized source; URL and cookies remain redacted.',
     );
-    return SecureMediaRestoreResult(isPlaying: player.state.playing);
+    return SecureMediaRestoreResult(
+      isPlaying: androidPlayer?.value.isPlaying ?? player!.state.playing,
+    );
   }
 
   Future<void> _pauseActivePlayer() async {
     await _player?.pause();
+    await _androidSecurePlayer?.pause();
     _youtubeController?.pause();
   }
 
@@ -399,6 +432,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
   Future<void> _setupYoutubePlayer(String videoId) async {
     final token = ++_setupToken;
+    _controlsHideTimer?.cancel();
 
     final secureController = _securePlaybackController;
     if (secureController != null) {
@@ -413,6 +447,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         _loading = true;
         _hasPlaybackError = false;
         _playbackMessage = null;
+        _controlsVisible = true;
+        _isSeeking = false;
       });
     }
 
@@ -488,12 +524,15 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     Map<String, String>? httpHeaders,
   }) async {
     final token = ++_setupToken;
+    _controlsHideTimer?.cancel();
 
     if (mounted) {
       setState(() {
         _loading = true;
         _hasPlaybackError = false;
         _playbackMessage = null;
+        _controlsVisible = true;
+        _isSeeking = false;
       });
     }
 
@@ -512,19 +551,79 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       if (_isDisposed || !mounted || token != _setupToken) return;
     }
 
-    final player = Player();
+    if (!kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.android &&
+        diagnoseSignedHls &&
+        !playFromFile) {
+      await _setupAndroidSecureHlsPlayer(
+        url,
+        httpHeaders: httpHeaders ?? const {},
+        token: token,
+      );
+      return;
+    }
+
+    final playerId = ++_nextPlayerId;
+    final player = Player(
+      configuration: const PlayerConfiguration(
+        logLevel: MPVLogLevel.debug,
+        protocolWhitelist: [
+          'udp',
+          'rtp',
+          'tcp',
+          'tls',
+          'data',
+          'file',
+          'http',
+          'https',
+          'crypto',
+        ],
+      ),
+    );
     final controller = VideoController(player);
+    SecurityDebugLog.diagnostic(
+      'MEDIA_KIT_CREATE playerId=$playerId secure=$diagnoseSignedHls '
+      'platform=${defaultTargetPlatform.name} native=${!kIsWeb}',
+    );
+    _bindNativePlayerLogs(player, playerId);
 
     try {
+      // Media.httpHeaders is the supported media_kit API. Also configure the
+      // underlying libmpv option because some native HLS paths do not retain
+      // Media headers when opening child playlists and segments.
+      if (!kIsWeb && !playFromFile && httpHeaders != null) {
+        final nativeHeaderFields = httpHeaders.entries
+            .map((entry) => '${entry.key}: ${entry.value}')
+            .join('\n');
+        await (player.platform as dynamic).setProperty(
+          'http-header-fields',
+          nativeHeaderFields,
+        );
+        final configuredHeaders = await (player.platform as dynamic)
+            .getProperty('http-header-fields') as String;
+        SecurityDebugLog.diagnostic(
+          'MEDIA_KIT_NATIVE_PROPERTIES playerId=$playerId '
+          'httpHeaderFieldsConfigured=${configuredHeaders.isNotEmpty} '
+          'nativeCookiePresent=${configuredHeaders.contains('Cookie:')} '
+          'protocolWhitelist=http,https,tls,tcp,crypto,data '
+          'headers=${httpHeaders.keys.toList()} '
+          'cookieHeaderPresent=${httpHeaders['Cookie']?.isNotEmpty == true} '
+          'cookieValuesRedacted=true',
+        );
+      }
       // media_kit is the underlying playback engine; the route keeps the
       // existing fullscreen, resume, continue-watching and auto-next behavior.
-      await player.open(
-        Media(
-          playFromFile ? _localFileMediaUri(url) : url,
-          httpHeaders: httpHeaders,
-        ),
-        play: false,
+      final media = Media(
+        playFromFile ? _localFileMediaUri(url) : url,
+        httpHeaders: httpHeaders,
       );
+      SecurityDebugLog.diagnostic(
+        'MEDIA_KIT_MEDIA playerId=$playerId uri=${_safeMediaUrl(media.uri)} '
+        'headers=${media.httpHeaders?.keys.toList() ?? const []} '
+        'cookieHeaderPresent=${media.httpHeaders?['Cookie']?.isNotEmpty == true} '
+        'cookieValuesRedacted=true openPlay=false',
+      );
+      await player.open(media, play: false);
       await player.setVolume(100);
     } catch (error, stackTrace) {
       SecurityDebugLog.exception(
@@ -534,9 +633,15 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       );
       SecurityDebugLog.event(
         'PLAYER',
-        'media_kit initialization failed; sanitized details are in HTTP_DIAGNOSTIC.',
+        'media_kit initialization failed for playerId=$playerId; sanitized details are in HTTP_DIAGNOSTIC.',
+      );
+      SecurityDebugLog.diagnostic(
+        'MEDIA_KIT_DISPOSE_BEGIN playerId=$playerId reason=open_exception',
       );
       await player.dispose();
+      SecurityDebugLog.diagnostic(
+        'MEDIA_KIT_DISPOSE_DONE playerId=$playerId reason=open_exception',
+      );
       if (mounted && token == _setupToken) {
         _showPlaybackError('Failed to load video');
       }
@@ -544,16 +649,23 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
 
     if (_isDisposed || !mounted || token != _setupToken) {
+      SecurityDebugLog.diagnostic(
+        'MEDIA_KIT_DISPOSE_BEGIN playerId=$playerId reason=stale_setup',
+      );
       await player.dispose();
+      SecurityDebugLog.diagnostic(
+        'MEDIA_KIT_DISPOSE_DONE playerId=$playerId reason=stale_setup',
+      );
       return;
     }
 
     _player = player;
+    _activePlayerId = playerId;
     _videoController = controller;
     _bindPlayerStreams(player);
     SecurityDebugLog.event(
       'PLAYER',
-      'media_kit open completed and player streams were attached.',
+      'media_kit open completed for playerId=$playerId and player streams were attached.',
     );
 
     if (mounted && token == _setupToken) {
@@ -561,6 +673,121 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
 
     await _resumeAndPlay(token);
+  }
+
+  Future<void> _setupAndroidSecureHlsPlayer(
+    String url, {
+    required Map<String, String> httpHeaders,
+    required int token,
+  }) async {
+    final playerId = ++_nextPlayerId;
+    final uri = Uri.parse(url);
+    SecurityDebugLog.diagnostic(
+      'ANDROID_EXOPLAYER_CREATE playerId=$playerId '
+      'engine=Media3/ExoPlayer uri=${_safeProbeUrl(uri)} '
+      'headers=${httpHeaders.keys.toList()} '
+      'cookieHeaderPresent=${httpHeaders['Cookie']?.isNotEmpty == true} '
+      'cookieValuesRedacted=true',
+    );
+    final controller = native_video.VideoPlayerController.networkUrl(
+      uri,
+      httpHeaders: Map<String, String>.unmodifiable(httpHeaders),
+      videoPlayerOptions: native_video.VideoPlayerOptions(
+        mixWithOthers: false,
+      ),
+    );
+    var lastPlaying = false;
+    var lastBuffering = false;
+    var lastError = '';
+    controller.addListener(() {
+      if (_isDisposed || token != _setupToken) return;
+      final value = controller.value;
+      _handlePositionChanged();
+      if (value.isPlaying != lastPlaying ||
+          value.isBuffering != lastBuffering) {
+        lastPlaying = value.isPlaying;
+        lastBuffering = value.isBuffering;
+        SecurityDebugLog.diagnostic(
+          'ANDROID_EXOPLAYER_STATE playerId=$playerId '
+          'initialized=${value.isInitialized} playing=${value.isPlaying} '
+          'buffering=${value.isBuffering} '
+          'positionMs=${value.position.inMilliseconds}',
+        );
+        _handlePlayingChanged(value.isPlaying);
+      }
+      final error = value.errorDescription ?? '';
+      if (value.hasError && error != lastError) {
+        lastError = error;
+        SecurityDebugLog.exception(
+          'ANDROID_EXOPLAYER_NATIVE playerId=$playerId',
+          error,
+          StackTrace.current,
+        );
+        if (error.contains('403') && _securePlaybackController != null) {
+          unawaited(_securePlaybackController!.handlePlayerHttp403());
+        } else {
+          _showPlaybackError('Failed to load video');
+        }
+      }
+      if (value.isCompleted) _handlePlaybackCompleted();
+      if (mounted) setState(() {});
+    });
+
+    try {
+      await controller.initialize();
+      await controller.setVolume(1);
+    } catch (error, stackTrace) {
+      SecurityDebugLog.exception(
+        'ANDROID_EXOPLAYER_INITIALIZE playerId=$playerId',
+        error,
+        stackTrace,
+      );
+      await controller.dispose();
+      if (mounted && token == _setupToken) {
+        _showPlaybackError('Failed to load video');
+      }
+      return;
+    }
+    if (_isDisposed || !mounted || token != _setupToken) {
+      await controller.dispose();
+      return;
+    }
+    _androidSecurePlayer = controller;
+    _activePlayerId = playerId;
+    SecurityDebugLog.diagnostic(
+      'ANDROID_EXOPLAYER_INITIALIZED playerId=$playerId '
+      'durationMs=${controller.value.duration.inMilliseconds} '
+      'size=${controller.value.size.width}x${controller.value.size.height}',
+    );
+    setState(() => _loading = false);
+    await _resumeAndPlay(token);
+  }
+
+  void _bindNativePlayerLogs(Player player, int playerId) {
+    _playerSubscriptions.add(
+      player.stream.log.listen(
+        (log) {
+          SecurityDebugLog.diagnostic(
+            'MEDIA_KIT_NATIVE_LOG playerId=$playerId level=${log.level} '
+            'prefix=${log.prefix} message=${log.text}',
+          );
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          SecurityDebugLog.exception(
+            'MEDIA_KIT_NATIVE_LOG_STREAM playerId=$playerId',
+            error,
+            stackTrace,
+          );
+        },
+      ),
+    );
+  }
+
+  String _safeMediaUrl(String value) {
+    final uri = Uri.tryParse(value);
+    if (uri == null) return '<invalid-uri>';
+    if (uri.scheme == 'file') return '<local-file>';
+    return _safeProbeUrl(uri);
   }
 
   Future<void> _probeSignedHls(
@@ -576,10 +803,6 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       return;
     }
 
-    SecurityDebugLog.event(
-      'HLS_PROBE',
-      'Requesting the top-level HLS resource with redacted CloudFront cookies before media_kit opens it.',
-    );
     if (cookieHeader == null || cookieHeader.isEmpty) {
       SecurityDebugLog.event(
         'HLS_PROBE',
@@ -588,65 +811,152 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       return;
     }
     try {
-      final response = await http.get(
-        uri,
-        headers: {
-          'Accept': 'application/vnd.apple.mpegurl, application/x-mpegURL, */*',
-          'Range': 'bytes=0-65535',
-          'Cookie': cookieHeader,
-        },
-      ).timeout(const Duration(seconds: 10));
-      final contentType = response.headers['content-type'] ?? '<missing>';
-      final cloudFrontResult = response.headers['x-cache'] ?? '<missing>';
-      SecurityDebugLog.diagnostic(
-        'HLS_PROBE_RESPONSE status=${response.statusCode} '
-        'contentType=$contentType bytes=${response.bodyBytes.length} '
-        'cloudFrontXCache=$cloudFrontResult',
+      final headers = {
+        'Accept': 'application/vnd.apple.mpegurl, application/x-mpegURL, */*',
+        'Range': 'bytes=0-65535',
+        'Cookie': cookieHeader,
+        'User-Agent': 'FilmyTell/1.0',
+      };
+      final master = await _getHlsProbeResource(
+        stage: 'MASTER_PLAYLIST',
+        uri: uri,
+        headers: headers,
       );
+      if (master == null) return;
 
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        final errorBody = utf8.decode(
-          response.bodyBytes.take(2048).toList(growable: false),
-          allowMalformed: true,
+      var mediaPlaylistUri = uri;
+      var mediaPlaylist = master;
+      final childReference = _firstPlaylistReference(master);
+      if (childReference != null) {
+        mediaPlaylistUri = uri.resolve(childReference);
+        final child = await _getHlsProbeResource(
+          stage: 'CHILD_PLAYLIST',
+          uri: mediaPlaylistUri,
+          headers: headers,
         );
+        if (child == null) return;
+        mediaPlaylist = child;
+      }
+
+      final segmentReference = _firstSegmentReference(mediaPlaylist);
+      if (segmentReference == null) {
         SecurityDebugLog.exception(
-          'HLS_PROBE_HTTP_${response.statusCode}',
-          errorBody.isEmpty ? 'CloudFront returned an empty error body.' : errorBody,
+          'HLS_PROBE_SEGMENT_MISSING',
+          'No .ts/.m4s segment or EXT-X-MAP URI was found.',
         );
         return;
       }
+      final segmentUri = mediaPlaylistUri.resolve(segmentReference);
+      final segment = await _getHlsProbeBytes(
+        stage: 'FIRST_SEGMENT',
+        uri: segmentUri,
+        headers: headers,
+      );
+      if (segment == null) return;
 
-      final playlist = utf8.decode(response.bodyBytes, allowMalformed: true);
-      final isHls = playlist.trimLeft().startsWith('#EXTM3U');
-      final mediaUris = playlist
-          .split(RegExp(r'\r?\n'))
-          .map((line) => line.trim())
-          .where((line) => line.isNotEmpty && !line.startsWith('#'))
-          .toList(growable: false);
-      var relativeUris = 0;
-      var absoluteUris = 0;
-      for (final value in mediaUris) {
-        final child = Uri.tryParse(value);
-        if (child == null) continue;
-        if (child.hasScheme) {
-          absoluteUris++;
-        } else {
-          relativeUris++;
-        }
-      }
       SecurityDebugLog.diagnostic(
-        'HLS_PLAYLIST_CHECK validM3u8=$isHls childUriCount=${mediaUris.length} '
-        'relativeChildUris=$relativeUris absoluteChildUris=$absoluteUris '
-        'cookieAuthorizationApplied=true',
+        'HLS_PROBE_CHAIN_SUCCESS master=true child=${childReference != null} '
+        'segment=true cookieAuthorizationApplied=true. If media_kit fails now, '
+        'its native HLS requests are not retaining the supplied headers.',
       );
     } catch (error, stackTrace) {
       SecurityDebugLog.exception('HLS_PROBE_NETWORK', error, stackTrace);
     }
   }
 
+  Future<String?> _getHlsProbeResource({
+    required String stage,
+    required Uri uri,
+    required Map<String, String> headers,
+  }) async {
+    final bytes = await _getHlsProbeBytes(
+      stage: stage,
+      uri: uri,
+      headers: headers,
+    );
+    if (bytes == null) return null;
+    final playlist = utf8.decode(bytes, allowMalformed: true);
+    final valid = playlist.trimLeft().startsWith('#EXTM3U');
+    SecurityDebugLog.diagnostic(
+      'HLS_PLAYLIST_CHECK stage=$stage validM3u8=$valid',
+    );
+    if (!valid) return null;
+    return playlist;
+  }
+
+  Future<List<int>?> _getHlsProbeBytes({
+    required String stage,
+    required Uri uri,
+    required Map<String, String> headers,
+  }) async {
+    SecurityDebugLog.diagnostic(
+      'HLS_PROBE_REQUEST stage=$stage url=${_safeProbeUrl(uri)} '
+      'headers=${headers.keys.toList()} Cookie=<redacted> '
+      'cookieHeaderPresent=${headers['Cookie']?.isNotEmpty == true}',
+    );
+    final response = await http
+        .get(uri, headers: headers)
+        .timeout(const Duration(seconds: 10));
+    SecurityDebugLog.diagnostic(
+      'HLS_PROBE_RESPONSE stage=$stage url=${_safeProbeUrl(uri)} '
+      'status=${response.statusCode} '
+      'contentType=${response.headers['content-type'] ?? '<missing>'} '
+      'bytes=${response.bodyBytes.length} '
+      'cloudFrontXCache=${response.headers['x-cache'] ?? '<missing>'}',
+    );
+    if (response.statusCode != 200 && response.statusCode != 206) {
+      final body = utf8.decode(
+        response.bodyBytes.take(2048).toList(growable: false),
+        allowMalformed: true,
+      );
+      SecurityDebugLog.exception(
+        'HLS_PROBE_${stage}_HTTP_${response.statusCode}',
+        body.isEmpty ? 'CloudFront returned an empty error body.' : body,
+      );
+      return null;
+    }
+    return response.bodyBytes;
+  }
+
+  String? _firstPlaylistReference(String playlist) {
+    final lines = playlist.split(RegExp(r'\r?\n'));
+    for (var index = 0; index < lines.length; index++) {
+      if (!lines[index].trim().startsWith('#EXT-X-STREAM-INF')) continue;
+      for (var next = index + 1; next < lines.length; next++) {
+        final value = lines[next].trim();
+        if (value.isEmpty) continue;
+        if (!value.startsWith('#')) return value;
+      }
+    }
+    return null;
+  }
+
+  String? _firstSegmentReference(String playlist) {
+    final mapMatch =
+        RegExp(r'''#EXT-X-MAP:.*URI=["']([^"']+)["']''').firstMatch(playlist);
+    if (mapMatch != null) return mapMatch.group(1);
+    for (final line in playlist.split(RegExp(r'\r?\n'))) {
+      final value = line.trim();
+      final path = Uri.tryParse(value)?.path.toLowerCase() ?? '';
+      if (!value.startsWith('#') &&
+          (path.endsWith('.ts') || path.endsWith('.m4s'))) {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  String _safeProbeUrl(Uri uri) =>
+      uri.replace(query: uri.hasQuery ? '<redacted>' : null).toString();
+
   void _bindPlayerStreams(Player player) {
     _playerSubscriptions
       ..add(player.stream.playing.listen((isPlaying) {
+        SecurityDebugLog.diagnostic(
+          'MEDIA_KIT_STATE playerId=$_activePlayerId playing=$isPlaying '
+          'buffering=${player.state.buffering} '
+          'positionMs=${player.state.position.inMilliseconds}',
+        );
         _handlePlayingChanged(isPlaying);
         if (mounted) setState(() {});
       }))
@@ -665,8 +975,15 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       ..add(player.stream.buffering.listen((isBuffering) {
         SecurityDebugLog.event(
           'PLAYER',
-          'media_kit buffering=$isBuffering positionMs=${player.state.position.inMilliseconds}.',
+          'media_kit playerId=$_activePlayerId buffering=$isBuffering '
+              'playing=${player.state.playing} '
+              'positionMs=${player.state.position.inMilliseconds}.',
         );
+        if (isBuffering) {
+          _showControls(persist: true);
+        } else if (player.state.playing) {
+          _scheduleControlsAutoHide();
+        }
       }))
       ..add(player.stream.completed.listen((completed) {
         if (completed) {
@@ -675,7 +992,11 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         }
       }))
       ..add(player.stream.error.listen((error) {
-        SecurityDebugLog.exception('MEDIA_KIT_STREAM', error);
+        SecurityDebugLog.exception(
+          'MEDIA_KIT_STREAM playerId=$_activePlayerId',
+          error,
+          StackTrace.current,
+        );
         final isForbidden = error.toString().contains('403');
         if (isForbidden && _securePlaybackController != null) {
           unawaited(_securePlaybackController!.handlePlayerHttp403());
@@ -688,11 +1009,12 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   Future<void> _resumeAndPlay(int token) async {
-    if (_player == null || !mounted) return;
+    if ((_player == null && _androidSecurePlayer == null) || !mounted) return;
     if (_isDisposed || token != _setupToken) return;
 
     final provider = context.read<PlayMediaProvider>();
-    await _player!.setVolume(100);
+    await _player?.setVolume(100);
+    await _androidSecurePlayer?.setVolume(1);
 
     final resumeSeconds = _isSeries
         ? provider.getLocalResume(
@@ -703,18 +1025,44 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         : widget.content?.watchedSeconds ?? 0;
 
     if (resumeSeconds > 5) {
-      await _player!.seek(Duration(seconds: resumeSeconds));
+      final resumePosition = Duration(seconds: resumeSeconds);
+      if (_androidSecurePlayer != null) {
+        await _androidSecurePlayer!.seekTo(resumePosition);
+      } else {
+        await _player!.seek(resumePosition);
+      }
     }
 
-    SecurityDebugLog.event(
-      'PLAYER',
-      'Requesting media_kit play at positionMs=${_player!.state.position.inMilliseconds}.',
-    );
-    await _player!.play();
-    SecurityDebugLog.event(
-      'PLAYER',
-      'media_kit play returned playing=${_player!.state.playing} buffering=${_player!.state.buffering}.',
-    );
+    try {
+      final position = _androidSecurePlayer?.value.position ??
+          _player?.state.position ??
+          Duration.zero;
+      SecurityDebugLog.event(
+        'PLAYER',
+        'Requesting secure engine play for playerId=$_activePlayerId '
+            'at positionMs=${position.inMilliseconds}.',
+      );
+      if (_androidSecurePlayer != null) {
+        await _androidSecurePlayer!.play();
+      } else {
+        await _player!.play();
+      }
+      final isPlaying = _androidSecurePlayer?.value.isPlaying ??
+          _player?.state.playing ??
+          false;
+      final isBuffering = _androidSecurePlayer?.value.isBuffering ??
+          _player?.state.buffering ??
+          false;
+      SecurityDebugLog.event(
+        'PLAYER',
+        'Secure engine play returned playerId=$_activePlayerId '
+            'playing=$isPlaying buffering=$isBuffering.',
+      );
+    } catch (error, stackTrace) {
+      SecurityDebugLog.exception('MEDIA_KIT_PLAY', error, stackTrace);
+      _showPlaybackError('Failed to load video');
+      return;
+    }
     if (_isDisposed || token != _setupToken) return;
 
     _progressTimer = Timer.periodic(
@@ -735,10 +1083,26 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       WakelockPlus.disable();
       _wakelockEnabled = false;
     }
+
+    if (isPlaying && !_isPlaybackBuffering && !_isSeeking) {
+      _scheduleControlsAutoHide();
+    } else {
+      _showControls(persist: true);
+    }
   }
 
   void _handlePositionChanged() {
-    if (_isDisposed || !mounted || _player == null || _handlingEnd) return;
+    if (_isDisposed || !mounted || _handlingEnd) return;
+
+    final androidValue = _androidSecurePlayer?.value;
+    if (androidValue != null) {
+      if (androidValue.isPlaying &&
+          (androidValue.position - _lastSavedPosition).inSeconds >= 15) {
+        _saveProgress();
+      }
+      return;
+    }
+    if (_player == null) return;
 
     final state = _player!.state;
 
@@ -766,10 +1130,12 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   void _saveProgress() {
     if (widget.content?.id == null) return;
 
-    final position =
-        _youtubeController?.value.position ?? _player?.state.position;
-    final duration =
-        _youtubeController?.value.metaData.duration ?? _player?.state.duration;
+    final position = _youtubeController?.value.position ??
+        _androidSecurePlayer?.value.position ??
+        _player?.state.position;
+    final duration = _youtubeController?.value.metaData.duration ??
+        _androidSecurePlayer?.value.duration ??
+        _player?.state.duration;
 
     if (position == null || duration == null) return;
 
@@ -840,6 +1206,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   void dispose() {
     _isDisposed = true;
     _setupToken++;
+    _controlsHideTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     final secureController = _securePlaybackController;
     secureController?.removeListener(_onSecurePlaybackChanged);
@@ -863,12 +1230,19 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     _playerSubscriptions.clear();
 
     final player = _player;
+    final androidPlayer = _androidSecurePlayer;
+    final playerId = _activePlayerId;
     final youtubeController = _youtubeController;
     _player = null;
+    _androidSecurePlayer = null;
+    _activePlayerId = null;
     _videoController = null;
     _youtubeController = null;
 
     if (player != null) {
+      SecurityDebugLog.diagnostic(
+        'MEDIA_KIT_DISPOSE_BEGIN playerId=$playerId reason=async_teardown',
+      );
       try {
         await player.pause();
       } catch (_) {}
@@ -876,6 +1250,22 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         await player.setVolume(0);
       } catch (_) {}
       await player.dispose();
+      SecurityDebugLog.diagnostic(
+        'MEDIA_KIT_DISPOSE_DONE playerId=$playerId reason=async_teardown',
+      );
+    }
+
+    if (androidPlayer != null) {
+      SecurityDebugLog.diagnostic(
+        'ANDROID_EXOPLAYER_DISPOSE_BEGIN playerId=$playerId '
+        'reason=async_teardown',
+      );
+      await androidPlayer.pause();
+      await androidPlayer.dispose();
+      SecurityDebugLog.diagnostic(
+        'ANDROID_EXOPLAYER_DISPOSE_DONE playerId=$playerId '
+        'reason=async_teardown',
+      );
     }
 
     youtubeController?.pause();
@@ -900,19 +1290,40 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     _playerSubscriptions.clear();
 
     final player = _player;
+    final androidPlayer = _androidSecurePlayer;
+    final playerId = _activePlayerId;
     final youtubeController = _youtubeController;
     _player = null;
+    _androidSecurePlayer = null;
+    _activePlayerId = null;
     _videoController = null;
     _youtubeController = null;
 
     if (player != null) {
+      SecurityDebugLog.diagnostic(
+        'MEDIA_KIT_DISPOSE_BEGIN playerId=$playerId reason=sync_teardown',
+      );
       try {
         player.pause();
       } catch (_) {}
       try {
         player.setVolume(0);
       } catch (_) {}
-      player.dispose();
+      unawaited(
+        player.dispose().then((_) {
+          SecurityDebugLog.diagnostic(
+            'MEDIA_KIT_DISPOSE_DONE playerId=$playerId reason=sync_teardown',
+          );
+        }),
+      );
+    }
+
+    if (androidPlayer != null) {
+      SecurityDebugLog.diagnostic(
+        'ANDROID_EXOPLAYER_DISPOSE_BEGIN playerId=$playerId '
+        'reason=sync_teardown',
+      );
+      unawaited(androidPlayer.dispose());
     }
 
     youtubeController?.pause();
@@ -979,6 +1390,82 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     final player = _player;
     if (player != null) {
       unawaited(player.playOrPause());
+      return;
+    }
+    final androidPlayer = _androidSecurePlayer;
+    if (androidPlayer != null) {
+      unawaited(
+        androidPlayer.value.isPlaying
+            ? androidPlayer.pause()
+            : androidPlayer.play(),
+      );
+    }
+  }
+
+  bool get _isPlaybackPlaying =>
+      _youtubeController?.value.isPlaying ??
+      _androidSecurePlayer?.value.isPlaying ??
+      _player?.state.playing ??
+      false;
+
+  bool get _isPlaybackBuffering =>
+      _androidSecurePlayer?.value.isBuffering ??
+      _player?.state.buffering ??
+      false;
+
+  void _toggleControlsVisibility() {
+    if (_controlsVisible) {
+      if (!_isPlaybackPlaying || _isPlaybackBuffering || _isSeeking) {
+        _showControls(persist: true);
+        return;
+      }
+      _controlsHideTimer?.cancel();
+      setState(() => _controlsVisible = false);
+    } else {
+      _showControls();
+    }
+  }
+
+  void _showControls({bool persist = false}) {
+    _controlsHideTimer?.cancel();
+    if (mounted && !_controlsVisible) {
+      setState(() => _controlsVisible = true);
+    }
+    if (!persist &&
+        _isPlaybackPlaying &&
+        !_isPlaybackBuffering &&
+        !_isSeeking) {
+      _scheduleControlsAutoHide();
+    }
+  }
+
+  void _scheduleControlsAutoHide() {
+    _controlsHideTimer?.cancel();
+    if (!_isPlaybackPlaying || _isPlaybackBuffering || _isSeeking) return;
+    _controlsHideTimer = Timer(const Duration(seconds: 4), () {
+      if (!mounted ||
+          !_isPlaybackPlaying ||
+          _isPlaybackBuffering ||
+          _isSeeking) {
+        return;
+      }
+      setState(() => _controlsVisible = false);
+    });
+  }
+
+  void _beginSeeking() {
+    _controlsHideTimer?.cancel();
+    setState(() {
+      _isSeeking = true;
+      _controlsVisible = true;
+    });
+  }
+
+  void _finishSeeking(double value) {
+    _seekTo(Duration(milliseconds: value.round()));
+    setState(() => _isSeeking = false);
+    if (_isPlaybackPlaying && !_isPlaybackBuffering) {
+      _scheduleControlsAutoHide();
     }
   }
 
@@ -1004,6 +1491,19 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           boundedSeekPosition(
             position: player.state.position,
             duration: duration,
+            offset: delta,
+          ),
+        ),
+      );
+      return;
+    }
+    final androidPlayer = _androidSecurePlayer;
+    if (androidPlayer != null) {
+      unawaited(
+        androidPlayer.seekTo(
+          boundedSeekPosition(
+            position: androidPlayer.value.position,
+            duration: androidPlayer.value.duration,
             offset: delta,
           ),
         ),
@@ -1050,22 +1550,27 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                             ? _desktopPlayer()
                             : _mobilePlayer(),
               ),
-              Positioned(
-                top: 8,
-                left: 8,
-                child: SafeArea(child: _backButton()),
-              ),
               if (!showLoading && !_hasPlaybackError)
                 Positioned.fill(
-                  child: Center(
-                    child: VideoSkipControls(
-                      onBackward: () => _seekBy(const Duration(seconds: -10)),
-                      onForward: () => _seekBy(const Duration(seconds: 10)),
-                      gap: ResponsiveWidget.isMobile(context) ? 82 : 120,
-                    ),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: _toggleControlsVisibility,
+                    child: const SizedBox.expand(),
                   ),
                 ),
-              if (!showLoading && !_hasPlaybackError)
+              if (_controlsVisible)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: SafeArea(child: _backButton()),
+                ),
+              if (!showLoading && !_hasPlaybackError && _controlsVisible)
+                Positioned.fill(
+                  child: Center(
+                    child: _centerPlaybackControls(),
+                  ),
+                ),
+              if (!showLoading && !_hasPlaybackError && _controlsVisible)
                 Positioned(
                   top: 12,
                   right: 12,
@@ -1075,6 +1580,16 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                 Positioned.fill(
                   child: PlaybackWatermarkOverlay(
                     watermark: watermark,
+                  ),
+                ),
+              if (!showLoading && !_hasPlaybackError && _controlsVisible)
+                Positioned(
+                  left: 20,
+                  right: 20,
+                  bottom: 12,
+                  child: SafeArea(
+                    top: false,
+                    child: _videoProgressBar(theme),
                   ),
                 ),
             ],
@@ -1106,6 +1621,95 @@ class _PlayMediaPageState extends State<PlayMediaPage>
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _centerPlaybackControls() {
+    final compact = ResponsiveWidget.isMobile(context);
+    final spacing = compact ? 30.0 : 48.0;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _roundPlaybackButton(
+          icon: Icons.replay_10_rounded,
+          semanticsLabel: 'Rewind 10 seconds',
+          onPressed: () {
+            _seekBy(const Duration(seconds: -10));
+            _showControls();
+          },
+        ),
+        SizedBox(width: spacing),
+        _roundPlaybackButton(
+          icon: _isPlaybackBuffering
+              ? null
+              : _isPlaybackPlaying
+                  ? Icons.pause_rounded
+                  : Icons.play_arrow_rounded,
+          semanticsLabel: _isPlaybackPlaying ? 'Pause' : 'Play',
+          prominent: true,
+          loading: _isPlaybackBuffering,
+          onPressed: () {
+            _togglePlayback();
+            _showControls(persist: true);
+          },
+        ),
+        SizedBox(width: spacing),
+        _roundPlaybackButton(
+          icon: Icons.forward_10_rounded,
+          semanticsLabel: 'Forward 10 seconds',
+          onPressed: () {
+            _seekBy(const Duration(seconds: 10));
+            _showControls();
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _roundPlaybackButton({
+    required IconData? icon,
+    required String semanticsLabel,
+    required VoidCallback onPressed,
+    bool prominent = false,
+    bool loading = false,
+  }) {
+    final size = prominent ? 66.0 : 54.0;
+    return Semantics(
+      button: true,
+      label: semanticsLabel,
+      child: Material(
+        color: Colors.black.withValues(alpha: prominent ? 0.72 : 0.58),
+        shape: CircleBorder(
+          side: BorderSide(
+            color: Colors.white.withValues(alpha: 0.5),
+          ),
+        ),
+        elevation: 4,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: loading ? null : onPressed,
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: Center(
+              child: loading
+                  ? const SizedBox(
+                      width: 26,
+                      height: 26,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Icon(
+                      icon,
+                      color: Colors.white,
+                      size: prominent ? 42 : 34,
+                    ),
+            ),
+          ),
         ),
       ),
     );
@@ -1165,6 +1769,122 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         ),
       ),
     );
+  }
+
+  Widget _videoProgressBar(ThemeData theme) {
+    final position = _currentPlaybackPosition;
+    final duration = _currentPlaybackDuration;
+    final durationMs = duration.inMilliseconds;
+    final positionMs = position.inMilliseconds.clamp(0, durationMs);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.68),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 54,
+              child: Text(
+                _formatPlaybackTime(position),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+            Expanded(
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  activeTrackColor: theme.primaryColor,
+                  inactiveTrackColor: Colors.white38,
+                  secondaryActiveTrackColor: Colors.white54,
+                  thumbColor: theme.primaryColor,
+                  overlayColor: theme.primaryColor.withValues(alpha: 0.2),
+                  trackHeight: 4,
+                  thumbShape: const RoundSliderThumbShape(
+                    enabledThumbRadius: 7,
+                  ),
+                  overlayShape: const RoundSliderOverlayShape(
+                    overlayRadius: 16,
+                  ),
+                ),
+                child: Slider(
+                  value: durationMs > 0 ? positionMs.toDouble() : 0,
+                  min: 0,
+                  max: durationMs > 0 ? durationMs.toDouble() : 1,
+                  onChanged: durationMs > 0
+                      ? (value) => _seekTo(
+                            Duration(milliseconds: value.round()),
+                          )
+                      : null,
+                  onChangeStart: durationMs > 0 ? (_) => _beginSeeking() : null,
+                  onChangeEnd: durationMs > 0 ? _finishSeeking : null,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 54,
+              child: Text(
+                _formatPlaybackTime(duration),
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Duration get _currentPlaybackPosition =>
+      _youtubeController?.value.position ??
+      _androidSecurePlayer?.value.position ??
+      _player?.state.position ??
+      Duration.zero;
+
+  Duration get _currentPlaybackDuration =>
+      _youtubeController?.value.metaData.duration ??
+      _androidSecurePlayer?.value.duration ??
+      _player?.state.duration ??
+      Duration.zero;
+
+  void _seekTo(Duration position) {
+    final youtubeController = _youtubeController;
+    if (youtubeController != null) {
+      youtubeController.seekTo(position);
+      return;
+    }
+    final androidPlayer = _androidSecurePlayer;
+    if (androidPlayer != null) {
+      unawaited(androidPlayer.seekTo(position));
+      return;
+    }
+    final player = _player;
+    if (player != null) unawaited(player.seek(position));
+  }
+
+  String _formatPlaybackTime(Duration value) {
+    final totalSeconds = value.inSeconds.clamp(0, 359999);
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+    final twoMinutes = minutes.toString().padLeft(2, '0');
+    final twoSeconds = seconds.toString().padLeft(2, '0');
+    if (hours > 0) {
+      return '$hours:$twoMinutes:$twoSeconds';
+    }
+    return '$twoMinutes:$twoSeconds';
   }
 
   String _downloadSourceUrl(Content? content) {
@@ -1238,6 +1958,20 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             ),
           );
         },
+      );
+    }
+
+    final androidPlayer = _androidSecurePlayer;
+    if (androidPlayer != null && androidPlayer.value.isInitialized) {
+      return SizedBox.expand(
+        child: FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(
+            width: androidPlayer.value.size.width,
+            height: androidPlayer.value.size.height,
+            child: native_video.VideoPlayer(androidPlayer),
+          ),
+        ),
       );
     }
 

@@ -63,6 +63,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   bool _isAutoPlayActive = false;
   bool _isStartingPreview = false;
   Timer? _playDelayTimer;
+  Future<void>? _previewStartFuture;
 
   String? _directPreviewUrl(String? rawUrl) {
     final value = DirectTrailerSource.fromBackend(rawUrl);
@@ -194,6 +195,33 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     _isVideoInitialized = false;
   }
 
+  Future<void> _disposePreviewBeforeSecurePlayback() async {
+    _playDelayTimer?.cancel();
+    _isAutoPlayActive = false;
+    await _previewStartFuture;
+    for (final subscription in _previewSubscriptions) {
+      await subscription.cancel();
+    }
+    _previewSubscriptions.clear();
+    final player = _previewPlayer;
+    _previewPlayer = null;
+    _videoController = null;
+    _isVideoInitialized = false;
+    _isPreviewPlaying = false;
+    if (_activePreviewState == this) _activePreviewState = null;
+    if (player != null) {
+      SecurityDebugLog.event(
+        'TRAILER',
+        'Awaiting continue-watching preview disposal before secure playback.',
+      );
+      await player.dispose();
+      SecurityDebugLog.event(
+        'TRAILER',
+        'Continue-watching preview disposal completed before secure playback.',
+      );
+    }
+  }
+
   @override
   void didUpdateWidget(covariant ContinueWatchMovieCard oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -301,14 +329,24 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     if (!_isPlayTriggerActive) return;
 
     if (_isAutoPlayActive && !_isHovered) {
-      _startPreviewIfEligible();
+      _beginPreviewStart();
       return;
     }
 
     _playDelayTimer = Timer(const Duration(milliseconds: 250), () {
       _playDelayTimer = null;
-      _startPreviewIfEligible();
+      _beginPreviewStart();
     });
+  }
+
+  void _beginPreviewStart() {
+    final future = _startPreviewIfEligible();
+    _previewStartFuture = future;
+    unawaited(future.whenComplete(() {
+      if (identical(_previewStartFuture, future)) {
+        _previewStartFuture = null;
+      }
+    }));
   }
 
   bool get _isPlayTriggerActive {
@@ -774,6 +812,8 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       return;
     }
 
+    await _disposePreviewBeforeSecurePlayback();
+    if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(

@@ -781,6 +781,9 @@ class UserProvider extends BaseProvider {
         if (updateUserResponse.success == true) {
           if (updateUserResponse.data != null) {
             user = updateUserResponse.data!.user!;
+            // Keep the provider synchronized with the persisted/backend user so
+            // dashboards created after this update see the new preferences.
+            userObject = user;
             print("before SEtData ${user.firstName}");
             LocalSharePreferences localSharePreferences =
                 LocalSharePreferences();

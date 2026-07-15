@@ -1173,6 +1173,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     EpisodeEntity episode,
   ) async {
     _stopHeroTrailer();
+    await _trailerController.disposePlayer?.call();
+    await _teaserController.disposePlayer?.call();
+    if (!context.mounted) return;
     final shouldRefresh = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
@@ -1998,7 +2001,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
       onTap: () async {
         if (!canPlay) return;
 
-        _trailerController.pause?.call();
+        await _trailerController.disposePlayer?.call();
+        await _teaserController.disposePlayer?.call();
+        if (!context.mounted) return;
         final shouldRefresh = await Navigator.push<bool>(
           context,
           MaterialPageRoute(

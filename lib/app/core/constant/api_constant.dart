@@ -1,5 +1,5 @@
 class ApiConstant {
-  static const String baseUrl = "https://filmytell.in/ott2/";
+  static const String baseUrl = "https://filmytell.in/ott/";
 
   /*  static const String baseUrl =
       "http://ec2-13-201-5-93.ap-south-1.compute.amazonaws.com:8080/ott/";
@@ -171,10 +171,10 @@ class ApiConstant {
 
   //shorts
   static String shortsMaster = "${baseUrl}api/shortsMaster";
-  static String getLatestShortsByLang(lang, page) =>
-      "${baseUrl}api/shortsMaster/latest?lang=${Uri.encodeComponent(lang.toString())}&page=$page&size=10";
-  static String getTrendingShortsByLang(lang, page) =>
-      "${baseUrl}api/shortsMaster/trending?lang=${Uri.encodeComponent(lang.toString())}&page=$page&size=10";
+  static String getLatestShortsByLang(lang, page, {int size = 10}) =>
+      "${baseUrl}api/shortsMaster/latest?lang=${Uri.encodeComponent(lang.toString())}&page=$page&size=$size";
+  static String getTrendingShortsByLang(lang, page, {int size = 10}) =>
+      "${baseUrl}api/shortsMaster/trending?lang=${Uri.encodeComponent(lang.toString())}&page=$page&size=$size";
   static String getShortsByTypeLang(type, lang, page) =>
       type.toString().toLowerCase() == 'trending'
           ? getTrendingShortsByLang(lang, page)

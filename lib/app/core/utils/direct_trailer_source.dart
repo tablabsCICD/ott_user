@@ -5,6 +5,6 @@
 abstract final class DirectTrailerSource {
   static String? fromBackend(String? backendUrl) {
     if (backendUrl == null || backendUrl.trim().isEmpty) return null;
-    return backendUrl;
+    return backendUrl.trim();
   }
 }

@@ -147,7 +147,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
       return;
     }
 
-    _trailerController.pause?.call();
+    await _trailerController.disposePlayer?.call();
+    await _teaserController.disposePlayer?.call();
+    if (!mounted) return;
 
     Navigator.push(
       context,

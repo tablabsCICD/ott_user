@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/widgets/movieCard.dart';
+import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 
@@ -18,17 +19,24 @@ class CategoryContentPage extends StatefulWidget {
   State<CategoryContentPage> createState() => _CategoryContentPageState();
 }
 
-class _CategoryContentPageState extends State<CategoryContentPage> {
+class _CategoryContentPageState extends State<CategoryContentPage>
+    with RouteAware, WidgetsBindingObserver {
+  static const double _autoPlayVisibilityThreshold = 0.70;
   static const double _cardHeight = 270;
   static const double _gap = 8;
 
   final ScrollController _scrollController = ScrollController();
-  final ValueNotifier<int?> _activeIndex = ValueNotifier<int?>(0);
+  final ValueNotifier<int?> _activeIndex = ValueNotifier<int?>(null);
   late List<Content> _contents;
+  PageRoute<dynamic>? _route;
+  bool _routeIsActive = true;
+  bool _appIsActive = true;
+  bool get _pageIsActive => _routeIsActive && _appIsActive;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _contents = List<Content>.from(widget.contents);
     _scrollController.addListener(_updateActiveIndex);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -36,6 +44,43 @@ class _CategoryContentPageState extends State<CategoryContentPage> {
         _updateActiveIndex();
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<dynamic> && route != _route) {
+      if (_route != null) routeObserver.unsubscribe(this);
+      _route = route;
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPushNext() {
+    _routeIsActive = false;
+    _activeIndex.value = null;
+  }
+
+  @override
+  void didPopNext() {
+    _routeIsActive = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _updateActiveIndex();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appIsActive = state == AppLifecycleState.resumed;
+    if (!_pageIsActive) {
+      _activeIndex.value = null;
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _updateActiveIndex();
+      });
+    }
   }
 
   @override
@@ -50,7 +95,7 @@ class _CategoryContentPageState extends State<CategoryContentPage> {
   }
 
   void _updateActiveIndex() {
-    if (!_scrollController.hasClients || _contents.isEmpty) {
+    if (!_pageIsActive || !_scrollController.hasClients || _contents.isEmpty) {
       if (_activeIndex.value != null) {
         _activeIndex.value = null;
       }
@@ -60,29 +105,32 @@ class _CategoryContentPageState extends State<CategoryContentPage> {
     final viewport = _scrollController.position.viewportDimension;
     if (viewport <= 0) return;
 
-    final maxScrollExtent = _scrollController.position.maxScrollExtent;
-    if (maxScrollExtent - _scrollController.offset <= 1.0) {
-      int lastIndex = _contents.length - 1;
-      for (int i = _contents.length - 1; i >= 0; i--) {
-        if (_contents[i].trailerUrl?.trim().isNotEmpty ?? false) {
-          lastIndex = i;
-          break;
-        }
-      }
-
-      if (_activeIndex.value != lastIndex) {
-        _activeIndex.value = lastIndex;
-      }
-      return;
-    }
-
     final rowExtent = _cardHeight + _gap;
-    final center = _scrollController.offset + (viewport / 2);
-    int index = (center / rowExtent).floor();
-
-    if (index < 0) index = 0;
-    if (index >= _contents.length) {
-      index = _contents.length - 1;
+    final viewStart = _scrollController.offset;
+    final viewEnd = viewStart + viewport;
+    final first =
+        (viewStart / rowExtent).floor().clamp(0, _contents.length - 1).toInt();
+    final last = ((viewEnd - 0.001) / rowExtent)
+        .floor()
+        .clamp(0, _contents.length - 1)
+        .toInt();
+    int? index;
+    double bestVisibility = 0;
+    for (var candidate = first; candidate <= last; candidate++) {
+      if (!(_contents[candidate].trailerUrl?.trim().isNotEmpty ?? false)) {
+        continue;
+      }
+      final itemStart = candidate * rowExtent;
+      final itemEnd = itemStart + _cardHeight;
+      final overlap = (itemEnd.clamp(viewStart, viewEnd) -
+              itemStart.clamp(viewStart, viewEnd))
+          .clamp(0.0, _cardHeight);
+      final visibility = overlap / _cardHeight;
+      if (visibility >= _autoPlayVisibilityThreshold &&
+          visibility > bestVisibility) {
+        index = candidate;
+        bestVisibility = visibility;
+      }
     }
 
     if (_activeIndex.value != index) {
@@ -105,6 +153,9 @@ class _CategoryContentPageState extends State<CategoryContentPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    routeObserver.unsubscribe(this);
+    _activeIndex.value = null;
     _scrollController.dispose();
     _activeIndex.dispose();
     super.dispose();
