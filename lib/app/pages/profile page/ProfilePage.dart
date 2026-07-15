@@ -4,16 +4,21 @@ import 'package:flutter/foundation.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/core/services/legal_document_service.dart';
+import 'package:ott/app/core/services/session_manager.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
+import 'package:ott/app/core/utils/image_url_utils.dart';
+import 'package:ott/app/core/utils/legal_document_url_utils.dart';
 import 'package:ott/app/pages/bookmarks%20page/bookmark_page.dart';
 import 'package:ott/app/pages/gifted%20movies%20page/GiftedMoviesPage.dart';
 import 'package:ott/app/pages/help%20support%20page/HelpSupportPage.dart';
+import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/app/pages/profile%20page/component/EditProfilePage.dart';
 import 'package:ott/app/pages/profile%20page/component/account_details_page.dart';
 import 'package:ott/app/pages/profile%20page/PurchaseHistoryPage.dart';
 import 'package:ott/app/pages/profile%20page/component/about_filmytell_dialog.dart';
 import 'package:ott/app/pages/profile%20page/component/change_language.dart';
-import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/pages/upcoming%20movies%20page/UpcomingPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/pages/watchlist%20page/WatchlistPage.dart';
@@ -24,9 +29,11 @@ import 'package:ott/app/provider/purchase_history_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/LanguageDropdown.dart';
 import 'package:ott/app/widgets/gift_claim_dialog.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/shimmer%20loader/profile_shimmer.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
+import 'package:ott/presentation/web_landing/utils/post_logout_navigation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -50,6 +57,7 @@ class _ProfilePageState extends State<ProfilePage> {
     super.initState();
     _fetchUserData();
     Future.delayed(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
@@ -59,23 +67,34 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _fetchUserData() async {
     final localSharePreferences = LocalSharePreferences();
     final user = await localSharePreferences.getUser();
+    if (!mounted) return;
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     await userProvider.hydrateFromCache();
+    if (!mounted) return;
 
     if (user != null) {
-      if (mounted) {
-        await userProvider.getUserById(user.id ?? 0);
-      }
+      await userProvider.getUserById(user.id ?? 0);
+      if (!mounted) return;
     }
     await Provider.of<WalletProvider>(context, listen: false).getBalance();
   }
 
   Future<void> _openPrivacyPolicy() async {
     try {
-      await launchUrl(
-        Uri.parse(AppConstant.privacyPolicy),
+      final documentUrls =
+          await LegalDocumentService.instance.getDocumentUrls();
+      final opened = await launchUrl(
+        legalDocumentViewUri(documentUrls.privacyPolicyUrl),
         mode: LaunchMode.externalApplication,
+        webOnlyWindowName: '_blank',
       );
+      if (!opened && mounted) {
+        CustomToast.show(
+          context,
+          'Unable to open privacy policy page right now.',
+          isSuccess: false,
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       CustomToast.show(
@@ -88,10 +107,20 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _openTerms() async {
     try {
-      await launchUrl(
-        Uri.parse(AppConstant.playStoreLink),
+      final documentUrls =
+          await LegalDocumentService.instance.getDocumentUrls();
+      final opened = await launchUrl(
+        legalDocumentViewUri(documentUrls.termsAndConditionsUrl),
         mode: LaunchMode.externalApplication,
+        webOnlyWindowName: '_blank',
       );
+      if (!opened && mounted) {
+        CustomToast.show(
+          context,
+          'Unable to open terms and condition right now.',
+          isSuccess: false,
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       CustomToast.show(
@@ -115,7 +144,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (!launched) {
         launched = await launchUrl(
-          Uri.parse(AppConstant.playStoreLink),
+          Uri.parse(AppConstant.platformStoreLink),
           mode: LaunchMode.externalApplication,
         );
       }
@@ -272,29 +301,29 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                               ],
                             ),
-                            profileCard(
-                              lang.gifts,
-                              [
-                                ProfileOption(
-                                  icon: Icons.history_sharp,
-                                  title: lang.giftedByYou,
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            GiftedMoviesPage()),
+                            if (!WalletPlatform.isIOS)
+                              profileCard(
+                                lang.gifts,
+                                [
+                                  ProfileOption(
+                                    icon: Icons.history_sharp,
+                                    title: lang.giftedByYou,
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              GiftedMoviesPage()),
+                                    ),
                                   ),
-                                ),
-                                ProfileOption(
-                                  icon: LucideIcons.gift,
-                                  title: lang.claimGiftCard,
-                                  onTap: () {
-                                    showGiftClaimDialog(context);
-                                  },
-                                ),
-                              ],
-                            ),
-
+                                  ProfileOption(
+                                    icon: LucideIcons.gift,
+                                    title: lang.claimGiftCard,
+                                    onTap: () {
+                                      showGiftClaimDialog(context);
+                                    },
+                                  ),
+                                ],
+                              ),
                             profileCard(
                               lang.feedbackAndInformation,
                               [
@@ -309,10 +338,32 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                 ),
                                 ProfileOption(
+                                  icon: Icons.tour_rounded,
+                                  title: 'App Tour',
+                                  onTap: () {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (_) => const NavigationPage(
+                                          initialIndex: 0,
+                                          initialHomeContentType: 'MOVIE',
+                                          startAppTourOnHome: true,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                ProfileOption(
                                   icon: Icons.file_copy,
-                                  title: lang.termsPoliciesLiscenses,
+                                  title: "Privacy Policy",
                                   onTap: () {
                                     _openPrivacyPolicy();
+                                  },
+                                ),
+                                ProfileOption(
+                                  icon: Icons.file_copy,
+                                  title: "Terms & Condition",
+                                  onTap: () {
+                                    _openTerms();
                                   },
                                 ),
                                 ProfileOption(
@@ -347,13 +398,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                               ],
                             ),
-                            //Text(
-                            //   "${userProvider.userObj.id ?? ''}",
-                            //   style: TextStyle(
-                            //     color: Colors.white70,
-                            //     fontSize: 10,
-                            //   ),
-                            // ),
                             const SizedBox(height: 250),
                             Opacity(
                               opacity: 0.4,
@@ -364,29 +408,18 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
                             const SizedBox(height: 2),
-
                             const SizedBox(height: 2),
-
                             Text(
-                              "Version · ${AppConstant.appVersion}",
+                              "Version - ${AppConstant.appVersion}",
                               style: const TextStyle(
                                 color: Colors.grey,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
                               ),
                             ),
-
-                            // Text(
-                            //   'Joining date: ${userProvider.userObject.joinDate}',
-                            //   style: const TextStyle(
-                            //     color: Colors.grey,
-                            //     fontWeight: FontWeight.bold,
-                            //     fontSize: 12,
-                            //   ),
-                            // ),
                             const SizedBox(height: 2),
                             Text(
-                              "© Filmytell - All Rights Reserved.",
+                              "Copyright Filmytell - All Rights Reserved.",
                               style: const TextStyle(
                                 color: Colors.grey,
                                 fontWeight: FontWeight.bold,
@@ -427,26 +460,21 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: () async {
               Navigator.of(context).pop(); // Close the dialog
 
+              await SessionManager.instance.logoutFromServer();
               final prefs = await SharedPreferences.getInstance();
               await prefs.remove('isLoggedIn');
               LocalSharePreferences localSharePreferences =
                   LocalSharePreferences();
-              localSharePreferences.setBool(
-                  SharedPreferencesConstant.isUserLoggedIn, false);
+              await localSharePreferences.clearSession();
               print(
                   "check  SEtLogin ${await localSharePreferences.getBool(SharedPreferencesConstant.isUserLoggedIn)}");
-              localSharePreferences.setString(
-                  SharedPreferencesConstant.currentUser, '');
 
               // clear all the APIs used for the user
               Provider.of<DashboardProvider>(context, listen: false).clear();
               Provider.of<BookmarkProvider>(context, listen: false).clear();
               Provider.of<UserProvider>(context, listen: false).clear();
               Provider.of<UserProvider>(context, listen: false).disposeData();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => LoginCard()),
-              );
+              pushPostLogoutReplacement(context);
             },
           ),
         ],
@@ -492,16 +520,11 @@ class _ProfilePageState extends State<ProfilePage> {
     final userProvider = Provider.of<UserProvider>(context);
     bool isDark = theme.brightness == Brightness.dark;
     var themeProvider = Provider.of<ThemeProvider>(context, listen: true);
-    final profilePhoto = (userProvider.userObj.profilePhoto ?? '').trim();
-    final imageUri = Uri.tryParse(profilePhoto);
-    final hasValidNetworkPhoto = profilePhoto.isNotEmpty &&
-        imageUri != null &&
-        (imageUri.isScheme('http') || imageUri.isScheme('https'));
-    final ImageProvider imageProvider = hasValidNetworkPhoto
-        ? NetworkImage(profilePhoto)
-        : AssetImage(ImageConstant.profile);
+    final profilePhotoUrl =
+        normalizeNetworkImageUrl(userProvider.userObj.profilePhoto);
 
     return SliverAppBar(
+      automaticallyImplyLeading: false,
       expandedHeight: 280,
       backgroundColor: theme.scaffoldBackgroundColor,
       centerTitle: ResponsiveWidget.isDesktop(context) ? true : false,
@@ -560,7 +583,27 @@ class _ProfilePageState extends State<ProfilePage> {
                       CircleAvatar(
                         radius: 50,
                         backgroundColor: theme.cardColor,
-                        backgroundImage: imageProvider,
+                        child: ClipOval(
+                          child: profilePhotoUrl.isEmpty
+                              ? Image.asset(
+                                  ImageConstant.profile,
+                                  width: 100,
+                                  height: 100,
+                                  fit: BoxFit.cover,
+                                )
+                              : Image.network(
+                                  profilePhotoUrl,
+                                  width: 100,
+                                  height: 100,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Image.asset(
+                                    ImageConstant.profile,
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                        ),
                       ),
                       (userProvider.userObj.verified ?? false)
                           ? Positioned(
@@ -653,7 +696,7 @@ class _ProfileOptionState extends State<ProfileOption> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return SizedBox(
+    final option = SizedBox(
       width: ResponsiveWidget.isMobile(context) ? double.infinity : 600,
       child: ListTile(
         dense: true,
@@ -668,7 +711,7 @@ class _ProfileOptionState extends State<ProfileOption> {
         ),
         subtitle: widget.balance != null
             ? Text(
-                '₹ ${widget.balance}',
+                'Rs ${widget.balance}',
                 style: TextStyle(
                   color: theme.canvasColor.withOpacity(0.6),
                   fontWeight: FontWeight.normal,
@@ -679,6 +722,15 @@ class _ProfileOptionState extends State<ProfileOption> {
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: widget.onTap,
       ),
+    );
+
+    if (ResponsiveWidget.isMobile(context)) return option;
+
+    return OttTvFocus(
+      onTap: widget.onTap,
+      borderRadius: 12,
+      scale: 1.025,
+      child: option,
     );
   }
 }

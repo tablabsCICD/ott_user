@@ -13,8 +13,9 @@ import '../../data/models/response/purchesContentListResponse.dart';
 import '../core/network/api_helper.dart';
 import '../core/constant/prefrense_constant.dart';
 import '../core/utils/sharepreferences.dart';
+import 'baseProvider.dart';
 
-class PurchaseContentProvider extends ChangeNotifier {
+class PurchaseContentProvider extends BaseProvider {
   static const String _purchaseCacheKey = 'cached_purchase_content';
   final List<UserContent> _userContentList = [];
   bool _isSavingContent = false;
@@ -81,14 +82,18 @@ class PurchaseContentProvider extends ChangeNotifier {
           debugPrint("Error: ${addUserResponse.message}");
           return {
             'success': false,
-            'message': addUserResponse.message ?? 'Error in response'
+            'message': _cleanPurchaseError(
+              addUserResponse.message ?? 'Error in response',
+            ),
           };
         }
       } else {
         return {
           'success': false,
-          'message': responseBody['message']?.toString() ??
-              'Purchase failed. Please try again.',
+          'message': _cleanPurchaseError(
+            responseBody['message']?.toString() ??
+                'Purchase failed. Please try again.',
+          ),
         };
       }
     } catch (error) {
@@ -119,8 +124,19 @@ class PurchaseContentProvider extends ChangeNotifier {
     if (message.contains('Unknown duration:')) {
       return message.replaceFirst('Exception: ', '');
     }
+    if (_isServerTransactionError(message)) {
+      return 'Purchase could not be completed. Please try again in a moment.';
+    }
 
     return 'Purchase failed. Please try again.';
+  }
+
+  bool _isServerTransactionError(String message) {
+    final normalized = message.toLowerCase();
+    return normalized.contains('transactionrequiredexception') ||
+        normalized.contains('no entitymanager with actual transaction') ||
+        normalized.contains("cannot reliably process 'remove' call") ||
+        normalized.contains('nested exception is javax.persistence');
   }
 
   Future<Map<String, Object>> getPurchaseContent({

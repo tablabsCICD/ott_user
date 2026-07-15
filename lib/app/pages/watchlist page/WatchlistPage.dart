@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
@@ -7,6 +8,7 @@ import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/offline_download_provider.dart';
 import 'package:ott/app/provider/playMediaProvider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/app/widgets/shimmer%20loader/comming_soon_shimmer.dart';
 import 'package:ott/data/models/content.dart';
@@ -128,18 +130,16 @@ class _WatchlistPageState extends State<WatchlistPage> {
           seasonId: item.seasonId,
           episodeId: item.episodeId,
         );
-    final latestResumeSeconds =
-        (item.watchedSeconds ?? 0) > localResumeSeconds
-            ? item.watchedSeconds ?? 0
-            : localResumeSeconds;
+    final latestResumeSeconds = (item.watchedSeconds ?? 0) > localResumeSeconds
+        ? item.watchedSeconds ?? 0
+        : localResumeSeconds;
 
     // Watchlist items come from the purchase API, which can already contain
     // a playable URL but not the latest continue-watching fields. Refresh the
     // content before playback so watchlist behaves like Continue Watching.
     if (!isOffline) {
-      final fetchedContent = await context
-          .read<DashboardProvider>()
-          .getContentById(item.id!);
+      final fetchedContent =
+          await context.read<DashboardProvider>().getContentById(item.id!);
       if (!mounted) return;
 
       if (fetchedContent != null) {
@@ -159,6 +159,13 @@ class _WatchlistPageState extends State<WatchlistPage> {
       contentToPlay.watchedSeconds = latestResumeSeconds;
     }
     contentToPlay.watchedPercentage ??= item.watchedPercentage;
+
+    final offlinePath = await context
+        .read<OfflineDownloadProvider>()
+        .getOfflinePath(contentToPlay);
+    if (offlinePath != null && offlinePath.trim().isNotEmpty) {
+      contentUrl = offlinePath;
+    }
 
     if (contentUrl == null || contentUrl.trim().isEmpty) {
       CustomToast.show(
@@ -191,6 +198,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        automaticallyImplyLeading: ResponsiveWidget.isMobile(context) ||
+            !(kIsWeb || ResponsiveWidget.isTv(context)),
         elevation: 0,
         backgroundColor: theme.primaryColor,
         foregroundColor: Colors.white,
@@ -280,43 +289,54 @@ class _WatchlistPageState extends State<WatchlistPage> {
   ) {
     final selected = selectedFilter == value;
 
-    return GestureDetector(
-      onTap: () => _onFilterSelected(value),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
+    final chip = AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
 
-          // ✅ Selected state (like your image)
-          color: selected ? theme.primaryColor : Colors.transparent,
+        // ✅ Selected state (like your image)
+        color: selected ? theme.primaryColor : Colors.transparent,
 
-          border: Border.all(
-            color: selected
-                ? theme.primaryColor
-                : theme.canvasColor.withOpacity(0.6),
-          ),
-
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: theme.primaryColor.withOpacity(0.25),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  )
-                ]
-              : [],
+        border: Border.all(
+          color: selected
+              ? theme.primaryColor
+              : theme.canvasColor.withOpacity(0.6),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : theme.primaryColor,
-          ),
+
+        boxShadow: selected
+            ? [
+                BoxShadow(
+                  color: theme.primaryColor.withOpacity(0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                )
+              ]
+            : [],
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: selected ? Colors.white : theme.primaryColor,
         ),
       ),
+    );
+
+    if (ResponsiveWidget.isMobile(context)) {
+      return GestureDetector(
+        onTap: () => _onFilterSelected(value),
+        child: chip,
+      );
+    }
+
+    return OttTvFocus(
+      onTap: () => _onFilterSelected(value),
+      borderRadius: 10,
+      scale: 1.04,
+      child: chip,
     );
   }
 
@@ -386,154 +406,159 @@ class _WatchlistPageState extends State<WatchlistPage> {
     final theme = Theme.of(context);
     final item = content.movie;
 
-    return GestureDetector(
-      onTap: content.active == true
-          ? () => _playContent(item)
-          : null,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: _posterBackground(item),
+    final card = ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: _posterBackground(item),
+          ),
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black54,
+                    Colors.black87,
+                  ],
+                ),
+              ),
             ),
+          ),
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 12,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.schedule, size: 12, color: Colors.white70),
+                    const SizedBox(width: 4),
+                    Text(
+                      item.rentlDuration ?? 'NA',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // ❌ Expired overlay
+          if (content.active == false)
             Positioned.fill(
               child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black54,
-                      Colors.black87,
-                    ],
+                color: Colors.black.withOpacity(0.55),
+                alignment: Alignment.center,
+                child: const Text(
+                  "Expired",
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ),
+
+          // 🎁 Gifted badge
+          if (content.isGifted == true)
             Positioned(
-              left: 12,
-              right: 12,
-              bottom: 12,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.title ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+              top: 8,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: theme.primaryColor,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'Gifted',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.schedule,
-                          size: 12, color: Colors.white70),
-                      const SizedBox(width: 4),
-                      Text(
-                        item.rentlDuration ?? 'NA',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
             ),
-
-            // ❌ Expired overlay
-            if (content.active == false)
-              Positioned.fill(
-                child: Container(
-                  color: Colors.black.withOpacity(0.55),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    "Expired",
-                    style: TextStyle(
-                      color: Colors.redAccent,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+          if (content.isDownloaded)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.white24),
                 ),
-              ),
-
-            // 🎁 Gifted badge
-            if (content.isGifted == true)
-              Positioned(
-                top: 8,
-                left: 8,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: theme.primaryColor,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    'Gifted',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            if (content.isDownloaded)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black87,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.white24),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.download_done_rounded,
-                          color: Colors.white, size: 12),
-                      SizedBox(width: 4),
-                      Text(
-                        'Offline',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.download_done_rounded,
+                        color: Colors.white, size: 12),
+                    SizedBox(width: 4),
+                    Text(
+                      'Offline',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            if ((item.watchedPercentage ?? 0) > 0 &&
-                (item.watchedPercentage ?? 0) < 95)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: LinearProgressIndicator(
-                  value: (item.watchedPercentage! / 100).clamp(0.0, 1.0),
-                  minHeight: 4,
-                  backgroundColor: Colors.white24,
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(theme.primaryColor),
-                ),
+            ),
+          if ((item.watchedPercentage ?? 0) > 0 &&
+              (item.watchedPercentage ?? 0) < 95)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: LinearProgressIndicator(
+                value: (item.watchedPercentage! / 100).clamp(0.0, 1.0),
+                minHeight: 4,
+                backgroundColor: Colors.white24,
+                valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
+    );
+
+    if (ResponsiveWidget.isMobile(context)) {
+      return GestureDetector(
+        onTap: content.active == true ? () => _playContent(item) : null,
+        child: card,
+      );
+    }
+
+    return OttTvFocus(
+      onTap: content.active == true ? () => _playContent(item) : null,
+      borderRadius: 16,
+      scale: 1.035,
+      child: card,
     );
   }
 

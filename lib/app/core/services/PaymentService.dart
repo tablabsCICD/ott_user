@@ -76,8 +76,7 @@ class PaymentService {
 
   static bool get isSupportedPlatform =>
       kIsWeb ||
-      defaultTargetPlatform == TargetPlatform.android ||
-      defaultTargetPlatform == TargetPlatform.iOS;
+      defaultTargetPlatform == TargetPlatform.android;
 
   Completer<PaymentResult>? _paymentCompleter;
   PaymentOrder? _activeOrder;
@@ -100,6 +99,9 @@ class PaymentService {
     required double amount,
     required int userId,
   }) async {
+    if (!isSupportedPlatform) {
+      throw StateError('Razorpay checkout is unavailable on this platform.');
+    }
     final normalizedAmount =
         amount == amount.truncateToDouble() ? amount.toInt() : amount;
     final paiseAmount = (amount * 100).round();
@@ -179,11 +181,16 @@ class PaymentService {
     String description = 'Add Money to Wallet',
     int plan = 0,
   }) async {
+    final activeCompleter = _paymentCompleter;
+    if (activeCompleter != null && !activeCompleter.isCompleted) {
+      return activeCompleter.future;
+    }
+
     if (!isSupportedPlatform) {
       return PaymentResult(
         success: false,
         message:
-            'Razorpay checkout is only available on web, Android, and iOS.',
+            'Razorpay checkout is only available on web and Android.',
       );
     }
     final user = await _getUser();

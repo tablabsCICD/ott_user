@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/services/AppleIapService.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/core/services/notification_service.dart';
@@ -14,13 +16,17 @@ import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/provider/language_provider.dart';
 import 'package:ott/app/provider/localeLanguageProvider.dart';
 import 'package:ott/app/provider/offline_download_provider.dart';
+import 'package:ott/app/provider/onboarding_tour_provider.dart';
 import 'package:ott/app/provider/playMediaProvider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
 import 'package:ott/app/provider/series_provider.dart';
+import 'package:ott/app/provider/session_device_provider.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/provider/ticketProvider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
+import 'package:ott/app/widgets/feature_tour.dart';
+import 'package:ott/app/widgets/ott_tv_app_shell.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -34,6 +40,7 @@ import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
   if (!kIsWeb) {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   }
@@ -68,6 +75,9 @@ Future<void> main() async {
           create: (context) => WalletProvider(),
         ),
         ChangeNotifierProvider(
+          create: (context) => AppleIapService(),
+        ),
+        ChangeNotifierProvider(
           create: (context) => TicketProvider(),
         ),
         ChangeNotifierProvider(
@@ -99,6 +109,12 @@ Future<void> main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => BookmarkProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => SessionDeviceProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => OnboardingTourProvider(),
         ),
       ],
       child: MyApp(
@@ -139,6 +155,7 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     sendNotification();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       NotificationService.instance.consumePendingNavigation();
     });
   }
@@ -147,6 +164,11 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final localeProvider = Provider.of<LocaleLanguageProvider>(context);
+    if (kDebugMode) {
+      debugPrint(
+        '[LocaleLanguage] MaterialApp rebuild locale=${localeProvider.locale.languageCode} mounted=$mounted',
+      );
+    }
     return MaterialApp(
       title: 'Filmytell',
       locale: localeProvider.locale,
@@ -180,14 +202,24 @@ class _MyAppState extends State<MyApp> {
       // Navigate based on login state
       initialRoute: "/",
       onGenerateRoute: RouteGenerator.generateRoute,
-      builder: (context, child) => child ?? const SizedBox.shrink(),
-      /* home: SplashScreen(
-        isLoggedIn: widget.isLoggedIn,
-      ),*/
+      builder: (context, child) {
+        final routeChild = child ?? const SizedBox.shrink();
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            kIsWeb ? routeChild : OttTvAppShell(child: routeChild),
+            const Positioned.fill(child: FeatureTourOverlay()),
+          ],
+        );
+      },
     );
   }
 
   sendNotification() async {
-    await FirebaseMessaging.instance.subscribeToTopic('all');
+    if (kIsWeb) {
+      return;
+    }
+
+    await NotificationService.instance.subscribeToDefaultTopic();
   }
 }

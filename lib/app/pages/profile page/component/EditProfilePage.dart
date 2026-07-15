@@ -23,15 +23,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => getData());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      getData();
+    });
   }
 
   Future<void> getData() async {
     final localSharePreferences = LocalSharePreferences();
     final user = await localSharePreferences.getUser();
+    if (!mounted) return;
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     await userProvider.hydrateFromCache();
-    if (user != null && mounted) {
+    if (!mounted) return;
+    if (user != null) {
       await userProvider.getUserById(user.id!);
     }
   }
@@ -123,7 +128,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           ),
                         ),
                         InkWell(
-                          onTap: () => userProvider.pickImage(),
+                          onTap: userProvider.isUploading
+                              ? null
+                              : () => userProvider.pickImage(),
                           child: Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
@@ -141,6 +148,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             ),
                           ),
                         ),
+                        if (userProvider.isUploading)
+                          Positioned.fill(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.35),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -211,7 +230,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(6)),
                       ),
-                      onPressed: () async {
+                      onPressed: userProvider.isUploading
+                          ? null
+                          : () async {
                         if (userProvider.profileController.text.isEmpty) {
                           userProvider.profileController.text =
                               userProvider.userObj.profilePhoto ?? '';
@@ -238,9 +259,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         }
                         if (!_formKey.currentState!.validate()) return;
                         var result = await userProvider.updateUser();
+                        if (!mounted) return;
                         if (result['success'] == true) {
                           final prefs = await SharedPreferences.getInstance();
                           await prefs.setBool('isLoggedIn', true);
+                          if (!mounted) return;
 
                           CustomToast.show(
                             context,

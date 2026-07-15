@@ -1,0 +1,23 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appID": "2KXZ4D5XSK.com.filmytell.ott",
+        "components": [
+          {
+            "/": "/movie/*"
+          },
+          {
+            "/": "/gift/*"
+          },
+          {
+            "/": "/ott/movie/*"
+          },
+          {
+            "/": "/ott/gift/*"
+          }
+        ]
+      }
+    ]
+  }
+}

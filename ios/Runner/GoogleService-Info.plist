@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyAXj3ySHGWSkyox8MEqVsGas_hEeOG4-38</string>
+	<string>AIzaSyD7KqwMowOdGg8qaU7VmBN8Rxgh6TceLgk</string>
 	<key>GCM_SENDER_ID</key>
-	<string>573981988871</string>
+	<string>244052932353</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.filmytell.ott</string>
 	<key>PROJECT_ID</key>
-	<string>netflix-ott-1198d</string>
+	<string>fimlytell</string>
 	<key>STORAGE_BUCKET</key>
-	<string>netflix-ott-1198d.firebasestorage.app</string>
+	<string>fimlytell.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:573981988871:ios:6de664bc7f6355642072a2</string>
+	<string>1:244052932353:ios:61fc3e0efa66d5a9f6cd00</string>
 </dict>
 </plist>

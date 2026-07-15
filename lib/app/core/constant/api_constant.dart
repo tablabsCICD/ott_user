@@ -1,17 +1,59 @@
 class ApiConstant {
-  static const String baseUrl = "https://filmytell.in/ott/";
+  static const String baseUrl = "https://filmytell.com/ott/";
 
-  /* static const String baseUrl =
-      "http://ec2-43-205-217-79.ap-south-1.compute.amazonaws.com:8080/ott/"; */
-
-  static String login = "${baseUrl}user/email/login2";
+  /*  static const String baseUrl =
+      "http://ec2-13-201-5-93.ap-south-1.compute.amazonaws.com:8080/ott/";
+ */
+  static String login = "${baseUrl}auth/session/login";
+  static String twoStepLogin = "${baseUrl}auth/two-step/login";
+  static String twoStepVerifyOtp = "${baseUrl}auth/two-step/verify-otp";
+  static String legacyLogin = "${baseUrl}user/email/login2";
+  static String sessionLogout = "${baseUrl}auth/session/logout";
+  static String activeDevices = "${baseUrl}auth/session/devices";
+  static String forceLogoutDevice(sessionRecordId) =>
+      "${baseUrl}auth/session/devices/$sessionRecordId/logout";
+  static String validatePlaybackSecurity =
+      "${baseUrl}api/playback/security/validate";
+  static String playbackPiracyEvent = "${baseUrl}api/playback/security/event";
+  static String antiPiracyDevices = "${baseUrl}anti-piracy/devices";
+  static String antiPiracyDevice(String deviceId) =>
+      "${antiPiracyDevices}/${Uri.encodeComponent(deviceId)}";
+  static String signedPlaybackUrl = "${baseUrl}anti-piracy/playback/signed-url";
+  static String playbackAnalytics = "${baseUrl}anti-piracy/playback/analytics";
+  static String currentWatermark = "${baseUrl}watermark/current";
   static String registration = '${baseUrl}user/RegisterUser';
 
   //otp login
   static String sendOTP(mobileNum) =>
       "${baseUrl}userNew/SendOTPOnMobileWithRegistration?mobileNumber=$mobileNum";
-  static String verifyOTP(mobileNum, otp) =>
-      "${baseUrl}userNew/VerifyOtpJWT?mobileNumber=$mobileNum&otp=$otp";
+  static String verifyOTP({
+    required mobileNum,
+    required otp,
+    required deviceId,
+    required deviceName,
+    required deviceType,
+    required appVersion,
+    deviceMetadata,
+    deviceToken,
+  }) {
+    final query = <String, String>{
+      'username': mobileNum.toString(),
+      'mobileNumber': mobileNum.toString(),
+      'otp': otp.toString(),
+      'deviceId': deviceId.toString(),
+      'deviceName': deviceName.toString(),
+      'deviceType': deviceType.toString(),
+      'appVersion': appVersion.toString(),
+      if (deviceMetadata != null && deviceMetadata.toString().trim().isNotEmpty)
+        'deviceMetadata': deviceMetadata.toString(),
+      if (deviceToken != null && deviceToken.toString().trim().isNotEmpty)
+        'deviceToken': deviceToken.toString(),
+    };
+
+    return Uri.parse("${baseUrl}userNew/VerifyOtpJWT")
+        .replace(queryParameters: query)
+        .toString();
+  }
 
   static String getDashboardData =
       "${baseUrl}api/forUser/filter/content-list/type3?";
@@ -24,7 +66,7 @@ class ApiConstant {
       "${baseUrl}api/forUser/episode/$episodeId/view?userId=$userId";
 
   //update user
-  static String editUserById = "${baseUrl}userNew/updateUserBy/%7Bid%7D";
+  static String editUserById(id) => "${baseUrl}userNew/updateUserBy/$id";
   static String getUserById(id) => "${baseUrl}user/getUser/$id";
   static String deleteUserById(id) => "${baseUrl}user/deleteUserBy/$id";
 
@@ -43,15 +85,34 @@ class ApiConstant {
       "${baseUrl}api/forUser/foruser/search/lag/gen/rating?userId=$id&language=$lang&genre=$genre&minRating=$rating";
   static String getTopTrendingContentLast7Days(userId) =>
       "${baseUrl}api/forUser/user/Content/TopTen?userId=$userId";
+  static String publicTopTenContent =
+      "${baseUrl}api/forUser/public/Content/TopTen";
+  static String publicLatestContent({
+    int page = 0,
+    int size = 10,
+    String? type,
+  }) {
+    final query = <String, String>{
+      'page': page.toString(),
+      'size': size.toString(),
+      if ((type ?? '').trim().isNotEmpty) 'type': type!.trim(),
+    };
+    return Uri.parse("${baseUrl}api/forUser/public/Content/Latest")
+        .replace(queryParameters: query)
+        .toString();
+  }
 
   static String uploadImg = "${baseUrl}api/other/upload-file";
 
   // get all languges
   static String fetchLang = "${baseUrl}api/Languages/getAll";
   static String fetchGroupedLang = "${baseUrl}api/all/withGrouping";
-  static String getLatestVersion = "${baseUrl}api/GetLatestVaersion";
+  static String getLatestVersion = "${baseUrl}api/GetLatestVersionIos";
+  static String legalDocumentUrls = "${baseUrl}api/legal/document-urls";
 
   static String addMoneyToWallet = "${baseUrl}add-amount";
+  static String verifyAppleIapPurchase =
+      "${baseUrl}api/apple-iap/verify-wallet-purchase";
   static String createWalletOrder(double amount, int userId) {
     final normalizedAmount =
         amount == amount.truncateToDouble() ? amount.toInt() : amount;
@@ -65,12 +126,17 @@ class ApiConstant {
       "${baseUrl}wallet/balance/$userId";
   static String walletHistory(userId) =>
       "${baseUrl}api/walletHistory/user/%7BuserId%7D?userId=$userId";
+  static String walletHistoryV2(userId) => "${baseUrl}wallet/history/$userId";
 
   static String saveRatingAndReview = "${baseUrl}api/saveRatingAndRewiew";
   static String deleteRatingAndReview(id) =>
       "${baseUrl}api/deleteRatingAndRewiewBy/$id";
   static String getRatingAndReviewByContentId(contentId) =>
       "${baseUrl}api/content/$contentId";
+  static String userPushNotifications(userId, pageNo, pageSize) =>
+      "${baseUrl}api/notifications/user/$userId/push?pageNo=$pageNo&pageSize=$pageSize";
+
+  static String sendEmail = "${baseUrl}api/email/send";
 
   static String raiseTicket = "${baseUrl}api/TicketRaised/add";
   static String deleteTicket(id) =>
@@ -108,10 +174,10 @@ class ApiConstant {
 
   //shorts
   static String shortsMaster = "${baseUrl}api/shortsMaster";
-  static String getLatestShortsByLang(lang, page) =>
-      "${baseUrl}api/shortsMaster/latest?lang=${Uri.encodeComponent(lang.toString())}&page=$page&size=10";
-  static String getTrendingShortsByLang(lang, page) =>
-      "${baseUrl}api/shortsMaster/trending?lang=${Uri.encodeComponent(lang.toString())}&page=$page&size=10";
+  static String getLatestShortsByLang(lang, page, {int size = 10}) =>
+      "${baseUrl}api/shortsMaster/latest?lang=${Uri.encodeComponent(lang.toString())}&page=$page&size=$size";
+  static String getTrendingShortsByLang(lang, page, {int size = 10}) =>
+      "${baseUrl}api/shortsMaster/trending?lang=${Uri.encodeComponent(lang.toString())}&page=$page&size=$size";
   static String getShortsByTypeLang(type, lang, page) =>
       type.toString().toLowerCase() == 'trending'
           ? getTrendingShortsByLang(lang, page)

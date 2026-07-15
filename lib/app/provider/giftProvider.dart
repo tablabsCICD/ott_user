@@ -3,13 +3,15 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/giftMasterModel.dart' hide User;
 import 'package:ott/data/models/giftRecordModel.dart';
 import 'package:ott/data/models/user.dart';
+import 'baseProvider.dart';
 
-class GiftProvider extends ChangeNotifier {
+class GiftProvider extends BaseProvider {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
@@ -28,6 +30,12 @@ class GiftProvider extends ChangeNotifier {
   /// Save user gift (send gift purchase request to API)
   Future<Map<String, dynamic>> saveUserGift(
       Content content, int giftCount) async {
+    if (WalletPlatform.isIOS) {
+      return {
+        "success": false,
+        "message": "Gift purchases are currently unavailable on iOS."
+      };
+    }
     if (_isSavingGift) {
       return {
         "success": false,
@@ -190,6 +198,12 @@ class GiftProvider extends ChangeNotifier {
 
   /// use gift by coupon
   Future<Map<String, dynamic>> useGiftByCoupon(String couponCode) async {
+    if (WalletPlatform.isIOS) {
+      return {
+        "success": false,
+        "message": "Gift code redemption is currently unavailable on iOS."
+      };
+    }
     try {
       User? user = await LocalSharePreferences.localSharePreferences.getUser();
 
@@ -202,7 +216,10 @@ class GiftProvider extends ChangeNotifier {
       ApiHelper apiHelper = ApiHelper();
       final response = await apiHelper.postApi(apiUrl);
 
-      log("API Response => ${response.statusCode} | ${response.body}");
+      log(
+        "Gift Claim API Response Received => "
+        "${response.statusCode} | ${response.body}",
+      );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseBody = json.decode(response.body);
@@ -213,19 +230,24 @@ class GiftProvider extends ChangeNotifier {
             "message": responseBody["message"] ?? "Gift saved successfully"
           };
         } else {
+          log(
+            "Gift Claim Error Response Received => "
+            "${responseBody["message"] ?? "Failed to save gift"}",
+          );
           return {
             "success": false,
             "message": responseBody["message"] ?? "Failed to save gift"
           };
         }
       } else {
+        log("Gift Claim Error Response Received => ${response.statusCode}");
         return {
           "success": false,
           "message": "Server error: ${response.statusCode}"
         };
       }
     } catch (error, stack) {
-      log("Error in saveUserGift => $error", stackTrace: stack);
+      log("Gift Claim Error Response Received => $error", stackTrace: stack);
       return {"success": false, "message": "Something went wrong: $error"};
     }
   }

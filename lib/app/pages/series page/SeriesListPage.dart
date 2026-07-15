@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/core/utils/image_url_utils.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/home%20page/category_content_page.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
@@ -60,7 +61,10 @@ class _SeriesListViewState extends State<_SeriesListView> {
   void initState() {
     super.initState();
     _verticalController.addListener(_updateVisibleRows);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadSeries());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _loadSeries();
+    });
   }
 
   @override
@@ -146,7 +150,9 @@ class _SeriesListViewState extends State<_SeriesListView> {
     int? fallbackIndex;
     double bestOverlap = 0;
 
-    for (int candidate = firstCandidate; candidate <= lastCandidate; candidate++) {
+    for (int candidate = firstCandidate;
+        candidate <= lastCandidate;
+        candidate++) {
       final overlap = _visibleOverlap(viewStart, viewEnd, candidate);
       if (overlap <= 0) continue;
 
@@ -214,6 +220,7 @@ class _SeriesListViewState extends State<_SeriesListView> {
     if (_visibleUpdateScheduled) return;
     _visibleUpdateScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _visibleUpdateScheduled = false;
       _updateVisibleRows();
     });
@@ -289,19 +296,20 @@ class _SeriesListViewState extends State<_SeriesListView> {
     ThemeData selectedThemeData,
   ) {
     final lang = AppLocalizations.of(context)!;
+    final useTransparentAppBar = !ResponsiveWidget.isMobile(context);
 
     return SliverAppBar(
       automaticallyImplyLeading: false,
-      forceMaterialTransparency: ResponsiveWidget.isDesktop(context),
+      forceMaterialTransparency: useTransparentAppBar,
       floating: false,
       pinned: true,
       stretch: true,
       surfaceTintColor: Colors.transparent,
-      backgroundColor: ResponsiveWidget.isDesktop(context)
+      backgroundColor: useTransparentAppBar
           ? selectedThemeData.scaffoldBackgroundColor
           : selectedThemeData.primaryColor,
-      titleSpacing: ResponsiveWidget.isTablet(context) ? 50 : 10,
-      title: ResponsiveWidget.isDesktop(context)
+      titleSpacing: 10,
+      title: useTransparentAppBar
           ? Text(
               lang.series,
               style: TextStyle(
@@ -317,7 +325,7 @@ class _SeriesListViewState extends State<_SeriesListView> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: Image.asset(
-                    ImageConstant.inAppLogo,
+                    ImageConstant.logo,
                     width: 75,
                     height: 75,
                     fit: BoxFit.contain,
@@ -329,7 +337,7 @@ class _SeriesListViewState extends State<_SeriesListView> {
         IconButton(
           icon: Icon(
             Icons.search,
-            color: ResponsiveWidget.isDesktop(context)
+            color: useTransparentAppBar
                 ? selectedThemeData.canvasColor
                 : Colors.white,
           ),
@@ -344,7 +352,7 @@ class _SeriesListViewState extends State<_SeriesListView> {
         IconButton(
           icon: Icon(
             Icons.notifications_active,
-            color: ResponsiveWidget.isDesktop(context)
+            color: useTransparentAppBar
                 ? selectedThemeData.canvasColor
                 : Colors.white,
           ),
@@ -361,7 +369,7 @@ class _SeriesListViewState extends State<_SeriesListView> {
           style: _appBarIconStyle(context),
           icon: Icon(
             Icons.language_sharp,
-            color: ResponsiveWidget.isDesktop(context)
+            color: useTransparentAppBar
                 ? selectedThemeData.canvasColor
                 : Colors.white,
           ),
@@ -380,7 +388,7 @@ class _SeriesListViewState extends State<_SeriesListView> {
                 IconButton(
                   icon: Icon(
                     Icons.account_balance_wallet,
-                    color: ResponsiveWidget.isDesktop(context)
+                    color: useTransparentAppBar
                         ? selectedThemeData.canvasColor
                         : Colors.white,
                   ),
@@ -414,14 +422,36 @@ class _SeriesListViewState extends State<_SeriesListView> {
                         child: CircleAvatar(
                           radius: 18,
                           backgroundColor: selectedThemeData.canvasColor,
-                          backgroundImage:
-                              userProvider.userObj.profilePhoto == null
-                                  ? AssetImage(ImageConstant.profile)
-                                  : userProvider.userObj.profilePhoto!.isNotEmpty
-                                      ? NetworkImage(
-                                          userProvider.userObj.profilePhoto!,
-                                        )
-                                      : AssetImage(ImageConstant.profile),
+                          child: ClipOval(
+                            child: Builder(
+                              builder: (_) {
+                                final profilePhotoUrl =
+                                    normalizeNetworkImageUrl(
+                                  userProvider.userObj.profilePhoto,
+                                );
+                                if (profilePhotoUrl.isEmpty) {
+                                  return Image.asset(
+                                    ImageConstant.profile,
+                                    width: 36,
+                                    height: 36,
+                                    fit: BoxFit.cover,
+                                  );
+                                }
+                                return Image.network(
+                                  profilePhotoUrl,
+                                  width: 36,
+                                  height: 36,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Image.asset(
+                                    ImageConstant.profile,
+                                    width: 36,
+                                    height: 36,
+                                    fit: BoxFit.cover,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -437,8 +467,10 @@ class _SeriesListViewState extends State<_SeriesListView> {
   }
 
   ButtonStyle _appBarIconStyle(BuildContext context) {
+    final useTransparentAppBar = !ResponsiveWidget.isMobile(context);
+
     return IconButton.styleFrom(
-      backgroundColor: ResponsiveWidget.isDesktop(context)
+      backgroundColor: useTransparentAppBar
           ? Colors.white.withOpacity(0.3)
           : Colors.black.withOpacity(0.2),
     );

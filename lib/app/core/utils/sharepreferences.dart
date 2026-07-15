@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,6 +12,7 @@ class LocalSharePreferences {
   factory LocalSharePreferences() {
     return localSharePreferences;
   }
+
   LocalSharePreferences._internal();
   setString(String key, String val) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -45,19 +47,19 @@ class LocalSharePreferences {
   Future<User?> getUser() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String? userJson = prefs.getString(SharedPreferencesConstant.currentUser);
-    debugPrint("getUser method in $userJson");
+    if (kDebugMode) debugPrint("getUser method in $userJson");
 
     if (userJson != null) {
       try {
         Map<String, dynamic> userMap = jsonDecode(userJson);
-        debugPrint("Parsed User Map: $userMap");
+        if (kDebugMode) debugPrint("Parsed User Map: $userMap");
         return User.fromJson(userMap);
       } catch (e) {
-        debugPrint("Error decoding user JSON: $e");
+        if (kDebugMode) debugPrint("Error decoding user JSON: $e");
         return null;
       }
     } else {
-      debugPrint("getUser method in null return $userJson");
+      if (kDebugMode) debugPrint("getUser method in null return $userJson");
       return null;
     }
   }
@@ -66,7 +68,28 @@ class LocalSharePreferences {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool(SharedPreferencesConstant.isUserLoggedIn, false);
     await prefs.remove(SharedPreferencesConstant.currentUser);
-    await prefs.clear();
+    await prefs.remove(SharedPreferencesConstant.authToken);
+    await prefs.remove(SharedPreferencesConstant.currentSessionRecordId);
     return true;
+  }
+
+  Future<void> setAuthToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(SharedPreferencesConstant.authToken, token);
+  }
+
+  Future<String?> getAuthToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(SharedPreferencesConstant.authToken);
+    if (token == null || token.trim().isEmpty) return null;
+    return token;
+  }
+
+  Future<void> clearSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(SharedPreferencesConstant.isUserLoggedIn, false);
+    await prefs.remove(SharedPreferencesConstant.currentUser);
+    await prefs.remove(SharedPreferencesConstant.authToken);
+    await prefs.remove(SharedPreferencesConstant.currentSessionRecordId);
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/provider/giftProvider.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -10,6 +11,24 @@ Future<bool?> showGiftClaimDialog(
   BuildContext context, {
   String? initialCouponCode,
 }) {
+  if (WalletPlatform.isIOS) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Unavailable on iOS'),
+        content: const Text(
+          'Gift code redemption is currently unavailable on iOS.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   final theme = Theme.of(context);
   final couponCodeController = TextEditingController(
     text: _normalizeCouponCode(initialCouponCode ?? ''),
@@ -58,9 +77,12 @@ Future<bool?> showGiftClaimDialog(
                       backgroundColor: theme.scaffoldBackgroundColor,
                       isDigits: false,
                       controller: couponCodeController,
+                      autofocus: ResponsiveWidget.isTabletOrTv(dialogContext),
+                      textInputAction: TextInputAction.done,
                       hintText: "Enter 16 Digit Number",
                       textInputType: TextInputType.text,
                       capitalization: TextCapitalization.characters,
+                      readOnly: true,
                     ),
                     const SizedBox(height: 24),
                     Row(

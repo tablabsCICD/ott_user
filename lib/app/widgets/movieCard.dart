@@ -2,9 +2,13 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
@@ -13,14 +17,15 @@ import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
+import 'package:ott/app/provider/onboarding_tour_provider.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/feature_tour.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:video_player/video_player.dart';
 
 import 'package:ott/data/models/content.dart';
 
@@ -34,6 +39,7 @@ class MovieCard extends StatefulWidget {
   final int? index;
   final double? cardWidth;
   final double? cardMargin;
+  final ValueChanged<Content>? onContentUpdated;
 
   const MovieCard({
     super.key,
@@ -42,6 +48,7 @@ class MovieCard extends StatefulWidget {
     this.index,
     this.cardWidth,
     this.cardMargin,
+    this.onContentUpdated,
   });
 
   @override
@@ -50,14 +57,16 @@ class MovieCard extends StatefulWidget {
 
 class _MovieCardState extends State<MovieCard> {
   static _MovieCardState? _activePreviewState;
-  VideoPlayerController? _videoController;
+  Player? _previewPlayer;
+  VideoController? _videoController;
+  final List<StreamSubscription<dynamic>> _previewSubscriptions = [];
   bool _isHovered = false;
   bool _isMuted = true;
   bool _isVideoInitialized = false;
   bool _isPreviewPlaying = false;
   bool _isAutoPlayActive = false;
   bool _isStartingPreview = false;
-  bool _hasVideoListener = false;
+  int _previewGeneration = 0;
   Timer? _playDelayTimer;
 
   Uri? _previewUri(String? rawUrl) {
@@ -77,10 +86,12 @@ class _MovieCardState extends State<MovieCard> {
     super.initState();
     widget.activeIndexListenable?.addListener(_handleActiveIndexChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       context
           .read<BookmarkProvider>()
           .isBookmarked(widget.movie.id ?? 0)
           .then((value) {
+        if (!mounted) return;
         if (value) {
           context.read<BookmarkProvider>().addBookmark(widget.movie.id ?? 0);
         }
@@ -114,11 +125,11 @@ class _MovieCardState extends State<MovieCard> {
   }
 
   void _toggleMute() {
-    final controller = _videoController;
+    final player = _previewPlayer;
     setState(() {
       _isMuted = !_isMuted;
     });
-    controller?.setVolume(_isMuted ? 0 : 1);
+    player?.setVolume(_isMuted ? 0 : 100);
   }
 
   Future<bool> _ensureVideoInitialized() async {
@@ -126,39 +137,80 @@ class _MovieCardState extends State<MovieCard> {
 
     final trailerUri = _previewUri(widget.movie.trailerUrl);
     if (trailerUri == null) return false;
+    final generation = _previewGeneration;
 
-    _videoController ??= VideoPlayerController.networkUrl(trailerUri);
+    final player = Player();
 
     try {
-      await _videoController!.initialize();
-      _videoController!
-        ..setLooping(true)
-        ..setVolume(_isMuted ? 0.0 : 1.0);
+      _previewSubscriptions
+        ..add(player.stream.completed.listen((completed) {
+          if (completed && _isPreviewPlaying) {
+            player.seek(Duration.zero);
+            player.play();
+          }
+        }))
+        ..add(player.stream.position.listen((_) {
+          if (mounted) setState(() {});
+        }))
+        ..add(player.stream.duration.listen((_) {
+          if (mounted) setState(() {});
+        }))
+        ..add(player.stream.error.listen((error) {
+          debugPrint("Trailer playback error: $error");
+          _stopAndDisposePreview('stream error');
+          if (_activePreviewState == this) {
+            _activePreviewState = null;
+          }
+        }));
 
-      if (!_hasVideoListener) {
-        _videoController!.addListener(_handleVideoTick);
-        _hasVideoListener = true;
+      await player.open(Media(trailerUri.toString()), play: false);
+      await player.setVolume(_isMuted ? 0 : 100);
+
+      if (!mounted ||
+          generation != _previewGeneration ||
+          !_isPlayTriggerActive ||
+          _activePreviewState != this) {
+        for (final subscription in _previewSubscriptions) {
+          unawaited(subscription.cancel());
+        }
+        _previewSubscriptions.clear();
+        await player.dispose();
+        _logPreview('Video Disposed stale init');
+        return false;
       }
+
+      final controller = VideoController(player);
+      _previewPlayer = player;
+      _videoController = controller;
 
       if (mounted) {
         setState(() => _isVideoInitialized = true);
       }
+      _logPreview('Video Initialized');
       return true;
     } catch (e) {
       debugPrint("Video init failed: $e");
+      await player.dispose();
       _disposeVideoController();
       return false;
     }
   }
 
   void _disposeVideoController() {
-    if (_videoController != null && _hasVideoListener) {
-      _videoController!.removeListener(_handleVideoTick);
-      _hasVideoListener = false;
+    _previewGeneration++;
+    for (final subscription in _previewSubscriptions) {
+      unawaited(subscription.cancel());
     }
-    _videoController?.dispose();
+    _previewSubscriptions.clear();
+    final player = _previewPlayer;
+    _previewPlayer = null;
     _videoController = null;
     _isVideoInitialized = false;
+    _isPreviewPlaying = false;
+    if (player != null) {
+      unawaited(player.dispose());
+      _logPreview('Video Disposed');
+    }
   }
 
   @override
@@ -176,8 +228,7 @@ class _MovieCardState extends State<MovieCard> {
 
     if (oldWidget.movie.trailerUrl != widget.movie.trailerUrl) {
       _playDelayTimer?.cancel();
-      _stopPreview();
-      _disposeVideoController();
+      _stopAndDisposePreview('trailer url changed');
     }
   }
 
@@ -199,7 +250,7 @@ class _MovieCardState extends State<MovieCard> {
       _schedulePreview();
     } else {
       _playDelayTimer?.cancel();
-      _stopPreview();
+      _stopAndDisposePreview('hover lost');
       if (_activePreviewState == this) {
         _activePreviewState = null;
       }
@@ -220,7 +271,7 @@ class _MovieCardState extends State<MovieCard> {
       _schedulePreview();
     } else {
       _playDelayTimer?.cancel();
-      _stopPreview();
+      _stopAndDisposePreview('visibility below threshold');
       if (_activePreviewState == this) {
         _activePreviewState = null;
       }
@@ -241,22 +292,6 @@ class _MovieCardState extends State<MovieCard> {
         return true;
       case TargetPlatform.fuchsia:
         return false;
-    }
-  }
-
-  void _handleVideoTick() {
-    if (!mounted) return;
-    final controller = _videoController;
-    if (controller == null || !_isVideoInitialized) return;
-
-    final value = controller.value;
-    if (value.hasError) {
-      debugPrint("Trailer playback error: ${value.errorDescription}");
-      _stopPreview();
-      if (_activePreviewState == this) {
-        _activePreviewState = null;
-      }
-      return;
     }
   }
 
@@ -286,6 +321,7 @@ class _MovieCardState extends State<MovieCard> {
     if (_isStartingPreview || _isPreviewPlaying) return;
 
     _isStartingPreview = true;
+    final generation = ++_previewGeneration;
     try {
       _activatePreview();
 
@@ -294,23 +330,32 @@ class _MovieCardState extends State<MovieCard> {
         if (_activePreviewState == this) {
           _activePreviewState = null;
         }
-        _stopPreview();
+        _stopAndDisposePreview('not ready');
         return;
       }
 
-      if (!_isPlayTriggerActive) {
-        _stopPreview();
+      if (!_isPlayTriggerActive ||
+          generation != _previewGeneration ||
+          _activePreviewState != this) {
+        _stopAndDisposePreview('stale start');
         return;
       }
 
       _ensureMuted();
 
-      await _videoController!.play();
-      if (!mounted) return;
+      await _previewPlayer!.play();
+      if (!mounted ||
+          generation != _previewGeneration ||
+          _activePreviewState != this) {
+        _stopAndDisposePreview('stale after play');
+        return;
+      }
       setState(() => _isPreviewPlaying = true);
+      _logPreview('Video Started');
+      _logPreview('Current Active Video ID ${widget.movie.id ?? widget.index}');
     } catch (e) {
       debugPrint("Trailer play failed: $e");
-      _stopPreview();
+      _stopAndDisposePreview('play failed');
       if (_activePreviewState == this) {
         _activePreviewState = null;
       }
@@ -323,25 +368,25 @@ class _MovieCardState extends State<MovieCard> {
     if (_activePreviewState == this) return;
     final previous = _activePreviewState;
     _activePreviewState = this;
-    previous?._stopPreview(external: true);
+    previous?._stopAndDisposePreview('replaced by ${widget.movie.id}');
   }
 
   void _ensureMuted() {
-    final controller = _videoController;
-    if (controller == null) return;
+    final player = _previewPlayer;
+    if (player == null) return;
     if (!_isMuted) {
       setState(() => _isMuted = true);
     }
-    controller.setVolume(0.0);
+    player.setVolume(0);
   }
 
   void _stopPreview({bool external = false}) {
-    final controller = _videoController;
-    if (controller == null || !_isVideoInitialized) return;
+    final player = _previewPlayer;
+    if (player == null || !_isVideoInitialized) return;
 
     try {
-      controller.pause();
-      controller.seekTo(Duration.zero);
+      player.pause();
+      player.seek(Duration.zero);
     } catch (e) {
       debugPrint("Trailer stop failed: $e");
     }
@@ -350,6 +395,23 @@ class _MovieCardState extends State<MovieCard> {
     setState(() {
       _isPreviewPlaying = false;
     });
+    _logPreview(external ? 'Video Paused external' : 'Video Paused');
+  }
+
+  void _stopAndDisposePreview(String reason) {
+    _previewGeneration++;
+    _stopPreview(external: true);
+    _disposeVideoController();
+    _logPreview('Video Stopped $reason');
+  }
+
+  void _logPreview(String message) {
+    if (kDebugMode) {
+      debugPrint(
+        'HOME_AUTOPLAY_CARD: $message '
+        'id=${widget.movie.id ?? 'unknown'} index=${widget.index}',
+      );
+    }
   }
 
   @override
@@ -368,32 +430,53 @@ class _MovieCardState extends State<MovieCard> {
 
     return Stack(
       children: [
-        MouseRegion(
-          onEnter: (_) => _handleHover(true),
-          onExit: (_) => _handleHover(false),
-          child: GestureDetector(
-            onTap: _openDetails,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOut,
-              width: cardWidth,
-              margin: EdgeInsets.only(
-                left: cardMargin,
-                right: cardMargin,
-                bottom: cardMargin,
-                top: showPreview ? 4 : 12, // 👈 selected card moves slightly up
-              ),
-              //    margin: EdgeInsets.all(cardMargin),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: showPreview
-                      ? highlightColor
-                      : theme.canvasColor.withValues(alpha: 0.2),
-                  width: showPreview ? 2.5 : 1,
+        Focus(
+          canRequestFocus: ResponsiveWidget.isTabletOrTv(context),
+          onFocusChange: (hasFocus) {
+            if (ResponsiveWidget.isTabletOrTv(context)) {
+              _handleHover(hasFocus);
+            }
+          },
+          onKeyEvent: (node, event) {
+            if (event is! KeyDownEvent) return KeyEventResult.ignored;
+            final key = event.logicalKey;
+            if (key == LogicalKeyboardKey.enter ||
+                key == LogicalKeyboardKey.select ||
+                key == LogicalKeyboardKey.space ||
+                key == LogicalKeyboardKey.gameButtonA) {
+              _openDetails();
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          child: MouseRegion(
+            onEnter: (_) => _handleHover(true),
+            onExit: (_) => _handleHover(false),
+            child: GestureDetector(
+              onTap: _openDetails,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                width: cardWidth,
+                margin: EdgeInsets.only(
+                  left: cardMargin,
+                  right: cardMargin,
+                  bottom: cardMargin,
+                  top: showPreview
+                      ? 4
+                      : 12, // 👈 selected card moves slightly up
                 ),
-                /*  boxShadow: showPreview
+                //    margin: EdgeInsets.all(cardMargin),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: showPreview
+                        ? highlightColor
+                        : theme.canvasColor.withValues(alpha: 0.2),
+                    width: showPreview ? 2.5 : 1,
+                  ),
+                  /*  boxShadow: showPreview
                     ? [
                         BoxShadow(
                           color: highlightColor.withValues(alpha: 0.12),
@@ -403,41 +486,42 @@ class _MovieCardState extends State<MovieCard> {
                         ),
                       ]
                     : null, */
-              ),
-              child: Column(
-                children: [
-                  /// 🎬 POSTER + PROGRESS BAR STACK
-                  Expanded(
-                    flex: 8,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: theme.cardColor, width: 1),
-                          left: BorderSide(color: theme.cardColor, width: 1),
-                          right: BorderSide(color: theme.cardColor, width: 1),
+                ),
+                child: Column(
+                  children: [
+                    /// 🎬 POSTER + PROGRESS BAR STACK
+                    Expanded(
+                      flex: 8,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: theme.cardColor, width: 1),
+                            left: BorderSide(color: theme.cardColor, width: 1),
+                            right: BorderSide(color: theme.cardColor, width: 1),
+                          ),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(12),
-                        ),
-                        child: _buildMediaPreview(
-                          posterUrl,
-                          theme,
-                          widget.movie,
-                          showPreview,
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(12),
+                          ),
+                          child: _buildMediaPreview(
+                            posterUrl,
+                            theme,
+                            widget.movie,
+                            showPreview,
+                          ),
                         ),
                       ),
                     ),
-                  ),
 
-                  /// 📄 DETAILS SECTION
-                  Expanded(
-                    flex: 3,
-                    child: _buildContentSection(theme, lang),
-                  ),
-                ],
+                    /// 📄 DETAILS SECTION
+                    Expanded(
+                      flex: 3,
+                      child: _buildContentSection(theme, lang),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -454,15 +538,18 @@ class _MovieCardState extends State<MovieCard> {
     if (showPreview && _isVideoInitialized && _videoController != null) {
       return Stack(
         children: [
-          Positioned.fill(child: VideoPlayer(_videoController!)),
+          Positioned.fill(
+            child: Video(
+              controller: _videoController!,
+              fit: BoxFit.fill,
+              controls: null,
+            ),
+          ),
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
-            child: VideoProgressIndicator(
-              _videoController!,
-              allowScrubbing: true,
-            ),
+            child: _previewProgress(),
           ),
           Positioned(
             right: 5,
@@ -594,7 +681,10 @@ class _MovieCardState extends State<MovieCard> {
                       ),
                     ),
                   )
-                : _buildPriceButton(theme, lang, price),
+                : _tourWrapDownloadTarget(
+                    _buildPriceButton(theme, lang, price),
+                    movie,
+                  ),
             SizedBox(
               width: 5,
             )
@@ -641,6 +731,18 @@ class _MovieCardState extends State<MovieCard> {
     );
   }
 
+  Widget _tourWrapDownloadTarget(Widget child, Content movie) {
+    final canDownload = widget.index == 0 &&
+        movie.isDownloadable == true &&
+        (movie.contentUrl?.trim().isNotEmpty ?? false);
+    if (!canDownload) return child;
+
+    return FeatureTourTarget(
+      id: FeatureTourStepId.download,
+      child: child,
+    );
+  }
+
   void _openDetails() {
     final movie = widget.movie;
 
@@ -652,7 +754,7 @@ class _MovieCardState extends State<MovieCard> {
         builder:
             (_) => /* movie.isFeatured == true
             ? TrailerPage(
-                trailerUrl: movie.trailerUrl ?? "",
+                trailerUrl: movie.teaserOrTrailerUrl ?? "",
                 isTrailerUrl: true,
                 content: movie)
             :  */
@@ -660,7 +762,7 @@ class _MovieCardState extends State<MovieCard> {
                     ? MovieDetailsPage(movieId: movie.id!)
                     : SeriesDetailsPage(seriesId: movie.id!, content: movie),
       ),
-    );
+    ).then((_) => _refreshSingleContent());
   }
 
   Future<void> _playMovie() async {
@@ -671,9 +773,8 @@ class _MovieCardState extends State<MovieCard> {
     var contentUrl = contentToPlay.contentUrl;
 
     if (contentUrl == null || contentUrl.trim().isEmpty) {
-      final fetchedContent = await context
-          .read<DashboardProvider>()
-          .getContentById(movie.id!);
+      final fetchedContent =
+          await context.read<DashboardProvider>().getContentById(movie.id!);
       if (!mounted) return;
 
       if (fetchedContent != null) {
@@ -710,6 +811,25 @@ class _MovieCardState extends State<MovieCard> {
           .read<DashboardProvider>()
           .getContinueWatchedMovieList(contentToPlay.type ?? "MOVIE");
     });
+  }
+
+  Widget _previewProgress() {
+    final player = _previewPlayer;
+    if (player == null) return const SizedBox.shrink();
+
+    final duration = player.state.duration.inMilliseconds;
+    if (duration <= 0) return const SizedBox.shrink();
+
+    final value = (player.state.position.inMilliseconds / duration)
+        .clamp(0.0, 1.0)
+        .toDouble();
+
+    return LinearProgressIndicator(
+      value: value,
+      minHeight: 3,
+      color: Colors.red,
+      backgroundColor: Colors.white24,
+    );
   }
 
   void _showCupertinoDialog(BuildContext context, Content movie) {
@@ -783,6 +903,25 @@ class _MovieCardState extends State<MovieCard> {
     final langList = languages.isEmpty ? ["English"] : languages;
 
     await dashboardProvider.getDashboardData(type, langList, user.id!);
+
+    final contentId = widget.movie.id;
+    if (contentId == null) return;
+
+    final refreshedContent = await dashboardProvider.getContentById(contentId);
+    if (!mounted || refreshedContent == null) return;
+
+    widget.onContentUpdated?.call(refreshedContent);
+  }
+
+  Future<void> _refreshSingleContent() async {
+    final contentId = widget.movie.id;
+    if (contentId == null || !mounted) return;
+
+    final refreshedContent =
+        await context.read<DashboardProvider>().getContentById(contentId);
+    if (!mounted || refreshedContent == null) return;
+
+    widget.onContentUpdated?.call(refreshedContent);
   }
 
   Widget _optionButton(BuildContext context, Content movie) {
@@ -805,94 +944,105 @@ class _MovieCardState extends State<MovieCard> {
     return Positioned(
       top: verticalInset,
       right: horizontalInset,
-      child: SpeedDial(
-        openCloseDial: isDialOpen,
-        onPress: () => isDialOpen.value = !isDialOpen.value,
-        icon: Icons.more_vert,
-        activeIcon: Icons.close,
-        backgroundColor: theme.primaryColor,
-        foregroundColor: Colors.white,
-        overlayColor: Colors.black,
-        overlayOpacity: 0.3,
-        elevation: 2,
-        direction: SpeedDialDirection.down,
-        buttonSize: Size(buttonSize, buttonSize),
-        childrenButtonSize: Size(buttonSize, compactOverlay ? 32 : 35),
-        spacing: 2,
-        children: [
-          movie.isRental!
-              ? SpeedDialChild()
-              : SpeedDialChild(
-                  label: isBookmarked ? "Remove Bookmark" : "Bookmark",
-                  labelBackgroundColor: theme.cardColor,
-                  labelStyle: TextStyle(
-                    color: theme.canvasColor,
-                    fontSize: 10,
+      child: _tourWrapMoreActionsTarget(
+        SpeedDial(
+          openCloseDial: isDialOpen,
+          onPress: () => isDialOpen.value = !isDialOpen.value,
+          icon: Icons.more_vert,
+          activeIcon: Icons.close,
+          backgroundColor: theme.primaryColor,
+          foregroundColor: Colors.white,
+          overlayColor: Colors.black,
+          overlayOpacity: 0.3,
+          elevation: 2,
+          direction: SpeedDialDirection.down,
+          buttonSize: Size(buttonSize, buttonSize),
+          childrenButtonSize: Size(buttonSize, compactOverlay ? 32 : 35),
+          spacing: 2,
+          children: [
+            movie.isRental!
+                ? SpeedDialChild()
+                : SpeedDialChild(
+                    label: isBookmarked ? "Remove Bookmark" : "Bookmark",
+                    labelBackgroundColor: theme.cardColor,
+                    labelStyle: TextStyle(
+                      color: theme.canvasColor,
+                      fontSize: 10,
+                    ),
+                    child: Icon(
+                      isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                    backgroundColor: theme.primaryColor,
+                    onTap: () async {
+                      final bool wasBookmarked =
+                          bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
+
+                      await bookmarkProvider.toggleBookmark(movie);
+
+                      CustomToast.show(
+                        context,
+                        wasBookmarked
+                            ? "${movie.title} removed from bookmarks"
+                            : "${movie.title} added to bookmarks",
+                        isSuccess: true,
+                      );
+
+                      isDialOpen.value = false;
+                    },
                   ),
-                  child: Icon(
-                    isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                    size: 14,
-                    color: Colors.white,
-                  ),
-                  backgroundColor: theme.primaryColor,
-                  onTap: () async {
-                    final bool wasBookmarked =
-                        bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
 
-                    await bookmarkProvider.toggleBookmark(movie);
-
-                    CustomToast.show(
-                      context,
-                      wasBookmarked
-                          ? "${movie.title} removed from bookmarks"
-                          : "${movie.title} added to bookmarks",
-                      isSuccess: true,
-                    );
-
-                    isDialOpen.value = false;
-                  },
-                ),
-
-          /// 🔗 Share
-          SpeedDialChild(
-            label: "Share",
-            labelBackgroundColor: theme.cardColor,
-            labelStyle: TextStyle(
-              color: theme.canvasColor,
-              fontSize: 10,
-            ),
-            child: const Icon(Icons.share, size: 14, color: Colors.white),
-            backgroundColor: theme.primaryColor,
-            onTap: () {
-              isDialOpen.value = false;
-              showContentShareSheet(
-                context,
-                movie,
-                contentType: _shareContentTypeFor(movie),
-                unavailableMessage: "Content details are not available yet",
-              );
-            },
-          ),
-
-          /// 🎁 Gift (movies only)
-          if (!isSeries)
+            /// 🔗 Share
             SpeedDialChild(
-              label: "Gift",
+              label: "Share",
               labelBackgroundColor: theme.cardColor,
               labelStyle: TextStyle(
                 color: theme.canvasColor,
                 fontSize: 10,
               ),
-              child:
-                  const Icon(LucideIcons.gift, size: 14, color: Colors.white),
+              child: const Icon(Icons.share, size: 14, color: Colors.white),
               backgroundColor: theme.primaryColor,
               onTap: () {
                 isDialOpen.value = false;
-                _showGiftDialog(context, movie, countController);
+                showContentShareSheet(
+                  context,
+                  movie,
+                  contentType: _shareContentTypeFor(movie),
+                  unavailableMessage: "Content details are not available yet",
+                );
               },
             ),
-        ],
+
+            /// 🎁 Gift (movies only)
+            if (!isSeries && !WalletPlatform.isIOS)
+              SpeedDialChild(
+                label: "Gift",
+                labelBackgroundColor: theme.cardColor,
+                labelStyle: TextStyle(
+                  color: theme.canvasColor,
+                  fontSize: 10,
+                ),
+                child:
+                    const Icon(LucideIcons.gift, size: 14, color: Colors.white),
+                backgroundColor: theme.primaryColor,
+                onTap: () {
+                  isDialOpen.value = false;
+                  _showGiftDialog(context, movie, countController);
+                },
+              ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _tourWrapMoreActionsTarget(Widget child) {
+    if (widget.index != 0) return child;
+
+    return FeatureTourTarget(
+      id: FeatureTourStepId.moreActions,
+      child: child,
     );
   }
 
@@ -901,6 +1051,7 @@ class _MovieCardState extends State<MovieCard> {
     Content movie,
     TextEditingController countController,
   ) {
+    if (WalletPlatform.isIOS) return;
     final theme = Theme.of(context);
 
     showDialog(

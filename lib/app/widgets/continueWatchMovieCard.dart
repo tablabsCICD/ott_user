@@ -5,7 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
@@ -21,7 +25,6 @@ import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:video_player/video_player.dart';
 
 import 'package:ott/data/models/content.dart';
 
@@ -49,14 +52,15 @@ class ContinueWatchMovieCard extends StatefulWidget {
 
 class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   static _ContinueWatchMovieCardState? _activePreviewState;
-  VideoPlayerController? _videoController;
+  Player? _previewPlayer;
+  VideoController? _videoController;
+  final List<StreamSubscription<dynamic>> _previewSubscriptions = [];
   bool _isHovered = false;
   bool _isMuted = true;
   bool _isVideoInitialized = false;
   bool _isPreviewPlaying = false;
   bool _isAutoPlayActive = false;
   bool _isStartingPreview = false;
-  bool _hasVideoListener = false;
   Timer? _playDelayTimer;
 
   Uri? _previewUri(String? rawUrl) {
@@ -78,10 +82,12 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       widget.activeIndexListenable?.addListener(_handleActiveIndexChanged);
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       context
           .read<BookmarkProvider>()
           .isBookmarked(widget.movie.id ?? 0)
           .then((value) {
+        if (!mounted) return;
         if (value) {
           context.read<BookmarkProvider>().addBookmark(widget.movie.id ?? 0);
         }
@@ -115,11 +121,11 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   }
 
   void _toggleMute() {
-    final controller = _videoController;
+    final player = _previewPlayer;
     setState(() {
       _isMuted = !_isMuted;
     });
-    controller?.setVolume(_isMuted ? 0 : 1);
+    player?.setVolume(_isMuted ? 0 : 100);
   }
 
   Future<bool> _ensureVideoInitialized() async {
@@ -128,18 +134,36 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     final trailerUri = _previewUri(widget.movie.trailerUrl);
     if (trailerUri == null) return false;
 
-    _videoController ??= VideoPlayerController.networkUrl(trailerUri);
+    final player = Player();
+    final controller = VideoController(player);
 
     try {
-      await _videoController!.initialize();
-      _videoController!
-        ..setLooping(true)
-        ..setVolume(_isMuted ? 0.0 : 1.0);
+      _previewSubscriptions
+        ..add(player.stream.completed.listen((completed) {
+          if (completed && _isPreviewPlaying) {
+            player.seek(Duration.zero);
+            player.play();
+          }
+        }))
+        ..add(player.stream.position.listen((_) {
+          if (mounted) setState(() {});
+        }))
+        ..add(player.stream.duration.listen((_) {
+          if (mounted) setState(() {});
+        }))
+        ..add(player.stream.error.listen((error) {
+          debugPrint("Trailer playback error: $error");
+          _stopPreview();
+          if (_activePreviewState == this) {
+            _activePreviewState = null;
+          }
+        }));
 
-      if (!_hasVideoListener) {
-        _videoController!.addListener(_handleVideoTick);
-        _hasVideoListener = true;
-      }
+      await player.open(Media(trailerUri.toString()), play: false);
+      await player.setVolume(_isMuted ? 0 : 100);
+
+      _previewPlayer = player;
+      _videoController = controller;
 
       if (mounted) {
         setState(() => _isVideoInitialized = true);
@@ -147,17 +171,19 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       return true;
     } catch (e) {
       debugPrint("Video init failed: $e");
+      await player.dispose();
       _disposeVideoController();
       return false;
     }
   }
 
   void _disposeVideoController() {
-    if (_videoController != null && _hasVideoListener) {
-      _videoController!.removeListener(_handleVideoTick);
-      _hasVideoListener = false;
+    for (final subscription in _previewSubscriptions) {
+      unawaited(subscription.cancel());
     }
-    _videoController?.dispose();
+    _previewSubscriptions.clear();
+    _previewPlayer?.dispose();
+    _previewPlayer = null;
     _videoController = null;
     _isVideoInitialized = false;
   }
@@ -263,22 +289,6 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     }
   }
 
-  void _handleVideoTick() {
-    if (!mounted) return;
-    final controller = _videoController;
-    if (controller == null || !_isVideoInitialized) return;
-
-    final value = controller.value;
-    if (value.hasError) {
-      debugPrint("Trailer playback error: ${value.errorDescription}");
-      _stopPreview();
-      if (_activePreviewState == this) {
-        _activePreviewState = null;
-      }
-      return;
-    }
-  }
-
   void _schedulePreview() {
     if (_playDelayTimer != null) return;
     if (_isStartingPreview || _isPreviewPlaying) return;
@@ -324,7 +334,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
 
       _ensureMuted();
 
-      await _videoController!.play();
+      await _previewPlayer!.play();
       if (!mounted) return;
       setState(() => _isPreviewPlaying = true);
     } catch (e) {
@@ -346,21 +356,21 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   }
 
   void _ensureMuted() {
-    final controller = _videoController;
-    if (controller == null) return;
+    final player = _previewPlayer;
+    if (player == null) return;
     if (!_isMuted) {
       setState(() => _isMuted = true);
     }
-    controller.setVolume(0.0);
+    player.setVolume(0);
   }
 
   void _stopPreview({bool external = false}) {
-    final controller = _videoController;
-    if (controller == null || !_isVideoInitialized) return;
+    final player = _previewPlayer;
+    if (player == null || !_isVideoInitialized) return;
 
     try {
-      controller.pause();
-      controller.seekTo(Duration.zero);
+      player.pause();
+      player.seek(Duration.zero);
     } catch (e) {
       debugPrint("Trailer stop failed: $e");
     }
@@ -382,9 +392,27 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     final highlightColor = theme.brightness == Brightness.light
         ? const Color.fromARGB(255, 185, 169, 169)
         : const Color.fromARGB(255, 58, 49, 49);
-    return Stack(
-      children: [
-        MouseRegion(
+    return Stack(children: [
+      Focus(
+        canRequestFocus: ResponsiveWidget.isTabletOrTv(context),
+        onFocusChange: (hasFocus) {
+          if (ResponsiveWidget.isTabletOrTv(context)) {
+            _handleHover(hasFocus);
+          }
+        },
+        onKeyEvent: (node, event) {
+          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+          final key = event.logicalKey;
+          if (key == LogicalKeyboardKey.enter ||
+              key == LogicalKeyboardKey.select ||
+              key == LogicalKeyboardKey.space ||
+              key == LogicalKeyboardKey.gameButtonA) {
+            _playContent();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: MouseRegion(
           onEnter: (_) => _handleHover(true),
           onExit: (_) => _handleHover(false),
           child: GestureDetector(
@@ -440,11 +468,11 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
             ),
           ),
         ),
+      ),
+    ]);
 
-        /*/// ⋮ OPTIONS BUTTON
+    /*/// ⋮ OPTIONS BUTTON
         _optionButton(context, widget.movie),*/
-      ],
-    );
   }
 
   Widget _buildMediaPreview(
@@ -452,15 +480,18 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     if (showPreview && _isVideoInitialized && _videoController != null) {
       return Stack(
         children: [
-          Positioned.fill(child: VideoPlayer(_videoController!)),
+          Positioned.fill(
+            child: Video(
+              controller: _videoController!,
+              fit: BoxFit.cover,
+              controls: null,
+            ),
+          ),
           Positioned(
             bottom: 5,
             left: 0,
             right: 0,
-            child: VideoProgressIndicator(
-              _videoController!,
-              allowScrubbing: true,
-            ),
+            child: _previewProgress(),
           ),
           Positioned(
             right: 5,
@@ -676,7 +707,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
         MaterialPageRoute(
           builder: (_) => movie.isFeatured == true
               ? TrailerPage(
-                  trailerUrl: movie.trailerUrl ?? "",
+                  trailerUrl: movie.teaserOrTrailerUrl ?? "",
                   isTrailerUrl: true,
                   content: movie)
               : movie.type!.toLowerCase() == 'movie'
@@ -687,6 +718,25 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     }
   }
 
+  Widget _previewProgress() {
+    final player = _previewPlayer;
+    if (player == null) return const SizedBox.shrink();
+
+    final duration = player.state.duration.inMilliseconds;
+    if (duration <= 0) return const SizedBox.shrink();
+
+    final value = (player.state.position.inMilliseconds / duration)
+        .clamp(0.0, 1.0)
+        .toDouble();
+
+    return LinearProgressIndicator(
+      value: value,
+      minHeight: 3,
+      color: Colors.red,
+      backgroundColor: Colors.white24,
+    );
+  }
+
   Future<void> _playContent() async {
     final movie = widget.movie;
     if (movie.id == null) return;
@@ -695,9 +745,8 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     var contentUrl = contentToPlay.contentUrl;
 
     if (contentUrl == null || contentUrl.trim().isEmpty) {
-      final fetchedContent = await context
-          .read<DashboardProvider>()
-          .getContentById(movie.id!);
+      final fetchedContent =
+          await context.read<DashboardProvider>().getContentById(movie.id!);
       if (!mounted) return;
 
       if (fetchedContent != null) {
@@ -727,8 +776,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
           content: contentToPlay,
           seasonIndex: contentToPlay.seasonId ?? 0,
           episodeIndex: contentToPlay.episodeId ?? 0,
-          seasons:
-              contentToPlay.type?.toLowerCase() == "series" ? [] : null,
+          seasons: contentToPlay.type?.toLowerCase() == "series" ? [] : null,
         ),
       ),
     ).then((_) {
@@ -897,7 +945,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
           ),
 
           /// 🎁 Gift (movies only)
-          if (!isSeries)
+          if (!isSeries && !WalletPlatform.isIOS)
             SpeedDialChild(
               label: "Gift",
               labelBackgroundColor: theme.cardColor,
@@ -919,13 +967,16 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   }
 
   void _shareMovie(BuildContext context, Content movie) async {
+    final shareLink = movie.id == null
+        ? (movie.trailerUrl ?? '')
+        : DeepLinkService.instance.buildMovieAppLink(movie.id!).toString();
     final String shareText = '''
 🎬 ${movie.title ?? ''}
 
 ${movie.description ?? ''}
 
 ▶️ Watch here:
-${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? ''}
+$shareLink
 
 📲 Download Filmytell App now!
 '''
@@ -954,6 +1005,7 @@ ${movie.trailerUrl?.isNotEmpty == true ? movie.trailerUrl : movie.contentUrl ?? 
     Content movie,
     TextEditingController countController,
   ) {
+    if (WalletPlatform.isIOS) return;
     final theme = Theme.of(context);
 
     showDialog(

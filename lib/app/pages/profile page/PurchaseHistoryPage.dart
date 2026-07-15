@@ -20,6 +20,7 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       context.read<PurchaseHistoryProvider>().fetchPurchaseHistory();
     });
   }

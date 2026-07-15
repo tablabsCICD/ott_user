@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
@@ -6,6 +7,7 @@ import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/shimmer%20loader/search_shimmer.dart';
 import 'package:ott/data/models/cast_member.dart';
@@ -29,6 +31,7 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     super.initState();
     Future.delayed(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
       Provider.of<VideoProvider>(context, listen: false).searchContent();
       setState(() {
         isLoading = false;
@@ -72,6 +75,8 @@ class _SearchPageState extends State<SearchPage> {
         return Scaffold(
           backgroundColor: selectedThemeData.scaffoldBackgroundColor,
           appBar: AppBar(
+            automaticallyImplyLeading:
+                !(kIsWeb || ResponsiveWidget.isTv(context)),
             toolbarHeight: 80,
             backgroundColor: ResponsiveWidget.isDesktop(context)
                 ? selectedThemeData.scaffoldBackgroundColor
@@ -343,9 +348,8 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
 
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
-        final responseData = responseBody is Map<String, dynamic>
-            ? responseBody['data']
-            : null;
+        final responseData =
+            responseBody is Map<String, dynamic> ? responseBody['data'] : null;
         final castData =
             responseData is Map<String, dynamic> ? responseData['cast'] : null;
 
@@ -414,194 +418,203 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => movie.type!.toLowerCase() == 'movie'
-                    ? MovieDetailsPage(
-                        movieId: movie.id!,
-                      )
-                    : SeriesDetailsPage(
-                        seriesId: movie.id!,
-                        content: movie,
-                      ),
-              ),
-            );
-          },
-          child: Card(
-            color: theme.cardColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+        void openDetails() {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => movie.type!.toLowerCase() == 'movie'
+                  ? MovieDetailsPage(
+                      movieId: movie.id!,
+                    )
+                  : SeriesDetailsPage(
+                      seriesId: movie.id!,
+                      content: movie,
+                    ),
             ),
-            elevation: 4,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 100,
-                    height: 140,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: movie.posterUrlList != null &&
-                              movie.posterUrlList!.isNotEmpty
-                          ? Image.network(
-                              movie.posterUrlList![0],
-                              width: 100,
-                              height: 140,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Icon(Icons.broken_image,
-                                      size: 30, color: Colors.grey),
-                            )
-                          : Container(
-                              width: 100,
-                              height: 140,
-                              color: Colors.grey[300],
-                              child: Icon(
-                                Icons.movie,
-                                size: 60,
-                                color: Colors.grey[600],
+          );
+        }
+
+        final card = Card(
+          color: theme.cardColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 4,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 100,
+                  height: 140,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: movie.posterUrlList != null &&
+                            movie.posterUrlList!.isNotEmpty
+                        ? Image.network(
+                            movie.posterUrlList![0],
+                            width: 100,
+                            height: 140,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                                Icons.broken_image,
+                                size: 30,
+                                color: Colors.grey),
+                          )
+                        : Container(
+                            width: 100,
+                            height: 140,
+                            color: Colors.grey[300],
+                            child: Icon(
+                              Icons.movie,
+                              size: 60,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.vertical,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text.rich(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          TextSpan(
+                              style: TextStyle(
+                                color: theme.canvasColor.withOpacity(0.7),
+                                fontSize: 12,
                               ),
-                            ),
+                              children: [
+                                TextSpan(
+                                  text: ' ${movie.ratings ?? '-'}',
+                                  style: TextStyle(
+                                      color: Colors.amberAccent,
+                                      fontWeight: FontWeight.w600),
+                                ),
+                                TextSpan(
+                                  text: ' | ',
+                                  style: TextStyle(
+                                    color: theme.canvasColor.withOpacity(0.7),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: (movie.genreList != null &&
+                                          movie.genreList!.isNotEmpty)
+                                      ? movie.genreList!.join(', ')
+                                      : 'N/A',
+                                )
+                              ]),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          movie.title ?? 'No Title',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: theme.canvasColor,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 1),
+                        Text.rich(
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          TextSpan(
+                              style: TextStyle(
+                                color: theme.canvasColor.withOpacity(0.7),
+                                fontSize: 12,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: 'Director: ',
+                                  style: TextStyle(
+                                    color: theme.primaryColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                TextSpan(text: _memberNames(_crewList))
+                              ]),
+                        ),
+                        const SizedBox(height: 1),
+                        Text.rich(
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          TextSpan(
+                              style: TextStyle(
+                                color: theme.canvasColor.withOpacity(0.7),
+                                fontSize: 12,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: 'Cast: ',
+                                  style: TextStyle(
+                                    color: theme.primaryColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                TextSpan(text: _memberNames(_castList))
+                              ]),
+                        ),
+                        const SizedBox(height: 4),
+                        Text.rich(
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          TextSpan(
+                              style: TextStyle(
+                                color: theme.canvasColor.withOpacity(0.7),
+                                fontSize: 12,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: movie.releaseDate ?? '',
+                                  style: TextStyle(
+                                    color: theme.canvasColor,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: ' | ',
+                                  style: TextStyle(
+                                    color: theme.canvasColor.withOpacity(0.7),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: movie.description ?? '',
+                                  style: TextStyle(
+                                    overflow: TextOverflow.ellipsis,
+                                    fontSize: 12,
+                                    color: theme.canvasColor.withOpacity(0.7),
+                                  ),
+                                )
+                              ]),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.vertical,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text.rich(
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            TextSpan(
-                                style: TextStyle(
-                                  color: theme.canvasColor.withOpacity(0.7),
-                                  fontSize: 12,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: ' ${movie.ratings ?? '-'}',
-                                    style: TextStyle(
-                                        color: Colors.amberAccent,
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                                  TextSpan(
-                                    text: ' | ',
-                                    style: TextStyle(
-                                      color: theme.canvasColor.withOpacity(0.7),
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: (movie.genreList != null &&
-                                            movie.genreList!.isNotEmpty)
-                                        ? movie.genreList!.join(', ')
-                                        : 'N/A',
-                                  )
-                                ]),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            movie.title ?? 'No Title',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: theme.canvasColor,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 1),
-                          Text.rich(
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            TextSpan(
-                                style: TextStyle(
-                                  color: theme.canvasColor.withOpacity(0.7),
-                                  fontSize: 12,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: 'Director: ',
-                                    style: TextStyle(
-                                      color: theme.primaryColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  TextSpan(text: _memberNames(_crewList))
-                                ]),
-                          ),
-                          const SizedBox(height: 1),
-                          Text.rich(
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            TextSpan(
-                                style: TextStyle(
-                                  color: theme.canvasColor.withOpacity(0.7),
-                                  fontSize: 12,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: 'Cast: ',
-                                    style: TextStyle(
-                                      color: theme.primaryColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  TextSpan(text: _memberNames(_castList))
-                                ]),
-                          ),
-                          const SizedBox(height: 4),
-                         
-                        
-                          Text.rich(
-                            maxLines: 4,
-                            overflow: TextOverflow.ellipsis,
-                            TextSpan(
-                                style: TextStyle(
-                                  color: theme.canvasColor.withOpacity(0.7),
-                                  fontSize: 12,
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: movie.releaseDate ?? '',
-                                    style: TextStyle(
-                                      color: theme.canvasColor,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: ' | ',
-                                    style: TextStyle(
-                                      color: theme.canvasColor.withOpacity(0.7),
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: movie.description ?? '',
-                                    style: TextStyle(
-                                      overflow: TextOverflow.ellipsis,
-                                      fontSize: 12,
-                                      color: theme.canvasColor.withOpacity(0.7),
-                                    ),
-                                  )
-                                ]),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
+        );
+
+        if (ResponsiveWidget.isMobile(context)) {
+          return GestureDetector(onTap: openDetails, child: card);
+        }
+
+        return OttTvFocus(
+          onTap: openDetails,
+          borderRadius: 12,
+          scale: 1.025,
+          child: card,
         );
       },
     );

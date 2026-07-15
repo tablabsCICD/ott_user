@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Ott</string>
+	<string>Filmytell</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -60,18 +60,17 @@
 	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
-		<string>fetch</string>
 		<string>remote-notification</string>
 	</array>
 	
 	<key>NSCameraUsageDescription</key>
-	<string>Camera required for payments</string>
+	<string>Filmytell uses the camera only when a payment or support flow needs you to scan or capture required information.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Photo library access required for payments</string>
+	<string>Filmytell uses your photo library only when you choose an image for your profile or a support attachment.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Location access is required to auto-fill your address.</string>
+	<string>Filmytell uses your approximate location while the app is open to help auto-fill address details when you request it.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Location access is required to auto-fill your address.</string>
+	<string>Filmytell uses your location only when you choose Use Current Location to auto-fill your address details; it does not track your location in the background.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSExceptionDomains</key>
@@ -85,6 +84,12 @@
 			</dict>
 		</dict>
 	</dict>
+	<key>FIREBASE_ANALYTICS_COLLECTION_DEACTIVATED</key>
+	<true/>
+	<key>GOOGLE_ANALYTICS_IDFV_COLLECTION_ENABLED</key>
+	<false/>
+	<key>GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_PERSONALIZATION_SIGNALS</key>
+	<false/>
 
 </dict>
 </plist>

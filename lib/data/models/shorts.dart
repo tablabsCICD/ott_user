@@ -1,5 +1,35 @@
 import 'package:ott/data/models/content.dart';
 
+class MiniSeriesPage {
+  final List<ShortModel> content;
+  final int page;
+  final int size;
+  final int totalPages;
+  final int totalElements;
+
+  const MiniSeriesPage({
+    required this.content,
+    required this.page,
+    required this.size,
+    required this.totalPages,
+    required this.totalElements,
+  });
+
+  factory MiniSeriesPage.fromJson(Map<String, dynamic> json) {
+    final rawContent = json['content'] as List? ?? const [];
+    return MiniSeriesPage(
+      content: rawContent
+          .whereType<Map<String, dynamic>>()
+          .map(ShortModel.fromJson)
+          .toList(),
+      page: json['number'] as int? ?? json['page'] as int? ?? 0,
+      size: json['size'] as int? ?? rawContent.length,
+      totalPages: json['totalPages'] as int? ?? 0,
+      totalElements: json['totalElements'] as int? ?? rawContent.length,
+    );
+  }
+}
+
 class ShortModel {
   final int id;
   final String title;

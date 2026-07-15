@@ -9,7 +9,9 @@ class CustomToast {
     Duration duration = const Duration(seconds: 3),
   }) {
     final overlay = Overlay.of(context);
-    final entry = OverlayEntry(
+    bool removed = false;
+    late final OverlayEntry entry;
+    entry = OverlayEntry(
       builder: (context) => Positioned(
         top: 50,
         right: 16,
@@ -24,6 +26,8 @@ class CustomToast {
 
     // Remove the toast after the specified duration
     Future.delayed(duration, () {
+      if (removed) return;
+      removed = true;
       entry.remove();
     });
   }

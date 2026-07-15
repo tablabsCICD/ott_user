@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 class NewsScreenArgs {
   const NewsScreenArgs({
@@ -38,6 +40,7 @@ class NewsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         title: const Text('News'),
       ),
       body: Padding(

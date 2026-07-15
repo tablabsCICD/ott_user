@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/shorts%20page/component/shortsLibraryPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
@@ -23,6 +24,7 @@ class _ShortsPageState extends State<ShortsPage> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         toolbarHeight: 80,
         backgroundColor: ResponsiveWidget.isDesktop(context)
             ? theme.scaffoldBackgroundColor

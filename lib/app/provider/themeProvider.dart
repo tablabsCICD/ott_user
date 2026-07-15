@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:ott/data/themes/custom_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'baseProvider.dart';
 
-class ThemeProvider extends ChangeNotifier {
+class ThemeProvider extends BaseProvider {
   late ThemeData _selectedTheme;
   late SharedPreferences _prefs;
 

@@ -1,9 +1,14 @@
-import 'package:chewie/chewie.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
+import 'package:ott/app/core/utils/direct_trailer_source.dart';
+import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:ott/app/widgets/video_skip_controls.dart';
 
 import '../../../../data/models/content.dart';
 import '../../../core/constant/api_constant.dart';
@@ -32,30 +37,48 @@ class TrailerPage extends StatefulWidget {
     required this.isTrailerUrl,
     required this.content,
   });
+
   @override
   State<TrailerPage> createState() => _TrailerPageState();
 }
 
-class _TrailerPageState extends State<TrailerPage> {
-  VideoPlayerController? _videoController;
+class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
+  Player? _player;
+  VideoController? _videoController;
   YoutubePlayerController? _youtubeController;
-  ChewieController? _chewieController;
+  final List<StreamSubscription<dynamic>> _subscriptions = [];
 
   bool _initialized = false;
   bool _historySaved = false;
   bool _hasError = false;
 
-  String get _trailerUrl => widget.trailerUrl?.trim() ?? '';
+  String get _trailerUrl =>
+      DirectTrailerSource.fromBackend(widget.trailerUrl) ?? '';
   bool get _hasUrl => _trailerUrl.isNotEmpty;
   String? get _youtubeId => _extractYoutubeId(_trailerUrl);
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (_hasUrl) _initPlayer();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      unawaited(_player?.pause());
+      _youtubeController?.pause();
+    }
+  }
+
   Future<void> _initPlayer() async {
+    SecurityDebugLog.event(
+      'TRAILER',
+      'Initializing trailer from the direct backend URL; signed playback API is intentionally bypassed.',
+    );
     final youtubeId = _youtubeId;
     if (youtubeId != null && youtubeId.isNotEmpty) {
       _youtubeController = YoutubePlayerController(
@@ -84,59 +107,52 @@ class _TrailerPageState extends State<TrailerPage> {
       return;
     }
 
+    final player = Player();
+    final controller = VideoController(player);
+
     try {
-      _videoController = VideoPlayerController.networkUrl(uri);
+      // media_kit powers direct trailer URLs while YouTube URLs keep their
+      // existing YouTube-specific controller.
+      _subscriptions
+        ..add(player.stream.playing.listen((isPlaying) {
+          isPlaying ? WakelockPlus.enable() : WakelockPlus.disable();
+          if (isPlaying && !_historySaved && !widget.isTrailerUrl) {
+            _historySaved = true;
+            _saveHistory();
+          }
+          if (mounted) setState(() {});
+        }))
+        ..add(player.stream.position.listen((_) {
+          if (mounted) setState(() {});
+        }))
+        ..add(player.stream.duration.listen((_) {
+          if (mounted) setState(() {});
+        }))
+        ..add(player.stream.error.listen((error) {
+          debugPrint('Trailer media_kit error: $error');
+          if (mounted) setState(() => _hasError = true);
+        }));
 
-    await _videoController!.initialize();
-    _videoController!.play();
+      SecurityDebugLog.event(
+        'TRAILER',
+        'Passing the direct backend trailer URL to media_kit.',
+      );
+      await player.open(Media(_trailerUrl), play: true);
+      await player.setVolume(100);
 
-    _videoController!.addListener(() {
-      if (!mounted) return;
-
-      // 🔋 wakelock like PlayMediaPage
-      if (_videoController!.value.isPlaying) {
-        WakelockPlus.enable();
-      } else {
-        WakelockPlus.disable();
+      if (!mounted) {
+        await player.dispose();
+        return;
       }
 
-      // 👁 save history once (non-trailer playback)
-      if (_videoController!.value.isPlaying &&
-          !_historySaved &&
-          !widget.isTrailerUrl) {
-        _historySaved = true;
-        _saveHistory();
-      }
-    });
-
-    _chewieController = ChewieController(
-      videoPlayerController: _videoController!,
-      autoPlay: true,
-      looping: false,
-      allowFullScreen: true,
-      allowMuting: true,
-      allowPlaybackSpeedChanging: true,
-      zoomAndPan: true,
-      showControls: true,
-      materialProgressColors: ChewieProgressColors(
-        playedColor: Colors.redAccent,
-        bufferedColor: Colors.white30,
-        handleColor: Colors.white,
-        backgroundColor: Colors.white12,
-      ),
-      deviceOrientationsOnEnterFullScreen: const [
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ],
-      deviceOrientationsAfterFullScreen: const [
-        DeviceOrientation.portraitUp,
-      ],
-    );
-
-      if (mounted) setState(() => _initialized = true);
-    } catch (_) {
-      await _videoController?.dispose();
-      _videoController = null;
+      setState(() {
+        _player = player;
+        _videoController = controller;
+        _initialized = true;
+      });
+    } catch (error) {
+      debugPrint('Trailer init error: $error');
+      await player.dispose();
       if (mounted) setState(() => _hasError = true);
     }
   }
@@ -148,7 +164,7 @@ class _TrailerPageState extends State<TrailerPage> {
 
       final body = {
         "contentId": widget.content.id,
-        "resumeTime": _videoController?.value.position.toString() ?? "0:00",
+        "resumeTime": _player?.state.position.toString() ?? "0:00",
         "selectedLanguage":
             widget.content.languageList?.first.language ?? "Unknown",
         "userId": user.id,
@@ -159,11 +175,53 @@ class _TrailerPageState extends State<TrailerPage> {
     } catch (_) {}
   }
 
+  void _seekBy(Duration offset) {
+    final youtube = _youtubeController;
+    if (youtube != null) {
+      youtube.seekTo(
+        boundedSeekPosition(
+          position: youtube.value.position,
+          duration: youtube.value.metaData.duration,
+          offset: offset,
+        ),
+      );
+      return;
+    }
+    final player = _player;
+    if (player == null) return;
+    unawaited(
+      player.seek(
+        boundedSeekPosition(
+          position: player.state.position,
+          duration: player.state.duration,
+          offset: offset,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _disposePlayer() async {
+    for (final subscription in _subscriptions) {
+      await subscription.cancel();
+    }
+    _subscriptions.clear();
+
+    final player = _player;
+    _player = null;
+    _videoController = null;
+    if (player != null) {
+      try {
+        await player.pause();
+      } catch (_) {}
+      await player.dispose();
+    }
+  }
+
   @override
   void dispose() {
-    _videoController?.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(_disposePlayer());
     _youtubeController?.dispose();
-    _chewieController?.dispose();
     WakelockPlus.disable();
 
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -186,28 +244,27 @@ class _TrailerPageState extends State<TrailerPage> {
                   child: Text("Trailer unavailable",
                       style: TextStyle(color: Colors.white)),
                 )
-          : !_initialized
-              ? Center(
-                  child: CircularProgressIndicator(
-                  color: Theme.of(context).primaryColor,
-                ))
-              : Stack(
-                  children: [
-                    Center(child: _playerSurface()),
-
-                    // 🔙 Back button overlay
-                    SafeArea(
-                      child: Align(
-                        alignment: Alignment.topLeft,
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back_ios,
-                              color: Colors.white),
-                          onPressed: () => Navigator.pop(context),
-                        ),
+              : !_initialized
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: Theme.of(context).primaryColor,
                       ),
+                    )
+                  : Stack(
+                      children: [
+                        Center(child: _playerSurface()),
+                        SafeArea(
+                          child: Align(
+                            alignment: Alignment.topLeft,
+                            child: IconButton(
+                              icon: const Icon(Icons.arrow_back_ios,
+                                  color: Colors.white),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
     );
   }
 
@@ -226,19 +283,40 @@ class _TrailerPageState extends State<TrailerPage> {
         builder: (context, player) {
           return AspectRatio(
             aspectRatio: 16 / 9,
-            child: player,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                player,
+                Center(
+                  child: VideoSkipControls(
+                    onBackward: () => _seekBy(const Duration(seconds: -10)),
+                    onForward: () => _seekBy(const Duration(seconds: 10)),
+                    gap: 92,
+                  ),
+                ),
+              ],
+            ),
           );
         },
       );
+    }
+
+    final player = _player;
+    final controller = _videoController;
+    if (player == null || controller == null) {
+      return const SizedBox.shrink();
     }
 
     return AspectRatio(
       aspectRatio: 16 / 9,
       child: Stack(
         children: [
-          Chewie(controller: _chewieController!),
-
-          /// 🎯 Netflix-style gesture overlay
+          Positioned.fill(
+            child: Video(
+              controller: controller,
+              fit: BoxFit.contain,
+            ),
+          ),
           Positioned.fill(
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
@@ -247,14 +325,14 @@ class _TrailerPageState extends State<TrailerPage> {
                 final local = box.globalToLocal(details.globalPosition);
                 final isLeft = local.dx < box.size.width / 2;
 
-                final current = _videoController!.value.position;
-                final duration = _videoController!.value.duration;
+                final current = player.state.position;
+                final duration = player.state.duration;
 
                 final target = isLeft
                     ? current - const Duration(seconds: 10)
                     : current + const Duration(seconds: 10);
 
-                await _videoController!.seekTo(
+                await player.seek(
                   target < Duration.zero
                       ? Duration.zero
                       : target > duration
@@ -263,11 +341,18 @@ class _TrailerPageState extends State<TrailerPage> {
                 );
               },
               onLongPressStart: (_) {
-                _videoController!.setPlaybackSpeed(2.0);
+                player.setRate(2.0);
               },
               onLongPressEnd: (_) {
-                _videoController!.setPlaybackSpeed(1.0);
+                player.setRate(1.0);
               },
+            ),
+          ),
+          Center(
+            child: VideoSkipControls(
+              onBackward: () => _seekBy(const Duration(seconds: -10)),
+              onForward: () => _seekBy(const Duration(seconds: 10)),
+              gap: 92,
             ),
           ),
         ],
@@ -276,18 +361,20 @@ class _TrailerPageState extends State<TrailerPage> {
   }
 }
 
-/// Lightweight autoplay preview for MovieDetailsPage
-///
 class TrailerPreview extends StatefulWidget {
   final String? trailerUrl;
   final Content content;
   final TrailerPreviewController controller;
+  final bool autoPlay;
+  final bool muted;
 
   const TrailerPreview({
     super.key,
     required this.trailerUrl,
     required this.content,
     required this.controller,
+    this.autoPlay = true,
+    this.muted = false,
   });
 
   @override
@@ -295,14 +382,17 @@ class TrailerPreview extends StatefulWidget {
 }
 
 class _TrailerPreviewState extends State<TrailerPreview> {
-  VideoPlayerController? _c;
+  Player? _player;
+  VideoController? _videoController;
   YoutubePlayerController? _youtubeController;
+  final List<StreamSubscription<dynamic>> _subscriptions = [];
   bool _showControls = false;
   bool _isDisposed = false;
   bool _hasError = false;
   int _initToken = 0;
 
-  String get _trailerUrl => widget.trailerUrl?.trim() ?? '';
+  String get _trailerUrl =>
+      DirectTrailerSource.fromBackend(widget.trailerUrl) ?? '';
   String? get _youtubeId => _extractYoutubeId(_trailerUrl);
 
   @override
@@ -310,13 +400,23 @@ class _TrailerPreviewState extends State<TrailerPreview> {
     super.initState();
 
     widget.controller.pause = () {
-      _c?.pause();
+      _player?.pause();
       _youtubeController?.pause();
     };
 
     widget.controller.play = () {
-      _c?.play();
+      _player?.play();
       _youtubeController?.play();
+    };
+
+    widget.controller.mute = () {
+      _player?.setVolume(0);
+      _youtubeController?.mute();
+    };
+
+    widget.controller.unmute = () {
+      _player?.setVolume(100);
+      _youtubeController?.unMute();
     };
 
     if (widget.trailerUrl?.isNotEmpty == true) _init();
@@ -325,6 +425,10 @@ class _TrailerPreviewState extends State<TrailerPreview> {
   Future<void> _init() async {
     if (_trailerUrl.isEmpty) return;
 
+    SecurityDebugLog.event(
+      'TRAILER',
+      'Initializing embedded trailer directly; no signed URL is requested.',
+    );
     final currentToken = ++_initToken;
     final youtubeId = _youtubeId;
     if (youtubeId != null && youtubeId.isNotEmpty) {
@@ -333,10 +437,17 @@ class _TrailerPreviewState extends State<TrailerPreview> {
         initialVideoId: youtubeId,
         flags: const YoutubePlayerFlags(
           autoPlay: true,
-          mute: false,
+          mute: true,
           loop: true,
         ),
       );
+
+      if (!widget.muted) {
+        controller.unMute();
+      }
+      if (!widget.autoPlay) {
+        controller.pause();
+      }
 
       if (_isDisposed || currentToken != _initToken) {
         controller.dispose();
@@ -360,30 +471,61 @@ class _TrailerPreviewState extends State<TrailerPreview> {
       return;
     }
 
-    final c = VideoPlayerController.networkUrl(uri);
+    final player = Player();
+    final controller = VideoController(player);
 
     try {
-      await c.initialize();
-      if (_isDisposed || currentToken != _initToken) {
-        await c.dispose();
-        return;
+      _subscriptions
+        ..add(player.stream.position.listen((_) {
+          if (mounted) setState(() {});
+        }))
+        ..add(player.stream.duration.listen((_) {
+          if (mounted) setState(() {});
+        }))
+        ..add(player.stream.playing.listen((_) {
+          if (mounted) setState(() {});
+        }))
+        ..add(player.stream.volume.listen((_) {
+          if (mounted) setState(() {});
+        }))
+        ..add(player.stream.completed.listen((completed) {
+          if (completed && !_isDisposed && currentToken == _initToken) {
+            player.seek(Duration.zero);
+            player.play();
+          }
+        }))
+        ..add(player.stream.error.listen((error) {
+          debugPrint('Trailer preview media_kit error: $error');
+          if (mounted && !_isDisposed) {
+            setState(() => _hasError = true);
+          }
+        }));
+
+      SecurityDebugLog.event(
+        'TRAILER',
+        'Passing the direct backend trailer URL to the embedded media_kit player.',
+      );
+      await player.open(Media(_trailerUrl), play: false);
+      await player.setVolume(widget.muted ? 0 : 100);
+      if (widget.autoPlay) {
+        await player.play();
       }
 
-      c.setLooping(true);
-      await c.play();
       if (_isDisposed || currentToken != _initToken) {
-        await c.dispose();
+        await player.dispose();
         return;
       }
 
       if (mounted) {
         setState(() {
           _hasError = false;
-          _c = c;
+          _player = player;
+          _videoController = controller;
         });
       }
-    } catch (e) {
-      await c.dispose();
+    } catch (error) {
+      debugPrint('Trailer preview init error: $error');
+      await player.dispose();
       if (mounted && !_isDisposed) {
         setState(() => _hasError = true);
       }
@@ -404,9 +546,19 @@ class _TrailerPreviewState extends State<TrailerPreview> {
 
   void _disposeController() {
     _initToken++;
-    _c?.pause();
-    _c?.dispose();
-    _c = null;
+    for (final subscription in _subscriptions) {
+      unawaited(subscription.cancel());
+    }
+    _subscriptions.clear();
+
+    final player = _player;
+    _player = null;
+    _videoController = null;
+    if (player != null) {
+      unawaited(player.pause());
+      unawaited(player.dispose());
+    }
+
     _youtubeController?.pause();
     _youtubeController?.dispose();
     _youtubeController = null;
@@ -417,6 +569,8 @@ class _TrailerPreviewState extends State<TrailerPreview> {
     _isDisposed = true;
     widget.controller.pause = null;
     widget.controller.play = null;
+    widget.controller.mute = null;
+    widget.controller.unmute = null;
     _disposeController();
     super.dispose();
   }
@@ -425,6 +579,31 @@ class _TrailerPreviewState extends State<TrailerPreview> {
     if (d == Duration.zero) return "00:00";
     String two(int n) => n.toString().padLeft(2, '0');
     return "${two(d.inMinutes.remainder(60))}:${two(d.inSeconds.remainder(60))}";
+  }
+
+  void _seekPreviewBy(Duration offset) {
+    final youtube = _youtubeController;
+    if (youtube != null) {
+      youtube.seekTo(
+        boundedSeekPosition(
+          position: youtube.value.position,
+          duration: youtube.value.metaData.duration,
+          offset: offset,
+        ),
+      );
+      return;
+    }
+    final player = _player;
+    if (player == null) return;
+    unawaited(
+      player.seek(
+        boundedSeekPosition(
+          position: player.state.position,
+          duration: player.state.duration,
+          offset: offset,
+        ),
+      ),
+    );
   }
 
   @override
@@ -441,7 +620,7 @@ class _TrailerPreviewState extends State<TrailerPreview> {
       );
     }
 
-    if (_c == null) {
+    if (_player == null || _videoController == null) {
       if (_youtubeController != null) {
         return _buildYoutubePreview();
       }
@@ -449,12 +628,14 @@ class _TrailerPreviewState extends State<TrailerPreview> {
       return AspectRatio(
         aspectRatio: 16 / 9,
         child: Center(
-            child: CircularProgressIndicator(
-          color: Theme.of(context).primaryColor,
-        )),
+          child: CircularProgressIndicator(
+            color: Theme.of(context).primaryColor,
+          ),
+        ),
       );
     }
 
+    final player = _player!;
     return MouseRegion(
       onEnter: (_) => setState(() => _showControls = true),
       onExit: (_) => setState(() => _showControls = false),
@@ -464,65 +645,58 @@ class _TrailerPreviewState extends State<TrailerPreview> {
           aspectRatio: 16 / 9,
           child: Stack(
             children: [
-              Positioned.fill(child: VideoPlayer(_c!)),
+              Positioned.fill(
+                child: Video(
+                  controller: _videoController!,
+                  fit: BoxFit.cover,
+                  controls: null,
+                ),
+              ),
               if (_showControls) ...[
-                // Dark overlay
                 Positioned.fill(
                   child: Container(color: Colors.black.withOpacity(0.35)),
                 ),
-
-                // Center Play / Pause
                 Center(
                   child: IconButton(
                     iconSize: 40,
                     icon: Icon(
-                      _c!.value.isPlaying
+                      player.state.playing
                           ? Icons.pause_circle_filled
                           : Icons.play_circle_filled,
                       color: Colors.white,
                     ),
                     onPressed: () {
-                      setState(() {
-                        _c!.value.isPlaying ? _c!.pause() : _c!.play();
-                      });
+                      player.state.playing ? player.pause() : player.play();
+                      setState(() {});
                     },
                   ),
                 ),
-
-                // Bottom controls
+                Center(
+                  child: VideoSkipControls(
+                    onBackward: () =>
+                        _seekPreviewBy(const Duration(seconds: -10)),
+                    onForward: () =>
+                        _seekPreviewBy(const Duration(seconds: 10)),
+                    gap: 72,
+                    compact: true,
+                  ),
+                ),
                 Positioned(
                   left: 12,
                   right: 12,
                   bottom: 8,
                   child: Row(
                     children: [
-                      // Current time
                       Text(
-                        _format(_c!.value.position),
+                        _format(player.state.position),
                         style:
                             const TextStyle(color: Colors.white, fontSize: 12),
                       ),
-
                       const SizedBox(width: 6),
-
-                      // Progress bar
-                      Expanded(
-                        child: VideoProgressIndicator(
-                          _c!,
-                          allowScrubbing: true,
-                          colors: const VideoProgressColors(
-                            playedColor: Colors.red,
-                            bufferedColor: Colors.white54,
-                            backgroundColor: Colors.white24,
-                          ),
-                        ),
-                      ),
-
+                      Expanded(child: _progressSlider(player)),
                       const SizedBox(width: 6),
-
-                      // Total duration
                       Text(
-                        _format(_c!.value.duration),
+                        _format(player.state.duration),
                         style:
                             const TextStyle(color: Colors.white, fontSize: 12),
                       ),
@@ -535,12 +709,14 @@ class _TrailerPreviewState extends State<TrailerPreview> {
                 left: 1,
                 child: IconButton(
                   icon: Icon(
-                    _c!.value.volume == 0 ? Icons.volume_off : Icons.volume_up,
+                    player.state.volume == 0
+                        ? Icons.volume_off
+                        : Icons.volume_up,
                     color: Colors.white,
                   ),
                   onPressed: () {
-                    final muted = _c!.value.volume == 0;
-                    _c!.setVolume(muted ? 1 : 0);
+                    final muted = player.state.volume == 0;
+                    player.setVolume(muted ? 100 : 0);
                     setState(() {});
                   },
                 ),
@@ -549,19 +725,26 @@ class _TrailerPreviewState extends State<TrailerPreview> {
                 top: 0,
                 right: 1,
                 child: IconButton(
-                  onPressed: () {
-                    _c!.pause(); // pauses preview while navigating to fullsfcreen
-                    Navigator.push(
+                  onPressed: () async {
+                    final trailerUrl = widget.trailerUrl;
+                    _disposeController();
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => TrailerPage(
-                            trailerUrl: widget.trailerUrl,
-                            isTrailerUrl: true,
-                            content: widget.content),
+                          trailerUrl: trailerUrl,
+                          isTrailerUrl: true,
+                          content: widget.content,
+                        ),
                       ),
                     );
+                    if (mounted &&
+                        !_isDisposed &&
+                        (trailerUrl?.trim().isNotEmpty ?? false)) {
+                      _init();
+                    }
                   },
-                  icon: Icon(
+                  icon: const Icon(
                     Icons.fullscreen,
                     color: Colors.white,
                   ),
@@ -570,6 +753,36 @@ class _TrailerPreviewState extends State<TrailerPreview> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _progressSlider(Player player) {
+    final durationMs = player.state.duration.inMilliseconds;
+    final positionMs = player.state.position.inMilliseconds;
+    if (durationMs <= 0) {
+      return const LinearProgressIndicator(
+        value: 0,
+        color: Colors.red,
+        backgroundColor: Colors.white24,
+      );
+    }
+
+    return SliderTheme(
+      data: SliderTheme.of(context).copyWith(
+        trackHeight: 3,
+        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+        overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+      ),
+      child: Slider(
+        min: 0,
+        max: durationMs.toDouble(),
+        value: positionMs.clamp(0, durationMs).toDouble(),
+        activeColor: Colors.red,
+        inactiveColor: Colors.white24,
+        onChanged: (value) {
+          player.seek(Duration(milliseconds: value.round()));
+        },
       ),
     );
   }
@@ -601,18 +814,24 @@ class _TrailerPreviewState extends State<TrailerPreview> {
                 top: 0,
                 right: 1,
                 child: IconButton(
-                  onPressed: () {
-                    _youtubeController!.pause();
-                    Navigator.push(
+                  onPressed: () async {
+                    final trailerUrl = widget.trailerUrl;
+                    _disposeController();
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => TrailerPage(
-                          trailerUrl: widget.trailerUrl,
+                          trailerUrl: trailerUrl,
                           isTrailerUrl: true,
                           content: widget.content,
                         ),
                       ),
                     );
+                    if (mounted &&
+                        !_isDisposed &&
+                        (trailerUrl?.trim().isNotEmpty ?? false)) {
+                      _init();
+                    }
                   },
                   icon: const Icon(
                     Icons.fullscreen,
@@ -620,6 +839,17 @@ class _TrailerPreviewState extends State<TrailerPreview> {
                   ),
                 ),
               ),
+              if (_showControls)
+                Center(
+                  child: VideoSkipControls(
+                    onBackward: () =>
+                        _seekPreviewBy(const Duration(seconds: -10)),
+                    onForward: () =>
+                        _seekPreviewBy(const Duration(seconds: 10)),
+                    gap: 72,
+                    compact: true,
+                  ),
+                ),
             ],
           ),
         ),
@@ -631,4 +861,6 @@ class _TrailerPreviewState extends State<TrailerPreview> {
 class TrailerPreviewController {
   VoidCallback? pause;
   VoidCallback? play;
+  VoidCallback? mute;
+  VoidCallback? unmute;
 }

@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/wallet%20page/PaymentPage.dart';
+import 'package:ott/app/pages/wallet%20page/AppleWalletRechargeScreen.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/provider/series_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -36,6 +39,9 @@ class SeriesBillingPage extends StatefulWidget {
 }
 
 class _SeriesBillingPageState extends State<SeriesBillingPage> {
+  static const double _minimumRechargeAmount = 100;
+  static const double _maximumRechargeAmount = 100000;
+
   @override
   void initState() {
     super.initState();
@@ -49,7 +55,11 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context).getTheme;
-    final horizontal = ResponsiveWidget.isDesktop(context) ? 200.0 : 16.0;
+    final horizontal = ResponsiveWidget.isDesktop(context)
+        ? 200.0
+        : ResponsiveWidget.isTablet(context)
+            ? 80.0
+            : 16.0;
     final totalCoins = widget.amount;
 
     return Scaffold(
@@ -58,6 +68,8 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
         slivers: [
           // -------- Wallet Header --------
           SliverAppBar(
+            automaticallyImplyLeading:
+                !(kIsWeb || ResponsiveWidget.isTv(context)),
             pinned: true,
             expandedHeight: 230,
             elevation: 0,
@@ -250,7 +262,12 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                   title: const Text("Confirm Purchase"),
-                  content: const Text("Do you want to confirm the purchase?"),
+                  content: SizedBox(
+                    width: ResponsiveWidget.isTabletOrTv(dialogContext)
+                        ? 460
+                        : null,
+                    child: const Text("Do you want to confirm the purchase?"),
+                  ),
                   actions: [
                     TextButton(
                       onPressed:
@@ -313,6 +330,16 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
   }
 
   void _showRechargeDialog(BuildContext context) {
+    if (WalletPlatform.isIOS) {
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => const AppleWalletRechargeScreen(),
+        ),
+      );
+      return;
+    }
+
     final pageContext = context;
     final theme = Theme.of(context);
     showDialog(
@@ -331,12 +358,21 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                   title: const Text("Recharge Wallet"),
-                  content: TextField(
-                    controller: walletProvider.amountController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Enter amount",
-                      border: OutlineInputBorder(),
+                  content: SizedBox(
+                    width: ResponsiveWidget.isTabletOrTv(dialogContext)
+                        ? 460
+                        : null,
+                    child: TextField(
+                      controller: walletProvider.amountController,
+                      autofocus: ResponsiveWidget.isTabletOrTv(dialogContext),
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) =>
+                          FocusScope.of(dialogContext).nextFocus(),
+                      decoration: const InputDecoration(
+                        labelText: "Enter amount",
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                   ),
                   actions: [
@@ -363,6 +399,22 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                                 );
                                 return;
                               }
+                              if (amount < _minimumRechargeAmount) {
+                                CustomToast.show(
+                                  pageContext,
+                                  "Minimum recharge amount is Rs ${_minimumRechargeAmount.toStringAsFixed(0)}",
+                                  isSuccess: false,
+                                );
+                                return;
+                              }
+                              if (amount > _maximumRechargeAmount) {
+                                CustomToast.show(
+                                  pageContext,
+                                  "Maximum recharge amount is Rs ${_maximumRechargeAmount.toStringAsFixed(0)}",
+                                  isSuccess: false,
+                                );
+                                return;
+                              }
 
                               setState(() => isProcessing = true);
                               Navigator.pop(dialogContext);
@@ -376,10 +428,19 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
 
                               if (!mounted) return;
                               if (result is Map && result['success'] == true) {
+                                _showWalletReflectLoader(pageContext);
                                 final addResult =
-                                    await walletProvider.onPaymentVerified(
-                                  expectedAmount: amount,
-                                );
+                                    await walletProvider
+                                        .onPaymentVerified(
+                                          expectedAmount: amount,
+                                        )
+                                        .whenComplete(() {
+                                  if (mounted) {
+                                    Navigator.of(pageContext,
+                                            rootNavigator: true)
+                                        .pop();
+                                  }
+                                });
 
                                 if (!mounted) return;
                                 final msg = addResult['message']?.toString() ??
@@ -412,6 +473,26 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
           },
         );
       },
+    );
+  }
+
+  void _showWalletReflectLoader(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+            SizedBox(width: 16),
+            Expanded(child: Text("Updating wallet balance...")),
+          ],
+        ),
+      ),
     );
   }
 

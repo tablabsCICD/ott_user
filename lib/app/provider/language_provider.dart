@@ -3,9 +3,10 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/data/models/response/languageResponse.dart';
+import 'baseProvider.dart';
 import '../core/constant/api_constant.dart';
 
-class LanguageProvider with ChangeNotifier {
+class LanguageProvider extends BaseProvider {
   /// State
   bool _loading = false;
   String? _error;

@@ -18,6 +18,7 @@ class Content {
 
   String? ageRating;
   List<String>? posterUrlList;
+  String? teaserUrl;
   String? trailerUrl;
   String? contentUrl;
   String? approvalStatus;
@@ -63,6 +64,7 @@ class Content {
     this.totalRevenue,
     this.ageRating,
     this.posterUrlList,
+    this.teaserUrl,
     this.trailerUrl,
     this.contentUrl,
     this.approvalStatus,
@@ -86,6 +88,12 @@ class Content {
     this.episodeId,
   });
 
+  String? get teaserOrTrailerUrl {
+    final teaser = teaserUrl?.trim();
+    if (teaser != null && teaser.isNotEmpty) return teaser;
+    return trailerUrl;
+  }
+
   factory Content.fromJson(Map<String, dynamic> json) => Content(
     id: _asInt(json['id']),
     title: json['title'],
@@ -98,7 +106,9 @@ class Content {
     totalRevenue: _asDouble(json['totalRevenue']),
 
     languageList: (json['languageList'] as List?)
-        ?.map((e) => LanguageList.fromJson(e))
+        ?.map((e) => e is Map
+            ? LanguageList.fromJson(Map<String, dynamic>.from(e))
+            : LanguageList(language: e.toString()))
         .toList(),
 
     castList: (json['castList'] as List?)
@@ -120,8 +130,27 @@ class Content {
         ?.map((e) => e.toString())
         .toList(),
 
-    trailerUrl: json['trailerUrl'],
-    contentUrl: json['contentUrl'],
+    teaserUrl: _firstStringValue(json, const [
+      'teaserUrl',
+      'teaserFile',
+      'teaserFileUrl',
+      'teaser_url',
+      'teaser_file',
+      'teasurUrl',
+      'teasurFile',
+      'teasurFileUrl',
+      'teasur_url',
+      'teasur_file',
+    ]),
+    trailerUrl: _firstStringValue(json, const [
+      'trailerUrl',
+      'trailerFile',
+      'trailerFileUrl',
+      'trailer_url',
+      'trailer_file',
+      'trailer_file_url',
+    ]),
+    contentUrl: _contentUrlFromJson(json),
     approvalStatus: json['approvalStatus'],
     type: json['type'],
     sensorCertificate: json['sensorCertificate'],
@@ -175,6 +204,7 @@ class Content {
     "totalRevenue": totalRevenue,
     "ageRating": ageRating,
     "posterUrlList": posterUrlList ?? [],
+    "teaserUrl": teaserUrl,
     "trailerUrl": trailerUrl,
     "contentUrl": contentUrl,
     "approvalStatus": approvalStatus,
@@ -213,6 +243,69 @@ double? _asDouble(dynamic v) {
   if (v is int) return v.toDouble();
   if (v is num) return v.toDouble();
   return double.tryParse(v.toString());
+}
+
+String? _firstStringValue(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = _stringFromField(json[key]);
+    if (value != null && value.isNotEmpty) return value;
+  }
+  return null;
+}
+
+String? _contentUrlFromJson(Map<String, dynamic> json) {
+  final directUrl = _firstStringValue(json, const [
+    'contentUrl',
+    'contentFile',
+    'contentFileUrl',
+    'content_url',
+    'content_file',
+    'content_file_url',
+    'videoUrl',
+    'videoFile',
+    'videoFileUrl',
+    'video_url',
+    'video_file',
+    'video_file_url',
+    'movieUrl',
+    'movieFile',
+    'movieFileUrl',
+    'movie_url',
+    'movie_file',
+    'movie_file_url',
+    'fileUrl',
+    'file_url',
+    'url',
+  ]);
+  if (directUrl != null && directUrl.isNotEmpty) return directUrl;
+
+  final languages = json['languageList'];
+  if (languages is List) {
+    for (final item in languages) {
+      if (item is Map) {
+        final languageUrl = _stringFromField(item['fileUrl']) ??
+            _stringFromField(item['file_url']) ??
+            _stringFromField(item['url']);
+        if (languageUrl != null && languageUrl.isNotEmpty) return languageUrl;
+      }
+    }
+  }
+
+  return null;
+}
+
+String? _stringFromField(dynamic field) {
+  if (field == null) return null;
+  if (field is Map) {
+    for (final key in const ['url', 'fileUrl', 'file_url', 'path']) {
+      final value = field[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return null;
+  }
+
+  final value = field.toString().trim();
+  return value.isEmpty ? null : value;
 }
 
 

@@ -6,8 +6,9 @@ import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/data/models/seriesModel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/utils/sharepreferences.dart';
+import 'baseProvider.dart';
 
-class PlayMediaProvider extends ChangeNotifier {
+class PlayMediaProvider extends BaseProvider {
   /// ================= LOCAL RESUME CACHE =================
 
   /// key examples:

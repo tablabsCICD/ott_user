@@ -1,10 +1,13 @@
 // ignore: file_names
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/services/invoice_service.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/gifted%20movies%20page/GiftedMoviesPage.dart';
+import 'package:ott/app/pages/wallet%20page/AppleWalletRechargeScreen.dart';
 import 'package:ott/app/pages/wallet%20page/PaymentPage.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
@@ -35,6 +38,10 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
   double moviePrice = 0.0;
   DateTime? _startDate;
   DateTime? _endDate;
+  bool _purchaseLoaderVisible = false;
+
+  static const double _minimumRechargeAmount = 100;
+  static const double _maximumRechargeAmount = 100000;
 
   String get _contentLabel {
     final type = (widget.movie.type ?? '').trim().toLowerCase();
@@ -55,7 +62,11 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context).getTheme;
-    final horizontal = ResponsiveWidget.isDesktop(context) ? 200.0 : 16.0;
+    final horizontal = ResponsiveWidget.isDesktop(context)
+        ? 200.0
+        : ResponsiveWidget.isTablet(context)
+            ? 80.0
+            : 16.0;
 
     moviePrice = double.tryParse(widget.movie.price.toString()) ?? 0.0;
     final totalCoins =
@@ -67,6 +78,8 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
         slivers: [
           /// -------- Extended Curved Header --------
           SliverAppBar(
+            automaticallyImplyLeading:
+                !(kIsWeb || ResponsiveWidget.isTv(context)),
             pinned: true,
             expandedHeight: 230,
             elevation: 0,
@@ -248,25 +261,26 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                           const SizedBox(height: 10),
 
                           /// Gift Card Link
-                          Center(
-                            child: InkWell(
-                              onTap: _showGiftDialog,
-                              child: Text.rich(
-                                TextSpan(
-                                  style: TextStyle(color: theme.canvasColor),
-                                  children: [
-                                    const TextSpan(text: 'Have a '),
-                                    TextSpan(
-                                      text: widget.movie.title ?? "",
-                                      style:
-                                          TextStyle(color: theme.primaryColor),
-                                    ),
-                                    const TextSpan(text: ' Gift Card?')
-                                  ],
+                          if (!WalletPlatform.isIOS)
+                            Center(
+                              child: InkWell(
+                                onTap: _showGiftDialog,
+                                child: Text.rich(
+                                  TextSpan(
+                                    style: TextStyle(color: theme.canvasColor),
+                                    children: [
+                                      const TextSpan(text: 'Have a '),
+                                      TextSpan(
+                                        text: widget.movie.title ?? "",
+                                        style: TextStyle(
+                                            color: theme.primaryColor),
+                                      ),
+                                      const TextSpan(text: ' Gift Card?')
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -358,6 +372,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
 
   // ---------------- Gift Dialog ----------------
   void _showGiftDialog() {
+    if (WalletPlatform.isIOS) return;
     final theme = Theme.of(context);
     final couponCodeController = TextEditingController();
 
@@ -398,6 +413,8 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                         backgroundColor: theme.scaffoldBackgroundColor,
                         isDigits: true,
                         controller: couponCodeController,
+                        autofocus: ResponsiveWidget.isTabletOrTv(context),
+                        textInputAction: TextInputAction.done,
                         hintText: "Enter 16 Digit Number",
                         textInputType: TextInputType.text,
                       ),
@@ -466,6 +483,14 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
     int movieID,
     int giftCount,
   ) {
+    if (WalletPlatform.isIOS && giftCount > 0) {
+      CustomToast.show(
+        context,
+        'Gift purchases are currently unavailable on iOS.',
+        isSuccess: false,
+      );
+      return;
+    }
     final pageContext = context;
     final theme = Theme.of(context);
     showDialog(
@@ -487,7 +512,12 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                   title: const Text("Confirm Purchase"),
-                  content: const Text("Do you want to confirm the purchase?"),
+                  content: SizedBox(
+                    width: ResponsiveWidget.isTabletOrTv(dialogContext)
+                        ? 460
+                        : null,
+                    child: const Text("Do you want to confirm the purchase?"),
+                  ),
                   actions: [
                     TextButton(
                       onPressed:
@@ -502,6 +532,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                           : () async {
                               setState(() => isProcessing = true);
                               Navigator.pop(dialogContext);
+                              _showPurchaseLoader(pageContext);
 
                               try {
                                 await provider.getBalance();
@@ -561,6 +592,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                 });
 
                                 if (!mounted) return;
+                                _hidePurchaseLoader(pageContext);
                                 CustomToast.show(
                                   pageContext,
                                   "Payment successful! Enjoy your content 🎬",
@@ -584,12 +616,10 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                 }
                               } catch (error) {
                                 if (!mounted) return;
+                                _hidePurchaseLoader(pageContext);
                                 CustomToast.show(
                                   pageContext,
-                                  error.toString().replaceFirst(
-                                        'Exception: ',
-                                        '',
-                                      ),
+                                  _cleanPurchaseScreenError(error),
                                   isSuccess: false,
                                 );
                               }
@@ -609,8 +639,85 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
     );
   }
 
+  void _showPurchaseLoader(BuildContext context) {
+    if (_purchaseLoaderVisible) return;
+    _purchaseLoaderVisible = true;
+    showDialog<void>(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: false,
+      builder: (_) {
+        final theme = Theme.of(context);
+        return PopScope(
+          canPop: false,
+          child: Center(
+            child: Container(
+              width: 190,
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.18),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: theme.primaryColor),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Processing purchase...',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    ).whenComplete(() => _purchaseLoaderVisible = false);
+  }
+
+  void _hidePurchaseLoader(BuildContext context) {
+    if (!_purchaseLoaderVisible) return;
+    Navigator.of(context, rootNavigator: true).pop();
+    _purchaseLoaderVisible = false;
+  }
+
+  String _cleanPurchaseScreenError(Object error) {
+    final message = error.toString().replaceFirst('Exception: ', '').trim();
+    final normalized = message.toLowerCase();
+    if (normalized.contains('transactionrequiredexception') ||
+        normalized.contains('no entitymanager with actual transaction') ||
+        normalized.contains("cannot reliably process 'remove' call") ||
+        normalized.contains('nested exception is javax.persistence')) {
+      return 'Purchase could not be completed. Please try again in a moment.';
+    }
+    return message.isEmpty ? 'Purchase failed. Please try again.' : message;
+  }
+
   // ---------------- Recharge ----------------
   void _showRechargeDialog(BuildContext context) {
+    if (WalletPlatform.isIOS) {
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => const AppleWalletRechargeScreen(),
+        ),
+      );
+      return;
+    }
+
     final pageContext = context;
     final theme = Theme.of(context);
     showDialog(
@@ -629,12 +736,21 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                   title: const Text("Recharge Wallet"),
-                  content: TextField(
-                    controller: provider.amountController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Enter amount",
-                      border: OutlineInputBorder(),
+                  content: SizedBox(
+                    width: ResponsiveWidget.isTabletOrTv(dialogContext)
+                        ? 460
+                        : null,
+                    child: TextField(
+                      controller: provider.amountController,
+                      autofocus: ResponsiveWidget.isTabletOrTv(dialogContext),
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) =>
+                          FocusScope.of(dialogContext).nextFocus(),
+                      decoration: const InputDecoration(
+                        labelText: "Enter amount",
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                   ),
                   actions: [
@@ -661,6 +777,22 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                 );
                                 return;
                               }
+                              if (amount < _minimumRechargeAmount) {
+                                CustomToast.show(
+                                  pageContext,
+                                  "Minimum recharge amount is Rs ${_minimumRechargeAmount.toStringAsFixed(0)}",
+                                  isSuccess: false,
+                                );
+                                return;
+                              }
+                              if (amount > _maximumRechargeAmount) {
+                                CustomToast.show(
+                                  pageContext,
+                                  "Maximum recharge amount is Rs ${_maximumRechargeAmount.toStringAsFixed(0)}",
+                                  isSuccess: false,
+                                );
+                                return;
+                              }
 
                               setState(() => isProcessing = true);
                               Navigator.pop(dialogContext);
@@ -674,10 +806,18 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
 
                               if (!mounted) return;
                               if (result is Map && result['success'] == true) {
-                                final addResult =
-                                    await provider.onPaymentVerified(
+                                _showWalletReflectLoader(pageContext);
+                                final addResult = await provider
+                                    .onPaymentVerified(
                                   expectedAmount: amount,
-                                );
+                                )
+                                    .whenComplete(() {
+                                  if (mounted) {
+                                    Navigator.of(pageContext,
+                                            rootNavigator: true)
+                                        .pop();
+                                  }
+                                });
 
                                 if (!mounted) return;
                                 final msg = addResult['message']?.toString() ??
@@ -710,6 +850,26 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
           },
         );
       },
+    );
+  }
+
+  void _showWalletReflectLoader(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+            SizedBox(width: 16),
+            Expanded(child: Text("Updating wallet balance...")),
+          ],
+        ),
+      ),
     );
   }
 

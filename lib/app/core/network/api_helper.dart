@@ -1,98 +1,85 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../data/models/response/api_response.dart';
-import '../constant/prefrense_constant.dart';
+import '../services/session_manager.dart';
 import '../utils/sharepreferences.dart';
 
 class ApiHelper {
-  Future<dynamic> getApi(String URL) async {
-    debugPrint("✅$URL");
-    final url = Uri.parse(URL);
-    var request = await http.get(url).timeout(Duration(seconds: 10));
-    debugPrint(request.body);
-    return request;
+  Future<dynamic> getApi(String url) async {
+    _logRequest("GET", url);
+    final request = await http
+        .get(Uri.parse(url), headers: await _headers())
+        .timeout(const Duration(seconds: 10));
+    return _handleResponse(request);
   }
 
-  Future<dynamic> getApi1(String URL) async {
-    debugPrint("✅GET API$URL");
-    final url = Uri.parse(URL);
-    var request = await http.get(url);
-    debugPrint("GETAPI RESPONSE ${request.body}");
-    return request;
+  Future<dynamic> getApi1(String url) async {
+    _logRequest("GET", url);
+    final request = await http.get(Uri.parse(url), headers: await _headers());
+    return _handleResponse(request);
   }
 
-  Future<dynamic> deleteApi(String URL) async {
-    debugPrint("✅$URL");
-    var request = await http.delete(Uri.parse(URL), headers: {
-      "Content-Type": "application/json",
-    });
-    debugPrint(request.body);
-    return request;
+  Future<dynamic> deleteApi(String url) async {
+    _logRequest("DELETE", url);
+    final request =
+        await http.delete(Uri.parse(url), headers: await _headers());
+    return _handleResponse(request);
   }
 
-  Future<dynamic> postApi(String URL) async {
-    debugPrint("✅$URL");
-    var request = await http.post(Uri.parse(URL), headers: {
-      "Content-Type": "application/json",
-    });
-    debugPrint(request.body);
-    return request;
+  Future<dynamic> postApi(String url) async {
+    _logRequest("POST", url);
+    final request = await http.post(Uri.parse(url), headers: await _headers());
+    return _handleResponse(request);
   }
 
   Future<dynamic> postApiWithBody(String url, Map<String, dynamic> data) async {
-    debugPrint("✅$url");
-    var body = json.encode(data);
-    print(body);
-    final response = await http.post(Uri.parse(url),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: body);
-    debugPrint(response.body);
-    return response;
+    _logRequest("POST", url);
+    final response = await http.post(
+      Uri.parse(url),
+      headers: await _headers(),
+      body: json.encode(data),
+    );
+    return _handleResponse(response);
   }
 
-  Future<dynamic> putApi(String URL) async {
-    debugPrint("✅$URL");
-    var request = await http.put(Uri.parse(URL), headers: {
-      "Content-Type": "application/json",
-    });
-    debugPrint(request.body);
-    return request;
+  Future<dynamic> putApi(String url) async {
+    _logRequest("PUT", url);
+    final request = await http.put(Uri.parse(url), headers: await _headers());
+    return _handleResponse(request);
   }
 
   Future<dynamic> putApiWithBody(String url, Map<String, dynamic> data) async {
-    debugPrint("✅$url");
-    var body = json.encode(data);
-    debugPrint(body);
-    final response = await http.put(Uri.parse(url),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: body);
-    debugPrint(response.body);
-    return response;
+    _logRequest("PUT", url);
+    final response = await http.put(
+      Uri.parse(url),
+      headers: await _headers(),
+      body: json.encode(data),
+    );
+    return _handleResponse(response);
   }
 
-  Future<dynamic> postApiWithoutAuthToken(String URL) async {
-    debugPrint("✅$URL");
-    var request = await http.post(Uri.parse(URL));
-    debugPrint(request.body);
+  Future<dynamic> postApiWithoutAuthToken(String url) async {
+    _logRequest("POST", url);
+    final request = await http.post(Uri.parse(url));
+    _logResponse(request);
     return request;
   }
 
   Future<dynamic> postApiWithoutBodyAndToken(
-      String url, Map<String, dynamic> data) async {
-    debugPrint("✅$url");
-    var body = json.encode(data);
-    debugPrint(body);
-    final response = await http.post(Uri.parse(url),
-        headers: {"Content-Type": "application/json"}, body: body);
-    debugPrint(response.body);
+    String url,
+    Map<String, dynamic> data,
+  ) async {
+    _logRequest("POST", url);
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {"Content-Type": "application/json"},
+      body: json.encode(data),
+    );
     return response;
   }
 
@@ -100,14 +87,49 @@ class ApiHelper {
     if (request.statusCode == 200 ||
         request.statusCode == 400 ||
         request.statusCode == 201) {
-      var response1 = request.body;
-      print("**************************************$response1");
-      var response = jsonDecode(request.body);
-      ApiResponse apiResponseHelper = ApiResponse(request.statusCode, response);
-      return apiResponseHelper;
+      final response = jsonDecode(request.body);
+      return ApiResponse(request.statusCode, response);
     } else {
-      ApiResponse apiResponseHelper = ApiResponse(request.statusCode, null);
-      return apiResponseHelper;
+      return ApiResponse(request.statusCode, null);
     }
+  }
+
+  Future<Map<String, String>> _headers() async {
+    final token =
+        await LocalSharePreferences.localSharePreferences.getAuthToken();
+    return {
+      "Content-Type": "application/json",
+      if (token != null) "Authorization": "Bearer $token",
+    };
+  }
+
+  Future<Response> _handleResponse(Response response) async {
+    if (SessionManager.instance.isReplacementSessionResponse(response)) {
+      final message = SessionManager.extractMessage(response.body) ??
+          SessionManager.replacementSessionMessage;
+      await SessionManager.instance.handleSessionExpired(message);
+    }
+    _logResponse(response);
+    return response;
+  }
+
+  void _logRequest(String method, String url) {
+    if (!kDebugMode) return;
+    final uri = Uri.tryParse(url);
+    final redacted = uri == null
+        ? 'redacted'
+        : uri.replace(queryParameters: const {}).toString();
+    debugPrint("$method $redacted");
+  }
+
+  void _logResponse(Response response) {
+    if (!kDebugMode) return;
+    final uri = response.request?.url;
+    final endpoint = uri == null
+        ? '<unknown>'
+        : '${uri.scheme}://${uri.authority}${uri.path}';
+    debugPrint(
+      'HTTP response endpoint=$endpoint status=${response.statusCode} bytes=${response.bodyBytes.length}',
+    );
   }
 }

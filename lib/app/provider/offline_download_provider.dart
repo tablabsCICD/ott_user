@@ -2,14 +2,82 @@ import 'dart:io';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'package:ott/app/core/services/download_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'baseProvider.dart';
 
-class OfflineDownloadProvider extends ChangeNotifier {
+enum OfflineDownloadStatus { idle, downloading, completed, failed }
+
+class OfflineDownloadMetadata {
+  const OfflineDownloadMetadata({
+    required this.mediaId,
+    required this.title,
+    required this.thumbnail,
+    required this.filePath,
+    required this.downloadDate,
+    required this.status,
+    this.errorMessage,
+  });
+
+  final int mediaId;
+  final String title;
+  final String thumbnail;
+  final String filePath;
+  final DateTime downloadDate;
+  final OfflineDownloadStatus status;
+  final String? errorMessage;
+
+  factory OfflineDownloadMetadata.fromJson(Map<String, dynamic> json) {
+    return OfflineDownloadMetadata(
+      mediaId: _asInt(json['mediaId']) ?? 0,
+      title: json['title']?.toString() ?? '',
+      thumbnail: json['thumbnail']?.toString() ?? '',
+      filePath: json['filePath']?.toString() ?? '',
+      downloadDate: DateTime.tryParse(json['downloadDate']?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      status: OfflineDownloadStatus.values.firstWhere(
+        (status) => status.name == json['status']?.toString(),
+        orElse: () => OfflineDownloadStatus.idle,
+      ),
+      errorMessage: json['errorMessage']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'mediaId': mediaId,
+        'title': title,
+        'thumbnail': thumbnail,
+        'filePath': filePath,
+        'downloadDate': downloadDate.toIso8601String(),
+        'status': status.name,
+        'errorMessage': errorMessage,
+      };
+
+  OfflineDownloadMetadata copyWith({
+    String? filePath,
+    DateTime? downloadDate,
+    OfflineDownloadStatus? status,
+    String? errorMessage,
+  }) {
+    return OfflineDownloadMetadata(
+      mediaId: mediaId,
+      title: title,
+      thumbnail: thumbnail,
+      filePath: filePath ?? this.filePath,
+      downloadDate: downloadDate ?? this.downloadDate,
+      status: status ?? this.status,
+      errorMessage: errorMessage,
+    );
+  }
+}
+
+class OfflineDownloadProvider extends BaseProvider {
   static const String _downloadedContentPrefsKey = 'offline_downloaded_movies';
+  static const String _downloadMetadataPrefsKey = 'offline_download_metadata';
   final Map<int, double> _downloadProgress = {};
+  final Map<int, OfflineDownloadMetadata> _downloadMetadata = {};
   final Set<int> _downloadedContentIds = <int>{};
   final Set<int> _downloadingContentIds = <int>{};
   final List<Content> _downloadedContents = <Content>[];
@@ -19,16 +87,56 @@ class OfflineDownloadProvider extends ChangeNotifier {
   bool isDownloading(int contentId) =>
       _downloadingContentIds.contains(contentId);
   bool isDownloaded(int contentId) => _downloadedContentIds.contains(contentId);
-  List<Content> get downloadedContents => List.unmodifiable(_downloadedContents);
+  bool hasFailed(int contentId) =>
+      statusFor(contentId) == OfflineDownloadStatus.failed;
+  OfflineDownloadStatus statusFor(int contentId) {
+    if (_downloadingContentIds.contains(contentId)) {
+      return OfflineDownloadStatus.downloading;
+    }
+    if (_downloadedContentIds.contains(contentId)) {
+      return OfflineDownloadStatus.completed;
+    }
+    return _downloadMetadata[contentId]?.status ?? OfflineDownloadStatus.idle;
+  }
+
+  OfflineDownloadMetadata? metadataFor(int contentId) =>
+      _downloadMetadata[contentId];
+
+  List<Content> get downloadedContents =>
+      List.unmodifiable(_downloadedContents);
+
+  void clear() {
+    _downloadProgress.clear();
+    _downloadMetadata.clear();
+    _downloadingContentIds.clear();
+    _downloadedContentIds.clear();
+    _downloadedContents.clear();
+    _hasLoadedCache = false;
+    notifyListeners();
+  }
 
   Future<void> loadDownloadedContents() async {
     if (_hasLoadedCache) return;
 
     final prefs = await SharedPreferences.getInstance();
-    final rawList = prefs.getStringList(_downloadedContentPrefsKey) ?? <String>[];
+    final rawList =
+        prefs.getStringList(_downloadedContentPrefsKey) ?? <String>[];
+    final rawMetadata =
+        prefs.getStringList(_downloadMetadataPrefsKey) ?? <String>[];
 
     _downloadedContentIds.clear();
     _downloadedContents.clear();
+    _downloadMetadata.clear();
+
+    for (final raw in rawMetadata) {
+      try {
+        final jsonMap = jsonDecode(raw) as Map<String, dynamic>;
+        final metadata = OfflineDownloadMetadata.fromJson(jsonMap);
+        if (metadata.mediaId > 0) {
+          _downloadMetadata[metadata.mediaId] = metadata;
+        }
+      } catch (_) {}
+    }
 
     for (final raw in rawList) {
       try {
@@ -40,13 +148,22 @@ class OfflineDownloadProvider extends ChangeNotifier {
         if (kIsWeb) {
           _downloadedContentIds.add(contentId);
           _downloadedContents.add(content);
+          _downloadMetadata[contentId] = _metadataForContent(
+            content,
+            status: OfflineDownloadStatus.completed,
+          );
           continue;
         }
 
-        final file = await _localFileForContent(content);
+        final file = await _existingLocalFileForContent(content);
         if (await file.exists()) {
           _downloadedContentIds.add(contentId);
           _downloadedContents.add(content);
+          _downloadMetadata[contentId] = _metadataForContent(
+            content,
+            filePath: file.path,
+            status: OfflineDownloadStatus.completed,
+          );
         }
       } catch (_) {}
     }
@@ -69,15 +186,24 @@ class OfflineDownloadProvider extends ChangeNotifier {
       return;
     }
 
-    final file = await _localFileForContent(content);
+    final file = await _existingLocalFileForContent(content);
     final exists = await file.exists();
 
     if (exists) {
       _downloadedContentIds.add(contentId);
       _upsertDownloadedContent(content);
+      _downloadMetadata[contentId] = _metadataForContent(
+        content,
+        filePath: file.path,
+        status: OfflineDownloadStatus.completed,
+      );
     } else {
       _downloadedContentIds.remove(contentId);
       _downloadedContents.removeWhere((item) => item.id == contentId);
+      final existing = _downloadMetadata[contentId];
+      if (existing?.status == OfflineDownloadStatus.completed) {
+        _downloadMetadata.remove(contentId);
+      }
     }
     await _persistDownloadedContents();
     notifyListeners();
@@ -88,9 +214,14 @@ class OfflineDownloadProvider extends ChangeNotifier {
     final contentId = content.id;
     if (contentId == null || kIsWeb) return null;
 
-    final file = await _localFileForContent(content);
+    final file = await _existingLocalFileForContent(content);
     if (await file.exists()) {
       _downloadedContentIds.add(contentId);
+      _downloadMetadata[contentId] = _metadataForContent(
+        content,
+        filePath: file.path,
+        status: OfflineDownloadStatus.completed,
+      );
       return file.path;
     }
 
@@ -98,10 +229,15 @@ class OfflineDownloadProvider extends ChangeNotifier {
     return null;
   }
 
-  Future<Map<String, Object>> downloadContent(Content content) async {
+  Future<Map<String, Object>> downloadContent(
+    Content content, {
+    String? sourceUrl,
+  }) async {
     await loadDownloadedContents();
     final contentId = content.id;
-    final videoUrl = content.contentUrl?.trim() ?? '';
+    final videoUrl = sourceUrl?.trim().isNotEmpty == true
+        ? sourceUrl!.trim()
+        : content.contentUrl?.trim() ?? '';
 
     if (contentId == null || videoUrl.isEmpty) {
       return {
@@ -119,10 +255,15 @@ class OfflineDownloadProvider extends ChangeNotifier {
       return _downloadForWeb(content, videoUrl);
     }
 
-    final file = await _localFileForContent(content);
+    final file = await _existingLocalFileForContent(content);
     if (await file.exists()) {
       _downloadedContentIds.add(contentId);
       _upsertDownloadedContent(content);
+      _downloadMetadata[contentId] = _metadataForContent(
+        content,
+        filePath: file.path,
+        status: OfflineDownloadStatus.completed,
+      );
       await _persistDownloadedContents();
       notifyListeners();
       return {
@@ -134,69 +275,74 @@ class OfflineDownloadProvider extends ChangeNotifier {
 
     _downloadingContentIds.add(contentId);
     _downloadProgress[contentId] = 0;
+    _downloadMetadata[contentId] = _metadataForContent(
+      content,
+      status: OfflineDownloadStatus.downloading,
+    );
     notifyListeners();
 
-    final client = http.Client();
-    IOSink? sink;
-
     try {
-      final request = http.Request('GET', Uri.parse(videoUrl));
-      final response = await client.send(request);
-
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw HttpException(
-          'Download failed with status ${response.statusCode}',
-        );
-      }
-
-      await file.parent.create(recursive: true);
-      sink = file.openWrite();
-
-      final totalBytes = response.contentLength ?? 0;
-      var receivedBytes = 0;
-
-      await for (final chunk in response.stream) {
-        sink.add(chunk);
-        receivedBytes += chunk.length;
-
-        if (totalBytes > 0) {
-          _downloadProgress[contentId] = receivedBytes / totalBytes;
+      final uri = Uri.parse(videoUrl);
+      final result = await DownloadService.instance.downloadFile(
+        uri: uri,
+        destination: file,
+        onProgress: (progress) {
+          _downloadProgress[contentId] = progress;
           notifyListeners();
-        }
-      }
+        },
+      );
 
-      await sink.flush();
-      await sink.close();
-      sink = null;
+      if (!result.success) {
+        _downloadMetadata[contentId] = _metadataForContent(
+          content,
+          filePath: file.path,
+          status: OfflineDownloadStatus.failed,
+          errorMessage: result.message,
+        );
+        await _persistDownloadedContents();
+        notifyListeners();
+        return {
+          'success': false,
+          'message': result.message ?? 'Failed to download movie.',
+        };
+      }
 
       _downloadedContentIds.add(contentId);
       _upsertDownloadedContent(content);
       _downloadProgress[contentId] = 1;
+      _downloadMetadata[contentId] = _metadataForContent(
+        content,
+        filePath: result.filePath,
+        status: OfflineDownloadStatus.completed,
+      );
       await _persistDownloadedContents();
       notifyListeners();
 
       return {
         'success': true,
         'message': 'Movie downloaded for offline playback.',
-        'path': file.path,
+        'path': result.filePath,
       };
     } catch (error) {
-      try {
-        await sink?.close();
-      } catch (_) {}
-
-      if (await file.exists()) {
-        await file.delete();
-      }
-
+      _downloadMetadata[contentId] = _metadataForContent(
+        content,
+        filePath: file.path,
+        status: OfflineDownloadStatus.failed,
+        errorMessage: error.toString(),
+      );
+      await _persistDownloadedContents();
       return {
         'success': false,
         'message': 'Failed to download movie: $error',
       };
     } finally {
-      client.close();
       _downloadingContentIds.remove(contentId);
-      _downloadProgress.remove(contentId);
+      if (_downloadMetadata[contentId]?.status !=
+          OfflineDownloadStatus.completed) {
+        _downloadProgress[contentId] = 0;
+      } else {
+        _downloadProgress.remove(contentId);
+      }
       notifyListeners();
     }
   }
@@ -214,6 +360,7 @@ class OfflineDownloadProvider extends ChangeNotifier {
       _downloadedContentIds.remove(contentId);
       _downloadedContents.removeWhere((item) => item.id == contentId);
       _downloadProgress.remove(contentId);
+      _downloadMetadata.remove(contentId);
       await _persistDownloadedContents();
       notifyListeners();
       return {
@@ -222,14 +369,19 @@ class OfflineDownloadProvider extends ChangeNotifier {
       };
     }
 
-    final file = await _localFileForContent(content);
+    final file = await _existingLocalFileForContent(content);
     if (await file.exists()) {
       await file.delete();
+    }
+    final partial = File('${file.path}.part');
+    if (await partial.exists()) {
+      await partial.delete();
     }
 
     _downloadedContentIds.remove(contentId);
     _downloadedContents.removeWhere((item) => item.id == contentId);
     _downloadProgress.remove(contentId);
+    _downloadMetadata.remove(contentId);
     await _persistDownloadedContents();
     notifyListeners();
 
@@ -247,6 +399,20 @@ class OfflineDownloadProvider extends ChangeNotifier {
     return File(
       '${directory.path}${Platform.pathSeparator}offline_media${Platform.pathSeparator}$fileName',
     );
+  }
+
+  Future<File> _existingLocalFileForContent(Content content) async {
+    final contentId = content.id;
+    final metadataPath =
+        contentId == null ? null : _downloadMetadata[contentId]?.filePath;
+    if (metadataPath != null && metadataPath.trim().isNotEmpty) {
+      final metadataFile = File(metadataPath);
+      if (await metadataFile.exists()) {
+        return metadataFile;
+      }
+    }
+
+    return _localFileForContent(content);
   }
 
   String _guessFileExtension(String? url) {
@@ -268,6 +434,10 @@ class OfflineDownloadProvider extends ChangeNotifier {
     final contentId = content.id!;
     if (_downloadedContentIds.contains(contentId)) {
       _upsertDownloadedContent(content);
+      _downloadMetadata[contentId] = _metadataForContent(
+        content,
+        status: OfflineDownloadStatus.completed,
+      );
       await _persistDownloadedContents();
       notifyListeners();
       return {
@@ -279,6 +449,10 @@ class OfflineDownloadProvider extends ChangeNotifier {
     try {
       _downloadedContentIds.add(contentId);
       _upsertDownloadedContent(content);
+      _downloadMetadata[contentId] = _metadataForContent(
+        content,
+        status: OfflineDownloadStatus.completed,
+      );
       await _persistDownloadedContents();
       notifyListeners();
 
@@ -298,12 +472,38 @@ class OfflineDownloadProvider extends ChangeNotifier {
     final contentId = content.id;
     if (contentId == null) return;
 
-    final index = _downloadedContents.indexWhere((item) => item.id == contentId);
+    final index =
+        _downloadedContents.indexWhere((item) => item.id == contentId);
     if (index >= 0) {
       _downloadedContents[index] = content;
     } else {
       _downloadedContents.add(content);
     }
+  }
+
+  OfflineDownloadMetadata _metadataForContent(
+    Content content, {
+    String? filePath,
+    required OfflineDownloadStatus status,
+    String? errorMessage,
+  }) {
+    final contentId = content.id ?? 0;
+    final existing = _downloadMetadata[contentId];
+    final posters = content.posterUrlList ?? const <String>[];
+
+    return OfflineDownloadMetadata(
+      mediaId: contentId,
+      title: content.title?.trim().isNotEmpty == true
+          ? content.title!.trim()
+          : 'Untitled',
+      thumbnail: posters.isNotEmpty ? posters.first : '',
+      filePath: filePath ?? existing?.filePath ?? '',
+      downloadDate: status == OfflineDownloadStatus.completed
+          ? DateTime.now()
+          : existing?.downloadDate ?? DateTime.now(),
+      status: status,
+      errorMessage: errorMessage,
+    );
   }
 
   Future<void> _persistDownloadedContents() async {
@@ -312,5 +512,18 @@ class OfflineDownloadProvider extends ChangeNotifier {
         .map((content) => jsonEncode(content.toJson()))
         .toList();
     await prefs.setStringList(_downloadedContentPrefsKey, encoded);
+
+    final metadata = _downloadMetadata.values
+        .where((item) => item.status != OfflineDownloadStatus.idle)
+        .map((item) => jsonEncode(item.toJson()))
+        .toList();
+    await prefs.setStringList(_downloadMetadataPrefsKey, metadata);
   }
+}
+
+int? _asInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value.toString());
 }

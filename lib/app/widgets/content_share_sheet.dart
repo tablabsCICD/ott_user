@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/ShareService.dart';
@@ -155,7 +157,7 @@ class _ContentShareSheetBody extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: QrImageView(
-                data: data.deepLink.toString(),
+                data: data.qrLink.toString(),
                 size: 220,
                 version: QrVersions.auto,
                 backgroundColor: const Color(0xFF111111),
@@ -183,7 +185,7 @@ class _ContentShareSheetBody extends StatelessWidget {
 
           /// LINK TEXT
           SelectableText(
-            data.deepLink.toString(),
+            data.qrLink.toString(),
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
@@ -234,12 +236,22 @@ class _ContentShareSheetBody extends StatelessWidget {
 🎬 ${data.movie.title}
 
 Watch now 👇
-${data.deepLink}
+${data.qrLink}
 
 📲 Download App:
 Android: $playStoreLink
 Web: $webAppLink
 ''';
+
+      if (kIsWeb) {
+        await SharePlus.instance.share(
+          ShareParams(
+            text: message,
+            subject: data.movie.title ?? 'FilmyTell',
+          ),
+        );
+        return;
+      }
 
       final path = await ShareService.instance.downloadQrImage(data);
 
@@ -248,6 +260,17 @@ Web: $webAppLink
         text: message,
       );
     } catch (e) {
+      if (kIsWeb) {
+        await Clipboard.setData(ClipboardData(text: data.qrLink.toString()));
+        if (!context.mounted) return;
+        CustomToast.show(
+          context,
+          "Share link copied to clipboard",
+          isSuccess: true,
+        );
+        return;
+      }
+
       CustomToast.show(
         context,
         "Failed to share content",

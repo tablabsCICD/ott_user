@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.filmytell.ott",
+      "sha256_cert_fingerprints": [
+        "7A:0A:0A:AC:A9:40:C8:0D:22:1F:69:9B:B3:F6:75:33:C4:99:EE:8A:D3:CF:DB:28:7C:9E:E3:1C:12:92:54:B9",
+        "75:A7:C5:B9:27:C2:86:25:93:20:3E:A3:B7:67:A5:95:2B:B8:B2:A8:89:9B:C7:B4:48:94:DE:5D:53:B3:1E:0E"
+      ]
+    }
+  }
+]

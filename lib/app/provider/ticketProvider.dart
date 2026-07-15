@@ -16,8 +16,9 @@ import '../core/utils/sharepreferences.dart';
 import 'dart:io' as io;
 import 'package:http/http.dart' as http;
 import 'package:universal_html/html.dart' as html;
+import 'baseProvider.dart';
 
-class TicketProvider extends ChangeNotifier {
+class TicketProvider extends BaseProvider {
   final List<TicketRaised> _ticketList = [];
   List<TicketRaised> get ticketList => _ticketList;
 

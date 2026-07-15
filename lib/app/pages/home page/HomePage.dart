@@ -6,10 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
+import 'package:ott/app/core/utils/image_url_utils.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/home%20page/category_content_page.dart';
 import 'package:ott/app/pages/madioo%20page/MadiooPage.dart';
+import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/profile%20page/component/change_language.dart';
+import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/shorts%20page/component/shortsLibraryPage.dart';
 import 'package:ott/app/pages/profile%20page/ProfilePage.dart';
 import 'package:ott/app/pages/search%20page/SearchPage.dart';
@@ -19,6 +22,8 @@ import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/continueWatchMovieCard.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/feature_tour.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/shimmer%20loader/home_shimmer.dart';
 import 'package:ott/app/widgets/shimmer%20loader/shimmer_loader.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -32,17 +37,26 @@ import 'package:ott/app/widgets/movieCard.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/utils/sharepreferences.dart';
+import '../../provider/onboarding_tour_provider.dart';
 import '../../provider/userProvider.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({
+    super.key,
+    this.initialSelectedType = "MOVIE",
+  });
+
+  final String initialSelectedType;
 
   @override
   _HomePageState createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with RouteAware {
-  String selectedType = "MOVIE";
+class _HomePageState extends State<HomePage>
+    with RouteAware, WidgetsBindingObserver {
+  static const double _autoPlayVisibilityThreshold = 0.70;
+
+  late String selectedType;
   bool isLoading = true;
 
 //// upcoming movie posters
@@ -53,7 +67,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
   bool _dataLoaded = false;
   int? _userId;
 
-  /// 🔥 NEW: Scroll controllers for each horizontal row
+  /// Scroll controllers for each horizontal row.
   final Map<int, ScrollController> _rowControllers = {};
   final Map<int, ValueNotifier<int?>> _rowActiveIndexes = {};
   final Map<int, int> _rowItemCounts = {};
@@ -75,6 +89,8 @@ class _HomePageState extends State<HomePage> with RouteAware {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    selectedType = widget.initialSelectedType;
 
     _verticalController.addListener(_updateVisibleRows);
     _connectivitySubscription =
@@ -89,6 +105,20 @@ class _HomePageState extends State<HomePage> with RouteAware {
         _updateVisibleRows();
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant HomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialSelectedType != widget.initialSelectedType &&
+        selectedType != widget.initialSelectedType) {
+      selectedType = widget.initialSelectedType;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          unawaited(_initializeData());
+        }
+      });
+    }
   }
 
   @override
@@ -107,10 +137,29 @@ class _HomePageState extends State<HomePage> with RouteAware {
   @override
   void didPopNext() {
     _refreshContinueWatching();
+    _scheduleVisibleUpdate();
+  }
+
+  @override
+  void didPushNext() {
+    _clearHomeAutoPlay('navigating away from home');
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _clearHomeAutoPlay('app lifecycle $state');
+    } else if (state == AppLifecycleState.resumed) {
+      _scheduleVisibleUpdate();
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _clearHomeAutoPlay('home disposed');
     routeObserver.unsubscribe(this);
     for (final controller in _rowControllers.values) {
       controller.dispose();
@@ -125,6 +174,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
     _rowKeys.clear();
 
     _verticalController.dispose();
+    _pageController.dispose();
     _continueWatchController.dispose();
     _continueWatchActiveIndex.dispose();
     _connectivitySubscription?.cancel();
@@ -175,6 +225,11 @@ class _HomePageState extends State<HomePage> with RouteAware {
     setState(() {
       _isOffline = isOffline;
     });
+    if (isOffline) {
+      _clearHomeAutoPlay('network offline');
+    } else {
+      _scheduleVisibleUpdate();
+    }
   }
 
   void _startAutoScroll() {
@@ -237,7 +292,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
     }
   }
 
-  /// 🔥 NEW: Horizontal pagination trigger
+  /// Horizontal pagination trigger.
   void _onRowScroll(
     ScrollController controller,
     DashboardProvider provider,
@@ -251,46 +306,22 @@ class _HomePageState extends State<HomePage> with RouteAware {
     }
   }
 
-  void _updateActiveIndex(
-    ValueNotifier<int?> notifier,
+  int? _primaryVisibleIndexForRow(
     ScrollController controller,
     int itemCount,
     List<Content>? items,
   ) {
     if (!controller.hasClients || itemCount <= 0) {
-      if (notifier.value != null) {
-        notifier.value = null;
-      }
-      return;
+      return null;
     }
 
     final viewport = controller.position.viewportDimension;
     if (viewport <= 0) {
-      if (notifier.value != null) {
-        notifier.value = null;
-      }
-      return;
+      return null;
     }
 
-    final maxScrollExtent = controller.position.maxScrollExtent;
-    if (maxScrollExtent - controller.offset <= 1.0) {
-      int bestLastIndex = itemCount - 1;
-
-      if (items != null && items.isNotEmpty) {
-        for (int i = itemCount - 1; i >= 0; i--) {
-          if (i < items.length &&
-              (items[i].trailerUrl?.trim().isNotEmpty ?? false)) {
-            bestLastIndex = i;
-            break;
-          }
-        }
-      }
-
-      if (notifier.value != bestLastIndex) {
-        notifier.value = bestLastIndex;
-      }
-      return;
-    }
+    final realItemCount = items?.length ?? itemCount;
+    if (realItemCount <= 0) return null;
 
     final viewStart = controller.offset;
     final viewEnd = viewStart + viewport;
@@ -299,13 +330,17 @@ class _HomePageState extends State<HomePage> with RouteAware {
       (viewStart / MovieCard.itemExtent).floor(),
     );
     final lastCandidate = math.min(
-      itemCount - 1,
-      ((viewEnd - 0.001) / MovieCard.itemExtent).floor(),
+      realItemCount - 1,
+      math.max(
+        firstCandidate,
+        ((viewEnd - 0.001) / MovieCard.itemExtent).floor(),
+      ),
     );
+    final isAtEnd =
+        controller.position.maxScrollExtent - controller.offset <= 1;
 
     int? bestIndex;
-    int? fallbackIndex;
-    double bestOverlap = 0;
+    double bestVisibility = 0;
 
     for (int candidate = firstCandidate;
         candidate <= lastCandidate;
@@ -313,7 +348,6 @@ class _HomePageState extends State<HomePage> with RouteAware {
       final overlap = _visibleOverlap(viewStart, viewEnd, candidate);
       if (overlap <= 0) continue;
 
-      fallbackIndex = candidate;
       final hasTrailer = items != null &&
           candidate < items.length &&
           (items[candidate].trailerUrl?.trim().isNotEmpty ?? false);
@@ -321,26 +355,53 @@ class _HomePageState extends State<HomePage> with RouteAware {
         continue;
       }
 
+      final visibility =
+          (overlap / MovieCard.itemWidth).clamp(0.0, 1.0).toDouble();
+      _logHomeAutoPlay(
+        'Visibility Percentage index=$candidate '
+        '${(visibility * 100).toStringAsFixed(0)}%',
+      );
+      if (visibility < _autoPlayVisibilityThreshold) {
+        continue;
+      }
+
       if (bestIndex == null ||
-          overlap > bestOverlap ||
-          (overlap == bestOverlap && candidate > bestIndex)) {
-        bestOverlap = overlap;
+          visibility > bestVisibility ||
+          (visibility == bestVisibility &&
+              bestIndex != null &&
+              candidate > bestIndex)) {
+        bestVisibility = visibility;
         bestIndex = candidate;
       }
     }
 
-    bestIndex ??= fallbackIndex;
-
-    if (bestIndex == null) {
-      if (notifier.value != null) {
-        notifier.value = null;
+    if (bestIndex == null && isAtEnd) {
+      final lastPlayableIndex = _lastPlayableIndex(items);
+      if (lastPlayableIndex != null) {
+        final overlap = _visibleOverlap(viewStart, viewEnd, lastPlayableIndex);
+        final visibility =
+            (overlap / MovieCard.itemWidth).clamp(0.0, 1.0).toDouble();
+        _logHomeAutoPlay(
+          'End-of-list visibility index=$lastPlayableIndex '
+          '${(visibility * 100).toStringAsFixed(0)}%',
+        );
+        if (visibility >= _autoPlayVisibilityThreshold) {
+          bestIndex = lastPlayableIndex;
+        }
       }
-      return;
     }
 
-    if (notifier.value != bestIndex) {
-      notifier.value = bestIndex;
+    return bestIndex;
+  }
+
+  int? _lastPlayableIndex(List<Content>? items) {
+    if (items == null || items.isEmpty) return null;
+    for (int index = items.length - 1; index >= 0; index--) {
+      if (items[index].trailerUrl?.trim().isNotEmpty ?? false) {
+        return index;
+      }
     }
+    return null;
   }
 
   double _visibleOverlap(double viewStart, double viewEnd, int index) {
@@ -350,7 +411,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
     return overlap <= 0 ? 0 : overlap;
   }
 
-  double? _rowCenterY(GlobalKey key) {
+  Rect? _rowRect(GlobalKey key) {
     final context = key.currentContext;
     if (context == null) return null;
 
@@ -358,58 +419,94 @@ class _HomePageState extends State<HomePage> with RouteAware {
     if (renderObject is! RenderBox || !renderObject.hasSize) return null;
 
     final position = renderObject.localToGlobal(Offset.zero);
-    final size = renderObject.size;
-    final centerY = position.dy + (size.height / 2);
-
-    return centerY;
+    return position & renderObject.size;
   }
 
   void _updateVisibleRows() {
     if (!mounted) return;
 
-    final screenHeight = MediaQuery.of(context).size.height;
+    final screenSize = MediaQuery.of(context).size;
+    final screenRect = Offset.zero & screenSize;
+    int? activeRowIndex;
+    int? activeCardIndex;
+    double bestVerticalVisibility = 0;
+
     for (final entry in _rowActiveIndexes.entries) {
       final rowIndex = entry.key;
-      final notifier = entry.value;
       final controller = _rowControllers[rowIndex];
       final itemCount = _rowItemCounts[rowIndex] ?? 0;
       final items = _rowItems[rowIndex];
       final key = _rowKeys[rowIndex];
-      final centerY = key == null ? null : _rowCenterY(key);
-      final isVisible =
-          centerY != null && centerY >= 0 && centerY <= screenHeight;
+      final rowRect = key == null ? null : _rowRect(key);
 
-      if (!isVisible || controller == null) {
-        if (notifier.value != null) {
-          notifier.value = null;
-        }
+      if (rowRect == null || controller == null || rowRect.height <= 0) {
         continue;
       }
 
-      _updateActiveIndex(notifier, controller, itemCount, items);
-    }
+      final visibleTop = math.max(rowRect.top, screenRect.top);
+      final visibleBottom = math.min(rowRect.bottom, screenRect.bottom);
+      final visibleHeight = math.max(0.0, visibleBottom - visibleTop);
+      final verticalVisibility =
+          (visibleHeight / rowRect.height).clamp(0.0, 1.0).toDouble();
+      if (verticalVisibility < _autoPlayVisibilityThreshold) {
+        continue;
+      }
 
-    if (_continueWatchItemCount > 0) {
-      final centerY = _rowCenterY(_continueWatchKey);
-      final isVisible =
-          centerY != null && centerY >= 0 && centerY <= screenHeight;
-      if (isVisible) {
-        _updateActiveIndex(
-          _continueWatchActiveIndex,
-          _continueWatchController,
-          _continueWatchItemCount,
-          _continueWatchItems,
-        );
-      } else if (_continueWatchActiveIndex.value != null) {
-        _continueWatchActiveIndex.value = null;
+      final rowPrimaryIndex = _primaryVisibleIndexForRow(
+        controller,
+        itemCount,
+        items,
+      );
+      if (rowPrimaryIndex == null) continue;
+
+      if (activeRowIndex == null ||
+          verticalVisibility > bestVerticalVisibility) {
+        activeRowIndex = rowIndex;
+        activeCardIndex = rowPrimaryIndex;
+        bestVerticalVisibility = verticalVisibility;
       }
     }
+
+    for (final entry in _rowActiveIndexes.entries) {
+      final rowIndex = entry.key;
+      final notifier = entry.value;
+      final nextValue = rowIndex == activeRowIndex ? activeCardIndex : null;
+      if (notifier.value != nextValue) {
+        notifier.value = nextValue;
+        if (nextValue != null) {
+          final activeItems = _rowItems[rowIndex];
+          final activeVideoId =
+              activeItems != null && nextValue < activeItems.length
+                  ? activeItems[nextValue].id
+                  : null;
+          _logHomeAutoPlay(
+            'Auto-play Triggered row=$rowIndex index=$nextValue '
+            'Current Active Video ID=$activeVideoId '
+            'vertical=${(bestVerticalVisibility * 100).toStringAsFixed(0)}%',
+          );
+        }
+      }
+    }
+  }
+
+  void _clearHomeAutoPlay(String reason) {
+    for (final notifier in _rowActiveIndexes.values) {
+      if (notifier.value != null) {
+        notifier.value = null;
+      }
+    }
+    _logHomeAutoPlay('Video Stopped: $reason');
+  }
+
+  void _logHomeAutoPlay(String message) {
+    debugPrint('HOME_AUTOPLAY: $message');
   }
 
   void _scheduleVisibleUpdate() {
     if (_visibleUpdateScheduled) return;
     _visibleUpdateScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _visibleUpdateScheduled = false;
       _updateVisibleRows();
     });
@@ -442,6 +539,14 @@ class _HomePageState extends State<HomePage> with RouteAware {
                           SizedBox(
                             height: 5,
                           ),
+                          if (ResponsiveWidget.isTabletOrTv(context) &&
+                              selectedType != 'MINI SERIES' &&
+                              selectedType != 'MADIOO')
+                            _buildTvHeroSlider(
+                              context,
+                              selectedThemeData,
+                              dashboardProvider,
+                            ),
                           SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child:
@@ -491,7 +596,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
                                                   _rowActiveIndexes.putIfAbsent(
                                                       index,
                                                       () => ValueNotifier<int?>(
-                                                          0));
+                                                          null));
                                                   _rowItemCounts[index] =
                                                       dashboardData
                                                               .movies?.length ??
@@ -499,6 +604,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
                                                   _rowItems[index] =
                                                       dashboardData.movies ??
                                                           const <Content>[];
+                                                  _scheduleVisibleUpdate();
                                                   _rowKeys.putIfAbsent(
                                                       index, () => GlobalKey());
 
@@ -510,34 +616,10 @@ class _HomePageState extends State<HomePage> with RouteAware {
                                                       _rowKeys[index]!;
                                                   final rowIndex = index;
 
-                                                  // 🔥 Attach listener ONLY once
+                                                  // Attach listener only once.
                                                   if (!controller
                                                       .hasListeners) {
                                                     controller.addListener(() {
-                                                      final rowNotifier =
-                                                          _rowActiveIndexes[
-                                                              rowIndex];
-                                                      final rowController =
-                                                          _rowControllers[
-                                                              rowIndex];
-                                                      final rowItemCount =
-                                                          _rowItemCounts[
-                                                                  rowIndex] ??
-                                                              0;
-                                                      final rowItems =
-                                                          _rowItems[rowIndex];
-
-                                                      if (rowNotifier != null &&
-                                                          rowController !=
-                                                              null) {
-                                                        _updateActiveIndex(
-                                                          rowNotifier,
-                                                          rowController,
-                                                          rowItemCount,
-                                                          rowItems,
-                                                        );
-                                                      }
-
                                                       _scheduleVisibleUpdate();
 
                                                       if (controller.position
@@ -550,13 +632,13 @@ class _HomePageState extends State<HomePage> with RouteAware {
                                                               .loadMoreRowData(
                                                                   dashboardData,
                                                                   selectedType,
-                                                                  _userId!);
+                                                                  _userId!)
+                                                              .whenComplete(
+                                                                  _scheduleVisibleUpdate);
                                                         }
                                                       }
                                                     });
                                                   }
-
-                                                  _scheduleVisibleUpdate();
 
                                                   return KeyedSubtree(
                                                     key: rowKey,
@@ -708,6 +790,348 @@ class _HomePageState extends State<HomePage> with RouteAware {
     );
   }
 
+  Widget _buildTvHeroSlider(
+    BuildContext context,
+    ThemeData theme,
+    DashboardProvider dashboardProvider,
+  ) {
+    final heroItems = dashboardProvider.dashboardData
+        .expand((row) => row.movies ?? const <Content>[])
+        .where((item) =>
+            item.id != null &&
+            (item.posterUrlList?.isNotEmpty ?? false) &&
+            (item.title?.trim().isNotEmpty ?? false))
+        .toList();
+
+    if (heroItems.isEmpty) return const SizedBox.shrink();
+
+    final height = ResponsiveWidget.isDesktop(context) ? 520.0 : 410.0;
+    final horizontalMargin = ResponsiveWidget.isDesktop(context) ? 24.0 : 14.0;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(horizontalMargin, 8, horizontalMargin, 28),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: SizedBox(
+          height: height,
+          width: double.infinity,
+          child: Focus(
+            autofocus: true,
+            onKeyEvent: (node, event) {
+              if (event is! KeyDownEvent) return KeyEventResult.ignored;
+              if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                _moveHeroSlider(heroItems.length, -1);
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                _moveHeroSlider(heroItems.length, 1);
+                return KeyEventResult.handled;
+              }
+              if (event.logicalKey == LogicalKeyboardKey.enter ||
+                  event.logicalKey == LogicalKeyboardKey.select ||
+                  event.logicalKey == LogicalKeyboardKey.space ||
+                  event.logicalKey == LogicalKeyboardKey.gameButtonA) {
+                _openContentDetails(heroItems[_currentPage % heroItems.length]);
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: Stack(
+              children: [
+                PageView.builder(
+                  controller: _pageController,
+                  itemCount: heroItems.length,
+                  onPageChanged: (index) {
+                    setState(() => _currentPage = index);
+                  },
+                  itemBuilder: (context, index) {
+                    final item = heroItems[index];
+                    final imageUrl = item.posterUrlList?.first ?? '';
+                    return Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: theme.cardColor,
+                            alignment: Alignment.center,
+                            child: Icon(
+                              Icons.movie_creation_outlined,
+                              color: theme.canvasColor.withOpacity(0.5),
+                              size: 72,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [
+                                Colors.black,
+                                Colors.black87,
+                                Colors.black26,
+                                Colors.black87,
+                              ],
+                              stops: [0, 0.26, 0.72, 1],
+                            ),
+                          ),
+                        ),
+                        Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black38,
+                                Colors.transparent,
+                                Colors.black87,
+                              ],
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          left: ResponsiveWidget.isDesktop(context) ? 70 : 36,
+                          bottom: ResponsiveWidget.isDesktop(context) ? 58 : 34,
+                          width:
+                              ResponsiveWidget.isDesktop(context) ? 560 : 430,
+                          child: _buildTvHeroCopy(context, theme, item, index),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                Positioned(
+                  left: 18,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: _buildHeroArrowButton(
+                      theme: theme,
+                      icon: Icons.chevron_left_rounded,
+                      onTap: () => _moveHeroSlider(heroItems.length, -1),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: 18,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: _buildHeroArrowButton(
+                      theme: theme,
+                      icon: Icons.chevron_right_rounded,
+                      onTap: () => _moveHeroSlider(heroItems.length, 1),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 18,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      math.min(heroItems.length, 9),
+                      (index) {
+                        final active =
+                            index == (_currentPage % heroItems.length);
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 220),
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          width: active ? 26 : 8,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: active
+                                ? Colors.white
+                                : Colors.white.withOpacity(0.35),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroArrowButton({
+    required ThemeData theme,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return OttTvFocus(
+      onTap: onTap,
+      borderRadius: 999,
+      scale: 1.1,
+      child: Material(
+        color: Colors.black.withOpacity(0.42),
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox(
+            width: 54,
+            height: 54,
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 38,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _moveHeroSlider(int itemCount, int delta) {
+    if (itemCount <= 0) return;
+    final next = (_currentPage + delta) % itemCount;
+    final normalized = next < 0 ? itemCount - 1 : next;
+    if (_pageController.hasClients) {
+      _pageController.animateToPage(
+        normalized,
+        duration: const Duration(milliseconds: 360),
+        curve: Curves.easeOutCubic,
+      );
+    }
+    setState(() => _currentPage = normalized);
+  }
+
+  Widget _buildTvHeroCopy(
+    BuildContext context,
+    ThemeData theme,
+    Content item,
+    int index,
+  ) {
+    final genres =
+        item.genreList?.where((e) => e.trim().isNotEmpty).join('  -  ');
+    final meta = [
+      if (item.releaseDate != null) item.releaseDate.toString(),
+      if (genres != null && genres.isNotEmpty) genres,
+      if (item.ratings != null) '${item.ratings!.toStringAsFixed(0)} star',
+    ].join('  -  ');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: theme.primaryColor,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            '#${index + 1} Trending',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          item.title ?? '',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontSize: ResponsiveWidget.isDesktop(context) ? 46 : 34,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        if (meta.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text(
+            meta,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
+        ],
+        if ((item.description ?? '').trim().isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            item.description!,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+              height: 1.35,
+            ),
+          ),
+        ],
+        const SizedBox(height: 22),
+        Row(
+          children: [
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.primaryColor,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(142, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => _openContentDetails(item),
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: const Text(
+                'Watch Now',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+            const SizedBox(width: 12),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white.withOpacity(0.14),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(118, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => _openContentDetails(item),
+              icon: const Icon(Icons.movie_filter_rounded),
+              label: const Text(
+                'Trailer',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  void _openContentDetails(Content item) {
+    final type = item.type?.toLowerCase();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => type == 'series'
+            ? SeriesDetailsPage(
+                seriesId: item.id ?? 0,
+                content: item,
+              )
+            : MovieDetailsPage(movieId: item.id!),
+      ),
+    );
+  }
+
   Widget continueWatchWidget({
     required List<Content> continueWatchList,
   }) {
@@ -736,7 +1160,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🔴 LABEL
+          // Label
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
             child: Text(
@@ -749,7 +1173,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
             ),
           ),
 
-          // 🎬 HORIZONTAL LIST
+          // Horizontal list
           SizedBox(
             height: 220, //270,
             child: ListView.builder(
@@ -887,20 +1311,20 @@ class _HomePageState extends State<HomePage> with RouteAware {
   SliverAppBar _buildSliverAppBar(
       BuildContext context, ThemeData selectedThemeData) {
     final lang = AppLocalizations.of(context)!;
+    final useTransparentAppBar = !ResponsiveWidget.isMobile(context);
 
     return SliverAppBar(
       automaticallyImplyLeading: false,
-      forceMaterialTransparency:
-          ResponsiveWidget.isDesktop(context) ? true : false,
+      forceMaterialTransparency: useTransparentAppBar,
       // expandedHeight: bannerHeight(context),
       floating: false,
       pinned: true,
       stretch: true,
       surfaceTintColor: Colors.transparent,
-      backgroundColor: ResponsiveWidget.isDesktop(context)
+      backgroundColor: useTransparentAppBar
           ? selectedThemeData.scaffoldBackgroundColor
           : selectedThemeData.primaryColor,
-      title: ResponsiveWidget.isDesktop(context)
+      title: useTransparentAppBar
           ? Text(
               "",
               style: TextStyle(
@@ -933,7 +1357,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: Image.asset(
-                      ImageConstant.inAppLogo,
+                      ImageConstant.logo,
                       width: 75,
                       height: 75,
                       fit: BoxFit.contain,
@@ -943,60 +1367,69 @@ class _HomePageState extends State<HomePage> with RouteAware {
               ),
             ),
 
-      titleSpacing: ResponsiveWidget.isTablet(context) ? 50 : 10,
+      titleSpacing: 10,
       actions: [
         //LanguageDropdown(),
-        IconButton(
-          icon: Icon(Icons.search,
-              color: ResponsiveWidget.isDesktop(context)
-                  ? selectedThemeData.canvasColor
-                  : Colors.white),
-          tooltip: lang.search,
-          style: IconButton.styleFrom(
-              backgroundColor: ResponsiveWidget.isDesktop(context)
-                  ? Colors.white.withOpacity(0.3)
-                  : Colors.black.withOpacity(0.2)),
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => SearchPage()),
+        FeatureTourTarget(
+          id: FeatureTourStepId.search,
+          child: IconButton(
+            icon: Icon(Icons.search,
+                color: useTransparentAppBar
+                    ? selectedThemeData.canvasColor
+                    : Colors.white),
+            tooltip: lang.search,
+            style: IconButton.styleFrom(
+                backgroundColor: useTransparentAppBar
+                    ? Colors.white.withOpacity(0.3)
+                    : Colors.black.withOpacity(0.2)),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => SearchPage()),
+            ),
           ),
         ),
         SizedBox(
           width: 4,
         ),
-        IconButton(
-          icon: Icon(Icons.notifications_active,
-              color: ResponsiveWidget.isDesktop(context)
-                  ? selectedThemeData.canvasColor
-                  : Colors.white),
-          tooltip: lang.notification,
-          style: IconButton.styleFrom(
-              backgroundColor: ResponsiveWidget.isDesktop(context)
-                  ? Colors.white.withOpacity(0.3)
-                  : Colors.black.withOpacity(0.2)),
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => NotificationPage()),
+        FeatureTourTarget(
+          id: FeatureTourStepId.notifications,
+          child: IconButton(
+            icon: Icon(Icons.notifications_active,
+                color: useTransparentAppBar
+                    ? selectedThemeData.canvasColor
+                    : Colors.white),
+            tooltip: lang.notification,
+            style: IconButton.styleFrom(
+                backgroundColor: useTransparentAppBar
+                    ? Colors.white.withOpacity(0.3)
+                    : Colors.black.withOpacity(0.2)),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => NotificationPage()),
+            ),
           ),
         ),
         SizedBox(
           width: 4,
         ),
-        IconButton(
-          tooltip: lang.selectPreferredLanguage,
-          style: IconButton.styleFrom(
-            backgroundColor: ResponsiveWidget.isDesktop(context)
-                ? Colors.white.withOpacity(0.3)
-                : Colors.black.withOpacity(0.2),
-          ),
-          icon: Icon(Icons.language_sharp,
-              color: ResponsiveWidget.isDesktop(context)
-                  ? selectedThemeData.canvasColor
-                  : Colors.white),
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChangeLanguage(),
+        FeatureTourTarget(
+          id: FeatureTourStepId.language,
+          child: IconButton(
+            tooltip: lang.selectPreferredLanguage,
+            style: IconButton.styleFrom(
+              backgroundColor: useTransparentAppBar
+                  ? Colors.white.withOpacity(0.3)
+                  : Colors.black.withOpacity(0.2),
+            ),
+            icon: Icon(Icons.language_sharp,
+                color: useTransparentAppBar
+                    ? selectedThemeData.canvasColor
+                    : Colors.white),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ChangeLanguage(),
+              ),
             ),
           ),
         ),
@@ -1011,57 +1444,87 @@ class _HomePageState extends State<HomePage> with RouteAware {
           final user = userProvider.userObject;
           return Row(
             children: [
-              IconButton(
-                icon: Icon(Icons.account_balance_wallet,
-                    color: ResponsiveWidget.isDesktop(context)
-                        ? selectedThemeData.canvasColor
-                        : Colors.white),
-                tooltip: "${walletProvider.walletBalance}",
-                style: IconButton.styleFrom(
-                    backgroundColor: ResponsiveWidget.isDesktop(context)
-                        ? Colors.white.withOpacity(0.3)
-                        : Colors.black.withOpacity(0.2)),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => WalletPage()),
+              FeatureTourTarget(
+                id: FeatureTourStepId.wallet,
+                child: IconButton(
+                  icon: Icon(Icons.account_balance_wallet,
+                      color: useTransparentAppBar
+                          ? selectedThemeData.canvasColor
+                          : Colors.white),
+                  tooltip: "${walletProvider.walletBalance}",
+                  style: IconButton.styleFrom(
+                      backgroundColor: useTransparentAppBar
+                          ? Colors.white.withOpacity(0.3)
+                          : Colors.black.withOpacity(0.2)),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => WalletPage()),
+                  ),
                 ),
               ),
               SizedBox(
                 width: 4,
               ),
-              Tooltip(
-                textStyle: TextStyle(
-                  fontSize: 10,
-                  color: selectedThemeData.scaffoldBackgroundColor,
-                ),
-                message:
-                    "${userProvider.userObj.firstName} ${userProvider.userObj.lastName}",
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => ProfilePage()));
-                  },
-                  child: Hero(
-                    tag: "profile",
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white,
-                          width: 1,
+              FeatureTourTarget(
+                id: FeatureTourStepId.profile,
+                child: Tooltip(
+                  textStyle: TextStyle(
+                    fontSize: 10,
+                    color: selectedThemeData.scaffoldBackgroundColor,
+                  ),
+                  message:
+                      "${userProvider.userObj.firstName} ${userProvider.userObj.lastName}",
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => ProfilePage()));
+                    },
+                    child: Hero(
+                      tag: "profile",
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 1,
+                          ),
                         ),
-                      ),
-                      child: CircleAvatar(
-                        radius: 18,
-                        backgroundColor: selectedThemeData.canvasColor,
-                        backgroundImage:
-                            userProvider.userObj.profilePhoto == null
-                                ? AssetImage(ImageConstant.profile)
-                                : userProvider.userObj.profilePhoto!.isNotEmpty
-                                    ? NetworkImage(
-                                        userProvider.userObj.profilePhoto!,
-                                      )
-                                    : AssetImage(ImageConstant.profile),
+                        child: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: selectedThemeData.canvasColor,
+                          child: ClipOval(
+                            child: Builder(
+                              builder: (_) {
+                                final profilePhotoUrl =
+                                    normalizeNetworkImageUrl(
+                                  userProvider.userObj.profilePhoto,
+                                );
+                                if (profilePhotoUrl.isEmpty) {
+                                  return Image.asset(
+                                    ImageConstant.profile,
+                                    width: 36,
+                                    height: 36,
+                                    fit: BoxFit.cover,
+                                  );
+                                }
+                                return Image.network(
+                                  profilePhotoUrl,
+                                  width: 36,
+                                  height: 36,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Image.asset(
+                                    ImageConstant.profile,
+                                    width: 36,
+                                    height: 36,
+                                    fit: BoxFit.cover,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -1317,7 +1780,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
       //           //                   "movie"
       //           //               ? lang.watchMovie
       //           //               : lang.watchSeries)
-      //           //           : "₹${trendingMovieList[_currentPage].price}",
+      //           //           : "Rs ${trendingMovieList[_currentPage].price}",
       //           //       style: const TextStyle(
       //           //         color: Colors.white,
       //           //         fontSize: 14,

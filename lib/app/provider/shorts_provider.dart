@@ -7,6 +7,7 @@ import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/data/models/user.dart';
+import 'baseProvider.dart';
 
 class ShortsSectionData {
   final String language;
@@ -20,12 +21,13 @@ class ShortsSectionData {
   });
 }
 
-class ShortProvider extends ChangeNotifier {
+class ShortProvider extends BaseProvider {
   List<ShortModel> shorts = [];
   List<ShortsSectionData> _shortSections = [];
   List<ShortsSectionData> get shortSections => _shortSections;
   ShortDetailModel? shortDetail;
   bool isLoading = false;
+  String? errorMessage;
 
   Future<void> fetchShorts() async {
     await fetchShortsByLanguages(const ["English"]);
@@ -35,6 +37,7 @@ class ShortProvider extends ChangeNotifier {
     final effectiveLanguages = languages
         .where((lang) => lang.trim().isNotEmpty)
         .map((lang) => lang.trim())
+        .toSet()
         .toList();
 
     if (effectiveLanguages.isEmpty) {
@@ -43,34 +46,27 @@ class ShortProvider extends ChangeNotifier {
 
     try {
       isLoading = true;
+      errorMessage = null;
       notifyListeners();
 
       final sections = <ShortsSectionData>[];
 
       for (final lang in effectiveLanguages) {
-        final trending = await _fetchShortsByType(
-          type: "trending",
-          lang: lang,
-          page: 0,
-        );
-        final latest = await _fetchShortsByType(
-          type: "latest",
-          lang: lang,
-          page: 0,
-        );
+        final latest = await getLatestMiniSeries(language: lang);
+        final trending = await getTrendingMiniSeries(language: lang);
 
         sections.add(
           ShortsSectionData(
             language: lang,
-            category: "Trending Shorts",
-            shorts: trending,
+            category: "Latest Mini Series",
+            shorts: latest.content,
           ),
         );
         sections.add(
           ShortsSectionData(
             language: lang,
-            category: "Latest Shorts",
-            shorts: latest,
+            category: "Trending Mini Series",
+            shorts: trending.content,
           ),
         );
       }
@@ -81,29 +77,54 @@ class ShortProvider extends ChangeNotifier {
       print("Shorts Fetch Error → $e");
       _shortSections = [];
       shorts = [];
+      errorMessage = 'Unable to load Mini Series. Please try again.';
     }
 
     isLoading = false;
     notifyListeners();
   }
 
-  Future<List<ShortModel>> _fetchShortsByType({
-    required String type,
-    required String lang,
+  Future<MiniSeriesPage> getLatestMiniSeries({
+    required String language,
     int page = 0,
+    int size = 10,
+  }) =>
+      _fetchMiniSeriesPage(
+          type: 'latest', language: language, page: page, size: size);
+
+  Future<MiniSeriesPage> getTrendingMiniSeries({
+    required String language,
+    int page = 0,
+    int size = 10,
+  }) =>
+      _fetchMiniSeriesPage(
+          type: 'trending', language: language, page: page, size: size);
+
+  Future<MiniSeriesPage> _fetchMiniSeriesPage({
+    required String type,
+    required String language,
+    int page = 0,
+    int size = 10,
   }) async {
     final apiUrl = type.toLowerCase() == 'trending'
-        ? ApiConstant.getTrendingShortsByLang(lang, page)
-        : ApiConstant.getLatestShortsByLang(lang, page);
+        ? ApiConstant.getTrendingShortsByLang(language, page, size: size)
+        : ApiConstant.getLatestShortsByLang(language, page, size: size);
     final url = Uri.parse(apiUrl);
-    final response = await http.get(url);
+    final response = await ApiHelper().getApi(url.toString());
 
-    if (response.statusCode != 200) return [];
+    if (response.statusCode != 200) {
+      throw http.ClientException(
+        'Mini Series $type request failed (${response.statusCode})',
+        url,
+      );
+    }
 
-    final data = jsonDecode(response.body);
-    final content = (data["data"]?["content"] as List?) ?? [];
-
-    return content.map((e) => ShortModel.fromJson(e)).toList();
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = decoded['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('Mini Series response is missing page data');
+    }
+    return MiniSeriesPage.fromJson(data);
   }
 
   Future<void> fetchShortDetail(int id, int userId) async {

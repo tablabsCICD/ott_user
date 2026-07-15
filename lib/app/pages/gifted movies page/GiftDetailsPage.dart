@@ -1,10 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 // avoid conflict
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class GiftDetailsPage extends StatefulWidget {
   final int giftMasterId;
@@ -29,6 +33,32 @@ class _GiftDetailsPageState extends State<GiftDetailsPage> {
     CustomToast.show(context, "Copied: $text", isSuccess: true);
   }
 
+  Future<void> shareGiftLink(
+    String couponCode,
+    String movieTitle,
+  ) async {
+    final giftLink = DeepLinkService.instance.buildGiftDeepLink(couponCode);
+    final fallbackLink = DeepLinkService.instance.buildGiftAppLink(couponCode);
+    final message = '''
+You have received a Filmytell gift: $movieTitle
+
+Claim gift:
+$giftLink
+
+Fallback link:
+$fallbackLink
+
+Gift code: $couponCode
+''';
+
+    await SharePlus.instance.share(
+      ShareParams(
+        text: message.trim(),
+        subject: 'Filmytell movie gift',
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -36,6 +66,7 @@ class _GiftDetailsPageState extends State<GiftDetailsPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
+        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         backgroundColor: theme.primaryColor,
         foregroundColor: Colors.white,
         centerTitle: true,
@@ -160,8 +191,10 @@ class _GiftDetailsPageState extends State<GiftDetailsPage> {
                             if (giftMaster.couponCode != null)
                               GestureDetector(
                                 onTap: () {
-                                  copyToClipboard(
-                                      context, giftMaster.couponCode!);
+                                  shareGiftLink(
+                                    giftMaster.couponCode!,
+                                    giftMaster.movie?.title ?? "this movie",
+                                  );
                                 },
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
@@ -183,7 +216,7 @@ class _GiftDetailsPageState extends State<GiftDetailsPage> {
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      const Icon(Icons.copy, size: 18),
+                                      const Icon(Icons.share, size: 18),
                                     ],
                                   ),
                                 ),

@@ -13,11 +13,18 @@ plugins {
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 
-require(keystorePropertiesFile.exists()) {
-    "key.properties file not found"
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
-keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+fun keystoreValue(name: String): String =
+    keystoreProperties.getProperty(name)?.trim().orEmpty()
+
+val hasReleaseKeystore = keystorePropertiesFile.exists() &&
+    listOf("storePassword", "keyPassword", "keyAlias", "storeFile").all { name ->
+        val value = keystoreValue(name)
+        value.isNotEmpty() && !value.startsWith("REPLACE_WITH_")
+    }
 
 android {
     namespace = "com.filmytell.ott"
@@ -44,17 +51,23 @@ android {
 
     // 🔐 Release signing config
     signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = file(keystoreProperties["storeFile"] as String)
-            storePassword = keystoreProperties["storePassword"] as String
+        if (hasReleaseKeystore) {
+            create("release") {
+                keyAlias = keystoreValue("keyAlias")
+                keyPassword = keystoreValue("keyPassword")
+                storeFile = file(keystoreValue("storeFile"))
+                storePassword = keystoreValue("storePassword")
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = if (hasReleaseKeystore) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
 
             // ✅ Safe for first release (avoid crashes)
             isMinifyEnabled = false

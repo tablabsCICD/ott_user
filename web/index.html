@@ -18,23 +18,48 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Filmytell OTT platform.">
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="ott">
+  <meta name="apple-mobile-web-app-title" content="Filmytell">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>ott</title>
+  <title>Filmytell</title>
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script>
+    (function () {
+      var supportedPath = /^\/(gift|movie|series|short)(\/|$)/i.test(
+        window.location.pathname
+      );
+      var isAndroid = /Android/i.test(window.navigator.userAgent || "");
+
+      if (!isAndroid || !supportedPath) {
+        return;
+      }
+
+      var packageName = "com.filmytell.ott";
+      var playStoreUrl = "https://play.google.com/store/apps/details?id=" +
+          packageName;
+      var intentPath = window.location.host +
+          window.location.pathname +
+          window.location.search +
+          window.location.hash;
+
+      window.location.href = "intent://" + intentPath +
+          "#Intent;scheme=https;package=" + packageName +
+          ";S.browser_fallback_url=" + encodeURIComponent(playStoreUrl) +
+          ";end";
+    })();
+
     window.openRazorpayCheckout = function (options) {
       return new Promise(function (resolve) {
         if (typeof Razorpay === "undefined") {

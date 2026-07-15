@@ -42,11 +42,11 @@ class ShareService {
       throw ArgumentError('Movie id is required to share this content.');
     }
 
-    final deepLink = DeepLinkService.instance.buildDeepLink(
+    final shareLink = DeepLinkService.instance.buildAppLink(
       type: contentType,
       id: contentId,
     );
-    final qrLink = deepLink;
+    final qrLink = shareLink;
     final qrCode = await QRService.instance.generatePng(
       data: qrLink.toString(),
       fileName: '${contentType.name}_${contentId}_qr.png',
@@ -57,13 +57,13 @@ class ShareService {
     return PreparedMovieShareData(
       movie: movie,
       contentType: contentType,
-      deepLink: deepLink,
+      deepLink: shareLink,
       qrLink: qrLink,
       qrCode: qrCode,
       message: _buildShareMessage(
         movie: movie,
         contentType: contentType,
-        deepLink: deepLink,
+        deepLink: shareLink,
       ),
     );
   }
@@ -117,10 +117,6 @@ class ShareService {
     required Uri deepLink,
   }) {
     final contentLabel = _contentLabel(contentType);
-    final fallbackLink = DeepLinkService.instance.buildAppLink(
-      type: contentType,
-      id: movie.id!,
-    );
     final buffer = StringBuffer()
       ..writeln(movie.title ?? contentLabel)
       ..writeln()
@@ -128,13 +124,8 @@ class ShareService {
           ? movie.description!.trim()
           : 'Open this $contentLabel in the Filmytell app.')
       ..writeln()
-      ..writeln('Deep link:')
+      ..writeln('Watch now:')
       ..writeln(deepLink.toString());
-
-    buffer
-      ..writeln()
-      ..writeln('Fallback link:')
-      ..writeln(fallbackLink.toString());
 
     buffer
       ..writeln()
