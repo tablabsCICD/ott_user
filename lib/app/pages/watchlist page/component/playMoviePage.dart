@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import 'package:video_player/video_player.dart' as native_video;
 import 'package:http/http.dart' as http;
 import 'package:ott/app/core/network/anti_piracy_api_client.dart';
 import 'package:ott/app/core/services/anti_piracy_service.dart';
@@ -17,6 +16,7 @@ import 'package:ott/app/provider/secure_playback_controller.dart';
 import 'package:ott/data/models/anti_piracy_models.dart';
 import 'package:ott/data/models/seriesModel.dart';
 import 'package:provider/provider.dart';
+import 'package:video_player/video_player.dart' as native_video;
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart' as youtube;
 
@@ -457,13 +457,23 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     if (_isDisposed || !mounted || token != _setupToken) return;
 
     final provider = context.read<PlayMediaProvider>();
-    final resumeSeconds = _isSeries
-        ? provider.getLocalResume(
-            contentId: widget.content!.id!,
-            seasonId: widget.seasonIndex,
-            episodeId: widget.episodeIndex,
-          )
-        : widget.content?.watchedSeconds ?? 0;
+    final localResumeSeconds = provider.getLocalResume(
+      contentId: widget.content!.id!,
+      seasonId: _isSeries ? widget.seasonIndex : null,
+      episodeId: _isSeries ? widget.episodeIndex : null,
+    );
+    final backendResumeSeconds = widget.content?.watchedSeconds ?? 0;
+    final resumeSeconds = localResumeSeconds > backendResumeSeconds
+        ? localResumeSeconds
+        : backendResumeSeconds;
+
+    debugPrint(
+      'Continue watching resume: contentId=${widget.content!.id} '
+      'seasonId=${_isSeries ? widget.seasonIndex : null} '
+      'episodeId=${_isSeries ? widget.episodeIndex : null} '
+      'localSeconds=$localResumeSeconds backendSeconds=$backendResumeSeconds '
+      'selectedSeconds=$resumeSeconds',
+    );
 
     final controller = youtube.YoutubePlayerController(
       initialVideoId: videoId,
@@ -1016,13 +1026,23 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     await _player?.setVolume(100);
     await _androidSecurePlayer?.setVolume(1);
 
-    final resumeSeconds = _isSeries
-        ? provider.getLocalResume(
-            contentId: widget.content!.id!,
-            seasonId: widget.seasonIndex,
-            episodeId: widget.episodeIndex,
-          )
-        : widget.content?.watchedSeconds ?? 0;
+    final localResumeSeconds = provider.getLocalResume(
+      contentId: widget.content!.id!,
+      seasonId: _isSeries ? widget.seasonIndex : null,
+      episodeId: _isSeries ? widget.episodeIndex : null,
+    );
+    final backendResumeSeconds = widget.content?.watchedSeconds ?? 0;
+    final resumeSeconds = localResumeSeconds > backendResumeSeconds
+        ? localResumeSeconds
+        : backendResumeSeconds;
+
+    debugPrint(
+      'Continue watching resume: contentId=${widget.content!.id} '
+      'seasonId=${_isSeries ? widget.seasonIndex : null} '
+      'episodeId=${_isSeries ? widget.episodeIndex : null} '
+      'localSeconds=$localResumeSeconds backendSeconds=$backendResumeSeconds '
+      'selectedSeconds=$resumeSeconds',
+    );
 
     if (resumeSeconds > 5) {
       final resumePosition = Duration(seconds: resumeSeconds);
