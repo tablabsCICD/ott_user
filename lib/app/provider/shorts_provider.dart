@@ -130,15 +130,32 @@ class ShortProvider extends BaseProvider {
   Future<void> fetchShortDetail(int id, int userId) async {
     try {
       isLoading = true;
+      errorMessage = null;
+      shortDetail = null;
       notifyListeners();
 
-      var url = Uri.parse(ApiConstant.shortsDetails(id, userId));
-      var response = await http.get(url);
-      final data = jsonDecode(response.body);
-
-      shortDetail = ShortDetailModel.fromJson(data["data"]);
+      final url = Uri.parse(ApiConstant.shortsDetails(id, userId));
+      final response = await ApiHelper().getApi(url.toString());
+      if (response.statusCode != 200) {
+        throw http.ClientException(
+          'Mini Series detail request failed (${response.statusCode})',
+          url,
+        );
+      }
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic> ||
+          decoded['success'] != true ||
+          decoded['data'] is! Map<String, dynamic>) {
+        throw const FormatException(
+          'Mini Series detail response is missing data',
+        );
+      }
+      shortDetail = ShortDetailModel.fromJson(
+        decoded['data'] as Map<String, dynamic>,
+      );
     } catch (e) {
       print("Short Detail Error → $e");
+      errorMessage = 'Unable to load Mini Series details. Please try again.';
     }
 
     isLoading = false;

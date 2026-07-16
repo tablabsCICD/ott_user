@@ -183,7 +183,7 @@ class ApiConstant {
           ? getTrendingShortsByLang(lang, page)
           : getLatestShortsByLang(lang, page);
   static String shortsDetails(id, userId) =>
-      "${baseUrl}api/shortsMaster/$id?userId=$userId";
+      "https://filmytell.in/ott/api/shortsMaster/$id?userId=$userId";
   static String likeshort(partId, userId) =>
       "${baseUrl}api/shortsMaster/part/$partId/like?userId=$userId";
   static String unlikeshort(partId, userId) =>

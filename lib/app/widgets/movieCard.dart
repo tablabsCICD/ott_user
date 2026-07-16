@@ -82,7 +82,7 @@ class _MovieCardState extends State<MovieCard> {
   Uri? _previewUri(String? rawUrl) {
     final value = DirectTrailerSource.fromBackend(rawUrl) ?? '';
     final uri = Uri.tryParse(value);
-    if (uri == null || !uri.hasScheme) return null;
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) return null;
 
     final host = uri.host.toLowerCase();
     final isYoutube = host.contains('youtube.com') || host == 'youtu.be';
@@ -94,6 +94,12 @@ class _MovieCardState extends State<MovieCard> {
   @override
   void initState() {
     super.initState();
+    _logTrailer('Widget created');
+    _logTrailer(
+      widget.movie.trailerUrl?.trim().isNotEmpty == true
+          ? 'Trailer URL received'
+          : 'Trailer URL missing',
+    );
     widget.activeIndexListenable?.addListener(_handleActiveIndexChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -159,6 +165,9 @@ class _MovieCardState extends State<MovieCard> {
             player.play();
           }
         }))
+        ..add(player.stream.playing.listen((isPlaying) {
+          _logTrailer(isPlaying ? 'Playback started' : 'Playback stopped');
+        }))
         ..add(player.stream.position.listen((_) {
           if (mounted) setState(() {});
         }))
@@ -173,7 +182,8 @@ class _MovieCardState extends State<MovieCard> {
           }
         }));
 
-      await player.open(Media(trailerUri.toString()), play: false);
+      _logTrailer('Opening trailer');
+      await player.open(Media(trailerUri.toString()), play: true);
       await player.setVolume(_isMuted ? 0 : 100);
 
       if (!mounted ||
@@ -197,6 +207,7 @@ class _MovieCardState extends State<MovieCard> {
         setState(() => _isVideoInitialized = true);
       }
       _logPreview('Video Initialized');
+      _logTrailer('media_kit initialized');
       return true;
     } catch (e) {
       debugPrint("Video init failed: $e");
@@ -250,6 +261,7 @@ class _MovieCardState extends State<MovieCard> {
     widget.activeIndexListenable?.removeListener(_handleActiveIndexChanged);
     _playDelayTimer?.cancel();
     _disposeVideoController();
+    _logTrailer('Widget disposed');
     super.dispose();
   }
 
@@ -273,6 +285,10 @@ class _MovieCardState extends State<MovieCard> {
         widget.index != null &&
         activeIndex != null &&
         activeIndex == widget.index;
+
+    _logTrailer(
+      'Visibility changed: ${shouldAutoPlay ? 'visible' : 'hidden'}',
+    );
 
     if (shouldAutoPlay == _isAutoPlayActive) return;
     _isAutoPlayActive = shouldAutoPlay;
@@ -353,7 +369,9 @@ class _MovieCardState extends State<MovieCard> {
 
       _ensureMuted();
 
-      await _previewPlayer!.play();
+      if (!_previewPlayer!.state.playing) {
+        await _previewPlayer!.play();
+      }
       if (!mounted ||
           generation != _previewGeneration ||
           _activePreviewState != this) {
@@ -420,6 +438,15 @@ class _MovieCardState extends State<MovieCard> {
       debugPrint(
         'HOME_AUTOPLAY_CARD: $message '
         'id=${widget.movie.id ?? 'unknown'} index=${widget.index}',
+      );
+    }
+  }
+
+  void _logTrailer(String message) {
+    if (kDebugMode) {
+      debugPrint(
+        '[TRAILER] $message id=${widget.movie.id ?? 'unknown'} '
+        'index=${widget.index}',
       );
     }
   }
