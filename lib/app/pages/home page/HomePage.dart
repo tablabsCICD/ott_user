@@ -495,6 +495,11 @@ class _HomePageState extends State<HomePage>
         notifier.value = null;
       }
     }
+    if (_continueWatchActiveIndex.value != null) {
+      _continueWatchActiveIndex.value = null;
+    }
+    MovieCard.stopActiveTrailerPreview(reason);
+    ContinueWatchMovieCard.stopActiveTrailerPreview(reason);
     _logHomeAutoPlay('Video Stopped: $reason');
   }
 

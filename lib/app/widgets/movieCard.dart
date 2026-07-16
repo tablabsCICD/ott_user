@@ -9,6 +9,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/wallet_platform.dart';
+import 'package:ott/app/core/utils/direct_trailer_source.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
@@ -51,6 +52,15 @@ class MovieCard extends StatefulWidget {
     this.onContentUpdated,
   });
 
+  static void stopActiveTrailerPreview([String reason = 'external stop']) {
+    final activeState = _MovieCardState._activePreviewState;
+    activeState?._playDelayTimer?.cancel();
+    activeState?._stopAndDisposePreview(reason);
+    if (_MovieCardState._activePreviewState == activeState) {
+      _MovieCardState._activePreviewState = null;
+    }
+  }
+
   @override
   State<MovieCard> createState() => _MovieCardState();
 }
@@ -70,7 +80,7 @@ class _MovieCardState extends State<MovieCard> {
   Timer? _playDelayTimer;
 
   Uri? _previewUri(String? rawUrl) {
-    final value = rawUrl?.trim() ?? '';
+    final value = DirectTrailerSource.fromBackend(rawUrl) ?? '';
     final uri = Uri.tryParse(value);
     if (uri == null || !uri.hasScheme) return null;
 
@@ -747,6 +757,11 @@ class _MovieCardState extends State<MovieCard> {
     final movie = widget.movie;
 
     if (movie.id == null || movie.type == null) return;
+    if (_activePreviewState == this) {
+      _activePreviewState = null;
+    }
+    _playDelayTimer?.cancel();
+    _stopAndDisposePreview('opening details');
 
     Navigator.push(
       context,
@@ -768,6 +783,11 @@ class _MovieCardState extends State<MovieCard> {
   Future<void> _playMovie() async {
     final movie = widget.movie;
     if (movie.id == null) return;
+    if (_activePreviewState == this) {
+      _activePreviewState = null;
+    }
+    _playDelayTimer?.cancel();
+    _stopAndDisposePreview('opening protected playback');
 
     Content contentToPlay = movie;
     var contentUrl = contentToPlay.contentUrl;

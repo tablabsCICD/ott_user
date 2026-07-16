@@ -7,6 +7,7 @@ import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:ott/app/core/utils/direct_trailer_source.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/wallet_platform.dart';
@@ -46,6 +47,15 @@ class ContinueWatchMovieCard extends StatefulWidget {
     this.enableTrailerPreview = true,
   });
 
+  static void stopActiveTrailerPreview([String reason = 'external stop']) {
+    final activeState = _ContinueWatchMovieCardState._activePreviewState;
+    activeState?._playDelayTimer?.cancel();
+    activeState?._stopAndDisposePreview(reason);
+    if (_ContinueWatchMovieCardState._activePreviewState == activeState) {
+      _ContinueWatchMovieCardState._activePreviewState = null;
+    }
+  }
+
   @override
   State<ContinueWatchMovieCard> createState() => _ContinueWatchMovieCardState();
 }
@@ -61,10 +71,11 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   bool _isPreviewPlaying = false;
   bool _isAutoPlayActive = false;
   bool _isStartingPreview = false;
+  int _previewGeneration = 0;
   Timer? _playDelayTimer;
 
   Uri? _previewUri(String? rawUrl) {
-    final value = rawUrl?.trim() ?? '';
+    final value = DirectTrailerSource.fromBackend(rawUrl) ?? '';
     final uri = Uri.tryParse(value);
     if (uri == null || !uri.hasScheme) return null;
 
@@ -133,6 +144,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
 
     final trailerUri = _previewUri(widget.movie.trailerUrl);
     if (trailerUri == null) return false;
+    final generation = _previewGeneration;
 
     final player = Player();
     final controller = VideoController(player);
@@ -162,6 +174,18 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       await player.open(Media(trailerUri.toString()), play: false);
       await player.setVolume(_isMuted ? 0 : 100);
 
+      if (!mounted ||
+          generation != _previewGeneration ||
+          !_isPlayTriggerActive ||
+          _activePreviewState != this) {
+        for (final subscription in _previewSubscriptions) {
+          unawaited(subscription.cancel());
+        }
+        _previewSubscriptions.clear();
+        await player.dispose();
+        return false;
+      }
+
       _previewPlayer = player;
       _videoController = controller;
 
@@ -178,14 +202,19 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   }
 
   void _disposeVideoController() {
+    _previewGeneration++;
     for (final subscription in _previewSubscriptions) {
       unawaited(subscription.cancel());
     }
     _previewSubscriptions.clear();
-    _previewPlayer?.dispose();
+    final player = _previewPlayer;
     _previewPlayer = null;
     _videoController = null;
     _isVideoInitialized = false;
+    _isPreviewPlaying = false;
+    if (player != null) {
+      unawaited(player.dispose());
+    }
   }
 
   @override
@@ -196,7 +225,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       oldWidget.activeIndexListenable
           ?.removeListener(_handleActiveIndexChanged);
       _playDelayTimer?.cancel();
-      _stopPreview();
+      _stopAndDisposePreview('trailer preview disabled');
       if (!widget.enableTrailerPreview) {
         _disposeVideoController();
       } else {
@@ -215,8 +244,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
 
     if (oldWidget.movie.trailerUrl != widget.movie.trailerUrl) {
       _playDelayTimer?.cancel();
-      _stopPreview();
-      _disposeVideoController();
+      _stopAndDisposePreview('trailer url changed');
     }
   }
 
@@ -242,7 +270,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       _schedulePreview();
     } else {
       _playDelayTimer?.cancel();
-      _stopPreview();
+      _stopAndDisposePreview('visibility below threshold');
       if (_activePreviewState == this) {
         _activePreviewState = null;
       }
@@ -318,28 +346,36 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     try {
       _activatePreview();
 
+      final generation = ++_previewGeneration;
       final ready = await _ensureVideoInitialized();
       if (!ready || !mounted) {
         if (_activePreviewState == this) {
           _activePreviewState = null;
         }
-        _stopPreview();
+        _stopAndDisposePreview('not ready');
         return;
       }
 
-      if (!_isPlayTriggerActive) {
-        _stopPreview();
+      if (!_isPlayTriggerActive ||
+          generation != _previewGeneration ||
+          _activePreviewState != this) {
+        _stopAndDisposePreview('stale start');
         return;
       }
 
       _ensureMuted();
 
       await _previewPlayer!.play();
-      if (!mounted) return;
+      if (!mounted ||
+          generation != _previewGeneration ||
+          _activePreviewState != this) {
+        _stopAndDisposePreview('stale after play');
+        return;
+      }
       setState(() => _isPreviewPlaying = true);
     } catch (e) {
       debugPrint("Trailer play failed: $e");
-      _stopPreview();
+      _stopAndDisposePreview('play failed');
       if (_activePreviewState == this) {
         _activePreviewState = null;
       }
@@ -379,6 +415,12 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     setState(() {
       _isPreviewPlaying = false;
     });
+  }
+
+  void _stopAndDisposePreview(String reason) {
+    _previewGeneration++;
+    _stopPreview(external: true);
+    _disposeVideoController();
   }
 
   @override
@@ -698,6 +740,11 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     final movie = widget.movie;
 
     if (movie.id == null || movie.type == null) return;
+    if (_activePreviewState == this) {
+      _activePreviewState = null;
+    }
+    _playDelayTimer?.cancel();
+    _stopAndDisposePreview('opening details');
 
     if (movie.type!.toLowerCase() == "movie") {
       _playContent();
@@ -740,6 +787,11 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   Future<void> _playContent() async {
     final movie = widget.movie;
     if (movie.id == null) return;
+    if (_activePreviewState == this) {
+      _activePreviewState = null;
+    }
+    _playDelayTimer?.cancel();
+    _stopAndDisposePreview('opening protected playback');
 
     Content contentToPlay = movie;
     var contentUrl = contentToPlay.contentUrl;

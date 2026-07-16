@@ -16,6 +16,7 @@ import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/offline_download_provider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
+import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
@@ -38,7 +39,8 @@ class MovieDetailsPage extends StatefulWidget {
   State<MovieDetailsPage> createState() => _MovieDetailsPageState();
 }
 
-class _MovieDetailsPageState extends State<MovieDetailsPage> {
+class _MovieDetailsPageState extends State<MovieDetailsPage>
+    with RouteAware, WidgetsBindingObserver {
   static const double _mediaPlayerBottomMargin = 24;
 
   bool isLoading = true;
@@ -51,10 +53,12 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   final FocusNode _heroFocusNode = FocusNode(debugLabel: 'movieHero');
   Timer? _heroTrailerTimer;
   bool _isHeroTrailerPlaying = false;
+  PageRoute<dynamic>? _route;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _fetchData();
     Future.delayed(const Duration(seconds: 2), () {
       if (!mounted) return;
@@ -62,6 +66,44 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
         isLoading = false;
       });
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<dynamic> && route != _route) {
+      if (_route != null) {
+        routeObserver.unsubscribe(this);
+      }
+      _route = route;
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPushNext() {
+    _pauseAllTrailerPreviews();
+  }
+
+  @override
+  void didPopNext() {
+    if (!ResponsiveWidget.isMobile(context)) {
+      _queueHeroTrailerAutoplay();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _pauseAllTrailerPreviews();
+    } else if (state == AppLifecycleState.resumed &&
+        (ModalRoute.of(context)?.isCurrent ?? true) &&
+        !ResponsiveWidget.isMobile(context)) {
+      _queueHeroTrailerAutoplay();
+    }
   }
 
   Future<void> _fetchData() async {
@@ -112,12 +154,19 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    routeObserver.unsubscribe(this);
     _trailerController.pause?.call();
     _teaserController.pause?.call();
     _heroTrailerTimer?.cancel();
     _tvScrollController.dispose();
     _heroFocusNode.dispose();
     super.dispose();
+  }
+
+  void _pauseAllTrailerPreviews() {
+    _stopHeroTrailer();
+    _teaserController.pause?.call();
   }
 
   Future<void> _playMovie(Content movie) async {
@@ -978,6 +1027,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     _heroTrailerTimer = Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
       _heroTrailerTimer = null;
+      if (_trailerController.canAutoPlay?.call() != true) return;
       _trailerController.mute?.call();
       _trailerController.play?.call();
       setState(() => _isHeroTrailerPlaying = true);

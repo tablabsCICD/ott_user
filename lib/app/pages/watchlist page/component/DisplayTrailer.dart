@@ -6,6 +6,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ott/app/core/utils/direct_trailer_source.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
+import 'package:ott/app/route/route_observer.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:ott/app/widgets/video_skip_controls.dart';
@@ -381,14 +382,19 @@ class TrailerPreview extends StatefulWidget {
   State<TrailerPreview> createState() => _TrailerPreviewState();
 }
 
-class _TrailerPreviewState extends State<TrailerPreview> {
+class _TrailerPreviewState extends State<TrailerPreview>
+    with WidgetsBindingObserver, RouteAware {
   Player? _player;
   VideoController? _videoController;
   YoutubePlayerController? _youtubeController;
   final List<StreamSubscription<dynamic>> _subscriptions = [];
+  PageRoute<dynamic>? _route;
   bool _showControls = false;
   bool _isDisposed = false;
   bool _hasError = false;
+  bool _userPaused = false;
+  bool _wasPlayingBeforeRoutePause = false;
+  bool _wasPlayingBeforeLifecyclePause = false;
   int _initToken = 0;
 
   String get _trailerUrl =>
@@ -398,16 +404,18 @@ class _TrailerPreviewState extends State<TrailerPreview> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     widget.controller.pause = () {
-      _player?.pause();
-      _youtubeController?.pause();
+      _pausePreview();
     };
 
     widget.controller.play = () {
-      _player?.play();
-      _youtubeController?.play();
+      _playPreview();
     };
+
+    widget.controller.canAutoPlay =
+        () => !_userPaused && _trailerUrl.isNotEmpty;
 
     widget.controller.mute = () {
       _player?.setVolume(0);
@@ -420,6 +428,78 @@ class _TrailerPreviewState extends State<TrailerPreview> {
     };
 
     if (widget.trailerUrl?.isNotEmpty == true) _init();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<dynamic> && route != _route) {
+      if (_route != null) {
+        routeObserver.unsubscribe(this);
+      }
+      _route = route;
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPushNext() {
+    _wasPlayingBeforeRoutePause = _isPreviewPlaying;
+    _pausePreview();
+  }
+
+  @override
+  void didPopNext() {
+    if (_wasPlayingBeforeRoutePause && widget.autoPlay && !_userPaused) {
+      _playPreview();
+    }
+    _wasPlayingBeforeRoutePause = false;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _wasPlayingBeforeLifecyclePause = _isPreviewPlaying;
+      _pausePreview();
+    } else if (state == AppLifecycleState.resumed &&
+        _wasPlayingBeforeLifecyclePause &&
+        widget.autoPlay &&
+        !_userPaused) {
+      _playPreview();
+      _wasPlayingBeforeLifecyclePause = false;
+    }
+  }
+
+  bool get _isPreviewPlaying {
+    final player = _player;
+    if (player != null) return player.state.playing;
+    return _youtubeController?.value.isPlaying ?? false;
+  }
+
+  void _pausePreview() {
+    unawaited(_player?.pause());
+    _youtubeController?.pause();
+    if (mounted && !_isDisposed) setState(() {});
+  }
+
+  void _playPreview() {
+    if (_userPaused) return;
+    unawaited(_player?.play());
+    _youtubeController?.play();
+    if (mounted && !_isDisposed) setState(() {});
+  }
+
+  void _toggleManualPlayback() {
+    if (_isPreviewPlaying) {
+      _userPaused = true;
+      _pausePreview();
+    } else {
+      _userPaused = false;
+      _playPreview();
+    }
   }
 
   Future<void> _init() async {
@@ -445,7 +525,7 @@ class _TrailerPreviewState extends State<TrailerPreview> {
       if (!widget.muted) {
         controller.unMute();
       }
-      if (!widget.autoPlay) {
+      if (!widget.autoPlay || _userPaused) {
         controller.pause();
       }
 
@@ -507,7 +587,7 @@ class _TrailerPreviewState extends State<TrailerPreview> {
       );
       await player.open(Media(_trailerUrl), play: false);
       await player.setVolume(widget.muted ? 0 : 100);
-      if (widget.autoPlay) {
+      if (widget.autoPlay && !_userPaused) {
         await player.play();
       }
 
@@ -567,8 +647,11 @@ class _TrailerPreviewState extends State<TrailerPreview> {
   @override
   void dispose() {
     _isDisposed = true;
+    WidgetsBinding.instance.removeObserver(this);
+    routeObserver.unsubscribe(this);
     widget.controller.pause = null;
     widget.controller.play = null;
+    widget.controller.canAutoPlay = null;
     widget.controller.mute = null;
     widget.controller.unmute = null;
     _disposeController();
@@ -665,10 +748,7 @@ class _TrailerPreviewState extends State<TrailerPreview> {
                           : Icons.play_circle_filled,
                       color: Colors.white,
                     ),
-                    onPressed: () {
-                      player.state.playing ? player.pause() : player.play();
-                      setState(() {});
-                    },
+                    onPressed: _toggleManualPlayback,
                   ),
                 ),
                 Center(
@@ -861,6 +941,7 @@ class _TrailerPreviewState extends State<TrailerPreview> {
 class TrailerPreviewController {
   VoidCallback? pause;
   VoidCallback? play;
+  bool Function()? canAutoPlay;
   VoidCallback? mute;
   VoidCallback? unmute;
 }

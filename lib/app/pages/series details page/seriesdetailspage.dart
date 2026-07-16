@@ -21,6 +21,7 @@ import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/offline_download_provider.dart';
 import 'package:ott/app/provider/series_provider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
+import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -49,7 +50,8 @@ class SeriesDetailsPage extends StatefulWidget {
   State<SeriesDetailsPage> createState() => _SeriesDetailsPageState();
 }
 
-class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
+class _SeriesDetailsPageState extends State<SeriesDetailsPage>
+    with RouteAware, WidgetsBindingObserver {
   int _selectedSeasonIndex = 0;
   final TrailerPreviewController _trailerController =
       TrailerPreviewController();
@@ -62,10 +64,12 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   List<CastMember> _seasonCastList = [];
   bool _isLoadingSeasonCast = false;
   int? _loadedSeasonId;
+  PageRoute<dynamic>? _route;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     Future.microtask(() {
       _loadInitialData();
       context.read<PlayMediaProvider>().loadLocalResumes();
@@ -73,13 +77,58 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<dynamic> && route != _route) {
+      if (_route != null) {
+        routeObserver.unsubscribe(this);
+      }
+      _route = route;
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPushNext() {
+    _pauseAllTrailerPreviews();
+  }
+
+  @override
+  void didPopNext() {
+    if (!ResponsiveWidget.isMobile(context)) {
+      _queueHeroTrailerAutoplay();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _pauseAllTrailerPreviews();
+    } else if (state == AppLifecycleState.resumed &&
+        (ModalRoute.of(context)?.isCurrent ?? true) &&
+        !ResponsiveWidget.isMobile(context)) {
+      _queueHeroTrailerAutoplay();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    routeObserver.unsubscribe(this);
     _trailerController.pause?.call();
     _teaserController.pause?.call();
     _heroTrailerTimer?.cancel();
     _tvScrollController.dispose();
     _heroFocusNode.dispose();
     super.dispose();
+  }
+
+  void _pauseAllTrailerPreviews() {
+    _stopHeroTrailer();
+    _teaserController.pause?.call();
   }
 
   Future<void> _loadInitialData() async {
@@ -1105,6 +1154,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     _heroTrailerTimer = Timer(const Duration(seconds: 2), () {
       if (!mounted) return;
       _heroTrailerTimer = null;
+      if (_trailerController.canAutoPlay?.call() != true) return;
       _trailerController.mute?.call();
       _trailerController.play?.call();
       setState(() => _isHeroTrailerPlaying = true);
