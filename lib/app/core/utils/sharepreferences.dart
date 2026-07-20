@@ -46,19 +46,23 @@ class LocalSharePreferences {
   Future<User?> getUser() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String? userJson = prefs.getString(SharedPreferencesConstant.currentUser);
-    if (kDebugMode) debugPrint("getUser method in $userJson");
+    if (kDebugMode) {
+      debugPrint('Cached authenticated user present=${userJson != null}.');
+    }
 
     if (userJson != null) {
       try {
         Map<String, dynamic> userMap = jsonDecode(userJson);
-        if (kDebugMode) debugPrint("Parsed User Map: $userMap");
+        if (kDebugMode) {
+          debugPrint('Cached authenticated user decoded successfully.');
+        }
         return User.fromJson(userMap);
       } catch (e) {
         if (kDebugMode) debugPrint("Error decoding user JSON: $e");
         return null;
       }
     } else {
-      if (kDebugMode) debugPrint("getUser method in null return $userJson");
+      if (kDebugMode) debugPrint('No cached authenticated user found.');
       return null;
     }
   }

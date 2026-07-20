@@ -5,18 +5,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:ott/app/core/network/anti_piracy_api_client.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/invoice_service.dart';
+import 'package:ott/app/core/services/session_manager.dart';
+import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
+import 'package:ott/app/provider/secure_playback_controller.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
+import 'package:ott/app/widgets/playback_watermark_overlay.dart';
 import 'package:ott/app/widgets/shimmer%20loader/shimmer_loader.dart';
+import 'package:ott/app/widgets/video_skip_controls.dart';
+import 'package:ott/data/models/anti_piracy_models.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+
+String _resolveShortPlaybackCountryCode() {
+  final countryCode =
+      WidgetsBinding.instance.platformDispatcher.locale.countryCode;
+  final normalized = countryCode?.trim().toUpperCase();
+  if (normalized != null && RegExp(r'^[A-Z]{2}$').hasMatch(normalized)) {
+    return normalized;
+  }
+  return 'IN';
+}
 
 class ShortsPlayerPage extends StatefulWidget {
   final ShortDetailModel short;
@@ -30,6 +47,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     with WidgetsBindingObserver {
   Player? _controller;
   VideoController? _videoController;
+  SecurePlaybackController? _securePlaybackController;
   final List<StreamSubscription<dynamic>> _playerSubscriptions = [];
   final PageController _pageController = PageController();
 
@@ -40,6 +58,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
   bool _isMetaExpanded = false;
   bool _hasVideoError = false;
   String? _videoErrorMessage;
+  bool _handlingSecureAuthenticationFailure = false;
 
   int get totalParts => _parts.length;
   int? _parsePartId(ShortPart part) => int.tryParse(part.partId);
@@ -72,6 +91,12 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    final secureController = _securePlaybackController;
+    if (secureController != null) {
+      secureController.removeListener(_onSecurePlaybackChanged);
+      unawaited(secureController.stop());
+      secureController.dispose();
+    }
     for (final subscription in _playerSubscriptions) {
       unawaited(subscription.cancel());
     }
@@ -147,6 +172,13 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
       final part = _parts[index];
 
+      final oldSecureController = _securePlaybackController;
+      _securePlaybackController = null;
+      if (oldSecureController != null) {
+        oldSecureController.removeListener(_onSecurePlaybackChanged);
+        await oldSecureController.stop();
+        oldSecureController.dispose();
+      }
       final old = _controller;
       _controller = null;
       _videoController = null;
@@ -202,44 +234,20 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         return;
       }
 
-      final ctrl = Player();
-      final videoController = VideoController(ctrl);
-      try {
-        _playerSubscriptions
-          ..add(ctrl.stream.position.listen((_) {
-            if (mounted) setState(() {});
-          }))
-          ..add(ctrl.stream.duration.listen((_) {
-            if (mounted) setState(() {});
-          }))
-          ..add(ctrl.stream.playing.listen((_) {
-            if (mounted) setState(() {});
-          }))
-          ..add(ctrl.stream.error.listen((error) {
-            debugPrint('Short media_kit error: $error');
-            if (mounted) {
-              setState(() {
-                _hasVideoError = true;
-                _videoErrorMessage = "Failed to load video";
-              });
-            }
-          }));
+      final secureController = SecurePlaybackController(
+        contentId: updated.partId,
+        originalPlaybackUrl: updated.videoUrl,
+        country: _resolveShortPlaybackCountryCode(),
+        mediaLoader: _loadSecureMedia,
+        pausePlayer: () async => _controller?.pause(),
+      );
+      _securePlaybackController = secureController;
+      secureController.addListener(_onSecurePlaybackChanged);
+      await secureController.start();
 
-        await ctrl.open(Media(updated.videoUrl), play: true);
-        await ctrl.setVolume(100);
-      } catch (e) {
-        await ctrl.dispose();
-        if (mounted) {
-          setState(() {
-            _hasVideoError = true;
-            _videoErrorMessage = "Failed to load video";
-          });
-        }
-        return;
-      }
-
-      if (!mounted) {
-        await ctrl.dispose();
+      if (!mounted ||
+          secureController.state == SecurePlaybackState.accessDenied ||
+          secureController.state == SecurePlaybackState.playbackError) {
         return;
       }
 
@@ -251,8 +259,6 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       await _refreshFromBackend();
 
       setState(() {
-        _controller = ctrl;
-        _videoController = videoController;
         _currentIndex = index;
         _hasVideoError = false;
         _videoErrorMessage = null;
@@ -260,6 +266,143 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     } finally {
       _isLoadingPart = false;
     }
+  }
+
+  void _onSecurePlaybackChanged() {
+    if (!mounted) return;
+    final controller = _securePlaybackController;
+    if (controller == null) return;
+    if (controller.failure == SecurePlaybackFailure.unauthenticated &&
+        !_handlingSecureAuthenticationFailure) {
+      _handlingSecureAuthenticationFailure = true;
+      unawaited(SessionManager.instance.handleSessionExpired(
+        'Your session has expired. Please sign in again.',
+      ));
+    }
+    setState(() {
+      _hasVideoError = controller.state == SecurePlaybackState.accessDenied ||
+          controller.state == SecurePlaybackState.playbackError;
+      _videoErrorMessage = controller.errorMessage;
+    });
+  }
+
+  Future<SecureMediaRestoreResult> _loadSecureMedia(
+    SignedPlaybackResponse authorization, {
+    required bool isRefresh,
+  }) async {
+    final previousState = _controller?.state;
+    final position = previousState?.position ?? Duration.zero;
+    final wasPlaying = previousState?.playing ?? true;
+    final volume = previousState?.volume ?? 100;
+    final rate = previousState?.rate ?? 1;
+
+    if (authorization.audioTracks.length > 1 ||
+        authorization.subtitleTracks.length > 1) {
+      SecurityDebugLog.event(
+        'PLAYER',
+        'Multiple supported external tracks were returned for the selected part; only one automatic track will be attached.',
+      );
+    }
+
+    final old = _controller;
+    _controller = null;
+    _videoController = null;
+    for (final subscription in _playerSubscriptions) {
+      await subscription.cancel();
+    }
+    _playerSubscriptions.clear();
+    await old?.pause();
+    await old?.dispose();
+
+    final player = Player();
+    final videoController = VideoController(player);
+    _playerSubscriptions
+      ..add(player.stream.position.listen((_) {
+        if (mounted) setState(() {});
+      }))
+      ..add(player.stream.duration.listen((_) {
+        if (mounted) setState(() {});
+      }))
+      ..add(player.stream.playing.listen((isPlaying) {
+        _securePlaybackController?.onPlayingChanged(isPlaying);
+        if (mounted) setState(() {});
+      }))
+      ..add(player.stream.error.listen((error) {
+        debugPrint('Short media_kit error: $error');
+        if (mounted) {
+          setState(() {
+            _hasVideoError = true;
+            _videoErrorMessage = 'Failed to load video';
+          });
+        }
+      }));
+
+    try {
+      await player.open(
+        Media(
+          authorization.playbackUrl,
+          httpHeaders: authorization.httpHeaders,
+        ),
+        play: true,
+      );
+      final automaticAudio =
+          getAutomaticAudioTrack(authorization.audioTracks);
+      if (automaticAudio != null) {
+        try {
+          await player.setAudioTrack(
+            AudioTrack.uri(
+              automaticAudio.url,
+              title: automaticAudio.label,
+              language: automaticAudio.language,
+            ),
+          );
+        } catch (_) {
+          SecurityDebugLog.event(
+            'PLAYER',
+            'Automatic external part audio is unsupported; using manifest audio.',
+          );
+        }
+      }
+      final automaticSubtitle =
+          getAutomaticSubtitleTrack(authorization.subtitleTracks);
+      if (automaticSubtitle != null) {
+        try {
+          await player.setSubtitleTrack(
+            SubtitleTrack.uri(
+              automaticSubtitle.url,
+              title: automaticSubtitle.label,
+              language: automaticSubtitle.language,
+            ),
+          );
+        } catch (_) {
+          SecurityDebugLog.event(
+            'PLAYER',
+            'Automatic external part subtitle is unsupported; continuing playback.',
+          );
+        }
+      }
+      await player.setVolume(volume);
+      if (isRefresh) {
+        if (position > Duration.zero) await player.seek(position);
+        await player.setRate(rate);
+        if (!wasPlaying) await player.pause();
+      }
+    } catch (_) {
+      await player.dispose();
+      rethrow;
+    }
+
+    if (!mounted) {
+      await player.dispose();
+      throw StateError('Mini Series player was disposed');
+    }
+    setState(() {
+      _controller = player;
+      _videoController = videoController;
+      _hasVideoError = false;
+      _videoErrorMessage = null;
+    });
+    return SecureMediaRestoreResult(isPlaying: player.state.playing);
   }
 
   Future<void> _changePage(int index) async {
@@ -315,6 +458,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     final isLandscape = orientation == Orientation.landscape;
     final useFullWidthPlayer =
         isLandscape || ResponsiveWidget.isMobile(context);
+    final watermark = _securePlaybackController?.watermark;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -336,6 +480,8 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                   itemBuilder: (_, i) => _overlay(i),
                 ),
               ),
+              if (watermark != null)
+                PlaybackWatermarkOverlay(watermark: watermark),
               _backButton(),
             ],
           ),
@@ -398,6 +544,16 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         !_isMetaExpanded && (titleText.length > 36 || hasDescription);
     return Stack(
       children: [
+        Positioned.fill(
+          child: Center(
+            child: VideoSkipControls(
+              onBackward: () => _seekBy(const Duration(seconds: -10)),
+              onForward: () => _seekBy(const Duration(seconds: 10)),
+              gap: 78,
+              compact: true,
+            ),
+          ),
+        ),
         Positioned(
           left: 16,
           bottom: 80,
@@ -815,6 +971,20 @@ ${short.durationSec ?? ''}
     controller.state.playing ? controller.pause() : controller.play();
   }
 
+  void _seekBy(Duration offset) {
+    final controller = _controller;
+    if (controller == null) return;
+    unawaited(
+      controller.seek(
+        boundedSeekPosition(
+          position: controller.state.position,
+          duration: controller.state.duration,
+          offset: offset,
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleDoubleTapLike() async {
     final controller = _controller;
     if (controller == null || _parts.isEmpty) {
@@ -906,9 +1076,9 @@ ${short.durationSec ?? ''}
       top: MediaQuery.of(context).padding.top + 12,
       left: 12,
       child: InkWell(
-      onTap: () {
-        _controller?.pause();
-        Navigator.pop(context);
+        onTap: () {
+          _controller?.pause();
+          Navigator.pop(context);
         },
         child: const CircleAvatar(
           radius: 18,

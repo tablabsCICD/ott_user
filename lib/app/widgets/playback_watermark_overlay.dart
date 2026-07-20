@@ -1,17 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
-import 'package:ott/app/core/services/anti_piracy_service.dart';
+import 'package:ott/data/models/anti_piracy_models.dart';
 
 class PlaybackWatermarkOverlay extends StatefulWidget {
   const PlaybackWatermarkOverlay({
     super.key,
-    required this.identity,
+    required this.watermark,
   });
 
-  final WatermarkIdentity identity;
+  final WatermarkData watermark;
 
   @override
   State<PlaybackWatermarkOverlay> createState() =>
@@ -29,10 +28,8 @@ class _PlaybackWatermarkOverlayState extends State<PlaybackWatermarkOverlay> {
     Alignment.center,
   ];
 
-  final DateFormat _timestampFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
   Timer? _timer;
   int _positionIndex = 0;
-  DateTime _now = DateTime.now();
 
   @override
   void initState() {
@@ -41,7 +38,6 @@ class _PlaybackWatermarkOverlayState extends State<PlaybackWatermarkOverlay> {
       if (!mounted) return;
       setState(() {
         _positionIndex = (_positionIndex + 1) % _positions.length;
-        _now = DateTime.now();
       });
     });
   }
@@ -54,12 +50,6 @@ class _PlaybackWatermarkOverlayState extends State<PlaybackWatermarkOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    final lines = [
-      //  'User: ${widget.identity.userId}',
-      widget.identity.email,
-      // _timestampFormat.format(_now),
-    ];
-
     return IgnorePointer(
       child: SafeArea(
         minimum: const EdgeInsets.all(28),
@@ -69,17 +59,17 @@ class _PlaybackWatermarkOverlayState extends State<PlaybackWatermarkOverlay> {
           curve: Curves.easeInOut,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.22),
+              color: Colors.black.withValues(alpha: 0.22),
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: Colors.white.withOpacity(0.18)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               child: Text(
-                lines.join('\n'),
+                widget.watermark.displayText,
                 textAlign: TextAlign.left,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.58),
+                  color: Colors.white.withValues(alpha: 0.58),
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   height: 1.25,

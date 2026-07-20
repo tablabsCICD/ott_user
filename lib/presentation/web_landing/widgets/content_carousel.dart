@@ -76,7 +76,8 @@ class _ContentCarouselState extends State<ContentCarousel> {
   Widget build(BuildContext context) {
     if (widget.items.isEmpty) return const SizedBox.shrink();
     final width = MediaQuery.of(context).size.width;
-    final cardWidth = width >= 1360 ? 178.0 : 156.0;
+    final horizontalPadding = width < 600 ? 16.0 : (width < 1024 ? 32.0 : 56.0);
+    final cardWidth = width < 600 ? 138.0 : (width >= 1360 ? 178.0 : 156.0);
 
     return RepaintBoundary(
       child: Padding(
@@ -85,7 +86,7 @@ class _ContentCarouselState extends State<ContentCarousel> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 56),
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
               child: Row(
                 children: [
                   Text(
@@ -97,15 +98,17 @@ class _ContentCarouselState extends State<ContentCarousel> {
                     ),
                   ),
                   const Spacer(),
-                  _ArrowButton(
-                    icon: Icons.chevron_left,
-                    onTap: () => _scrollBy(-720),
-                  ),
-                  const SizedBox(width: 10),
-                  _ArrowButton(
-                    icon: Icons.chevron_right,
-                    onTap: () => _scrollBy(720),
-                  ),
+                  if (width >= 600) ...[
+                    _ArrowButton(
+                      icon: Icons.chevron_left,
+                      onTap: () => _scrollBy(-720),
+                    ),
+                    const SizedBox(width: 10),
+                    _ArrowButton(
+                      icon: Icons.chevron_right,
+                      onTap: () => _scrollBy(720),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -122,7 +125,7 @@ class _ContentCarouselState extends State<ContentCarousel> {
                 height: widget.numbered ? 292 : 270,
                 child: ListView.separated(
                   controller: _controller,
-                  padding: const EdgeInsets.symmetric(horizontal: 56),
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                   scrollDirection: Axis.horizontal,
                   itemCount: widget.items.length +
                       (widget.isLoadingMore || widget.hasMore ? 1 : 0),

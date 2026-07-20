@@ -183,6 +183,14 @@ class _NavigationPageState extends State<NavigationPage> {
                 backgroundColor: selectedThemeData.scaffoldBackgroundColor,
                 selectedItemColor: selectedThemeData.primaryColor,
                 unselectedItemColor: selectedThemeData.canvasColor,
+                selectedIconTheme: IconThemeData(
+                  color: selectedThemeData.primaryColor,
+                  size: 26,
+                ),
+                unselectedIconTheme: IconThemeData(
+                  color: selectedThemeData.canvasColor.withOpacity(0.76),
+                  size: 24,
+                ),
                 showSelectedLabels: true,
                 showUnselectedLabels: false,
                 items: [

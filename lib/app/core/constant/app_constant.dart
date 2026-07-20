@@ -1,6 +1,6 @@
 class AppConstant {
-  static const String appVersion = "1.0.14";
-  static const int appBuildNumber = 31;
+  static const String appVersion = "1.0.15";
+  static const int appBuildNumber = 32;
   static final String GOOGLE_KEY = "AIzaSyDbIESWMKX_4TqGEiFUhbu8-PUpLnVBPrc";
   static const String razorpayKeyId = String.fromEnvironment(
     'RAZORPAY_KEY_ID',
@@ -14,7 +14,14 @@ class AppConstant {
   );
   static const playStoreLink =
       "https://play.google.com/store/apps/details?id=com.filmytell.ott";
+  static const filmytellPartnerPlayStoreLink =
+      "https://play.google.com/store/apps/details?id=com.filmytell.partner";
+
   static const webAppLink = "https://filmytell.com";
+  static const facebookUrl =
+      "https://www.facebook.com/profile.php?id=61591490073891";
+  static const instagramUrl = "https://www.instagram.com/filmytell/";
+  static const xUrl = "https://x.com/Filmytell";
   static const accountDeletionUrl = "https://filmytell.com/account-delete.html";
 
   static const privacyPolicy =

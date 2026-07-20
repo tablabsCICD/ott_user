@@ -14,6 +14,10 @@ void main() {
     return;
   }
 
+  if (!_verifyFlutterWebAssets(webBuildDirectory)) {
+    return;
+  }
+
   if (!_copyRequiredFile(
     source: File('web/.well-known/assetlinks.json'),
     destination: File('${webBuildDirectory.path}/.well-known/assetlinks.json'),
@@ -28,6 +32,46 @@ void main() {
   )) {
     return;
   }
+}
+
+bool _verifyFlutterWebAssets(Directory webBuildDirectory) {
+  final requiredFiles = <String>[
+    'assets/AssetManifest.bin',
+    'assets/AssetManifest.bin.json',
+    'assets/FontManifest.json',
+    'assets/fonts/MaterialIcons-Regular.otf',
+    'flutter_bootstrap.js',
+    'main.dart.js',
+    'canvaskit/canvaskit.js',
+    'canvaskit/canvaskit.wasm',
+  ];
+
+  for (final relativePath in requiredFiles) {
+    final file = File('${webBuildDirectory.path}/$relativePath');
+    if (!file.existsSync() || file.lengthSync() == 0) {
+      stderr.writeln(
+        'Incomplete Flutter web build: missing or empty ${file.path}. '
+        'Run `flutter build web` and deploy the complete build/web directory.',
+      );
+      exitCode = 1;
+      return false;
+    }
+  }
+
+  final fontManifest = File(
+    '${webBuildDirectory.path}/assets/FontManifest.json',
+  ).readAsStringSync();
+  if (!fontManifest.contains('fonts/MaterialIcons-Regular.otf')) {
+    stderr.writeln(
+      'Incomplete Flutter web build: FontManifest.json does not reference '
+      'MaterialIcons-Regular.otf.',
+    );
+    exitCode = 1;
+    return false;
+  }
+
+  stdout.writeln('Verified required Flutter web assets.');
+  return true;
 }
 
 bool _copyRequiredFile({

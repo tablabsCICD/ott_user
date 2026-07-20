@@ -22,6 +22,7 @@ import '../../data/models/response/addUserResponse.dart';
 import '../../data/models/user.dart';
 import '../core/constant/api_constant.dart';
 import '../core/network/api_helper.dart';
+import '../core/repositories/secure_playback_repository.dart';
 import '../core/services/device_type_helper.dart';
 import '../core/services/notification_service.dart';
 import '../core/services/session_manager.dart';
@@ -780,6 +781,9 @@ class UserProvider extends BaseProvider {
         if (updateUserResponse.success == true) {
           if (updateUserResponse.data != null) {
             user = updateUserResponse.data!.user!;
+            // Keep the provider synchronized with the persisted/backend user so
+            // dashboards created after this update see the new preferences.
+            userObject = user;
             print("before SEtData ${user.firstName}");
             LocalSharePreferences localSharePreferences =
                 LocalSharePreferences();
@@ -1277,6 +1281,12 @@ class UserProvider extends BaseProvider {
       'session_id',
     ]);
     await SessionManager.instance.saveSessionRecordId(sessionRecordId);
+    SecurePlaybackRepository.instance.markRegistrationUnknown();
+    unawaited(
+      SecurePlaybackRepository.instance
+          .registerCurrentDevice()
+          .catchError((_) {}),
+    );
   }
 
   String? _findStringValue(dynamic value, List<String> keys) {

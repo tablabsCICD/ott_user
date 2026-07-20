@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ott/app/core/utils/text_capitalization_formatter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/email_service.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/l10n/app_localizations.dart';
+import 'package:ott/presentation/web_landing/widgets/play_store_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProductionHouseSection extends StatelessWidget {
@@ -46,6 +49,8 @@ class ProductionHouseSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
+    final width = MediaQuery.sizeOf(context).width;
+    final compact = width < 900;
     final steps = [
       lang.registerProductionHouse,
       lang.completeVerification,
@@ -64,8 +69,13 @@ class ProductionHouseSection extends StatelessWidget {
     ];
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(56, 8, 56, 70),
-      padding: const EdgeInsets.all(34),
+      margin: EdgeInsets.fromLTRB(
+        width < 600 ? 16 : (width < 1024 ? 32 : 56),
+        8,
+        width < 600 ? 16 : (width < 1024 ? 32 : 56),
+        width < 600 ? 46 : 70,
+      ),
+      padding: EdgeInsets.all(width < 600 ? 20 : 34),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         color: const Color(0xFF101010),
@@ -87,10 +97,13 @@ class ProductionHouseSection extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Flex(
+        direction: compact ? Axis.vertical : Axis.horizontal,
+        mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Expanded(
+          Flexible(
+            fit: FlexFit.loose,
             flex: 10,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,9 +120,9 @@ class ProductionHouseSection extends StatelessWidget {
                 const SizedBox(height: 14),
                 Text(
                   lang.productionHousesTitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 40,
+                    fontSize: width < 600 ? 30 : 40,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -187,8 +200,9 @@ class ProductionHouseSection extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 42),
-          Expanded(
+          SizedBox(width: compact ? 0 : 42, height: compact ? 30 : 0),
+          Flexible(
+            fit: FlexFit.loose,
             flex: 9,
             child: Column(
               children: [
@@ -363,12 +377,20 @@ Submitted At: $submittedAt''';
     List<TextInputFormatter>? inputFormatters,
     int minLines = 1,
     int maxLines = 1,
+    TextCapitalization textCapitalization = TextCapitalization.none,
   }) {
     return TextFormField(
       controller: controller,
       enabled: !_sending,
       keyboardType: keyboardType,
-      inputFormatters: inputFormatters,
+      inputFormatters: [
+        ...?inputFormatters,
+        if (textCapitalization == TextCapitalization.words)
+          CapitalizeWordsTextInputFormatter(),
+        if (textCapitalization == TextCapitalization.sentences)
+          CapitalizeSentencesTextInputFormatter(),
+      ],
+      textCapitalization: textCapitalization,
       minLines: minLines,
       maxLines: maxLines,
       textInputAction:
@@ -482,6 +504,7 @@ Submitted At: $submittedAt''';
                 accentColor: theme.primaryColor,
                 minLines: 2,
                 maxLines: 4,
+                textCapitalization: TextCapitalization.sentences,
                 validator: (value) => _validateRequired(
                   value,
                   'Please enter message',
@@ -594,8 +617,7 @@ class _TimelineRowState extends State<_TimelineRow> {
                           ? widget.color
                           : Colors.white.withOpacity(0.10),
                       shape: BoxShape.circle,
-                      border:
-                          Border.all(color: widget.color.withOpacity(0.55)),
+                      border: Border.all(color: widget.color.withOpacity(0.55)),
                     ),
                     child: Center(
                       child: Text(

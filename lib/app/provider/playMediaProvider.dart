@@ -5,6 +5,7 @@ import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/data/models/seriesModel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/utils/sharepreferences.dart';
+import '../core/network/api_helper.dart';
 import 'baseProvider.dart';
 
 class PlayMediaProvider extends BaseProvider {
@@ -58,21 +59,24 @@ class PlayMediaProvider extends BaseProvider {
     required Duration duration,
   }) async {
     try {
-      if (duration.inSeconds == 0) return;
+      if (duration.inSeconds == 0) {
+        debugPrint('Continue watching save skipped: duration is zero');
+        return;
+      }
 
       final key = episodeId != null && seasonId != null
           ? _episodeKey(
-        contentId: contentId,
-        seasonId: seasonId,
-        episodeId: episodeId,
-      )
+              contentId: contentId,
+              seasonId: seasonId,
+              episodeId: episodeId,
+            )
           : _movieKey(contentId);
 
       final currentSeconds = position.inSeconds;
       final lastSaved = _lastSavedSecondsMap[key] ?? 0;
 
       /// ❌ DO NOT SPAM API
-      if ((currentSeconds - lastSaved) < 5) return;
+      if ((currentSeconds - lastSaved).abs() < 5) return;
 
       // 🔥 SAVE LOCALLY (THIS FIXES YOUR BUG)
       _resumeSecondsMap[key] = currentSeconds;
@@ -80,12 +84,15 @@ class PlayMediaProvider extends BaseProvider {
 
       final prefs = LocalSharePreferences();
       final user = await prefs.getUser();
-      if (user?.id == null) return;
+      final authToken = await prefs.getAuthToken();
+      if (user?.id == null) {
+        debugPrint(
+            'Continue watching save skipped: authenticated user ID missing');
+        return;
+      }
 
       final watchedPercentage =
-      ((currentSeconds / duration.inSeconds) * 100)
-          .clamp(0, 100)
-          .toInt();
+          ((currentSeconds / duration.inSeconds) * 100).clamp(0, 100).toInt();
 
       final uri = Uri.parse(
         "${ApiConstant.baseUrl}continue-watching/save",
@@ -98,9 +105,25 @@ class PlayMediaProvider extends BaseProvider {
         if (episodeId != null) "episodeId": episodeId.toString(),
       });
 
-      await http.post(uri);
-    } catch (e) {
-      log("Continue watching error: $e");
+      debugPrint(
+        'Continue watching save request: userId=${user.id} '
+        'contentId=$contentId seasonId=$seasonId episodeId=$episodeId '
+        'watchedSeconds=$currentSeconds watchedPercentage=$watchedPercentage '
+        'authTokenPresent=${authToken != null}',
+      );
+      final response = await ApiHelper().postApi(uri.toString());
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        debugPrint(
+          'Continue watching save failed: status=${response.statusCode} '
+          'body=${response.body}',
+        );
+        return;
+      }
+      debugPrint(
+        'Continue watching save succeeded: status=${response.statusCode}',
+      );
+    } catch (e, stackTrace) {
+      log('Continue watching save error: $e', stackTrace: stackTrace);
     }
   }
 
@@ -113,10 +136,10 @@ class PlayMediaProvider extends BaseProvider {
   }) {
     final key = episodeId != null && seasonId != null
         ? _episodeKey(
-      contentId: contentId,
-      seasonId: seasonId,
-      episodeId: episodeId,
-    )
+            contentId: contentId,
+            seasonId: seasonId,
+            episodeId: episodeId,
+          )
         : _movieKey(contentId);
 
     return _resumeSecondsMap[key] ?? 0;
@@ -142,8 +165,7 @@ class PlayMediaProvider extends BaseProvider {
           }
 
           // first episode of next season
-          if (s + 1 < seasons.length &&
-              seasons[s + 1].episodes.isNotEmpty) {
+          if (s + 1 < seasons.length && seasons[s + 1].episodes.isNotEmpty) {
             return seasons[s + 1].episodes.first;
           }
 
@@ -188,7 +210,6 @@ class PlayMediaProvider extends BaseProvider {
     return _resumeCache[key] ?? 0;
   }
 
-
   String _resumeKey({
     required int contentId,
     int? seasonId,
@@ -208,6 +229,4 @@ class PlayMediaProvider extends BaseProvider {
 
     notifyListeners();
   }
-
-
 }

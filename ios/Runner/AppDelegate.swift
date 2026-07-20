@@ -32,8 +32,15 @@ import UIKit
         result(nil)
       case "deviceIntegrity":
         result([
-          "rootedOrJailbroken": self.isJailbrokenDevice(),
+          "rooted": false,
+          "jailbroken": self.isJailbrokenDevice(),
+          "emulator": self.isSimulator(),
           "screenCaptured": UIScreen.main.isCaptured
+        ])
+      case "deviceIdentity":
+        result([
+          "deviceName": UIDevice.current.model,
+          "osVersion": "iOS \(UIDevice.current.systemVersion)"
         ])
       default:
         result(FlutterMethodNotImplemented)
@@ -66,6 +73,14 @@ import UIKit
     } catch {
       return false
     }
+    #endif
+  }
+
+  private func isSimulator() -> Bool {
+    #if targetEnvironment(simulator)
+    return true
+    #else
+    return false
     #endif
   }
 }

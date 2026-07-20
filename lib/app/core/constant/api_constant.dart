@@ -15,6 +15,13 @@ class ApiConstant {
   static String validatePlaybackSecurity =
       "${baseUrl}api/playback/security/validate";
   static String playbackPiracyEvent = "${baseUrl}api/playback/security/event";
+  static String antiPiracyDevices = "${baseUrl}anti-piracy/devices";
+  static String antiPiracyDevice(String deviceId) =>
+      "${antiPiracyDevices}/${Uri.encodeComponent(deviceId)}";
+  static const String signedPlaybackUrl =
+      "https://filmytell.in/ott2/anti-piracy/playback/signed-url";
+  static String playbackAnalytics = "${baseUrl}anti-piracy/playback/analytics";
+  static String currentWatermark = "${baseUrl}watermark/current";
   static String registration = '${baseUrl}user/RegisterUser';
 
   //otp login
@@ -165,10 +172,10 @@ class ApiConstant {
 
   //shorts
   static String shortsMaster = "${baseUrl}api/shortsMaster";
-  static String getLatestShortsByLang(lang, page) =>
-      "${baseUrl}api/shortsMaster/latest?lang=${Uri.encodeComponent(lang.toString())}&page=$page&size=10";
-  static String getTrendingShortsByLang(lang, page) =>
-      "${baseUrl}api/shortsMaster/trending?lang=${Uri.encodeComponent(lang.toString())}&page=$page&size=10";
+  static String getLatestShortsByLang(lang, page, {int size = 10}) =>
+      "${baseUrl}api/shortsMaster/latest?lang=${Uri.encodeComponent(lang.toString())}&page=$page&size=$size";
+  static String getTrendingShortsByLang(lang, page, {int size = 10}) =>
+      "${baseUrl}api/shortsMaster/trending?lang=${Uri.encodeComponent(lang.toString())}&page=$page&size=$size";
   static String getShortsByTypeLang(type, lang, page) =>
       type.toString().toLowerCase() == 'trending'
           ? getTrendingShortsByLang(lang, page)

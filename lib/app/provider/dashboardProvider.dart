@@ -247,16 +247,31 @@ class DashboardProvider extends BaseProvider {
     }
   }
 
-  getContinueWatchedMovieList(String type) async {
+  Future<void> getContinueWatchedMovieList(String type) async {
     final localSharePreferences = LocalSharePreferences();
     final user = await localSharePreferences.getUser();
+    final authToken = await localSharePreferences.getAuthToken();
+    if (user?.id == null) {
+      debugPrint(
+          'Continue watching fetch skipped: authenticated user ID missing');
+      _continueWatchedMovies.clear();
+      notifyListeners();
+      return;
+    }
     String apiUrl = ApiConstant.continueWatchedMoviesByUser(user!.id, type);
     ApiHelper apiHelper = ApiHelper();
-    debugPrint(apiUrl);
+    debugPrint(
+      'Continue watching fetch request: userId=${user.id} contentType=$type '
+      'authTokenPresent=${authToken != null}',
+    );
     try {
       var response = await apiHelper.getApi1(apiUrl);
 
       if (response.statusCode == 200) {
+        debugPrint(
+          'Continue watching fetch response: status=${response.statusCode} '
+          'bytes=${response.bodyBytes.length}',
+        );
         final responseBody = json.decode(response.body);
 
         ContinueWatchedResponse continueWatchedResponse =
@@ -265,14 +280,29 @@ class DashboardProvider extends BaseProvider {
         if (continueWatchedResponse.isSuccess == true &&
             continueWatchedResponse.data != null) {
           _continueWatchedMovies = continueWatchedResponse.data!;
-          debugPrint(_continueWatchedMovies.length.toString());
-          notifyListeners();
+          debugPrint(
+            'Continue watching parsed: count=${_continueWatchedMovies.length}',
+          );
+        } else {
+          _continueWatchedMovies.clear();
+          debugPrint(
+            'Continue watching response rejected: '
+            'isSuccess=${continueWatchedResponse.isSuccess} '
+            'message=${continueWatchedResponse.message}',
+          );
         }
       } else {
         _continueWatchedMovies.clear();
+        debugPrint(
+          'Continue watching fetch failed: status=${response.statusCode} '
+          'body=${response.body}',
+        );
       }
     } catch (error) {
       debugPrint("❌ continue watching error: $error");
+      _continueWatchedMovies.clear();
+    } finally {
+      notifyListeners();
     }
   }
 

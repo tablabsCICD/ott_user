@@ -65,7 +65,7 @@ class ApiHelper {
   Future<dynamic> postApiWithoutAuthToken(String url) async {
     _logRequest("POST", url);
     final request = await http.post(Uri.parse(url));
-    _logResponseBody(request.body);
+    _logResponse(request);
     return request;
   }
 
@@ -96,7 +96,6 @@ class ApiHelper {
   Future<Map<String, String>> _headers() async {
     final token =
         await LocalSharePreferences.localSharePreferences.getAuthToken();
-    debugPrint(token);
     return {
       "Content-Type": "application/json",
       if (token != null) "Authorization": "Bearer $token",
@@ -109,7 +108,7 @@ class ApiHelper {
           SessionManager.replacementSessionMessage;
       await SessionManager.instance.handleSessionExpired(message);
     }
-    _logResponseBody(response.body);
+    _logResponse(response);
     return response;
   }
 
@@ -122,8 +121,14 @@ class ApiHelper {
     debugPrint("$method $redacted");
   }
 
-  void _logResponseBody(String body) {
+  void _logResponse(Response response) {
     if (!kDebugMode) return;
-    debugPrint(body);
+    final uri = response.request?.url;
+    final endpoint = uri == null
+        ? '<unknown>'
+        : '${uri.scheme}://${uri.authority}${uri.path}';
+    debugPrint(
+      'HTTP response endpoint=$endpoint status=${response.statusCode} bytes=${response.bodyBytes.length}',
+    );
   }
 }

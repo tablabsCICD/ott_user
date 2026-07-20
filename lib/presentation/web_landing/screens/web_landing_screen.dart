@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/utils/text_capitalization_formatter.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/email_service.dart';
 import 'package:ott/app/core/services/legal_document_service.dart';
@@ -110,7 +111,7 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
   void _handleNav(String label) {
     switch (label) {
       case 'Home':
-        _scrollTo(_homeKey);
+        Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
         break;
       case 'Movies':
         _showLatestContentType('MOVIE');
@@ -121,12 +122,7 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
       case 'Mini Series':
         _showLatestContentType('MINI SERIES');
         break;
-      case 'Live TV':
-        _scrollTo(_liveTvKey);
-        break;
-      case 'Categories':
-        _scrollTo(_latestKey);
-        break;
+
       default:
         _scrollTo(_homeKey);
     }
@@ -283,6 +279,32 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     }
   }
 
+  Future<void> _openInternalStaticPage(String path) async {
+    try {
+      final uri = kIsWeb
+          ? Uri.base.resolve(path)
+          : Uri.https('filmytell.com', path.startsWith('/') ? path : '/$path');
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.platformDefault,
+        webOnlyWindowName: '_self',
+      );
+      if (!mounted || opened) return;
+      CustomToast.show(
+        context,
+        AppLocalizations.of(context)!.unableOpenLink,
+        isSuccess: false,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      CustomToast.show(
+        context,
+        AppLocalizations.of(context)!.unableOpenLink,
+        isSuccess: false,
+      );
+    }
+  }
+
   Future<void> _openDocumentInNewTab(String url) async {
     final uri = legalDocumentViewUri(url);
     final opened = await launchUrl(
@@ -354,7 +376,7 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
   void _handleFooterLink(String label) {
     switch (label) {
       case 'Home':
-        _scrollTo(_homeKey);
+        Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
         return;
       case 'Movies':
         _showLatestContentType('MOVIE');
@@ -384,30 +406,34 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
         );
         return;
       case 'Privacy Policy':
-        _openPrivacyPolicy();
+        _openInternalStaticPage('/privacy-policy.html');
         return;
       case 'Terms & Conditions':
-        _openTerms();
+        _openInternalStaticPage('/terms-of-service.html');
         return;
       case 'Account Deletion':
         _openExternal(AppConstant.accountDeletionUrl);
         return;
+      case 'Facebook':
+        _openExternal(AppConstant.facebookUrl);
+        return;
+      case 'Instagram':
+        _openExternal(AppConstant.instagramUrl);
+        return;
+      case 'X (Twitter)':
+        _openExternal(AppConstant.xUrl);
+        return;
       case 'About Us':
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AboutFilmytellScreen()),
-        );
+        _openInternalStaticPage('/about-us.html');
         return;
       case 'Contact Us':
-        _showContactDialog();
+        _openInternalStaticPage('/contact.html');
         return;
       case 'FAQ':
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const FaqScreen()),
-        );
+        _openInternalStaticPage('/help-center.html');
+        return;
+      case 'Cookies':
+        _openInternalStaticPage('/cookies.html');
         return;
     }
 
@@ -416,7 +442,7 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
       'Facebook' => 'facebook',
       _ => label.toLowerCase().replaceAll(' ', '-'),
     };
-    _openExternal('https://filmytell.in/$slug/');
+    _openExternal('https://filmytell.com/$slug/');
   }
 
   Future<void> _openTrailer(Content content) async {
@@ -682,6 +708,8 @@ Submitted At: $submittedAt''';
                   const SizedBox(height: 22),
                   TextFormField(
                     controller: _nameController,
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [CapitalizeWordsTextInputFormatter()],
                     enabled: !_sending,
                     textInputAction: TextInputAction.next,
                     style: const TextStyle(
@@ -730,6 +758,8 @@ Submitted At: $submittedAt''';
                   const SizedBox(height: 14),
                   TextFormField(
                     controller: _subjectController,
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [CapitalizeWordsTextInputFormatter()],
                     enabled: !_sending,
                     textInputAction: TextInputAction.next,
                     style: const TextStyle(
@@ -746,6 +776,10 @@ Submitted At: $submittedAt''';
                   const SizedBox(height: 14),
                   TextFormField(
                     controller: _messageController,
+                    textCapitalization: TextCapitalization.sentences,
+                    inputFormatters: [
+                      CapitalizeSentencesTextInputFormatter(),
+                    ],
                     enabled: !_sending,
                     minLines: 4,
                     maxLines: 6,
@@ -814,9 +848,16 @@ class _LatestContentStatus extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
+    final horizontalPadding =
+        MediaQuery.sizeOf(context).width < 600 ? 20.0 : 56.0;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(56, 0, 56, 48),
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        0,
+        horizontalPadding,
+        48,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -878,8 +919,15 @@ class _LandingError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final horizontalPadding =
+        MediaQuery.sizeOf(context).width < 600 ? 20.0 : 56.0;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(56, 16, 56, 34),
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        16,
+        horizontalPadding,
+        34,
+      ),
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(

@@ -31,13 +31,16 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
   Future<void> _loadShortRows() async {
     await context.read<BookmarkProvider>().getUserBookmarkShort();
 
-    final userProvider = context.read<UserProvider>();
+    // The persisted user is updated immediately after the language API succeeds.
+    // Prefer it over a potentially stale in-memory UserProvider after navigation.
+    final user = await LocalSharePreferences.localSharePreferences.getUser();
     List<String> selectedLanguages =
-        List<String>.from(userProvider.userObject.selectedLanguages ?? []);
+        List<String>.from(user?.selectedLanguages ?? []);
 
-    if (selectedLanguages.isEmpty) {
-      final user = await LocalSharePreferences.localSharePreferences.getUser();
-      selectedLanguages = List<String>.from(user?.selectedLanguages ?? []);
+    if (selectedLanguages.isEmpty && mounted) {
+      selectedLanguages = List<String>.from(
+        context.read<UserProvider>().userObject.selectedLanguages ?? [],
+      );
     }
 
     if (selectedLanguages.isEmpty) {
@@ -76,11 +79,16 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                   height: 300,
                 ),
                 Text(
-                  "No short films available",
+                  provider.errorMessage ?? "No Mini Series available",
                   style: TextStyle(
                     color: theme.canvasColor.withOpacity(0.6),
                   ),
                 ),
+                if (provider.errorMessage != null)
+                  TextButton(
+                    onPressed: _loadShortRows,
+                    child: const Text('Retry'),
+                  ),
               ],
             ),
           );
@@ -98,7 +106,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                   height: 300,
                 ),
                 Text(
-                  "No short films available",
+                  "No Mini Series available",
                   style: TextStyle(
                     color: theme.canvasColor.withOpacity(0.6),
                   ),

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter/foundation.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/l10n/app_localizations.dart';
+import 'package:url_launcher/link.dart';
 
 class FooterSection extends StatelessWidget {
   const FooterSection({
@@ -15,6 +16,7 @@ class FooterSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
+    final width = MediaQuery.sizeOf(context).width;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -45,7 +47,12 @@ class FooterSection extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(56, 56, 56, 30),
+            padding: EdgeInsets.fromLTRB(
+              width < 600 ? 20 : (width < 1024 ? 32 : 56),
+              width < 600 ? 40 : 56,
+              width < 600 ? 20 : (width < 1024 ? 32 : 56),
+              30,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -81,9 +88,21 @@ class FooterSection extends StatelessWidget {
                         _FooterColumn(
                           title: lang.shortcuts,
                           links: [
-                            _FooterLinkData(lang.aboutUs, 'About Us'),
-                            _FooterLinkData(lang.contactUs, 'Contact Us'),
-                            _FooterLinkData(lang.faq, 'FAQ'),
+                            _FooterLinkData(
+                              lang.aboutUs,
+                              'About Us',
+                              href: '/about-us.html',
+                            ),
+                            _FooterLinkData(
+                              lang.contactUs,
+                              'Contact Us',
+                              href: '/contact.html',
+                            ),
+                            _FooterLinkData(
+                              lang.faq,
+                              'FAQ',
+                              href: '/help-center.html',
+                            ),
                           ],
                           onOpenLink: onOpenLink,
                         ),
@@ -91,10 +110,19 @@ class FooterSection extends StatelessWidget {
                           title: lang.legal,
                           links: [
                             _FooterLinkData(
-                                lang.privacyPolicy, 'Privacy Policy'),
+                              lang.privacyPolicy,
+                              'Privacy Policy',
+                              href: '/privacy-policy.html',
+                            ),
                             _FooterLinkData(
                               lang.termsConditions,
                               'Terms & Conditions',
+                              href: '/terms-of-service.html',
+                            ),
+                            const _FooterLinkData(
+                              'Cookies',
+                              'Cookies',
+                              href: '/cookies.html',
                             ),
                             _FooterLinkData(
                               'Account Deletion',
@@ -213,7 +241,7 @@ class _BrandBlock extends StatelessWidget {
             icon: Icon(Icons.support_agent_rounded, color: color, size: 18),
             label: Builder(
               builder: (context) {
-                return Text("support@filmytell.com");
+                return Text("connect@filmytell.com");
               },
             ),
             style: OutlinedButton.styleFrom(
@@ -354,6 +382,7 @@ class _FooterColumn extends StatelessWidget {
             _FooterLink(
               label: link.label,
               onTap: () => onOpenLink(link.target),
+              href: link.href,
             ),
         ],
       ),
@@ -362,20 +391,23 @@ class _FooterColumn extends StatelessWidget {
 }
 
 class _FooterLinkData {
-  const _FooterLinkData(this.label, this.target);
+  const _FooterLinkData(this.label, this.target, {this.href});
 
   final String label;
   final String target;
+  final String? href;
 }
 
 class _FooterLink extends StatefulWidget {
   const _FooterLink({
     required this.label,
     required this.onTap,
+    this.href,
   });
 
   final String label;
   final VoidCallback onTap;
+  final String? href;
 
   @override
   State<_FooterLink> createState() => _FooterLinkState();
@@ -393,11 +425,32 @@ class _FooterLinkState extends State<_FooterLink> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final href = widget.href;
+    if (href != null) {
+      return Link(
+        uri: kIsWeb
+            ? Uri.base.resolve(href)
+            : Uri.https(
+                'filmytell.com',
+                href.startsWith('/') ? href : '/$href',
+              ),
+        target: LinkTarget.self,
+        builder: (context, followLink) => _buildInteractiveLink(
+          theme,
+          followLink ?? widget.onTap,
+        ),
+      );
+    }
+
+    return _buildInteractiveLink(theme, widget.onTap);
+  }
+
+  Widget _buildInteractiveLink(ThemeData theme, VoidCallback onTap) {
     return MouseRegion(
       onEnter: (_) => _setHovered(true),
       onExit: (_) => _setHovered(false),
       child: GestureDetector(
-        onTap: widget.onTap,
+        onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: AnimatedPadding(
           duration: const Duration(milliseconds: 160),
@@ -476,13 +529,10 @@ class _SocialButtonState extends State<_SocialButton> {
                   : null,
             ),
             child: Center(
-              child: SvgPicture.string(
-                icon.svg,
-                height: icon.size,
-                width: icon.size,
-                colorFilter: icon.useSourceColors
-                    ? null
-                    : ColorFilter.mode(icon.color, BlendMode.srcIn),
+              child: _SocialIcon(
+                label: widget.label,
+                color: icon.color,
+                size: icon.size,
               ),
             ),
           ),
@@ -494,43 +544,32 @@ class _SocialButtonState extends State<_SocialButton> {
 
 class _SocialIconData {
   const _SocialIconData({
-    required this.svg,
     required this.color,
     this.size = 18,
-    this.useSourceColors = false,
   });
 
-  final String svg;
   final Color color;
   final double size;
-  final bool useSourceColors;
 
   static _SocialIconData forLabel(String label) {
     switch (label) {
       case 'Facebook':
         return const _SocialIconData(
-          svg: _facebookSvg,
           color: Color(0xFF1877F2),
           size: 27,
-          useSourceColors: true,
         );
       case 'Instagram':
         return const _SocialIconData(
-          svg: _instagramSvg,
           color: Color(0xFFE4405F),
           size: 27,
-          useSourceColors: true,
         );
       case 'X (Twitter)':
         return const _SocialIconData(
-          svg: _xSvg,
           color: Colors.white,
           size: 27,
-          useSourceColors: true,
         );
       default:
         return const _SocialIconData(
-          svg: _linkSvg,
           color: Colors.white,
           size: 18,
         );
@@ -538,38 +577,102 @@ class _SocialIconData {
   }
 }
 
-const String _facebookSvg = '''
-<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="12" cy="12" r="11" fill="#1877F2"/>
-  <path fill="#FFFFFF" d="M13.7 22v-7.7h2.6l.4-3h-3V9.4c0-.9.2-1.5 1.5-1.5h1.6V5.2c-.3 0-1.3-.1-2.4-.1-2.4 0-4 1.5-4 4.1v2.3H7.7v3h2.7V22h3.3z"/>
-</svg>
-''';
+class _SocialIcon extends StatelessWidget {
+  const _SocialIcon({
+    required this.label,
+    required this.color,
+    required this.size,
+  });
 
-const String _instagramSvg = '''
-<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="instagramGradient" x1="3" y1="21" x2="21" y2="3" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FEDA75"/>
-      <stop offset="0.28" stop-color="#FA7E1E"/>
-      <stop offset="0.52" stop-color="#D62976"/>
-      <stop offset="0.74" stop-color="#962FBF"/>
-      <stop offset="1" stop-color="#4F5BD5"/>
-    </linearGradient>
-  </defs>
-  <rect x="2" y="2" width="20" height="20" rx="6" fill="url(#instagramGradient)"/>
-  <path fill="#FFFFFF" fill-rule="evenodd" clip-rule="evenodd" d="M8 6.2h8c1 0 1.8.8 1.8 1.8v8c0 1-.8 1.8-1.8 1.8H8c-1 0-1.8-.8-1.8-1.8V8c0-1 .8-1.8 1.8-1.8zm8 1.6H8c-.1 0-.2.1-.2.2v8c0 .1.1.2.2.2h8c.1 0 .2-.1.2-.2V8c0-.1-.1-.2-.2-.2zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm0 1.6a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8zm3.4-2.1a.8.8 0 1 0 0 1.6.8.8 0 0 0 0-1.6z"/>
-</svg>
-''';
+  final String label;
+  final Color color;
+  final double size;
 
-const String _xSvg = '''
-<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="12" cy="12" r="11" fill="#000000"/>
-  <path fill="#FFFFFF" d="M13.7 10.6 19 4.5h-1.3l-4.6 5.3-3.6-5.3H5.2l5.5 8.1-5.5 6.4h1.3l4.8-5.6 3.9 5.6h4.3l-5.8-8.4zm-1.7 2-.6-.9L7 5.5h1.9l3.6 5.1.6.9 4.6 6.6h-1.9L12 12.6z"/>
-</svg>
-''';
-
-const String _linkSvg = '''
-<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <path d="M10.6 13.4a1 1 0 0 1 0-1.4l3.4-3.4a3 3 0 0 1 4.2 4.2l-2 2a1 1 0 1 1-1.4-1.4l2-2a1 1 0 0 0-1.4-1.4L12 13.4a1 1 0 0 1-1.4 0zm2.8-2.8a1 1 0 0 1 0 1.4L10 15.4a3 3 0 1 1-4.2-4.2l2-2a1 1 0 1 1 1.4 1.4l-2 2a1 1 0 0 0 1.4 1.4l3.4-3.4a1 1 0 0 1 1.4 0z"/>
-</svg>
-''';
+  @override
+  Widget build(BuildContext context) {
+    switch (label) {
+      case 'Facebook':
+        return Container(
+          height: size,
+          width: size,
+          decoration: const BoxDecoration(
+            color: Color(0xFF1877F2),
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.bottomCenter,
+          child: const Text(
+            'f',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              height: 0.95,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        );
+      case 'Instagram':
+        return Container(
+          height: size,
+          width: size,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            gradient: const LinearGradient(
+              begin: Alignment.bottomLeft,
+              end: Alignment.topRight,
+              colors: [
+                Color(0xFFFEDA75),
+                Color(0xFFFA7E1E),
+                Color(0xFFD62976),
+                Color(0xFF962FBF),
+                Color(0xFF4F5BD5),
+              ],
+            ),
+          ),
+          child: Center(
+            child: Container(
+              height: 15,
+              width: 15,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(5),
+                border: Border.all(color: Colors.white, width: 1.8),
+              ),
+              child: Align(
+                alignment: Alignment.topRight,
+                child: Container(
+                  margin: const EdgeInsets.only(top: 2, right: 2),
+                  height: 3,
+                  width: 3,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      case 'X (Twitter)':
+        return Container(
+          height: size,
+          width: size,
+          decoration: BoxDecoration(
+            color: Colors.black,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withOpacity(0.16)),
+          ),
+          alignment: Alignment.center,
+          child: const Text(
+            'X',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              height: 1,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        );
+      default:
+        return Icon(Icons.link_rounded, color: color, size: size);
+    }
+  }
+}
