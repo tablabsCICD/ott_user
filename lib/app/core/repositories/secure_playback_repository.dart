@@ -133,6 +133,7 @@ class SecurePlaybackRepository {
         deviceId: current.deviceId,
         playbackUrl: playbackUrl,
         country: country,
+        platform: current.deviceType,
         deviceIntegrity: integrity,
       ),
     );

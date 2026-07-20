@@ -18,8 +18,14 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Filmytell OTT platform.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Discover and stream movies, series, mini-series and other video entertainment with Filmytell OTT.">
+  <link rel="canonical" href="https://filmytell.com/">
+  <meta property="og:title" content="Filmytell OTT">
+  <meta property="og:description" content="Discover and stream digital entertainment across supported devices with Filmytell.">
+  <meta property="og:site_name" content="Filmytell">
+  <meta property="og:url" content="https://filmytell.com/">
+  <meta property="og:type" content="website">
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,13 +36,21 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>Filmytell</title>
+  <title>Filmytell — Movies, Series and Mini-Series</title>
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script>
     (function () {
+      // Keep disabled for the public website. Set to true only if automatic
+      // Android app launching is intentionally restored in the future.
+      const ENABLE_AUTO_APP_REDIRECT = false;
+
+      if (!ENABLE_AUTO_APP_REDIRECT) {
+        return;
+      }
+
       var supportedPath = /^\/(gift|movie|series|short)(\/|$)/i.test(
         window.location.pathname
       );

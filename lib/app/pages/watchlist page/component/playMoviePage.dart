@@ -338,8 +338,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     SecurityDebugLog.event(
       'PLAYER',
       isRefresh
-          ? 'Received refreshed CloudFront cookies; reinitializing media_kit.'
-          : 'Received CloudFront signed-cookie authorization; initializing media_kit now.',
+          ? 'Received refreshed playback authorization; reinitializing the player.'
+          : 'Received platform playback authorization; initializing the player now.',
     );
     final playbackUri = Uri.tryParse(authorization.playbackUrl);
     SecurityDebugLog.diagnostic(
@@ -347,8 +347,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       'scheme=${playbackUri?.scheme ?? '<missing>'} '
       'host=${playbackUri?.host ?? '<missing>'} '
       'authorizationType=${authorization.authorizationType} '
-      'cookieNames=${authorization.cookies.keys.toList()} '
-      'cookieValuesRedacted=true',
+      'cookieHeaderPresent=${authorization.httpHeaders.containsKey('Cookie')} '
+      'credentialValuesRedacted=true',
     );
     final previous = _player?.state;
     final androidPrevious = _androidSecurePlayer?.value;
@@ -362,13 +362,22 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     final audioTrack = previous?.track.audio;
     final subtitleTrack = previous?.track.subtitle;
 
+    if (authorization.audioTracks.length > 1 ||
+        authorization.subtitleTracks.length > 1) {
+      SecurityDebugLog.event(
+        'PLAYER',
+        'Multiple supported external tracks were returned; only the selected content default or first track will be attached.',
+      );
+    }
+
     await _setupPlayer(
       authorization.playbackUrl,
-      httpHeaders: {
-        'Cookie': authorization.cookieHeader,
-        'User-Agent': 'FilmyTell/1.0',
-      },
+      httpHeaders: authorization.httpHeaders,
       diagnoseSignedHls: true,
+      automaticAudioTrack:
+          getAutomaticAudioTrack(authorization.audioTracks),
+      automaticSubtitleTrack:
+          getAutomaticSubtitleTrack(authorization.subtitleTracks),
     );
     final player = _player;
     final androidPlayer = _androidSecurePlayer;
@@ -407,7 +416,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
     SecurityDebugLog.event(
       'PLAYER',
-      'media_kit accepted the cookie-authorized source; URL and cookies remain redacted.',
+      'The player accepted the authorized source; credentials remain redacted.',
     );
     return SecureMediaRestoreResult(
       isPlaying: androidPlayer?.value.isPlaying ?? player!.state.playing,
@@ -532,6 +541,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     bool playFromFile = false,
     bool diagnoseSignedHls = false,
     Map<String, String>? httpHeaders,
+    SecureAudioTrack? automaticAudioTrack,
+    SecureSubtitleTrack? automaticSubtitleTrack,
   }) async {
     final token = ++_setupToken;
     _controlsHideTimer?.cancel();
@@ -634,6 +645,42 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         'cookieValuesRedacted=true openPlay=false',
       );
       await player.open(media, play: false);
+      if (automaticAudioTrack != null) {
+        try {
+          await player.setAudioTrack(
+            AudioTrack.uri(
+              automaticAudioTrack.url,
+              title: automaticAudioTrack.label,
+              language: automaticAudioTrack.language,
+            ),
+          );
+        } catch (_) {
+          SecurityDebugLog.event(
+            'PLAYER',
+            'Automatic external audio is unsupported; continuing with audio embedded in the selected content manifest.',
+          );
+        }
+      }
+      if (automaticSubtitleTrack != null) {
+        try {
+          await player.setSubtitleTrack(
+            SubtitleTrack.uri(
+              automaticSubtitleTrack.url,
+              title: automaticSubtitleTrack.label,
+              language: automaticSubtitleTrack.language,
+            ),
+          );
+        } catch (_) {
+          SecurityDebugLog.event(
+            'PLAYER',
+            'Automatic external subtitle attachment is unsupported; playback will continue without it.',
+          );
+        }
+      }
+      SecurityDebugLog.event(
+        'PLAYER',
+        'Secure playback initialized; authorization type and automatic track presence were validated without logging media URLs.',
+      );
       await player.setVolume(100);
     } catch (error, stackTrace) {
       SecurityDebugLog.exception(
@@ -1973,8 +2020,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
               controller: _youtubeController!,
               width: width,
               aspectRatio: aspectRatio,
-              showVideoProgressIndicator: true,
-              progressIndicatorColor: theme.primaryColor,
+              showVideoProgressIndicator: false,
             ),
           );
         },
@@ -2027,6 +2073,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             height: height,
             fit: BoxFit.cover,
             fill: Colors.black,
+            controls: NoVideoControls,
           ),
         );
       },

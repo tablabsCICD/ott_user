@@ -17,6 +17,8 @@ class FinalCtaSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
+    final width = MediaQuery.sizeOf(context).width;
+    final compact = width < 700;
     final cards = [
       _CtaCardData(
         icon: Icons.play_circle_fill_rounded,
@@ -35,8 +37,13 @@ class FinalCtaSection extends StatelessWidget {
     ];
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(56, 8, 56, 70),
-      padding: const EdgeInsets.all(34),
+      margin: EdgeInsets.fromLTRB(
+        width < 600 ? 16 : (width < 1024 ? 32 : 56),
+        8,
+        width < 600 ? 16 : (width < 1024 ? 32 : 56),
+        width < 600 ? 46 : 70,
+      ),
+      padding: EdgeInsets.all(width < 600 ? 20 : 34),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         color: const Color(0xFF101010),
@@ -74,9 +81,9 @@ class FinalCtaSection extends StatelessWidget {
           Text(
             lang.startJourneyToday,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 40,
+              fontSize: width < 600 ? 30 : 40,
               height: 1.08,
               fontWeight: FontWeight.w900,
             ),
@@ -92,16 +99,26 @@ class FinalCtaSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 32),
-          Row(
-            children: [
-              for (int i = 0; i < cards.length; i++) ...[
-                Expanded(
-                  child: _CtaCard(data: cards[i], color: theme.primaryColor),
-                ),
-                if (i != cards.length - 1) const SizedBox(width: 16),
+          if (compact)
+            Column(
+              children: [
+                for (int i = 0; i < cards.length; i++) ...[
+                  _CtaCard(data: cards[i], color: theme.primaryColor),
+                  if (i != cards.length - 1) const SizedBox(height: 16),
+                ],
               ],
-            ],
-          ),
+            )
+          else
+            Row(
+              children: [
+                for (int i = 0; i < cards.length; i++) ...[
+                  Expanded(
+                    child: _CtaCard(data: cards[i], color: theme.primaryColor),
+                  ),
+                  if (i != cards.length - 1) const SizedBox(width: 16),
+                ],
+              ],
+            ),
         ],
       ),
     );

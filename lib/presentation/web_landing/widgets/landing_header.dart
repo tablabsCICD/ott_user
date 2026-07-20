@@ -24,6 +24,14 @@ class LandingHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
     final width = MediaQuery.sizeOf(context).width;
+    final isMobile = width < 600;
+    final isTablet = width >= 600 && width < 1024;
+    final topSafeSpacing = isMobile
+        ? MediaQuery.viewPaddingOf(context)
+            .top
+            .clamp(16.0, double.infinity)
+            .toDouble()
+        : 0.0;
     final showLanguageLabel = width >= 620;
     const headerControlHeight = 46.0;
     final navItems = [
@@ -35,7 +43,7 @@ class LandingHeader extends StatelessWidget {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 260),
-      height: 84,
+      height: isMobile ? 68 + topSafeSpacing : 84,
       decoration: BoxDecoration(
         color: scrolled ? Colors.black.withOpacity(0.72) : Colors.transparent,
         border: Border(
@@ -67,34 +75,70 @@ class LandingHeader extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 56,
+            padding: EdgeInsets.fromLTRB(
+              isMobile ? 16 : (isTablet ? 28 : 56),
+              topSafeSpacing,
+              isMobile ? 16 : (isTablet ? 28 : 56),
+              0,
             ),
             child: SizedBox.expand(
               child: Row(
                 children: [
-                  SizedBox(
-                    height: 76,
-                    width: 76,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Image.asset(
-                        ImageConstant.logo,
-                        height: 76,
-                        width: 76,
+                  InkWell(
+                    onTap: () => onNavigate('Home'),
+                    child: SizedBox(
+                      height: isMobile ? 56 : 76,
+                      width: isMobile ? 56 : 76,
+                      child: Align(
                         alignment: Alignment.centerLeft,
-                        fit: BoxFit.contain,
-                        filterQuality: FilterQuality.high,
+                        child: Image.asset(
+                          ImageConstant.logo,
+                          height: isMobile ? 56 : 76,
+                          width: isMobile ? 56 : 76,
+                          alignment: Alignment.centerLeft,
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.high,
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 32),
-                  for (final item in navItems)
+                  SizedBox(width: isTablet ? 14 : 32),
+                  for (final item in (isMobile || isTablet)
+                      ? const <({String target, String label})>[]
+                      : navItems)
                     _HeaderNavItem(
                       label: item.label,
                       onTap: () => onNavigate(item.target),
                     ),
                   const Spacer(),
+                  if (isMobile || isTablet) ...[
+                    PopupMenuButton<String>(
+                      tooltip: 'Open navigation menu',
+                      onSelected: onNavigate,
+                      color: const Color(0xFF151515),
+                      offset: const Offset(0, 48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: Colors.white.withOpacity(0.12)),
+                      ),
+                      itemBuilder: (context) => [
+                        for (final item in navItems)
+                          PopupMenuItem<String>(
+                            value: item.target,
+                            child: Text(
+                              item.label,
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                      ],
+                      child: const SizedBox(
+                        height: headerControlHeight,
+                        width: headerControlHeight,
+                        child: Icon(Icons.menu_rounded, color: Colors.white),
+                      ),
+                    ),
+                    SizedBox(width: isMobile ? 4 : 10),
+                  ],
                   LanguageDropdown(
                     showSelectedLabel: showLanguageLabel,
                     foregroundColor: Colors.white,
@@ -107,14 +151,16 @@ class LandingHeader extends StatelessWidget {
                       vertical: 0,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: isMobile ? 8 : 12),
                   ElevatedButton(
                     onPressed: onSignUp,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.primaryColor,
                       foregroundColor: Colors.white,
                       fixedSize: const Size.fromHeight(headerControlHeight),
-                      padding: const EdgeInsets.symmetric(horizontal: 22),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 14 : 22,
+                      ),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),

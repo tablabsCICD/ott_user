@@ -68,15 +68,22 @@ class _HeroBannerState extends State<HeroBanner> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final width = MediaQuery.sizeOf(context).width;
+    final isMobile = width < 600;
+    final isTablet = width >= 600 && width < 1024;
 
     final item = widget.items.isEmpty ? null : widget.items[_index];
     final poster = item == null ? null : _posterFor(item);
     final collageItems = widget.items.take(6).toList();
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 680),
+      constraints: BoxConstraints(minHeight: isMobile ? 620 : 680),
       child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.88,
+        height: isMobile
+            ? 680
+            : (MediaQuery.of(context).size.height * 0.88)
+                .clamp(680, 920)
+                .toDouble(),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -123,7 +130,12 @@ class _HeroBannerState extends State<HeroBanner> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(72, 118, 72, 70),
+              padding: EdgeInsets.fromLTRB(
+                isMobile ? 20 : (isTablet ? 36 : 72),
+                isMobile ? 92 : 118,
+                isMobile ? 20 : (isTablet ? 36 : 72),
+                isMobile ? 36 : 70,
+              ),
               child: Row(
                 children: [
                   Expanded(
@@ -136,16 +148,19 @@ class _HeroBannerState extends State<HeroBanner> {
                           : _HeroCopy(
                               key: ValueKey(item.id ?? item.title),
                               item: item,
+                              compact: isMobile,
                               onWatchNow: () => widget.onWatchNow(item),
                               onPlayTrailer: () => widget.onPlayTrailer(item),
                             ),
                     ),
                   ),
-                  const SizedBox(width: 42),
-                  Expanded(
-                    flex: 9,
-                    child: _PosterCollage(items: collageItems),
-                  ),
+                  if (!isMobile) ...[
+                    SizedBox(width: isTablet ? 24 : 42),
+                    Expanded(
+                      flex: isTablet ? 7 : 9,
+                      child: _PosterCollage(items: collageItems),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -183,11 +198,13 @@ class _HeroCopy extends StatelessWidget {
     required this.item,
     required this.onWatchNow,
     required this.onPlayTrailer,
+    required this.compact,
   });
 
   final Content item;
   final VoidCallback onWatchNow;
   final VoidCallback onPlayTrailer;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -220,15 +237,17 @@ class _HeroCopy extends StatelessWidget {
               item.title ?? lang.filmytellOriginals,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
-                fontSize: 58,
+                fontSize: compact ? 36 : 58,
                 height: 1.02,
                 fontWeight: FontWeight.w900,
               ),
             ),
             const SizedBox(height: 18),
-            Row(
+            Wrap(
+              spacing: 0,
+              runSpacing: 8,
               children: [
                 _MetaBadge(label: '${(item.ratings ?? 0).toStringAsFixed(1)} '),
                 _MetaBadge(label: item.ageRating ?? 'U/A'),
@@ -267,7 +286,9 @@ class _HeroCopy extends StatelessWidget {
               const SizedBox(height: 28),
             ] else
               const SizedBox(height: 12),
-            Row(
+            Wrap(
+              spacing: 14,
+              runSpacing: 12,
               children: [
                 ElevatedButton.icon(
                   onPressed: onWatchNow,
@@ -276,15 +297,17 @@ class _HeroCopy extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.primaryColor,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 28, vertical: 19),
+                    minimumSize: Size(0, compact ? 54 : 62),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 20 : 28,
+                      vertical: compact ? 15 : 19,
+                    ),
                     textStyle: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.w800),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
-                const SizedBox(width: 14),
                 ElevatedButton.icon(
                   onPressed: onPlayTrailer,
                   icon: const Icon(Icons.play_circle_outline_rounded, size: 24),
@@ -292,8 +315,11 @@ class _HeroCopy extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.primaryColor,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 28, vertical: 19),
+                    minimumSize: Size(0, compact ? 54 : 62),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 20 : 28,
+                      vertical: compact ? 15 : 19,
+                    ),
                     textStyle: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.w800),
                     shape: RoundedRectangleBorder(

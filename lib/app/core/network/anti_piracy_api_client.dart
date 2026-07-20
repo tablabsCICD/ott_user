@@ -111,7 +111,10 @@ class AntiPiracyApiClient {
     );
     final decoded = _unwrapMap(_decode(response.body));
     try {
-      return SignedPlaybackResponse.fromJson(decoded);
+      return SignedPlaybackResponse.fromJson(
+        decoded,
+        platform: request.platform,
+      );
     } on FormatException {
       throw const SecurePlaybackException(
         SecurePlaybackFailure.invalidResponse,

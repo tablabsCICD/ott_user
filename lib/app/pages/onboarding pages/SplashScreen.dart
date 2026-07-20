@@ -10,8 +10,8 @@ import 'package:ott/app/core/services/app_update_service.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/onboarding pages/selectLanguagePage.dart';
 import 'package:ott/app/route/routes/web_navigation_routes.dart';
-import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/presentation/web_landing/screens/web_landing_screen.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constant/prefrense_constant.dart';
@@ -131,7 +131,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   static bool _shouldShowWebLandingForContext(BuildContext context) {
-    return kIsWeb && MediaQuery.sizeOf(context).width >= 1024;
+    return kIsWeb || ResponsiveWidget.isTablet(context);
   }
 
   void _logWebAuth(String message) {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/l10n/app_localizations.dart';
+import 'package:url_launcher/link.dart';
 
 class FooterSection extends StatelessWidget {
   const FooterSection({
@@ -14,6 +16,7 @@ class FooterSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
+    final width = MediaQuery.sizeOf(context).width;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -44,7 +47,12 @@ class FooterSection extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(56, 56, 56, 30),
+            padding: EdgeInsets.fromLTRB(
+              width < 600 ? 20 : (width < 1024 ? 32 : 56),
+              width < 600 ? 40 : 56,
+              width < 600 ? 20 : (width < 1024 ? 32 : 56),
+              30,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -80,9 +88,21 @@ class FooterSection extends StatelessWidget {
                         _FooterColumn(
                           title: lang.shortcuts,
                           links: [
-                            _FooterLinkData(lang.aboutUs, 'About Us'),
-                            _FooterLinkData(lang.contactUs, 'Contact Us'),
-                            _FooterLinkData(lang.faq, 'FAQ'),
+                            _FooterLinkData(
+                              lang.aboutUs,
+                              'About Us',
+                              href: '/about-us.html',
+                            ),
+                            _FooterLinkData(
+                              lang.contactUs,
+                              'Contact Us',
+                              href: '/contact.html',
+                            ),
+                            _FooterLinkData(
+                              lang.faq,
+                              'FAQ',
+                              href: '/help-center.html',
+                            ),
                           ],
                           onOpenLink: onOpenLink,
                         ),
@@ -90,10 +110,19 @@ class FooterSection extends StatelessWidget {
                           title: lang.legal,
                           links: [
                             _FooterLinkData(
-                                lang.privacyPolicy, 'Privacy Policy'),
+                              lang.privacyPolicy,
+                              'Privacy Policy',
+                              href: '/privacy-policy.html',
+                            ),
                             _FooterLinkData(
                               lang.termsConditions,
                               'Terms & Conditions',
+                              href: '/terms-of-service.html',
+                            ),
+                            const _FooterLinkData(
+                              'Cookies',
+                              'Cookies',
+                              href: '/cookies.html',
                             ),
                             _FooterLinkData(
                               'Account Deletion',
@@ -212,7 +241,7 @@ class _BrandBlock extends StatelessWidget {
             icon: Icon(Icons.support_agent_rounded, color: color, size: 18),
             label: Builder(
               builder: (context) {
-                return Text("support@filmytell.com");
+                return Text("connect@filmytell.com");
               },
             ),
             style: OutlinedButton.styleFrom(
@@ -353,6 +382,7 @@ class _FooterColumn extends StatelessWidget {
             _FooterLink(
               label: link.label,
               onTap: () => onOpenLink(link.target),
+              href: link.href,
             ),
         ],
       ),
@@ -361,20 +391,23 @@ class _FooterColumn extends StatelessWidget {
 }
 
 class _FooterLinkData {
-  const _FooterLinkData(this.label, this.target);
+  const _FooterLinkData(this.label, this.target, {this.href});
 
   final String label;
   final String target;
+  final String? href;
 }
 
 class _FooterLink extends StatefulWidget {
   const _FooterLink({
     required this.label,
     required this.onTap,
+    this.href,
   });
 
   final String label;
   final VoidCallback onTap;
+  final String? href;
 
   @override
   State<_FooterLink> createState() => _FooterLinkState();
@@ -392,11 +425,32 @@ class _FooterLinkState extends State<_FooterLink> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final href = widget.href;
+    if (href != null) {
+      return Link(
+        uri: kIsWeb
+            ? Uri.base.resolve(href)
+            : Uri.https(
+                'filmytell.com',
+                href.startsWith('/') ? href : '/$href',
+              ),
+        target: LinkTarget.self,
+        builder: (context, followLink) => _buildInteractiveLink(
+          theme,
+          followLink ?? widget.onTap,
+        ),
+      );
+    }
+
+    return _buildInteractiveLink(theme, widget.onTap);
+  }
+
+  Widget _buildInteractiveLink(ThemeData theme, VoidCallback onTap) {
     return MouseRegion(
       onEnter: (_) => _setHovered(true),
       onExit: (_) => _setHovered(false),
       child: GestureDetector(
-        onTap: widget.onTap,
+        onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: AnimatedPadding(
           duration: const Duration(milliseconds: 160),

@@ -68,6 +68,7 @@ void main() {
           deviceId: 'device-1',
           playbackUrl: 'https://cdn.example.com/master.m3u8',
           country: 'IN',
+          platform: 'ANDROID',
           deviceIntegrity: DeviceIntegrityStatus(
             rooted: false,
             jailbroken: false,
@@ -86,8 +87,10 @@ void main() {
         'deviceId',
         'playbackUrl',
         'country',
+        'platform',
         'deviceIntegrity',
       ]));
+      expect(requestBody['platform'], 'ANDROID');
       expect(
         result.cookieHeader,
         'CloudFront-Policy=policy; CloudFront-Signature=signature; '
@@ -155,11 +158,122 @@ void main() {
       expect(response.isValidAt(now), isTrue);
     });
 
+    test('accepts signed URL with nullable cookies and track arrays', () {
+      final now = DateTime.now().toUtc();
+      final epochSeconds =
+          now.add(const Duration(minutes: 10)).millisecondsSinceEpoch ~/ 1000;
+      final response = SignedPlaybackResponse.fromJson(
+        {
+          'signedUrl': 'https://cdn.example.com/master.m3u8?Expires=1',
+          'playbackUrl': 'https://cdn.example.com/master.m3u8?Expires=1',
+          'authorizationType': 'CLOUDFRONT_SIGNED_URL',
+          'cookies': null,
+          'cookieHeader': null,
+          'sessionId': 'session',
+          'expiresAtEpochSeconds': epochSeconds,
+          'audioTracks': null,
+          'subtitleTracks': null,
+        },
+        platform: 'IOS',
+        now: now,
+      );
+
+      expect(response.authorizationType,
+          SignedPlaybackResponse.cloudFrontSignedUrl);
+      expect(response.httpHeaders, isEmpty);
+      expect(response.audioTracks, isEmpty);
+      expect(response.subtitleTracks, isEmpty);
+      expect(response.isValidAt(now), isTrue);
+    });
+
+    test('uses cautious platform fallback when authorization type is absent',
+        () {
+      final now = DateTime.now().toUtc();
+      final epochSeconds =
+          now.add(const Duration(minutes: 10)).millisecondsSinceEpoch ~/ 1000;
+      final android = SignedPlaybackResponse.fromJson(
+        {
+          'playbackUrl': 'https://cdn.example.com/master.m3u8',
+          'cookieHeader': 'CloudFront-Policy=p; CloudFront-Signature=s; '
+              'CloudFront-Key-Pair-Id=k',
+          'sessionId': 'session',
+          'expiresAtEpochSeconds': epochSeconds,
+        },
+        platform: 'ANDROID',
+        now: now,
+      );
+      final web = SignedPlaybackResponse.fromJson(
+        {
+          'playbackUrl': 'https://cdn.example.com/master.m3u8?Expires=1',
+          'sessionId': 'session',
+          'expiresAtEpochSeconds': epochSeconds,
+        },
+        platform: 'WEB',
+        now: now,
+      );
+
+      expect(android.httpHeaders['Cookie'], isNotEmpty);
+      expect(web.authorizationType, SignedPlaybackResponse.cloudFrontSignedUrl);
+      expect(web.httpHeaders, isEmpty);
+    });
+
+    test('automatic tracks select one default supported track only', () {
+      const audioTracks = <SecureAudioTrack>[
+        SecureAudioTrack(
+          id: 'english-record-audio',
+          label: 'English',
+          language: 'en',
+          url: 'https://cdn.example.com/audio/en.mp3',
+          type: 'audio',
+          format: 'mp3',
+        ),
+        SecureAudioTrack(
+          id: 'hindi-record-audio',
+          label: 'Hindi',
+          language: 'hi',
+          url: 'https://cdn.example.com/audio/hi.m3u8',
+          type: 'hls',
+          format: 'm3u8',
+          isDefault: true,
+        ),
+        SecureAudioTrack(
+          id: 'unexpected-second-audio',
+          label: 'Marathi',
+          language: 'mr',
+          url: 'https://cdn.example.com/audio/mr.m3u8',
+          type: 'hls',
+          format: 'm3u8',
+        ),
+      ];
+      const subtitleTracks = <SecureSubtitleTrack>[
+        SecureSubtitleTrack(
+          id: 'unsupported-srt',
+          label: 'SRT',
+          language: 'en',
+          url: 'https://cdn.example.com/subtitle/en.srt',
+          type: 'subtitle',
+          format: 'srt',
+        ),
+        SecureSubtitleTrack(
+          id: 'assigned-vtt',
+          label: 'English',
+          language: 'en',
+          url: 'https://cdn.example.com/subtitle/en.vtt',
+          type: 'subtitle',
+          format: 'vtt',
+        ),
+      ];
+
+      expect(getAutomaticAudioTrack(audioTracks)?.id, 'hindi-record-audio');
+      expect(getAutomaticSubtitleTrack(subtitleTracks)?.id, 'assigned-vtt');
+    });
+
     test('rejects missing cookie authorization and expired responses', () {
       expect(
         () => SignedPlaybackResponse.fromJson({
           'signedUrl': 'https://cdn.example.com/master.m3u8',
           'playbackUrl': 'https://cdn.example.com/master.m3u8',
+          'authorizationType': 'CLOUDFRONT_SIGNED_COOKIES',
           'sessionId': 'session',
           'expiresAtEpochSeconds':
               DateTime.now().millisecondsSinceEpoch ~/ 1000 + 300,

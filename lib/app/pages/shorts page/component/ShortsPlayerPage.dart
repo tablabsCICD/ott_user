@@ -9,6 +9,7 @@ import 'package:ott/app/core/network/anti_piracy_api_client.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/invoice_service.dart';
 import 'package:ott/app/core/services/session_manager.dart';
+import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/provider/secure_playback_controller.dart';
@@ -295,6 +296,14 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     final volume = previousState?.volume ?? 100;
     final rate = previousState?.rate ?? 1;
 
+    if (authorization.audioTracks.length > 1 ||
+        authorization.subtitleTracks.length > 1) {
+      SecurityDebugLog.event(
+        'PLAYER',
+        'Multiple supported external tracks were returned for the selected part; only one automatic track will be attached.',
+      );
+    }
+
     final old = _controller;
     _controller = null;
     _videoController = null;
@@ -332,13 +341,46 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       await player.open(
         Media(
           authorization.playbackUrl,
-          httpHeaders: {
-            'Cookie': authorization.cookieHeader,
-            'User-Agent': 'FilmyTell/1.0',
-          },
+          httpHeaders: authorization.httpHeaders,
         ),
         play: true,
       );
+      final automaticAudio =
+          getAutomaticAudioTrack(authorization.audioTracks);
+      if (automaticAudio != null) {
+        try {
+          await player.setAudioTrack(
+            AudioTrack.uri(
+              automaticAudio.url,
+              title: automaticAudio.label,
+              language: automaticAudio.language,
+            ),
+          );
+        } catch (_) {
+          SecurityDebugLog.event(
+            'PLAYER',
+            'Automatic external part audio is unsupported; using manifest audio.',
+          );
+        }
+      }
+      final automaticSubtitle =
+          getAutomaticSubtitleTrack(authorization.subtitleTracks);
+      if (automaticSubtitle != null) {
+        try {
+          await player.setSubtitleTrack(
+            SubtitleTrack.uri(
+              automaticSubtitle.url,
+              title: automaticSubtitle.label,
+              language: automaticSubtitle.language,
+            ),
+          );
+        } catch (_) {
+          SecurityDebugLog.event(
+            'PLAYER',
+            'Automatic external part subtitle is unsupported; continuing playback.',
+          );
+        }
+      }
       await player.setVolume(volume);
       if (isRefresh) {
         if (position > Duration.zero) await player.seek(position);

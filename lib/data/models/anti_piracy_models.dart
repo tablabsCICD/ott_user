@@ -96,6 +96,7 @@ class SignedPlaybackRequest {
     required this.deviceId,
     required this.playbackUrl,
     required this.country,
+    required this.platform,
     required this.deviceIntegrity,
   });
 
@@ -103,6 +104,7 @@ class SignedPlaybackRequest {
   final String deviceId;
   final String playbackUrl;
   final String country;
+  final String platform;
   final DeviceIntegrityStatus deviceIntegrity;
 
   Map<String, dynamic> toJson() => {
@@ -110,8 +112,100 @@ class SignedPlaybackRequest {
         'deviceId': deviceId,
         'playbackUrl': playbackUrl,
         'country': country,
+        'platform': platform,
         'deviceIntegrity': deviceIntegrity.toJson(),
       };
+}
+
+class SecureAudioTrack {
+  const SecureAudioTrack({
+    required this.id,
+    required this.label,
+    required this.language,
+    required this.url,
+    required this.type,
+    required this.format,
+    this.isDefault = false,
+  });
+
+  final String id;
+  final String label;
+  final String language;
+  final String url;
+  final String type;
+  final String format;
+  final bool isDefault;
+
+  bool get isSupportedHls =>
+      url.isNotEmpty &&
+      (type.toLowerCase() == 'hls' || format.toLowerCase() == 'm3u8');
+
+  factory SecureAudioTrack.fromJson(Map<String, dynamic> json) =>
+      SecureAudioTrack(
+        id: (json['id'] ?? '').toString().trim(),
+        label: (json['label'] ?? '').toString().trim(),
+        language: (json['language'] ?? '').toString().trim(),
+        url: (json['url'] ?? '').toString().trim(),
+        type: (json['type'] ?? '').toString().trim(),
+        format: (json['format'] ?? '').toString().trim(),
+        isDefault: json['default'] == true || json['isDefault'] == true,
+      );
+}
+
+class SecureSubtitleTrack {
+  const SecureSubtitleTrack({
+    required this.id,
+    required this.label,
+    required this.language,
+    required this.url,
+    required this.type,
+    required this.format,
+    this.isDefault = false,
+  });
+
+  final String id;
+  final String label;
+  final String language;
+  final String url;
+  final String type;
+  final String format;
+  final bool isDefault;
+
+  bool get isSupportedVtt =>
+      url.isNotEmpty &&
+      (format.toLowerCase() == 'vtt' ||
+          Uri.tryParse(url)?.path.toLowerCase().endsWith('.vtt') == true);
+
+  factory SecureSubtitleTrack.fromJson(Map<String, dynamic> json) =>
+      SecureSubtitleTrack(
+        id: (json['id'] ?? '').toString().trim(),
+        label: (json['label'] ?? '').toString().trim(),
+        language: (json['language'] ?? '').toString().trim(),
+        url: (json['url'] ?? '').toString().trim(),
+        type: (json['type'] ?? '').toString().trim(),
+        format: (json['format'] ?? '').toString().trim(),
+        isDefault: json['default'] == true || json['isDefault'] == true,
+      );
+}
+
+SecureAudioTrack? getAutomaticAudioTrack(List<SecureAudioTrack> tracks) {
+  SecureAudioTrack? first;
+  for (final track in tracks.where((track) => track.isSupportedHls)) {
+    first ??= track;
+    if (track.isDefault) return track;
+  }
+  return first;
+}
+
+SecureSubtitleTrack? getAutomaticSubtitleTrack(
+  List<SecureSubtitleTrack> tracks,
+) {
+  SecureSubtitleTrack? first;
+  for (final track in tracks.where((track) => track.isSupportedVtt)) {
+    first ??= track;
+    if (track.isDefault) return track;
+  }
+  return first;
 }
 
 class SignedPlaybackResponse {
@@ -123,9 +217,13 @@ class SignedPlaybackResponse {
     required this.sessionId,
     required this.expiresAt,
     required this.expiresAtEpochSeconds,
-  });
+    this.audioTracks = const [],
+    this.subtitleTracks = const [],
+    String? cookieHeader,
+  }) : _cookieHeader = cookieHeader;
 
   static const cloudFrontSignedCookies = 'CLOUDFRONT_SIGNED_COOKIES';
+  static const cloudFrontSignedUrl = 'CLOUDFRONT_SIGNED_URL';
   static const requiredCookieNames = <String>{
     'CloudFront-Policy',
     'CloudFront-Signature',
@@ -139,9 +237,21 @@ class SignedPlaybackResponse {
   final String sessionId;
   final DateTime expiresAt;
   final int expiresAtEpochSeconds;
+  final List<SecureAudioTrack> audioTracks;
+  final List<SecureSubtitleTrack> subtitleTracks;
+  final String? _cookieHeader;
 
-  String get cookieHeader =>
-      requiredCookieNames.map((name) => '$name=${cookies[name]}').join('; ');
+  String get cookieHeader => _cookieHeader?.trim().isNotEmpty == true
+      ? _cookieHeader!.trim()
+      : requiredCookieNames
+          .where((name) => cookies[name]?.isNotEmpty == true)
+          .map((name) => '$name=${cookies[name]}')
+          .join('; ');
+
+  Map<String, String> get httpHeaders =>
+      authorizationType == cloudFrontSignedCookies
+          ? Map.unmodifiable({'Cookie': cookieHeader})
+          : const {};
 
   bool get isValid => isValidAt(DateTime.now().toUtc());
 
@@ -150,20 +260,25 @@ class SignedPlaybackResponse {
     return uri != null &&
         uri.scheme == 'https' &&
         uri.host.isNotEmpty &&
-        authorizationType == cloudFrontSignedCookies &&
+        (authorizationType == cloudFrontSignedUrl ||
+            (authorizationType == cloudFrontSignedCookies &&
+                cookieHeader.isNotEmpty &&
+                !cookieHeader.contains(RegExp(r'[\r\n]')))) &&
         sessionId.isNotEmpty &&
         expiresAtEpochSeconds > now.toUtc().millisecondsSinceEpoch ~/ 1000 &&
-        requiredCookieNames.every((name) {
-          final value = cookies[name];
-          return value != null &&
-              value.isNotEmpty &&
-              !value.contains(RegExp(r'[;\r\n]'));
-        });
+        (authorizationType == cloudFrontSignedUrl ||
+            requiredCookieNames.every((name) {
+              final value = cookies[name];
+              return value != null &&
+                  value.isNotEmpty &&
+                  !value.contains(RegExp(r'[;\r\n]'));
+            }));
   }
 
   factory SignedPlaybackResponse.fromJson(
     Map<String, dynamic> json, {
     DateTime? now,
+    String? platform,
   }) {
     final playbackUrl = (json['playbackUrl'] ?? '').toString().trim();
     final uri = Uri.tryParse(playbackUrl);
@@ -172,27 +287,37 @@ class SignedPlaybackResponse {
     }
 
     final signedUrl = (json['signedUrl'] ?? '').toString().trim();
-    final authorizationType =
-        (json['authorizationType'] ?? '').toString().trim();
-    if (authorizationType != cloudFrontSignedCookies) {
+    var authorizationType =
+        (json['authorizationType'] ?? '').toString().trim().toUpperCase();
+    final rawCookieHeader = (json['cookieHeader'] ?? '').toString().trim();
+    if (authorizationType.isEmpty) {
+      authorizationType = platform == 'ANDROID' && rawCookieHeader.isNotEmpty
+          ? cloudFrontSignedCookies
+          : cloudFrontSignedUrl;
+    }
+    if (authorizationType != cloudFrontSignedCookies &&
+        authorizationType != cloudFrontSignedUrl) {
       throw const FormatException('Unsupported playback authorization.');
     }
 
     final rawCookies = json['cookies'];
-    if (rawCookies is! Map) {
-      throw const FormatException('Missing CloudFront playback cookies.');
-    }
-    final cookies = rawCookies.map(
-      (key, value) => MapEntry(key.toString(), value.toString().trim()),
-    );
-    final cookiesValid = requiredCookieNames.every((name) {
-      final value = cookies[name];
-      return value != null &&
-          value.isNotEmpty &&
-          !value.contains(RegExp(r'[;\r\n]'));
-    });
-    if (!cookiesValid) {
-      throw const FormatException('Invalid CloudFront playback cookies.');
+    final cookies = rawCookies is Map
+        ? rawCookies.map(
+            (key, value) => MapEntry(key.toString(), value.toString().trim()),
+          )
+        : <String, String>{};
+    if (authorizationType == cloudFrontSignedCookies) {
+      final headerIsValid = rawCookieHeader.isNotEmpty &&
+          !rawCookieHeader.contains(RegExp(r'[\r\n]'));
+      final cookiesAreValid = requiredCookieNames.every((name) {
+        final value = cookies[name];
+        return value != null &&
+            value.isNotEmpty &&
+            !value.contains(RegExp(r'[;\r\n]'));
+      });
+      if (!headerIsValid && !cookiesAreValid) {
+        throw const FormatException('Missing CloudFront playback cookies.');
+      }
     }
 
     final sessionId = (json['sessionId'] ?? '').toString().trim();
@@ -228,8 +353,28 @@ class SignedPlaybackResponse {
       sessionId: sessionId,
       expiresAt: expiresAt,
       expiresAtEpochSeconds: expiresAtEpochSeconds,
+      cookieHeader: rawCookieHeader.isEmpty ? null : rawCookieHeader,
+      audioTracks: _parseTrackList(
+        json['audioTracks'],
+        SecureAudioTrack.fromJson,
+      ).where((track) => track.isSupportedHls).toList(growable: false),
+      subtitleTracks: _parseTrackList(
+        json['subtitleTracks'],
+        SecureSubtitleTrack.fromJson,
+      ).where((track) => track.isSupportedVtt).toList(growable: false),
     );
   }
+}
+
+List<T> _parseTrackList<T>(
+  dynamic value,
+  T Function(Map<String, dynamic>) parser,
+) {
+  if (value is! List) return const [];
+  return value
+      .whereType<Map>()
+      .map((item) => parser(item.cast<String, dynamic>()))
+      .toList(growable: false);
 }
 
 enum PlaybackAnalyticsEvent {

@@ -114,7 +114,7 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
   void _handleNav(String label) {
     switch (label) {
       case 'Home':
-        _scrollTo(_homeKey);
+        Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
         break;
       case 'Movies':
         _showLatestContentType('MOVIE');
@@ -125,12 +125,7 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
       case 'Mini Series':
         _showLatestContentType('MINI SERIES');
         break;
-      case 'Live TV':
-        _scrollTo(_liveTvKey);
-        break;
-      case 'Categories':
-        _scrollTo(_latestKey);
-        break;
+
       default:
         _scrollTo(_homeKey);
     }
@@ -287,6 +282,32 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     }
   }
 
+  Future<void> _openInternalStaticPage(String path) async {
+    try {
+      final uri = kIsWeb
+          ? Uri.base.resolve(path)
+          : Uri.https('filmytell.com', path.startsWith('/') ? path : '/$path');
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.platformDefault,
+        webOnlyWindowName: '_self',
+      );
+      if (!mounted || opened) return;
+      CustomToast.show(
+        context,
+        AppLocalizations.of(context)!.unableOpenLink,
+        isSuccess: false,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      CustomToast.show(
+        context,
+        AppLocalizations.of(context)!.unableOpenLink,
+        isSuccess: false,
+      );
+    }
+  }
+
   Future<void> _openDocumentInNewTab(String url) async {
     final uri = legalDocumentViewUri(url);
     final opened = await launchUrl(
@@ -358,7 +379,7 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
   void _handleFooterLink(String label) {
     switch (label) {
       case 'Home':
-        _scrollTo(_homeKey);
+        Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
         return;
       case 'Movies':
         _showLatestContentType('MOVIE');
@@ -388,10 +409,10 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
         );
         return;
       case 'Privacy Policy':
-        _openPrivacyPolicy();
+        _openInternalStaticPage('/privacy-policy.html');
         return;
       case 'Terms & Conditions':
-        _openTerms();
+        _openInternalStaticPage('/terms-of-service.html');
         return;
       case 'Account Deletion':
         _openExternal(AppConstant.accountDeletionUrl);
@@ -406,21 +427,16 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
         _openExternal(AppConstant.xUrl);
         return;
       case 'About Us':
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AboutFilmytellScreen()),
-        );
+        _openInternalStaticPage('/about-us.html');
         return;
       case 'Contact Us':
-        _showContactDialog();
+        _openInternalStaticPage('/contact.html');
         return;
       case 'FAQ':
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const FaqScreen()),
-        );
+        _openInternalStaticPage('/help-center.html');
+        return;
+      case 'Cookies':
+        _openInternalStaticPage('/cookies.html');
         return;
     }
 
@@ -835,9 +851,16 @@ class _LatestContentStatus extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
+    final horizontalPadding =
+        MediaQuery.sizeOf(context).width < 600 ? 20.0 : 56.0;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(56, 0, 56, 48),
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        0,
+        horizontalPadding,
+        48,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -899,8 +922,15 @@ class _LandingError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final horizontalPadding =
+        MediaQuery.sizeOf(context).width < 600 ? 20.0 : 56.0;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(56, 16, 56, 34),
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        16,
+        horizontalPadding,
+        34,
+      ),
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(

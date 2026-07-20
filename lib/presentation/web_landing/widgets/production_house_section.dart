@@ -49,6 +49,8 @@ class ProductionHouseSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
+    final width = MediaQuery.sizeOf(context).width;
+    final compact = width < 900;
     final steps = [
       lang.registerProductionHouse,
       lang.completeVerification,
@@ -67,8 +69,13 @@ class ProductionHouseSection extends StatelessWidget {
     ];
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(56, 8, 56, 70),
-      padding: const EdgeInsets.all(34),
+      margin: EdgeInsets.fromLTRB(
+        width < 600 ? 16 : (width < 1024 ? 32 : 56),
+        8,
+        width < 600 ? 16 : (width < 1024 ? 32 : 56),
+        width < 600 ? 46 : 70,
+      ),
+      padding: EdgeInsets.all(width < 600 ? 20 : 34),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         color: const Color(0xFF101010),
@@ -90,10 +97,13 @@ class ProductionHouseSection extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Flex(
+        direction: compact ? Axis.vertical : Axis.horizontal,
+        mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Expanded(
+          Flexible(
+            fit: FlexFit.loose,
             flex: 10,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,9 +120,9 @@ class ProductionHouseSection extends StatelessWidget {
                 const SizedBox(height: 14),
                 Text(
                   lang.productionHousesTitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 40,
+                    fontSize: width < 600 ? 30 : 40,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -190,8 +200,9 @@ class ProductionHouseSection extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 42),
-          Expanded(
+          SizedBox(width: compact ? 0 : 42, height: compact ? 30 : 0),
+          Flexible(
+            fit: FlexFit.loose,
             flex: 9,
             child: Column(
               children: [

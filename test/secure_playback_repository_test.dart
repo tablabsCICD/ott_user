@@ -129,6 +129,7 @@ void main() {
     expect(response.sessionId, 'session-id');
     expect(api.request, isNotNull);
     expect(api.request!.deviceId, api.registeredDeviceId);
+    expect(api.request!.platform, 'ANDROID');
     expect(
       api.request!.deviceIntegrity.state,
       DeviceIntegrityState.unknown,
