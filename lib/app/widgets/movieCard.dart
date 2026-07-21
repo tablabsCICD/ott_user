@@ -27,8 +27,19 @@ import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:video_player/video_player.dart' as native_video;
 
 import 'package:ott/data/models/content.dart';
+
+const Duration _trailerPreviewNativeInitializeTimeout = Duration(seconds: 12);
+
+bool get _useNativeIosTrailerPreview =>
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+bool _looksLikeHlsUri(Uri uri) {
+  final value = uri.toString().toLowerCase();
+  return uri.path.toLowerCase().endsWith('.m3u8') || value.contains('.m3u8?');
+}
 
 class MovieCard extends StatefulWidget {
   static const double itemWidth = 300;
@@ -69,6 +80,7 @@ class _MovieCardState extends State<MovieCard> {
   static _MovieCardState? _activePreviewState;
   Player? _previewPlayer;
   VideoController? _videoController;
+  native_video.VideoPlayerController? _nativePreviewController;
   final List<StreamSubscription<dynamic>> _previewSubscriptions = [];
   bool _isHovered = false;
   bool _isMuted = true;
@@ -142,10 +154,12 @@ class _MovieCardState extends State<MovieCard> {
 
   void _toggleMute() {
     final player = _previewPlayer;
+    final nativePlayer = _nativePreviewController;
     setState(() {
       _isMuted = !_isMuted;
     });
     player?.setVolume(_isMuted ? 0 : 100);
+    nativePlayer?.setVolume(_isMuted ? 0 : 1);
   }
 
   Future<bool> _ensureVideoInitialized() async {
@@ -154,6 +168,10 @@ class _MovieCardState extends State<MovieCard> {
     final trailerUri = _previewUri(widget.movie.trailerUrl);
     if (trailerUri == null) return false;
     final generation = _previewGeneration;
+
+    if (_useNativeIosTrailerPreview) {
+      return _ensureNativeVideoInitialized(trailerUri, generation);
+    }
 
     final player = Player();
 
@@ -217,6 +235,76 @@ class _MovieCardState extends State<MovieCard> {
     }
   }
 
+  Future<bool> _ensureNativeVideoInitialized(
+    Uri trailerUri,
+    int generation,
+  ) async {
+    final controller = native_video.VideoPlayerController.networkUrl(
+      trailerUri,
+      formatHint:
+          _looksLikeHlsUri(trailerUri) ? native_video.VideoFormat.hls : null,
+      videoPlayerOptions: native_video.VideoPlayerOptions(
+        mixWithOthers: false,
+      ),
+    );
+
+    void listener() {
+      if (!mounted ||
+          generation != _previewGeneration ||
+          _activePreviewState != this) {
+        return;
+      }
+
+      if (controller.value.hasError) {
+        debugPrint("Trailer native playback error: "
+            "${controller.value.errorDescription}");
+        _stopAndDisposePreview('native stream error');
+        if (_activePreviewState == this) {
+          _activePreviewState = null;
+        }
+        return;
+      }
+
+      if (mounted) setState(() {});
+    }
+
+    controller.addListener(listener);
+
+    try {
+      _logTrailer('Opening trailer with AVPlayer');
+      await controller
+          .initialize()
+          .timeout(_trailerPreviewNativeInitializeTimeout);
+      await controller.setLooping(true);
+      await controller.setVolume(_isMuted ? 0 : 1);
+
+      if (!mounted ||
+          generation != _previewGeneration ||
+          !_isPlayTriggerActive ||
+          _activePreviewState != this) {
+        controller.removeListener(listener);
+        await controller.dispose();
+        _logPreview('Native video disposed stale init');
+        return false;
+      }
+
+      _nativePreviewController = controller;
+
+      if (mounted) {
+        setState(() => _isVideoInitialized = true);
+      }
+      _logPreview('Native video initialized');
+      _logTrailer('AVPlayer initialized');
+      return true;
+    } catch (e) {
+      debugPrint("Native video init failed: $e");
+      controller.removeListener(listener);
+      await controller.dispose();
+      _disposeVideoController();
+      return false;
+    }
+  }
+
   void _disposeVideoController() {
     _previewGeneration++;
     for (final subscription in _previewSubscriptions) {
@@ -224,13 +312,20 @@ class _MovieCardState extends State<MovieCard> {
     }
     _previewSubscriptions.clear();
     final player = _previewPlayer;
+    final nativePlayer = _nativePreviewController;
     _previewPlayer = null;
     _videoController = null;
+    _nativePreviewController = null;
     _isVideoInitialized = false;
     _isPreviewPlaying = false;
     if (player != null) {
       unawaited(player.dispose());
       _logPreview('Video Disposed');
+    }
+    if (nativePlayer != null) {
+      unawaited(nativePlayer.pause());
+      unawaited(nativePlayer.dispose());
+      _logPreview('Native video disposed');
     }
   }
 
@@ -369,8 +464,8 @@ class _MovieCardState extends State<MovieCard> {
 
       _ensureMuted();
 
-      if (!_previewPlayer!.state.playing) {
-        await _previewPlayer!.play();
+      if (!_isActivePreviewPlaying) {
+        await _playActivePreview();
       }
       if (!mounted ||
           generation != _previewGeneration ||
@@ -401,20 +496,42 @@ class _MovieCardState extends State<MovieCard> {
 
   void _ensureMuted() {
     final player = _previewPlayer;
-    if (player == null) return;
+    final nativePlayer = _nativePreviewController;
+    if (player == null && nativePlayer == null) return;
     if (!_isMuted) {
       setState(() => _isMuted = true);
     }
-    player.setVolume(0);
+    player?.setVolume(0);
+    nativePlayer?.setVolume(0);
+  }
+
+  bool get _isActivePreviewPlaying {
+    final nativePlayer = _nativePreviewController;
+    if (nativePlayer != null) return nativePlayer.value.isPlaying;
+    return _previewPlayer?.state.playing ?? false;
+  }
+
+  Future<void> _playActivePreview() async {
+    final nativePlayer = _nativePreviewController;
+    if (nativePlayer != null) {
+      await nativePlayer.play();
+      return;
+    }
+    await _previewPlayer?.play();
   }
 
   void _stopPreview({bool external = false}) {
     final player = _previewPlayer;
-    if (player == null || !_isVideoInitialized) return;
+    final nativePlayer = _nativePreviewController;
+    if ((player == null && nativePlayer == null) || !_isVideoInitialized) {
+      return;
+    }
 
     try {
-      player.pause();
-      player.seek(Duration.zero);
+      player?.pause();
+      player?.seek(Duration.zero);
+      nativePlayer?.pause();
+      nativePlayer?.seekTo(Duration.zero);
     } catch (e) {
       debugPrint("Trailer stop failed: $e");
     }
@@ -572,6 +689,47 @@ class _MovieCardState extends State<MovieCard> {
 
   Widget _buildMediaPreview(
       String? posterUrl, ThemeData theme, Content content, bool showPreview) {
+    final nativePlayer = _nativePreviewController;
+    if (showPreview &&
+        _isVideoInitialized &&
+        nativePlayer != null &&
+        nativePlayer.value.isInitialized) {
+      final videoSize = nativePlayer.value.size;
+      final videoWidth = videoSize.width <= 0 ? 16.0 : videoSize.width;
+      final videoHeight = videoSize.height <= 0 ? 9.0 : videoSize.height;
+      return Stack(
+        children: [
+          Positioned.fill(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(
+                width: videoWidth,
+                height: videoHeight,
+                child: native_video.VideoPlayer(nativePlayer),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: _previewProgress(),
+          ),
+          Positioned(
+            right: 5,
+            bottom: 5,
+            child: IconButton(
+              icon: Icon(
+                _isMuted ? Icons.volume_off : Icons.volume_up,
+                color: Colors.white.withOpacity(0.7),
+              ),
+              onPressed: _toggleMute,
+            ),
+          ),
+        ],
+      );
+    }
+
     if (showPreview && _isVideoInitialized && _videoController != null) {
       return Stack(
         children: [
@@ -861,6 +1019,23 @@ class _MovieCardState extends State<MovieCard> {
   }
 
   Widget _previewProgress() {
+    final nativePlayer = _nativePreviewController;
+    if (nativePlayer != null && nativePlayer.value.isInitialized) {
+      final duration = nativePlayer.value.duration.inMilliseconds;
+      if (duration <= 0) return const SizedBox.shrink();
+
+      final value = (nativePlayer.value.position.inMilliseconds / duration)
+          .clamp(0.0, 1.0)
+          .toDouble();
+
+      return LinearProgressIndicator(
+        value: value,
+        minHeight: 3,
+        color: Colors.red,
+        backgroundColor: Colors.white24,
+      );
+    }
+
     final player = _previewPlayer;
     if (player == null) return const SizedBox.shrink();
 

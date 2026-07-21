@@ -16,6 +16,7 @@ import 'package:ott/app/provider/secure_playback_controller.dart';
 import 'package:ott/data/models/anti_piracy_models.dart';
 import 'package:ott/data/models/seriesModel.dart';
 import 'package:provider/provider.dart';
+import 'package:video_player/video_player.dart' as native_video;
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart' as youtube;
 
@@ -48,6 +49,9 @@ String _resolvePlaybackCountryCode() {
   return 'IN';
 }
 
+const Duration _nativeNetworkInitializeTimeout = Duration(seconds: 12);
+const Duration _mediaKitOpenTimeout = Duration(seconds: 25);
+
 class PlayMediaPage extends StatefulWidget {
   final Content? content;
   final int? seasonIndex;
@@ -72,6 +76,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     with WidgetsBindingObserver {
   Player? _player;
   VideoController? _videoController;
+  native_video.VideoPlayerController? _nativeNetworkPlayer;
   youtube.YoutubePlayerController? _youtubeController;
   final List<StreamSubscription<dynamic>> _playerSubscriptions = [];
   Timer? _progressTimer;
@@ -96,6 +101,14 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       widget.seasons != null &&
       widget.episodeIndex != null;
 
+  bool get _canUseNativeSignedUrlPlayer =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+  bool get _hasReadyPlayerSurface =>
+      _youtubeController != null ||
+      (_nativeNetworkPlayer?.value.isInitialized ?? false) ||
+      (_player != null && _videoController != null);
+
   @override
   void initState() {
     super.initState();
@@ -114,6 +127,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
       unawaited(_player?.pause());
+      unawaited(_nativeNetworkPlayer?.pause());
       _youtubeController?.pause();
       unawaited(_securePlaybackController?.onBackground());
       _saveProgress();
@@ -326,64 +340,95 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     SignedPlaybackResponse authorization, {
     required bool isRefresh,
   }) async {
+    final playbackConfig = authorization.toPlaybackConfig();
     SecurityDebugLog.event(
       'PLAYER',
       isRefresh
-          ? 'Received refreshed CloudFront cookies; reinitializing media_kit.'
-          : 'Received CloudFront signed-cookie authorization; initializing media_kit now.',
+          ? 'Received refreshed ${playbackConfig.authorizationType}; reinitializing the secure media player.'
+          : 'Received ${playbackConfig.authorizationType}; initializing the secure media player now.',
     );
-    final playbackUri = Uri.tryParse(authorization.playbackUrl);
+    final playbackUri = Uri.tryParse(playbackConfig.playbackUrl);
     SecurityDebugLog.diagnostic(
       'SIGNED_MEDIA_METADATA validUri=${playbackUri != null} '
       'scheme=${playbackUri?.scheme ?? '<missing>'} '
       'host=${playbackUri?.host ?? '<missing>'} '
-      'authorizationType=${authorization.authorizationType} '
-      'cookieNames=${authorization.cookies.keys.toList()} '
-      'cookieValuesRedacted=true',
+      'authorizationType=${playbackConfig.authorizationType} '
+      'usesSignedCookies=${playbackConfig.usesSignedCookies} '
+      'httpHeaderCount=${playbackConfig.httpHeaders.length} '
+      'audioTracks=${playbackConfig.audioTracks.length} '
+      'subtitleTracks=${playbackConfig.subtitleTracks.length} '
+      'credentialValuesRedacted=true',
     );
     final previous = _player?.state;
-    final position = previous?.position ?? Duration.zero;
-    final wasPlaying = previous?.playing ?? true;
-    final volume = previous?.volume ?? 100;
-    final rate = previous?.rate ?? 1;
+    final previousNative = _nativeNetworkPlayer?.value;
+    final position =
+        previousNative?.position ?? previous?.position ?? Duration.zero;
+    final wasPlaying = previousNative?.isPlaying ?? previous?.playing ?? true;
+    final volume = previousNative == null
+        ? previous?.volume ?? 100
+        : previousNative.volume * 100;
+    final rate = previousNative?.playbackSpeed ?? previous?.rate ?? 1;
     final audioTrack = previous?.track.audio;
     final subtitleTrack = previous?.track.subtitle;
 
     await _setupPlayer(
-      authorization.playbackUrl,
-      httpHeaders: {'Cookie': authorization.cookieHeader},
-      diagnoseSignedHls: true,
+      playbackConfig.playbackUrl,
+      httpHeaders: playbackConfig.httpHeaders.isEmpty
+          ? null
+          : playbackConfig.httpHeaders,
+      diagnoseSignedHls: playbackConfig.usesSignedCookies,
+      audioTracks: playbackConfig.audioTracks,
+      subtitleTracks: playbackConfig.subtitleTracks,
+      preferNativeNetworkPlayer:
+          playbackConfig.usesSignedUrl && _canUseNativeSignedUrlPlayer,
     );
     final player = _player;
-    if (player == null || _hasPlaybackError) {
+    final nativePlayer = _nativeNetworkPlayer;
+    if ((player == null && nativePlayer == null) || _hasPlaybackError) {
       SecurityDebugLog.event(
         'PLAYER',
-        'media_kit could not initialize the signed media source.',
+        'The secure media player could not initialize the signed media source.',
       );
       throw StateError('Secure media initialization failed');
     }
 
     if (isRefresh) {
-      if (position > Duration.zero) await player.seek(position);
-      await player.setVolume(volume);
-      await player.setRate(rate);
-      if (audioTrack != null) await player.setAudioTrack(audioTrack);
-      if (subtitleTrack != null) await player.setSubtitleTrack(subtitleTrack);
-      if (wasPlaying) {
-        await player.play();
-      } else {
-        await player.pause();
+      if (nativePlayer != null) {
+        if (position > Duration.zero) await nativePlayer.seekTo(position);
+        await nativePlayer.setVolume((volume / 100).clamp(0.0, 1.0));
+        await nativePlayer.setPlaybackSpeed(rate);
+        if (wasPlaying) {
+          await nativePlayer.play();
+        } else {
+          await nativePlayer.pause();
+        }
+      } else if (player != null) {
+        if (position > Duration.zero) await player.seek(position);
+        await player.setVolume(volume);
+        await player.setRate(rate);
+        if (audioTrack != null) await player.setAudioTrack(audioTrack);
+        if (subtitleTrack != null) await player.setSubtitleTrack(subtitleTrack);
+        if (wasPlaying) {
+          await player.play();
+        } else {
+          await player.pause();
+        }
       }
     }
     SecurityDebugLog.event(
       'PLAYER',
-      'media_kit accepted the cookie-authorized source; URL and cookies remain redacted.',
+      nativePlayer != null
+          ? 'AVPlayer accepted the signed-url source; URL credentials remain redacted.'
+          : 'media_kit accepted the authorized source; URL and credentials remain redacted.',
     );
-    return SecureMediaRestoreResult(isPlaying: player.state.playing);
+    return SecureMediaRestoreResult(
+      isPlaying: nativePlayer?.value.isPlaying ?? player!.state.playing,
+    );
   }
 
   Future<void> _pauseActivePlayer() async {
     await _player?.pause();
+    await _nativeNetworkPlayer?.pause();
     _youtubeController?.pause();
   }
 
@@ -486,6 +531,9 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     bool playFromFile = false,
     bool diagnoseSignedHls = false,
     Map<String, String>? httpHeaders,
+    List<PlaybackTrackInfo> audioTracks = const [],
+    List<PlaybackTrackInfo> subtitleTracks = const [],
+    bool preferNativeNetworkPlayer = false,
   }) async {
     final token = ++_setupToken;
 
@@ -512,24 +560,65 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       if (_isDisposed || !mounted || token != _setupToken) return;
     }
 
+    if (!playFromFile && preferNativeNetworkPlayer) {
+      final nativeReady = await _setupNativeNetworkPlayer(
+        url,
+        httpHeaders: httpHeaders ?? const {},
+        token: token,
+      );
+      if (_isDisposed || !mounted || token != _setupToken) return;
+      if (nativeReady) return;
+      SecurityDebugLog.event(
+        'PLAYER',
+        'AVPlayer could not initialize the signed-url source; falling back to media_kit.',
+      );
+    }
+
     final player = Player();
     final controller = VideoController(player);
 
     try {
+      // Media.httpHeaders is the supported media_kit API. Configure libmpv as
+      // well so native HLS child playlists and segments keep protected headers.
+      if (!kIsWeb && !playFromFile && httpHeaders != null) {
+        final nativeHeaderFields = httpHeaders.entries
+            .map((entry) => '${entry.key}: ${entry.value}')
+            .join('\n');
+        await (player.platform as dynamic).setProperty(
+          'http-header-fields',
+          nativeHeaderFields,
+        );
+        SecurityDebugLog.diagnostic(
+          'MEDIA_KIT_NATIVE_PROPERTIES '
+          'headers=${httpHeaders.keys.toList()} '
+          'cookieHeaderPresent=${httpHeaders['Cookie']?.isNotEmpty == true} '
+          'credentialValuesRedacted=true',
+        );
+      }
       // media_kit is the underlying playback engine; the route keeps the
       // existing fullscreen, resume, continue-watching and auto-next behavior.
-      await player.open(
+      final openFuture = player.open(
         Media(
           playFromFile ? _localFileMediaUri(url) : url,
           httpHeaders: httpHeaders,
         ),
         play: false,
       );
+      if (preferNativeNetworkPlayer) {
+        await openFuture.timeout(_mediaKitOpenTimeout);
+      } else {
+        await openFuture;
+      }
       await player.setVolume(100);
+      await _applySecurePlaybackTracks(
+        player,
+        audioTracks: audioTracks,
+        subtitleTracks: subtitleTracks,
+      );
     } catch (error, stackTrace) {
       SecurityDebugLog.exception(
         'MEDIA_KIT_OPEN',
-        error,
+        _sanitizeSecurityText(error),
         stackTrace,
       );
       SecurityDebugLog.event(
@@ -561,6 +650,170 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
 
     await _resumeAndPlay(token);
+  }
+
+  Future<bool> _setupNativeNetworkPlayer(
+    String url, {
+    required Map<String, String> httpHeaders,
+    required int token,
+  }) async {
+    if (!_canUseNativeSignedUrlPlayer) return false;
+
+    final uri = Uri.tryParse(url);
+    if (uri == null ||
+        (uri.scheme != 'https' && uri.scheme != 'http') ||
+        uri.host.isEmpty) {
+      SecurityDebugLog.event(
+        'PLAYER',
+        'AVPlayer was skipped because the signed-url media URI is invalid.',
+      );
+      return false;
+    }
+
+    SecurityDebugLog.event(
+      'PLAYER',
+      'Using AVPlayer for iOS signed-url HLS playback.',
+    );
+    SecurityDebugLog.diagnostic(
+      'NATIVE_PLAYER_METADATA validUri=true '
+      'scheme=${uri.scheme} '
+      'host=${uri.host} '
+      'queryPresent=${uri.hasQuery} '
+      'httpHeaderCount=${httpHeaders.length} '
+      'credentialValuesRedacted=true',
+    );
+
+    final controller = native_video.VideoPlayerController.networkUrl(
+      uri,
+      formatHint: _looksLikeHlsUri(uri) ? native_video.VideoFormat.hls : null,
+      httpHeaders: httpHeaders,
+      videoPlayerOptions: native_video.VideoPlayerOptions(
+        mixWithOthers: false,
+      ),
+    );
+
+    var lastBuffering = false;
+    var completionReported = false;
+    var errorReported = false;
+
+    void listener() {
+      if (_isDisposed || !mounted || token != _setupToken) return;
+
+      final value = controller.value;
+      _handlePlayingChanged(value.isPlaying);
+
+      if (value.isInitialized && value.duration != _lastLoggedDuration) {
+        _lastLoggedDuration = value.duration;
+        SecurityDebugLog.event(
+          'PLAYER',
+          'Native media duration updated to ${value.duration.inMilliseconds} ms.',
+        );
+      }
+
+      if (value.isBuffering != lastBuffering) {
+        lastBuffering = value.isBuffering;
+        SecurityDebugLog.event(
+          'PLAYER',
+          'AVPlayer buffering=${value.isBuffering} positionMs=${value.position.inMilliseconds}.',
+        );
+      }
+
+      if (value.hasError && !errorReported) {
+        errorReported = true;
+        final description = value.errorDescription ?? 'Native player error';
+        SecurityDebugLog.exception(
+          'NATIVE_PLAYER_STREAM',
+          _sanitizeSecurityText(description),
+        );
+        final isForbidden = description.contains('403');
+        if (isForbidden && _securePlaybackController != null) {
+          unawaited(_securePlaybackController!.handlePlayerHttp403());
+        } else {
+          _showPlaybackError('Failed to load video');
+        }
+      }
+
+      if (value.isCompleted && !completionReported) {
+        completionReported = true;
+        SecurityDebugLog.event('PLAYER', 'AVPlayer reported completion.');
+        _handlePlaybackCompleted();
+      }
+
+      _handlePositionChanged();
+      if (mounted) setState(() {});
+    }
+
+    controller.addListener(listener);
+    try {
+      await controller.initialize().timeout(_nativeNetworkInitializeTimeout);
+      await controller.setLooping(false);
+      await controller.setVolume(1.0);
+    } catch (error, stackTrace) {
+      SecurityDebugLog.exception(
+        'NATIVE_PLAYER_INITIALIZE',
+        _sanitizeSecurityText(error),
+        stackTrace,
+      );
+      controller.removeListener(listener);
+      await controller.dispose();
+      return false;
+    }
+
+    if (_isDisposed || !mounted || token != _setupToken) {
+      controller.removeListener(listener);
+      await controller.dispose();
+      return false;
+    }
+
+    _nativeNetworkPlayer = controller;
+    SecurityDebugLog.event(
+      'PLAYER',
+      'AVPlayer initialization completed for the signed-url source.',
+    );
+
+    if (mounted && token == _setupToken) {
+      setState(() => _loading = false);
+    }
+
+    await _resumeAndPlay(token);
+    return true;
+  }
+
+  Future<void> _applySecurePlaybackTracks(
+    Player player, {
+    required List<PlaybackTrackInfo> audioTracks,
+    required List<PlaybackTrackInfo> subtitleTracks,
+  }) async {
+    final hlsAudioTracks = audioTracks.where((track) => track.isHls).toList();
+    final vttSubtitleTracks =
+        subtitleTracks.where((track) => track.isVtt).toList();
+    if (hlsAudioTracks.isNotEmpty) {
+      final track = hlsAudioTracks.first;
+      await player.setAudioTrack(
+        AudioTrack.uri(
+          track.url,
+          title: track.label.isEmpty ? null : track.label,
+          language: track.language.isEmpty ? null : track.language,
+        ),
+      );
+    }
+    if (vttSubtitleTracks.isNotEmpty) {
+      final track = vttSubtitleTracks.first;
+      await player.setSubtitleTrack(
+        SubtitleTrack.uri(
+          track.url,
+          title: track.label.isEmpty ? null : track.label,
+          language: track.language.isEmpty ? null : track.language,
+        ),
+      );
+    }
+    SecurityDebugLog.diagnostic(
+      'SECURE_TRACKS appliedAudio=${hlsAudioTracks.isNotEmpty} '
+      'appliedSubtitle=${vttSubtitleTracks.isNotEmpty} '
+      'ignoredAudio=${audioTracks.length - hlsAudioTracks.length} '
+      'ignoredSubtitle=${subtitleTracks.length - vttSubtitleTracks.length} '
+      'trackUrlsRedacted=true',
+    );
   }
 
   Future<void> _probeSignedHls(
@@ -613,7 +866,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           'HLS_PROBE_HTTP_${response.statusCode}',
           errorBody.isEmpty
               ? 'CloudFront returned an empty error body.'
-              : errorBody,
+              : _sanitizeSecurityText(errorBody),
         );
         return;
       }
@@ -642,8 +895,39 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         'cookieAuthorizationApplied=true',
       );
     } catch (error, stackTrace) {
-      SecurityDebugLog.exception('HLS_PROBE_NETWORK', error, stackTrace);
+      SecurityDebugLog.exception(
+        'HLS_PROBE_NETWORK',
+        _sanitizeSecurityText(error),
+        stackTrace,
+      );
     }
+  }
+
+  String _sanitizeSecurityText(Object? value) {
+    var text = value?.toString() ?? '';
+    if (text.isEmpty) return text;
+    text = text.replaceAllMapped(
+      RegExp(r'''https?://[^\s'")<>]+'''),
+      (match) {
+        final uri = Uri.tryParse(match.group(0)!);
+        if (uri == null) return '<redacted-url>';
+        return uri
+            .replace(query: uri.hasQuery ? '<redacted>' : null)
+            .toString();
+      },
+    );
+    text = text.replaceAllMapped(
+      RegExp(
+        r'CloudFront-(Policy|Signature|Key-Pair-Id)=[^\s;]+',
+        caseSensitive: false,
+      ),
+      (match) => 'CloudFront-${match.group(1)}=<redacted>',
+    );
+    text = text.replaceAll(
+      RegExp(r'Cookie:\s*[^\r\n]+', caseSensitive: false),
+      'Cookie: <redacted>',
+    );
+    return text;
   }
 
   void _bindPlayerStreams(Player player) {
@@ -677,7 +961,10 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         }
       }))
       ..add(player.stream.error.listen((error) {
-        SecurityDebugLog.exception('MEDIA_KIT_STREAM', error);
+        SecurityDebugLog.exception(
+          'MEDIA_KIT_STREAM',
+          _sanitizeSecurityText(error),
+        );
         final isForbidden = error.toString().contains('403');
         if (isForbidden && _securePlaybackController != null) {
           unawaited(_securePlaybackController!.handlePlayerHttp403());
@@ -690,11 +977,17 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   Future<void> _resumeAndPlay(int token) async {
-    if (_player == null || !mounted) return;
+    final player = _player;
+    final nativePlayer = _nativeNetworkPlayer;
+    if ((player == null && nativePlayer == null) || !mounted) return;
     if (_isDisposed || token != _setupToken) return;
 
     final provider = context.read<PlayMediaProvider>();
-    await _player!.setVolume(100);
+    if (nativePlayer != null) {
+      await nativePlayer.setVolume(1.0);
+    } else {
+      await player!.setVolume(100);
+    }
 
     final resumeSeconds = _isSeries
         ? provider.getLocalResume(
@@ -705,18 +998,35 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         : widget.content?.watchedSeconds ?? 0;
 
     if (resumeSeconds > 5) {
-      await _player!.seek(Duration(seconds: resumeSeconds));
+      final resumePosition = Duration(seconds: resumeSeconds);
+      if (nativePlayer != null) {
+        await nativePlayer.seekTo(resumePosition);
+      } else {
+        await player!.seek(resumePosition);
+      }
     }
 
-    SecurityDebugLog.event(
-      'PLAYER',
-      'Requesting media_kit play at positionMs=${_player!.state.position.inMilliseconds}.',
-    );
-    await _player!.play();
-    SecurityDebugLog.event(
-      'PLAYER',
-      'media_kit play returned playing=${_player!.state.playing} buffering=${_player!.state.buffering}.',
-    );
+    if (nativePlayer != null) {
+      SecurityDebugLog.event(
+        'PLAYER',
+        'Requesting AVPlayer play at positionMs=${nativePlayer.value.position.inMilliseconds}.',
+      );
+      await nativePlayer.play();
+      SecurityDebugLog.event(
+        'PLAYER',
+        'AVPlayer play returned playing=${nativePlayer.value.isPlaying} buffering=${nativePlayer.value.isBuffering}.',
+      );
+    } else {
+      SecurityDebugLog.event(
+        'PLAYER',
+        'Requesting media_kit play at positionMs=${player!.state.position.inMilliseconds}.',
+      );
+      await player.play();
+      SecurityDebugLog.event(
+        'PLAYER',
+        'media_kit play returned playing=${player.state.playing} buffering=${player.state.buffering}.',
+      );
+    }
     if (_isDisposed || token != _setupToken) return;
 
     _progressTimer = Timer.periodic(
@@ -740,7 +1050,26 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   void _handlePositionChanged() {
-    if (_isDisposed || !mounted || _player == null || _handlingEnd) return;
+    if (_isDisposed || !mounted || _handlingEnd) return;
+
+    final nativeValue = _nativeNetworkPlayer?.value;
+    if (nativeValue != null && nativeValue.isInitialized) {
+      if (nativeValue.isPlaying &&
+          (nativeValue.position - _lastSavedPosition).inSeconds >= 15) {
+        _saveProgress();
+      }
+
+      if (!nativeValue.isPlaying &&
+          nativeValue.position > Duration.zero &&
+          nativeValue.position != _lastSavedPosition) {
+        _saveProgress();
+      }
+
+      if (mounted) setState(() {});
+      return;
+    }
+
+    if (_player == null) return;
 
     final state = _player!.state;
 
@@ -768,10 +1097,17 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   void _saveProgress() {
     if (widget.content?.id == null) return;
 
-    final position =
-        _youtubeController?.value.position ?? _player?.state.position;
-    final duration =
-        _youtubeController?.value.metaData.duration ?? _player?.state.duration;
+    final nativeValue = _nativeNetworkPlayer?.value;
+    final nativePosition =
+        nativeValue?.isInitialized == true ? nativeValue!.position : null;
+    final nativeDuration =
+        nativeValue?.isInitialized == true ? nativeValue!.duration : null;
+    final position = _youtubeController?.value.position ??
+        nativePosition ??
+        _player?.state.position;
+    final duration = _youtubeController?.value.metaData.duration ??
+        nativeDuration ??
+        _player?.state.duration;
 
     if (position == null || duration == null) return;
 
@@ -865,9 +1201,11 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     _playerSubscriptions.clear();
 
     final player = _player;
+    final nativePlayer = _nativeNetworkPlayer;
     final youtubeController = _youtubeController;
     _player = null;
     _videoController = null;
+    _nativeNetworkPlayer = null;
     _youtubeController = null;
 
     if (player != null) {
@@ -878,6 +1216,13 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         await player.setVolume(0);
       } catch (_) {}
       await player.dispose();
+    }
+
+    if (nativePlayer != null) {
+      try {
+        await nativePlayer.pause();
+      } catch (_) {}
+      await nativePlayer.dispose();
     }
 
     youtubeController?.pause();
@@ -902,9 +1247,11 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     _playerSubscriptions.clear();
 
     final player = _player;
+    final nativePlayer = _nativeNetworkPlayer;
     final youtubeController = _youtubeController;
     _player = null;
     _videoController = null;
+    _nativeNetworkPlayer = null;
     _youtubeController = null;
 
     if (player != null) {
@@ -915,6 +1262,13 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         player.setVolume(0);
       } catch (_) {}
       player.dispose();
+    }
+
+    if (nativePlayer != null) {
+      try {
+        nativePlayer.pause();
+      } catch (_) {}
+      unawaited(nativePlayer.dispose());
     }
 
     youtubeController?.pause();
@@ -978,6 +1332,16 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       return;
     }
 
+    final nativePlayer = _nativeNetworkPlayer;
+    if (nativePlayer != null && nativePlayer.value.isInitialized) {
+      if (nativePlayer.value.isPlaying) {
+        unawaited(nativePlayer.pause());
+      } else {
+        unawaited(nativePlayer.play());
+      }
+      return;
+    }
+
     final player = _player;
     if (player != null) {
       unawaited(player.playOrPause());
@@ -993,6 +1357,21 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           position: youtubeController.value.position,
           duration: duration,
           offset: delta,
+        ),
+      );
+      return;
+    }
+
+    final nativePlayer = _nativeNetworkPlayer;
+    if (nativePlayer != null && nativePlayer.value.isInitialized) {
+      final duration = nativePlayer.value.duration;
+      unawaited(
+        nativePlayer.seekTo(
+          boundedSeekPosition(
+            position: nativePlayer.value.position,
+            duration: duration,
+            offset: delta,
+          ),
         ),
       );
       return;
@@ -1017,12 +1396,15 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>().getTheme;
     final secureState = _securePlaybackController?.state;
+    final playerSurfaceReady = _hasReadyPlayerSurface;
     final secureLoading =
-        secureState == SecurePlaybackState.preparingSecurity ||
-            secureState == SecurePlaybackState.requestingPlaybackAccess ||
-            secureState == SecurePlaybackState.initializingPlayer ||
-            secureState == SecurePlaybackState.refreshingUrl;
-    final showLoading = _loading || secureLoading;
+        (secureState == SecurePlaybackState.preparingSecurity ||
+                secureState == SecurePlaybackState.requestingPlaybackAccess ||
+                secureState == SecurePlaybackState.initializingPlayer ||
+                secureState == SecurePlaybackState.refreshingUrl) &&
+            !(secureState == SecurePlaybackState.initializingPlayer &&
+                playerSurfaceReady);
+    final showLoading = (_loading && !playerSurfaceReady) || secureLoading;
     final watermark = _securePlaybackController?.watermark;
 
     return WillPopScope(
@@ -1243,6 +1625,34 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       );
     }
 
+    final nativePlayer = _nativeNetworkPlayer;
+    if (nativePlayer != null && nativePlayer.value.isInitialized) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final height = constraints.maxHeight;
+          if (width <= 0 || height <= 0) return const SizedBox.expand();
+
+          final aspectRatio = nativePlayer.value.aspectRatio;
+          final videoWidth = width;
+          final videoHeight = videoWidth / aspectRatio;
+
+          return SizedBox(
+            width: width,
+            height: height,
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(
+                width: videoWidth,
+                height: videoHeight,
+                child: native_video.VideoPlayer(nativePlayer),
+              ),
+            ),
+          );
+        },
+      );
+    }
+
     if (_player == null || _videoController == null) {
       if (_hasPlaybackError) {
         return Center(
@@ -1285,5 +1695,10 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     final uri = Uri.tryParse(pathOrUri);
     if (uri?.scheme == 'file') return pathOrUri;
     return File(pathOrUri).uri.toString();
+  }
+
+  bool _looksLikeHlsUri(Uri uri) {
+    final value = uri.toString().toLowerCase();
+    return uri.path.toLowerCase().endsWith('.m3u8') || value.contains('.m3u8?');
   }
 }

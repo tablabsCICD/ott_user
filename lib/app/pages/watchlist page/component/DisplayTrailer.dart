@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
@@ -7,6 +8,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ott/app/core/utils/direct_trailer_source.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/route/route_observer.dart';
+import 'package:video_player/video_player.dart' as native_video;
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:ott/app/widgets/video_skip_controls.dart';
@@ -25,6 +27,17 @@ String? _extractYoutubeId(String urlOrId) {
 
   final looksLikeVideoId = RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(value);
   return looksLikeVideoId ? value : null;
+}
+
+const Duration _trailerNativeInitializeTimeout = Duration(seconds: 12);
+const Duration _trailerMediaKitOpenTimeout = Duration(seconds: 20);
+
+bool get _shouldUseNativeIosTrailerPlayer =>
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+bool _looksLikeHlsUri(Uri uri) {
+  final value = uri.toString().toLowerCase();
+  return uri.path.toLowerCase().endsWith('.m3u8') || value.contains('.m3u8?');
 }
 
 class TrailerPage extends StatefulWidget {
@@ -46,6 +59,7 @@ class TrailerPage extends StatefulWidget {
 class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
   Player? _player;
   VideoController? _videoController;
+  native_video.VideoPlayerController? _nativePlayer;
   YoutubePlayerController? _youtubeController;
   final List<StreamSubscription<dynamic>> _subscriptions = [];
 
@@ -71,6 +85,7 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
       unawaited(_player?.pause());
+      unawaited(_nativePlayer?.pause());
       _youtubeController?.pause();
     }
   }
@@ -108,6 +123,16 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
       return;
     }
 
+    if (_shouldUseNativeIosTrailerPlayer) {
+      final initialized = await _initNativeTrailerPlayer(uri);
+      if (initialized) return;
+      if (!mounted) return;
+      SecurityDebugLog.event(
+        'TRAILER',
+        'Native iOS trailer player could not initialize; falling back to media_kit.',
+      );
+    }
+
     final player = Player();
     final controller = VideoController(player);
 
@@ -138,7 +163,12 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
         'TRAILER',
         'Passing the direct backend trailer URL to media_kit.',
       );
-      await player.open(Media(_trailerUrl), play: true);
+      final openFuture = player.open(Media(_trailerUrl), play: true);
+      if (_shouldUseNativeIosTrailerPlayer) {
+        await openFuture.timeout(_trailerMediaKitOpenTimeout);
+      } else {
+        await openFuture;
+      }
       await player.setVolume(100);
 
       if (!mounted) {
@@ -158,6 +188,85 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
     }
   }
 
+  Future<bool> _initNativeTrailerPlayer(Uri uri) async {
+    SecurityDebugLog.event(
+      'TRAILER',
+      'Opening trailer with AVPlayer on iOS using the direct backend trailer URL.',
+    );
+    SecurityDebugLog.diagnostic(
+      'TRAILER_NATIVE_METADATA scheme=${uri.scheme} '
+      'host=${uri.host} '
+      'queryPresent=${uri.hasQuery} '
+      'credentialValuesRedacted=true',
+    );
+
+    final controller = native_video.VideoPlayerController.networkUrl(
+      uri,
+      formatHint: _looksLikeHlsUri(uri) ? native_video.VideoFormat.hls : null,
+      videoPlayerOptions: native_video.VideoPlayerOptions(
+        mixWithOthers: false,
+      ),
+    );
+
+    var historySaved = false;
+    void listener() {
+      if (!mounted) return;
+
+      final value = controller.value;
+      value.isPlaying ? WakelockPlus.enable() : WakelockPlus.disable();
+
+      if (value.isPlaying &&
+          !historySaved &&
+          !_historySaved &&
+          !widget.isTrailerUrl) {
+        historySaved = true;
+        _historySaved = true;
+        _saveHistory();
+      }
+
+      if (value.hasError) {
+        SecurityDebugLog.event(
+          'TRAILER',
+          'AVPlayer reported a trailer playback error.',
+        );
+        setState(() => _hasError = true);
+        return;
+      }
+
+      if (value.isCompleted) {
+        unawaited(controller.pause());
+      }
+
+      setState(() {});
+    }
+
+    controller.addListener(listener);
+    try {
+      await controller.initialize().timeout(_trailerNativeInitializeTimeout);
+      await controller.setLooping(false);
+      await controller.setVolume(1.0);
+      await controller.play();
+    } catch (error) {
+      debugPrint('Trailer native init error: $error');
+      controller.removeListener(listener);
+      await controller.dispose();
+      return false;
+    }
+
+    if (!mounted) {
+      controller.removeListener(listener);
+      await controller.dispose();
+      return true;
+    }
+
+    setState(() {
+      _nativePlayer = controller;
+      _initialized = true;
+      _hasError = false;
+    });
+    return true;
+  }
+
   Future<void> _saveHistory() async {
     try {
       final user = await LocalSharePreferences.localSharePreferences.getUser();
@@ -165,7 +274,9 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
 
       final body = {
         "contentId": widget.content.id,
-        "resumeTime": _player?.state.position.toString() ?? "0:00",
+        "resumeTime": _nativePlayer?.value.position.toString() ??
+            _player?.state.position.toString() ??
+            "0:00",
         "selectedLanguage":
             widget.content.languageList?.first.language ?? "Unknown",
         "userId": user.id,
@@ -189,6 +300,19 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
       return;
     }
     final player = _player;
+    final nativePlayer = _nativePlayer;
+    if (nativePlayer != null && nativePlayer.value.isInitialized) {
+      unawaited(
+        nativePlayer.seekTo(
+          boundedSeekPosition(
+            position: nativePlayer.value.position,
+            duration: nativePlayer.value.duration,
+            offset: offset,
+          ),
+        ),
+      );
+      return;
+    }
     if (player == null) return;
     unawaited(
       player.seek(
@@ -208,13 +332,21 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
     _subscriptions.clear();
 
     final player = _player;
+    final nativePlayer = _nativePlayer;
     _player = null;
     _videoController = null;
+    _nativePlayer = null;
     if (player != null) {
       try {
         await player.pause();
       } catch (_) {}
       await player.dispose();
+    }
+    if (nativePlayer != null) {
+      try {
+        await nativePlayer.pause();
+      } catch (_) {}
+      await nativePlayer.dispose();
     }
   }
 
@@ -302,6 +434,44 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
       );
     }
 
+    final nativePlayer = _nativePlayer;
+    if (nativePlayer != null && nativePlayer.value.isInitialized) {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: native_video.VideoPlayer(nativePlayer),
+            ),
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onDoubleTapDown: (details) {
+                  final box = context.findRenderObject() as RenderBox;
+                  final local = box.globalToLocal(details.globalPosition);
+                  final isLeft = local.dx < box.size.width / 2;
+                  _seekBy(Duration(seconds: isLeft ? -10 : 10));
+                },
+                onLongPressStart: (_) {
+                  nativePlayer.setPlaybackSpeed(2.0);
+                },
+                onLongPressEnd: (_) {
+                  nativePlayer.setPlaybackSpeed(1.0);
+                },
+              ),
+            ),
+            Center(
+              child: VideoSkipControls(
+                onBackward: () => _seekBy(const Duration(seconds: -10)),
+                onForward: () => _seekBy(const Duration(seconds: 10)),
+                gap: 92,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final player = _player;
     final controller = _videoController;
     if (player == null || controller == null) {
@@ -386,6 +556,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
     with WidgetsBindingObserver, RouteAware {
   Player? _player;
   VideoController? _videoController;
+  native_video.VideoPlayerController? _nativePlayer;
   YoutubePlayerController? _youtubeController;
   final List<StreamSubscription<dynamic>> _subscriptions = [];
   PageRoute<dynamic>? _route;
@@ -419,11 +590,13 @@ class _TrailerPreviewState extends State<TrailerPreview>
 
     widget.controller.mute = () {
       _player?.setVolume(0);
+      _nativePlayer?.setVolume(0);
       _youtubeController?.mute();
     };
 
     widget.controller.unmute = () {
       _player?.setVolume(100);
+      _nativePlayer?.setVolume(1);
       _youtubeController?.unMute();
     };
 
@@ -476,11 +649,14 @@ class _TrailerPreviewState extends State<TrailerPreview>
   bool get _isPreviewPlaying {
     final player = _player;
     if (player != null) return player.state.playing;
+    final nativePlayer = _nativePlayer;
+    if (nativePlayer != null) return nativePlayer.value.isPlaying;
     return _youtubeController?.value.isPlaying ?? false;
   }
 
   void _pausePreview() {
     unawaited(_player?.pause());
+    unawaited(_nativePlayer?.pause());
     _youtubeController?.pause();
     if (mounted && !_isDisposed) setState(() {});
   }
@@ -488,6 +664,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
   void _playPreview() {
     if (_userPaused) return;
     unawaited(_player?.play());
+    unawaited(_nativePlayer?.play());
     _youtubeController?.play();
     if (mounted && !_isDisposed) setState(() {});
   }
@@ -551,6 +728,16 @@ class _TrailerPreviewState extends State<TrailerPreview>
       return;
     }
 
+    if (_shouldUseNativeIosTrailerPlayer) {
+      final nativeReady = await _initNativePreview(uri, currentToken);
+      if (_isDisposed || currentToken != _initToken) return;
+      if (nativeReady) return;
+      SecurityDebugLog.event(
+        'TRAILER',
+        'Native iOS embedded trailer player could not initialize; falling back to media_kit.',
+      );
+    }
+
     final player = Player();
     final controller = VideoController(player);
 
@@ -585,7 +772,12 @@ class _TrailerPreviewState extends State<TrailerPreview>
         'TRAILER',
         'Passing the direct backend trailer URL to the embedded media_kit player.',
       );
-      await player.open(Media(_trailerUrl), play: false);
+      final openFuture = player.open(Media(_trailerUrl), play: false);
+      if (_shouldUseNativeIosTrailerPlayer) {
+        await openFuture.timeout(_trailerMediaKitOpenTimeout);
+      } else {
+        await openFuture;
+      }
       await player.setVolume(widget.muted ? 0 : 100);
       if (widget.autoPlay && !_userPaused) {
         await player.play();
@@ -612,6 +804,69 @@ class _TrailerPreviewState extends State<TrailerPreview>
     }
   }
 
+  Future<bool> _initNativePreview(Uri uri, int currentToken) async {
+    SecurityDebugLog.event(
+      'TRAILER',
+      'Opening embedded trailer with AVPlayer on iOS using the direct backend trailer URL.',
+    );
+    SecurityDebugLog.diagnostic(
+      'TRAILER_PREVIEW_NATIVE_METADATA scheme=${uri.scheme} '
+      'host=${uri.host} '
+      'queryPresent=${uri.hasQuery} '
+      'credentialValuesRedacted=true',
+    );
+
+    final controller = native_video.VideoPlayerController.networkUrl(
+      uri,
+      formatHint: _looksLikeHlsUri(uri) ? native_video.VideoFormat.hls : null,
+      videoPlayerOptions: native_video.VideoPlayerOptions(
+        mixWithOthers: false,
+      ),
+    );
+
+    void listener() {
+      if (_isDisposed || !mounted || currentToken != _initToken) return;
+      if (controller.value.hasError) {
+        SecurityDebugLog.event(
+          'TRAILER',
+          'AVPlayer reported an embedded trailer playback error.',
+        );
+        setState(() => _hasError = true);
+        return;
+      }
+      setState(() {});
+    }
+
+    controller.addListener(listener);
+    try {
+      await controller.initialize().timeout(_trailerNativeInitializeTimeout);
+      await controller.setLooping(true);
+      await controller.setVolume(widget.muted ? 0 : 1);
+      if (widget.autoPlay && !_userPaused) {
+        await controller.play();
+      }
+    } catch (error) {
+      debugPrint('Trailer preview native init error: $error');
+      controller.removeListener(listener);
+      await controller.dispose();
+      return false;
+    }
+
+    if (_isDisposed || currentToken != _initToken) {
+      controller.removeListener(listener);
+      await controller.dispose();
+      return false;
+    }
+
+    if (mounted) {
+      setState(() {
+        _hasError = false;
+        _nativePlayer = controller;
+      });
+    }
+    return true;
+  }
+
   @override
   void didUpdateWidget(covariant TrailerPreview oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -632,11 +887,17 @@ class _TrailerPreviewState extends State<TrailerPreview>
     _subscriptions.clear();
 
     final player = _player;
+    final nativePlayer = _nativePlayer;
     _player = null;
     _videoController = null;
+    _nativePlayer = null;
     if (player != null) {
       unawaited(player.pause());
       unawaited(player.dispose());
+    }
+    if (nativePlayer != null) {
+      unawaited(nativePlayer.pause());
+      unawaited(nativePlayer.dispose());
     }
 
     _youtubeController?.pause();
@@ -677,6 +938,19 @@ class _TrailerPreviewState extends State<TrailerPreview>
       return;
     }
     final player = _player;
+    final nativePlayer = _nativePlayer;
+    if (nativePlayer != null && nativePlayer.value.isInitialized) {
+      unawaited(
+        nativePlayer.seekTo(
+          boundedSeekPosition(
+            position: nativePlayer.value.position,
+            duration: nativePlayer.value.duration,
+            offset: offset,
+          ),
+        ),
+      );
+      return;
+    }
     if (player == null) return;
     unawaited(
       player.seek(
@@ -701,6 +975,11 @@ class _TrailerPreviewState extends State<TrailerPreview>
           ),
         ),
       );
+    }
+
+    final nativePlayer = _nativePlayer;
+    if (nativePlayer != null && nativePlayer.value.isInitialized) {
+      return _buildNativePreview(nativePlayer);
     }
 
     if (_player == null || _videoController == null) {
@@ -837,6 +1116,121 @@ class _TrailerPreviewState extends State<TrailerPreview>
     );
   }
 
+  Widget _buildNativePreview(native_video.VideoPlayerController player) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _showControls = true),
+      onExit: (_) => setState(() => _showControls = false),
+      child: GestureDetector(
+        onTap: () => setState(() => _showControls = !_showControls),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: native_video.VideoPlayer(player),
+              ),
+              if (_showControls) ...[
+                Positioned.fill(
+                  child: Container(color: Colors.black.withOpacity(0.35)),
+                ),
+                Center(
+                  child: IconButton(
+                    iconSize: 40,
+                    icon: Icon(
+                      player.value.isPlaying
+                          ? Icons.pause_circle_filled
+                          : Icons.play_circle_filled,
+                      color: Colors.white,
+                    ),
+                    onPressed: _toggleManualPlayback,
+                  ),
+                ),
+                Center(
+                  child: VideoSkipControls(
+                    onBackward: () =>
+                        _seekPreviewBy(const Duration(seconds: -10)),
+                    onForward: () =>
+                        _seekPreviewBy(const Duration(seconds: 10)),
+                    gap: 72,
+                    compact: true,
+                  ),
+                ),
+                Positioned(
+                  left: 12,
+                  right: 12,
+                  bottom: 8,
+                  child: Row(
+                    children: [
+                      Text(
+                        _format(player.value.position),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(child: _nativeProgressSlider(player)),
+                      const SizedBox(width: 6),
+                      Text(
+                        _format(player.value.duration),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              Positioned(
+                top: 0,
+                left: 1,
+                child: IconButton(
+                  icon: Icon(
+                    player.value.volume == 0
+                        ? Icons.volume_off
+                        : Icons.volume_up,
+                    color: Colors.white,
+                  ),
+                  onPressed: () {
+                    final muted = player.value.volume == 0;
+                    player.setVolume(muted ? 1 : 0);
+                    setState(() {});
+                  },
+                ),
+              ),
+              Positioned(
+                top: 0,
+                right: 1,
+                child: IconButton(
+                  onPressed: () async {
+                    final trailerUrl = widget.trailerUrl;
+                    _disposeController();
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TrailerPage(
+                          trailerUrl: trailerUrl,
+                          isTrailerUrl: true,
+                          content: widget.content,
+                        ),
+                      ),
+                    );
+                    if (mounted &&
+                        !_isDisposed &&
+                        (trailerUrl?.trim().isNotEmpty ?? false)) {
+                      _init();
+                    }
+                  },
+                  icon: const Icon(
+                    Icons.fullscreen,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _progressSlider(Player player) {
     final durationMs = player.state.duration.inMilliseconds;
     final positionMs = player.state.position.inMilliseconds;
@@ -862,6 +1256,36 @@ class _TrailerPreviewState extends State<TrailerPreview>
         inactiveColor: Colors.white24,
         onChanged: (value) {
           player.seek(Duration(milliseconds: value.round()));
+        },
+      ),
+    );
+  }
+
+  Widget _nativeProgressSlider(native_video.VideoPlayerController player) {
+    final durationMs = player.value.duration.inMilliseconds;
+    final positionMs = player.value.position.inMilliseconds;
+    if (durationMs <= 0) {
+      return const LinearProgressIndicator(
+        value: 0,
+        color: Colors.red,
+        backgroundColor: Colors.white24,
+      );
+    }
+
+    return SliderTheme(
+      data: SliderTheme.of(context).copyWith(
+        trackHeight: 3,
+        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+        overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+      ),
+      child: Slider(
+        min: 0,
+        max: durationMs.toDouble(),
+        value: positionMs.clamp(0, durationMs).toDouble(),
+        activeColor: Colors.red,
+        inactiveColor: Colors.white24,
+        onChanged: (value) {
+          player.seekTo(Duration(milliseconds: value.round()));
         },
       ),
     );

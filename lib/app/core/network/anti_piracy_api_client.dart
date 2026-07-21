@@ -302,6 +302,8 @@ class AntiPiracyApiClient {
             normalizedKey.contains('token') ||
             normalizedKey == 'playbackurl' ||
             normalizedKey == 'signedurl' ||
+            normalizedKey == 'cookieheader' ||
+            normalizedKey == 'cookies' ||
             normalizedKey == 'signature' ||
             normalizedKey == 'sessionid' ||
             normalizedKey == 'cloudfrontpolicy' ||

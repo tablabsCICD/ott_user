@@ -168,12 +168,11 @@ class DeviceIdentityService {
   }
 
   static String _deviceType() {
+    if (kIsWeb) return 'WEB';
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) return 'IOS';
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       return 'ANDROID';
     }
-    // The supplied backend contract defines only ANDROID and IOS. Keeping a
-    // distinct value prevents browsers from masquerading as trusted mobiles.
     return 'UNSUPPORTED';
   }
 

@@ -43,21 +43,21 @@ void main() {
         client: MockClient((request) async {
           capturedRequest = request;
           return http.Response(
-              jsonEncode({
-                'signedUrl': 'https://cdn.example.com/master.m3u8',
-                'playbackUrl': 'https://cdn.example.com/master.m3u8',
-                'authorizationType': 'CLOUDFRONT_SIGNED_COOKIES',
-                'cookies': {
-                  'CloudFront-Policy': 'policy',
-                  'CloudFront-Signature': 'signature',
-                  'CloudFront-Key-Pair-Id': 'key-pair',
-                },
-                'sessionId': 'session-1',
-                'expiresAt': expiry.toIso8601String(),
-                'expiresAtEpochSeconds': expiryEpoch,
-              }),
-              200,
-            );
+            jsonEncode({
+              'signedUrl': 'https://cdn.example.com/master.m3u8',
+              'playbackUrl': 'https://cdn.example.com/master.m3u8',
+              'authorizationType': 'CLOUDFRONT_SIGNED_COOKIES',
+              'cookies': {
+                'CloudFront-Policy': 'policy',
+                'CloudFront-Signature': 'signature',
+                'CloudFront-Key-Pair-Id': 'key-pair',
+              },
+              'sessionId': 'session-1',
+              'expiresAt': expiry.toIso8601String(),
+              'expiresAtEpochSeconds': expiryEpoch,
+            }),
+            200,
+          );
         }),
         tokenProvider: () async => 'token',
       );
@@ -68,6 +68,7 @@ void main() {
           deviceId: 'device-1',
           playbackUrl: 'https://cdn.example.com/master.m3u8',
           country: 'IN',
+          platform: 'ANDROID',
           deviceIntegrity: DeviceIntegrityStatus(
             rooted: false,
             jailbroken: false,
@@ -81,15 +82,19 @@ void main() {
       expect(result.playbackUrl, 'https://cdn.example.com/master.m3u8');
       final requestBody = jsonDecode(capturedRequest.body) as Map;
       expect(requestBody['contentId'], isA<String>());
-      expect(requestBody.keys, containsAll(<String>[
-        'contentId',
-        'deviceId',
-        'playbackUrl',
-        'country',
-        'deviceIntegrity',
-      ]));
       expect(
-        result.cookieHeader,
+          requestBody.keys,
+          containsAll(<String>[
+            'contentId',
+            'deviceId',
+            'playbackUrl',
+            'country',
+            'platform',
+            'deviceIntegrity',
+          ]));
+      expect(requestBody['platform'], 'ANDROID');
+      expect(
+        result.effectiveCookieHeader,
         'CloudFront-Policy=policy; CloudFront-Signature=signature; '
         'CloudFront-Key-Pair-Id=key-pair',
       );
@@ -153,6 +158,37 @@ void main() {
       expect(response.expiresAt.isUtc, isTrue);
       expect(response.expiresAtEpochSeconds, epochSeconds);
       expect(response.isValidAt(now), isTrue);
+      expect(response.toPlaybackConfig().httpHeaders['Cookie'], isNotEmpty);
+    });
+
+    test('accepts signed-url response without cookies', () {
+      final now = DateTime.now().toUtc();
+      final epochSeconds =
+          now.add(const Duration(minutes: 10)).millisecondsSinceEpoch ~/ 1000;
+      final response = SignedPlaybackResponse.fromJson(
+        {
+          'signedUrl':
+              'https://cdn.example.com/master.m3u8?Expires=1&Signature=s&Key-Pair-Id=k',
+          'playbackUrl':
+              'https://cdn.example.com/master.m3u8?Expires=1&Signature=s&Key-Pair-Id=k',
+          'authorizationType': 'CLOUDFRONT_SIGNED_URL',
+          'cookies': null,
+          'cookieHeader': null,
+          'sessionId': 'session',
+          'expiresAtEpochSeconds': epochSeconds,
+          'audioTracks': [],
+          'subtitleTracks': [],
+        },
+        now: now,
+      );
+
+      final config = response.toPlaybackConfig();
+
+      expect(response.isValidAt(now), isTrue);
+      expect(
+          config.authorizationType, SignedPlaybackResponse.cloudFrontSignedUrl);
+      expect(config.httpHeaders, isEmpty);
+      expect(config.playbackUrl, contains('Signature=s'));
     });
 
     test('rejects missing cookie authorization and expired responses', () {
@@ -160,6 +196,7 @@ void main() {
         () => SignedPlaybackResponse.fromJson({
           'signedUrl': 'https://cdn.example.com/master.m3u8',
           'playbackUrl': 'https://cdn.example.com/master.m3u8',
+          'authorizationType': 'CLOUDFRONT_SIGNED_COOKIES',
           'sessionId': 'session',
           'expiresAtEpochSeconds':
               DateTime.now().millisecondsSinceEpoch ~/ 1000 + 300,

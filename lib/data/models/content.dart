@@ -89,9 +89,12 @@ class Content {
   });
 
   String? get teaserOrTrailerUrl {
-    final teaser = teaserUrl?.trim();
-    if (teaser != null && teaser.isNotEmpty) return teaser;
-    return trailerUrl;
+    final teaser = teaserUrl;
+    if (teaser != null && teaser.trim().isNotEmpty) return teaser;
+
+    final trailer = trailerUrl;
+    if (trailer != null && trailer.trim().isNotEmpty) return trailer;
+    return null;
   }
 
   factory Content.fromJson(Map<String, dynamic> json) => Content(
@@ -130,7 +133,7 @@ class Content {
         ?.map((e) => e.toString())
         .toList(),
 
-    teaserUrl: _firstStringValue(json, const [
+    teaserUrl: _firstDirectTrailerValue(json, const [
       'teaserUrl',
       'teaserFile',
       'teaserFileUrl',
@@ -142,7 +145,7 @@ class Content {
       'teasur_url',
       'teasur_file',
     ]),
-    trailerUrl: _firstStringValue(json, const [
+    trailerUrl: _firstDirectTrailerValue(json, const [
       'trailerUrl',
       'trailerFile',
       'trailerFileUrl',
@@ -167,6 +170,7 @@ class Content {
     subtitleLanguageList: (json['subtitleLanguageList'] as List?)
         ?.map((e) => e.toString())
         .toList(),
+
 
     isDownloadable: json['isDownloadable'] == true,
 
@@ -253,6 +257,14 @@ String? _firstStringValue(Map<String, dynamic> json, List<String> keys) {
   return null;
 }
 
+String? _firstDirectTrailerValue(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = _directTrailerStringFromField(json[key]);
+    if (value != null) return value;
+  }
+  return null;
+}
+
 String? _contentUrlFromJson(Map<String, dynamic> json) {
   final directUrl = _firstStringValue(json, const [
     'contentUrl',
@@ -308,6 +320,19 @@ String? _stringFromField(dynamic field) {
   return value.isEmpty ? null : value;
 }
 
+String? _directTrailerStringFromField(dynamic field) {
+  if (field == null) return null;
+  if (field is Map) {
+    for (final key in const ['url', 'fileUrl', 'file_url', 'path']) {
+      final rawValue = field[key]?.toString();
+      if (rawValue != null && rawValue.trim().isNotEmpty) return rawValue;
+    }
+    return null;
+  }
+
+  final value = field.toString();
+  return value.trim().isEmpty ? null : value;
+}
 
 class Availability {
   List<String>? regions;

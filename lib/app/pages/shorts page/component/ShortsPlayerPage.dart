@@ -289,6 +289,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     SignedPlaybackResponse authorization, {
     required bool isRefresh,
   }) async {
+    final playbackConfig = authorization.toPlaybackConfig();
     final previousState = _controller?.state;
     final position = previousState?.position ?? Duration.zero;
     final wasPlaying = previousState?.playing ?? true;
@@ -333,15 +334,30 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       }));
 
     try {
+      final mediaHeaders = <String, String>{
+        ...playbackConfig.httpHeaders,
+        'User-Agent': 'FilmyTell/1.0',
+      };
+      if (!kIsWeb && playbackConfig.httpHeaders.isNotEmpty) {
+        final nativeHeaderFields = mediaHeaders.entries
+            .map((entry) => '${entry.key}: ${entry.value}')
+            .join('\n');
+        await (player.platform as dynamic).setProperty(
+          'http-header-fields',
+          nativeHeaderFields,
+        );
+      }
       await player.open(
         Media(
-          authorization.playbackUrl,
-          httpHeaders: {
-            'Cookie': authorization.cookieHeader,
-            'User-Agent': 'FilmyTell/1.0',
-          },
+          playbackConfig.playbackUrl,
+          httpHeaders: mediaHeaders,
         ),
         play: true,
+      );
+      await _applySecurePlaybackTracks(
+        player,
+        audioTracks: playbackConfig.audioTracks,
+        subtitleTracks: playbackConfig.subtitleTracks,
       );
       await player.setVolume(volume);
       if (isRefresh) {
@@ -365,6 +381,36 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       _videoErrorMessage = null;
     });
     return SecureMediaRestoreResult(isPlaying: player.state.playing);
+  }
+
+  Future<void> _applySecurePlaybackTracks(
+    Player player, {
+    required List<PlaybackTrackInfo> audioTracks,
+    required List<PlaybackTrackInfo> subtitleTracks,
+  }) async {
+    final hlsAudioTracks = audioTracks.where((track) => track.isHls).toList();
+    final vttSubtitleTracks =
+        subtitleTracks.where((track) => track.isVtt).toList();
+    if (hlsAudioTracks.isNotEmpty) {
+      final track = hlsAudioTracks.first;
+      await player.setAudioTrack(
+        AudioTrack.uri(
+          track.url,
+          title: track.label.isEmpty ? null : track.label,
+          language: track.language.isEmpty ? null : track.language,
+        ),
+      );
+    }
+    if (vttSubtitleTracks.isNotEmpty) {
+      final track = vttSubtitleTracks.first;
+      await player.setSubtitleTrack(
+        SubtitleTrack.uri(
+          track.url,
+          title: track.label.isEmpty ? null : track.label,
+          language: track.language.isEmpty ? null : track.language,
+        ),
+      );
+    }
   }
 
   Future<void> _changePage(int index) async {

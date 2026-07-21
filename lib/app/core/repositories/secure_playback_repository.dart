@@ -125,7 +125,7 @@ class SecurePlaybackRepository {
     }
     SecurityDebugLog.event(
       'FLOW',
-      'Calling POST /anti-piracy/playback/signed-url.',
+      'Calling POST /anti-piracy/playback/signed-url for platform ${current.deviceType}.',
     );
     return _apiClient.createSignedPlayback(
       SignedPlaybackRequest(
@@ -133,6 +133,7 @@ class SecurePlaybackRepository {
         deviceId: current.deviceId,
         playbackUrl: playbackUrl,
         country: country,
+        platform: current.deviceType,
         deviceIntegrity: integrity,
       ),
     );

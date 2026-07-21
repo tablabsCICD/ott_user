@@ -96,6 +96,7 @@ class SignedPlaybackRequest {
     required this.deviceId,
     required this.playbackUrl,
     required this.country,
+    required this.platform,
     required this.deviceIntegrity,
   });
 
@@ -103,6 +104,7 @@ class SignedPlaybackRequest {
   final String deviceId;
   final String playbackUrl;
   final String country;
+  final String platform;
   final DeviceIntegrityStatus deviceIntegrity;
 
   Map<String, dynamic> toJson() => {
@@ -110,8 +112,69 @@ class SignedPlaybackRequest {
         'deviceId': deviceId,
         'playbackUrl': playbackUrl,
         'country': country,
+        'platform': platform,
         'deviceIntegrity': deviceIntegrity.toJson(),
       };
+}
+
+class PlaybackTrackInfo {
+  const PlaybackTrackInfo({
+    required this.id,
+    required this.label,
+    required this.language,
+    required this.url,
+    required this.type,
+    required this.format,
+  });
+
+  final String id;
+  final String label;
+  final String language;
+  final String url;
+  final String type;
+  final String format;
+
+  bool get isHls =>
+      type.toLowerCase() == 'hls' || format.toLowerCase() == 'm3u8';
+
+  bool get isVtt => format.toLowerCase() == 'vtt';
+
+  factory PlaybackTrackInfo.fromJson(Map<String, dynamic> json) {
+    return PlaybackTrackInfo(
+      id: (json['id'] ?? '').toString().trim(),
+      label: (json['label'] ?? '').toString().trim(),
+      language: (json['language'] ?? '').toString().trim(),
+      url: (json['url'] ?? '').toString().trim(),
+      type: (json['type'] ?? '').toString().trim(),
+      format: (json['format'] ?? '').toString().trim(),
+    );
+  }
+}
+
+class SecurePlaybackConfig {
+  const SecurePlaybackConfig({
+    required this.playbackUrl,
+    required this.httpHeaders,
+    required this.authorizationType,
+    required this.sessionId,
+    required this.expiresAt,
+    required this.audioTracks,
+    required this.subtitleTracks,
+  });
+
+  final String playbackUrl;
+  final Map<String, String> httpHeaders;
+  final String authorizationType;
+  final String sessionId;
+  final DateTime expiresAt;
+  final List<PlaybackTrackInfo> audioTracks;
+  final List<PlaybackTrackInfo> subtitleTracks;
+
+  bool get usesSignedCookies =>
+      authorizationType == SignedPlaybackResponse.cloudFrontSignedCookies;
+
+  bool get usesSignedUrl =>
+      authorizationType == SignedPlaybackResponse.cloudFrontSignedUrl;
 }
 
 class SignedPlaybackResponse {
@@ -123,9 +186,13 @@ class SignedPlaybackResponse {
     required this.sessionId,
     required this.expiresAt,
     required this.expiresAtEpochSeconds,
+    this.cookieHeader,
+    this.audioTracks = const [],
+    this.subtitleTracks = const [],
   });
 
   static const cloudFrontSignedCookies = 'CLOUDFRONT_SIGNED_COOKIES';
+  static const cloudFrontSignedUrl = 'CLOUDFRONT_SIGNED_URL';
   static const requiredCookieNames = <String>{
     'CloudFront-Policy',
     'CloudFront-Signature',
@@ -136,29 +203,76 @@ class SignedPlaybackResponse {
   final String signedUrl;
   final String authorizationType;
   final Map<String, String> cookies;
+  final String? cookieHeader;
   final String sessionId;
   final DateTime expiresAt;
   final int expiresAtEpochSeconds;
+  final List<PlaybackTrackInfo> audioTracks;
+  final List<PlaybackTrackInfo> subtitleTracks;
 
-  String get cookieHeader =>
-      requiredCookieNames.map((name) => '$name=${cookies[name]}').join('; ');
+  String get effectiveCookieHeader {
+    final rawHeader = cookieHeader?.trim();
+    if (rawHeader != null &&
+        rawHeader.isNotEmpty &&
+        !rawHeader.contains(RegExp(r'[\r\n]'))) {
+      return rawHeader;
+    }
+    return requiredCookieNames
+        .map((name) => '$name=${cookies[name]}')
+        .join('; ');
+  }
 
   bool get isValid => isValidAt(DateTime.now().toUtc());
 
   bool isValidAt(DateTime now) {
     final uri = Uri.tryParse(playbackUrl);
-    return uri != null &&
+    final baseValid = uri != null &&
         uri.scheme == 'https' &&
         uri.host.isNotEmpty &&
-        authorizationType == cloudFrontSignedCookies &&
         sessionId.isNotEmpty &&
-        expiresAtEpochSeconds > now.toUtc().millisecondsSinceEpoch ~/ 1000 &&
-        requiredCookieNames.every((name) {
-          final value = cookies[name];
-          return value != null &&
-              value.isNotEmpty &&
-              !value.contains(RegExp(r'[;\r\n]'));
-        });
+        expiresAtEpochSeconds > now.toUtc().millisecondsSinceEpoch ~/ 1000;
+    if (!baseValid) return false;
+    if (authorizationType == cloudFrontSignedUrl) return true;
+    if (authorizationType != cloudFrontSignedCookies) return false;
+    if (effectiveCookieHeader.isEmpty ||
+        effectiveCookieHeader.contains(RegExp(r'[\r\n]'))) {
+      return false;
+    }
+    return requiredCookieNames.every((name) {
+      final value = cookies[name];
+      return value != null &&
+          value.isNotEmpty &&
+          !value.contains(RegExp(r'[;\r\n]'));
+    });
+  }
+
+  SecurePlaybackConfig toPlaybackConfig() {
+    if (!isValid) {
+      throw StateError('Secure playback authorization is invalid or expired.');
+    }
+    if (authorizationType == cloudFrontSignedCookies) {
+      return SecurePlaybackConfig(
+        playbackUrl: playbackUrl,
+        httpHeaders: {'Cookie': effectiveCookieHeader},
+        authorizationType: authorizationType,
+        sessionId: sessionId,
+        expiresAt: expiresAt,
+        audioTracks: audioTracks,
+        subtitleTracks: subtitleTracks,
+      );
+    }
+    if (authorizationType == cloudFrontSignedUrl) {
+      return SecurePlaybackConfig(
+        playbackUrl: playbackUrl,
+        httpHeaders: const {},
+        authorizationType: authorizationType,
+        sessionId: sessionId,
+        expiresAt: expiresAt,
+        audioTracks: audioTracks,
+        subtitleTracks: subtitleTracks,
+      );
+    }
+    throw StateError('Unsupported playback authorization type.');
   }
 
   factory SignedPlaybackResponse.fromJson(
@@ -172,27 +286,50 @@ class SignedPlaybackResponse {
     }
 
     final signedUrl = (json['signedUrl'] ?? '').toString().trim();
-    final authorizationType =
-        (json['authorizationType'] ?? '').toString().trim();
-    if (authorizationType != cloudFrontSignedCookies) {
+    var authorizationType = (json['authorizationType'] ?? '').toString().trim();
+    final rawCookieHeader = json['cookieHeader']?.toString().trim();
+    if (authorizationType.isEmpty) {
+      authorizationType = rawCookieHeader != null && rawCookieHeader.isNotEmpty
+          ? cloudFrontSignedCookies
+          : cloudFrontSignedUrl;
+    }
+    if (authorizationType != cloudFrontSignedCookies &&
+        authorizationType != cloudFrontSignedUrl) {
       throw const FormatException('Unsupported playback authorization.');
     }
 
+    var cookies = const <String, String>{};
     final rawCookies = json['cookies'];
-    if (rawCookies is! Map) {
-      throw const FormatException('Missing CloudFront playback cookies.');
+    if (rawCookies is Map) {
+      cookies = rawCookies.map(
+        (key, value) => MapEntry(key.toString(), value.toString().trim()),
+      );
     }
-    final cookies = rawCookies.map(
-      (key, value) => MapEntry(key.toString(), value.toString().trim()),
-    );
-    final cookiesValid = requiredCookieNames.every((name) {
-      final value = cookies[name];
-      return value != null &&
-          value.isNotEmpty &&
-          !value.contains(RegExp(r'[;\r\n]'));
-    });
-    if (!cookiesValid) {
-      throw const FormatException('Invalid CloudFront playback cookies.');
+    if (authorizationType == cloudFrontSignedCookies) {
+      if (rawCookieHeader != null &&
+          rawCookieHeader.isNotEmpty &&
+          rawCookieHeader.contains(RegExp(r'[\r\n]'))) {
+        throw const FormatException('Invalid CloudFront playback cookies.');
+      }
+      final cookieHeaderValid = rawCookieHeader != null &&
+          rawCookieHeader.isNotEmpty &&
+          !rawCookieHeader.contains(RegExp(r'[\r\n]'));
+      final cookiesValid = requiredCookieNames.every((name) {
+        final value = cookies[name];
+        return value != null &&
+            value.isNotEmpty &&
+            !value.contains(RegExp(r'[;\r\n]'));
+      });
+      if (!cookieHeaderValid && !cookiesValid) {
+        throw const FormatException('Missing CloudFront playback cookies.');
+      }
+      if (!cookiesValid && cookieHeaderValid) {
+        cookies = _cookiesFromHeader(rawCookieHeader);
+      }
+      if (!requiredCookieNames
+          .every((name) => cookies[name]?.isNotEmpty == true)) {
+        throw const FormatException('Invalid CloudFront playback cookies.');
+      }
     }
 
     final sessionId = (json['sessionId'] ?? '').toString().trim();
@@ -225,11 +362,43 @@ class SignedPlaybackResponse {
       signedUrl: signedUrl,
       authorizationType: authorizationType,
       cookies: Map<String, String>.unmodifiable(cookies),
+      cookieHeader: rawCookieHeader,
       sessionId: sessionId,
       expiresAt: expiresAt,
       expiresAtEpochSeconds: expiresAtEpochSeconds,
+      audioTracks: _tracksFromJson(json['audioTracks']),
+      subtitleTracks: _tracksFromJson(json['subtitleTracks']),
     );
   }
+}
+
+Map<String, String> _cookiesFromHeader(String header) {
+  final values = <String, String>{};
+  for (final part in header.split(';')) {
+    final separator = part.indexOf('=');
+    if (separator <= 0) continue;
+    final name = part.substring(0, separator).trim();
+    final value = part.substring(separator + 1).trim();
+    if (SignedPlaybackResponse.requiredCookieNames.contains(name) &&
+        value.isNotEmpty &&
+        !value.contains(RegExp(r'[;\r\n]'))) {
+      values[name] = value;
+    }
+  }
+  return values;
+}
+
+List<PlaybackTrackInfo> _tracksFromJson(dynamic rawTracks) {
+  if (rawTracks is! List) return const [];
+  return rawTracks
+      .whereType<Map>()
+      .map((item) => PlaybackTrackInfo.fromJson(item.cast<String, dynamic>()))
+      .where((track) {
+    final uri = Uri.tryParse(track.url);
+    return track.url.isNotEmpty &&
+        uri != null &&
+        (uri.scheme == 'https' || uri.scheme == 'http');
+  }).toList(growable: false);
 }
 
 enum PlaybackAnalyticsEvent {
@@ -300,10 +469,6 @@ class WatermarkData {
     final identity = maskEmail(email).isNotEmpty
         ? maskEmail(email)
         : (userId.isEmpty ? 'Viewer' : userId);
-    final normalizedDevice = deviceId.replaceAll('-', '').toUpperCase();
-    final shortDevice = normalizedDevice.length <= 6
-        ? normalizedDevice
-        : normalizedDevice.substring(normalizedDevice.length - 6);
     final local = timestamp.toLocal();
     final date = '${local.day.toString().padLeft(2, '0')}/'
         '${local.month.toString().padLeft(2, '0')}/'

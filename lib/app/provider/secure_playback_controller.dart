@@ -104,14 +104,14 @@ class SecurePlaybackController extends ChangeNotifier {
           response.expiresAt.difference(DateTime.now().toUtc()).inSeconds;
       SecurityDebugLog.event(
         'FLOW',
-        'Signed-cookie authorization validated in memory; expires in approximately $secondsUntilExpiry seconds.',
+        'Signed playback authorization validated in memory as ${response.authorizationType}; expires in approximately $secondsUntilExpiry seconds.',
       );
       _applySession(response);
       _analytics.bindSession(response.sessionId);
       _setState(SecurePlaybackState.initializingPlayer);
       SecurityDebugLog.event(
         'PLAYER',
-        'Calling the media loader with the authorized playback URL and CloudFront cookie header.',
+        'Calling the media loader with the authorized playback configuration.',
       );
       final restored = await _mediaLoader(response, isRefresh: false);
       if (_disposed) return;
