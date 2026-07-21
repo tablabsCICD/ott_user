@@ -13,6 +13,7 @@ import 'package:ott/app/core/services/anti_piracy_service.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/core/services/session_manager.dart';
 import 'package:ott/app/provider/secure_playback_controller.dart';
+import 'package:ott/app/widgets/ott_tv_app_shell.dart';
 import 'package:ott/data/models/anti_piracy_models.dart';
 import 'package:ott/data/models/seriesModel.dart';
 import 'package:provider/provider.dart';
@@ -374,8 +375,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       authorization.playbackUrl,
       httpHeaders: authorization.httpHeaders,
       diagnoseSignedHls: true,
-      automaticAudioTrack:
-          getAutomaticAudioTrack(authorization.audioTracks),
+      automaticAudioTrack: getAutomaticAudioTrack(authorization.audioTracks),
       automaticSubtitleTrack:
           getAutomaticSubtitleTrack(authorization.subtitleTracks),
     );
@@ -1419,6 +1419,21 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
 
     final key = event.logicalKey;
+    if (OttTvRemoteKey.playPause.contains(key)) {
+      _togglePlayback();
+      _showControls(persist: true);
+      return KeyEventResult.handled;
+    }
+    if (OttTvRemoteKey.fastForward.contains(key)) {
+      _seekBy(const Duration(seconds: 10));
+      _showControls();
+      return KeyEventResult.handled;
+    }
+    if (OttTvRemoteKey.rewind.contains(key)) {
+      _seekBy(const Duration(seconds: -10));
+      _showControls();
+      return KeyEventResult.handled;
+    }
     if (key == LogicalKeyboardKey.select ||
         key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.space ||
@@ -1436,7 +1451,12 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
     if (key == LogicalKeyboardKey.escape ||
         key == LogicalKeyboardKey.goBack ||
-        key == LogicalKeyboardKey.browserBack) {
+        key == LogicalKeyboardKey.browserBack ||
+        key == LogicalKeyboardKey.gameButtonB) {
+      if (_controlsVisible) {
+        _hideControls();
+        return KeyEventResult.handled;
+      }
       unawaited(_handleExit());
       return KeyEventResult.handled;
     }
@@ -1503,6 +1523,13 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         !_isPlaybackBuffering &&
         !_isSeeking) {
       _scheduleControlsAutoHide();
+    }
+  }
+
+  void _hideControls() {
+    _controlsHideTimer?.cancel();
+    if (mounted && _controlsVisible) {
+      setState(() => _controlsVisible = false);
     }
   }
 

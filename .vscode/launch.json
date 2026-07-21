@@ -1,13 +1,42 @@
 {
   "version": "0.2.0",
   "configurations": [
-
     {
       "name": "Flutter",
       "type": "dart",
       "request": "launch",
       "program": "lib/main.dart"
     },
+    {
+      "name": "Filmytell Android TV",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main_tv.dart",
+      "deviceId": "emulator-5554",
+      "toolArgs": [
+        "--flavor",
+        "tv",
+        "--dart-define=FLAVOR=tv"
+      ],
+      "env": {
+        "GRADLE_USER_HOME": "${workspaceFolder}/.gradle-tv"
+      }
+    },
+    {
+      "name": "Filmytell Android Mobile",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main_mobile.dart",
+      "deviceId": "emulator-5556",
+      "toolArgs": [
+        "--flavor",
+        "mobile",
+        "--dart-define=FLAVOR=mobile"
+      ],
+      "env": {
+        "GRADLE_USER_HOME": "${workspaceFolder}/.gradle-tv"
+      }
+    }
 
   /* 
     {

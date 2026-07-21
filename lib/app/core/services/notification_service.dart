@@ -150,7 +150,6 @@ class NotificationService {
   Future<void> _setupTokenHandlers() async {
     try {
       final token = await _messaging.getToken();
-      debugPrint("******FCM Token******** $token");
       await _persistToken(token);
     } catch (error, stackTrace) {
       if (kDebugMode) {
@@ -162,7 +161,7 @@ class NotificationService {
     _messaging.onTokenRefresh.listen((newToken) async {
       await _persistToken(newToken);
       if (kDebugMode) {
-        debugPrint('FCM token refreshed: $newToken');
+        debugPrint('FCM token refreshed and stored.');
       }
     }, onError: (Object error, StackTrace stackTrace) {
       if (kDebugMode) {
@@ -179,10 +178,6 @@ class NotificationService {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_fcmTokenKey, token);
-
-    if (kDebugMode) {
-      debugPrint('FCM token: $token');
-    }
   }
 
   void _listenForegroundMessages() {

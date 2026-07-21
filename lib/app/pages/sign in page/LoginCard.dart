@@ -7,12 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:intl_phone_field/country_picker_dialog.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
-import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/provider/language_provider.dart';
-import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/userProvider.dart';
-import 'package:ott/app/route/routes/app_routes.dart';
 import 'package:ott/app/widgets/LanguageDropdown.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -133,14 +130,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     if (!mounted) return;
     if (_otpFocusNode.hasFocus) {
       setState(() => _editingOtp = true);
-      if (_useTvKeypad(context)) {
-        _showTextInputKeyboard(_otpFocusNode);
-      }
     } else if (_mobileFocusNode.hasFocus) {
       setState(() => _editingOtp = false);
-      if (_useTvKeypad(context) && !otpSent) {
-        _showTextInputKeyboard(_mobileFocusNode);
-      }
     }
   }
 
@@ -286,7 +277,9 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                       enabled: useTvKeypad,
                                       child: TextFormField(
                                         focusNode: _mobileFocusNode,
-                                        readOnly: otpSent,
+                                        // TV uses the D-pad keypad below. Do
+                                        // not open a competing platform IME.
+                                        readOnly: true,
                                         showCursor: true,
                                         cursorColor: theme.primaryColor,
                                         controller: _mobileController,
@@ -296,8 +289,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                               .digitsOnly,
                                           LengthLimitingTextInputFormatter(10),
                                         ],
-                                        onTap: () => _showTextInputKeyboard(
-                                            _mobileFocusNode),
+                                        onTap: _openTvKeypad,
                                         textInputAction: TextInputAction.done,
                                         onChanged: (value) {
                                           _mobileNumberForOtp =
@@ -449,8 +441,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                         ],
                                         enablePinAutofill: true,
                                         animationType: AnimationType.fade,
-                                        onTap: () => _showTextInputKeyboard(
-                                            _otpFocusNode),
+                                        onTap: _openTvKeypad,
                                         onCompleted: (_) {
                                           if (!isLoading &&
                                               !_authRequestInFlight) {
@@ -640,6 +631,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
   void _handleLoginOrOtp() async {
     if (_authRequestInFlight) return;
     if (!_formKey.currentState!.validate() || _mobileController.text.isEmpty) {
+      if (_useTvKeypad(context)) _mobileFocusNode.requestFocus();
       return;
     }
     final lang = AppLocalizations.of(context)!;
@@ -656,6 +648,9 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
       );
       _authRequestInFlight = false;
       if (mounted) setState(() => isLoading = false);
+      if (mounted && _useTvKeypad(context)) {
+        _mobileFocusNode.requestFocus();
+      }
       return;
     }
     final userProvider = Provider.of<UserProvider>(context, listen: false);
@@ -688,7 +683,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
           _startResendCooldown();
           await _startOtpAutoFillListener();
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) _showTextInputKeyboard(_otpFocusNode);
+            if (mounted) _otpFocusNode.requestFocus();
           });
         } else {
           CustomToast.show(
@@ -696,12 +691,14 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
             'Failure: $message',
             isSuccess: false,
           );
+          if (_useTvKeypad(context)) _mobileFocusNode.requestFocus();
         }
       } else {
         final otp = _digitsOnly(_otpController.text);
 
         if (otp.length != _otpLength) {
           CustomToast.show(context, 'Invalid OTP', isSuccess: false);
+          if (_useTvKeypad(context)) _otpFocusNode.requestFocus();
           return;
         }
 
@@ -746,6 +743,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
           );
         } else {
           CustomToast.show(context, 'Failure: $message', isSuccess: false);
+          if (_useTvKeypad(context)) _otpFocusNode.requestFocus();
         }
       }
     } catch (e, stackTrace) {
@@ -954,9 +952,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         event.logicalKey == LogicalKeyboardKey.space ||
         event.logicalKey == LogicalKeyboardKey.gameButtonA) {
       if (_mobileFocusNode.hasFocus || _otpFocusNode.hasFocus) {
-        _showTextInputKeyboard(
-          _otpFocusNode.hasFocus ? _otpFocusNode : _mobileFocusNode,
-        );
+        _openTvKeypad();
         return KeyEventResult.handled;
       }
     }
@@ -964,9 +960,9 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     return KeyEventResult.ignored;
   }
 
-  void _showTextInputKeyboard(FocusNode focusNode) {
-    focusNode.requestFocus();
-    SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+  void _openTvKeypad() {
+    if (!_useTvKeypad(context) || _keypadFocusNodes.isEmpty) return;
+    _keypadFocusNodes.first.requestFocus();
   }
 }
 

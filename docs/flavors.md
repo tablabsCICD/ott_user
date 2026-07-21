@@ -21,20 +21,20 @@ or business logic is duplicated.
 
 - `android/app/build.gradle.kts`
   - `mobile` flavor: `applicationId = "com.filmytell.ott"`
-  - `mobile` version: `1.0.14+30`
+  - `mobile` version: inherited from `pubspec.yaml`
   - `mobile` app name resource: `Filmytell`
-  - `tv` flavor: `applicationId = "com.filmytell.ott.tv"`
-  - `tv` version: `1.0.0+1`
+  - `tv` flavor: `applicationId = "com.filmytell.ott"`
+  - `tv` version: inherited from `pubspec.yaml`
   - `tv` app name resource: `Filmytell`
 - `android/app/src/main/AndroidManifest.xml`
   - Shared permissions, activities, payment activity, deep links, and app links.
 - `android/app/src/tv/AndroidManifest.xml`
-  - TV-only required `android.software.leanback`, optional touchscreen,
+  - TV-only optional `android.software.leanback`, optional touchscreen,
     `LEANBACK_LAUNCHER`, TV banner, and Android TV app metadata.
 - `android/app/src/mobile/google-services.json`
   - Mobile-flavor Firebase configuration for package `com.filmytell.ott`.
 - `android/app/src/tv/google-services.json`
-  - TV-flavor Firebase configuration for package `com.filmytell.ott.tv`.
+  - TV-flavor Firebase configuration for package `com.filmytell.ott`.
 - `android/app/src/tv/res/drawable-xhdpi/tv_banner.png`
   - Android TV launcher banner resource.
 
@@ -47,15 +47,9 @@ Current Firebase behavior is preserved for:
 - iOS
 - Web
 
-Important production step: register Android package `com.filmytell.ott.tv` in
-Firebase Console and replace both:
-
-- `android/app/src/tv/google-services.json`
-- `DefaultFirebaseOptions.androidTv` in `lib/firebase_options.dart`
-
-with the generated TV Firebase app values. The current TV file intentionally
-uses the same Firebase project values as mobile so the flavor is wired without
-changing app behavior.
+Mobile and TV intentionally use the existing `com.filmytell.ott` Firebase app
+and Play Store identity. Do not register a second package unless product
+requirements explicitly change to a separate store listing.
 
 ## iOS
 
@@ -94,10 +88,9 @@ flutter build ios -t lib/main_ios.dart --dart-define=FLAVOR=ios
 flutter build web -t lib/main_web.dart --dart-define=FLAVOR=web
 ```
 
-`lib/main.dart` resolves the Android flavor from the installed package name, so
-the requested Android flavor commands work without duplicating app logic. The
-`main_*` files remain available for explicit platform entry points, and
-`--dart-define=FLAVOR=...` is still supported for CI and release builds.
+Because both Android flavors share a package name, use the explicit `main_*`
+entrypoints shown above. The entrypoint is the authoritative runtime platform
+signal; `--dart-define=FLAVOR=...` remains supported for CI and release builds.
 
 ## Deep Links And App Links
 
@@ -110,14 +103,13 @@ The shared Android manifest still preserves:
 - `https://filmytell.in`
 - `https://www.filmytell.in`
 
-For production Android TV App Links, add package `com.filmytell.ott.tv` and its
-release certificate fingerprint to `web/.well-known/assetlinks.json` before
-publishing the TV package.
+The existing `com.filmytell.ott` App Links registration and release certificate
+remain authoritative for both form factors.
 
 ## Verification Checklist
 
 - Mobile app installs as `com.filmytell.ott`.
-- Android TV app installs as `com.filmytell.ott.tv`.
+- Android TV app installs as `com.filmytell.ott`.
 - Android TV launcher shows the TV banner and Leanback launcher entry.
 - Mobile launcher does not expose a Leanback launcher entry.
 - Firebase initializes on mobile, TV, iOS, and web.

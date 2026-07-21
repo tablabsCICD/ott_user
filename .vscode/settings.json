@@ -1,4 +1,7 @@
 {
     "java.configuration.updateBuildConfiguration": "interactive",
-    "git.ignoreLimitWarning": true
+    "git.ignoreLimitWarning": true,
+    "terminal.integrated.env.windows": {
+        "GRADLE_USER_HOME": "${workspaceFolder}/.gradle-tv"
+    }
 }

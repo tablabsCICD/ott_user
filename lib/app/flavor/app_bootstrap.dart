@@ -41,6 +41,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> runFilmytellApp({
   required FilmytellFlavor fallbackFlavor,
+}) {
+  if (!kReleaseMode) {
+    return _runFilmytellApp(fallbackFlavor: fallbackFlavor);
+  }
+
+  return runZoned(
+    () => _runFilmytellApp(fallbackFlavor: fallbackFlavor),
+    zoneSpecification: ZoneSpecification(
+      print: (self, parent, zone, message) {},
+    ),
+  );
+}
+
+Future<void> _runFilmytellApp({
+  required FilmytellFlavor fallbackFlavor,
 }) async {
   WidgetsFlutterBinding.ensureInitialized();
   FlavorConfig.current = await _resolveFlavor(fallbackFlavor);
@@ -130,6 +145,14 @@ Future<void> runFilmytellApp({
 Future<FlavorConfig> _resolveFlavor(FilmytellFlavor fallbackFlavor) async {
   final configured = FlavorConfig.fromEnvironment(fallback: fallbackFlavor);
   if (kIsWeb) return configured;
+
+  // Mobile and TV intentionally share the Play Store application ID. Their
+  // entrypoints are therefore the authoritative platform signal; package-name
+  // detection cannot distinguish them.
+  if (fallbackFlavor == FilmytellFlavor.tv ||
+      fallbackFlavor == FilmytellFlavor.mobile) {
+    return FlavorConfig.forFlavor(fallbackFlavor);
+  }
 
   try {
     final packageInfo = await PackageInfo.fromPlatform();

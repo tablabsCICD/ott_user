@@ -1,6 +1,5 @@
 package com.filmytell.ott
 
-import android.os.Bundle
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -9,13 +8,6 @@ import java.io.File
 
 class MainActivity : FlutterActivity() {
     private val antiPiracyChannel = "com.filmytell.ott/anti_piracy"
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        // Keep the screen awake during playback-heavy sessions.
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

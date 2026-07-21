@@ -55,8 +55,8 @@ android {
         create("mobile") {
             dimension = "platform"
             applicationId = "com.filmytell.ott"
-            versionCode = 30
-            versionName = "1.0.14"
+            versionCode = flutter.versionCode
+            versionName = flutter.versionName
             resValue("string", "app_name", "Filmytell")
             manifestPlaceholders["appAuthRedirectScheme"] = "com.filmytell.ott"
         }
@@ -64,8 +64,8 @@ android {
         create("tv") {
             dimension = "platform"
             applicationId = "com.filmytell.ott"
-            versionCode = 31
-            versionName = "1.0.15"
+            versionCode = flutter.versionCode
+            versionName = flutter.versionName
             resValue("string", "app_name", "Filmytell")
             manifestPlaceholders["appAuthRedirectScheme"] = "com.filmytell.ott"
         }

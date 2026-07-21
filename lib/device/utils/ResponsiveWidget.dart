@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ott/app/flavor/app_flavor.dart';
 
 class ResponsiveWidget extends StatelessWidget {
   static const double mobileBreakpoint = 750;
@@ -16,16 +17,20 @@ class ResponsiveWidget extends StatelessWidget {
   });
 
   static bool isMobile(BuildContext context) =>
+      !FlavorConfig.current.isTv &&
       MediaQuery.of(context).size.width < mobileBreakpoint;
 
   static bool isTablet(BuildContext context) =>
+      !FlavorConfig.current.isTv &&
       MediaQuery.of(context).size.width < desktopBreakpoint &&
       MediaQuery.of(context).size.width >= mobileBreakpoint;
 
   static bool isDesktop(BuildContext context) =>
+      FlavorConfig.current.isTv ||
       MediaQuery.of(context).size.width >= desktopBreakpoint;
 
   static bool isTv(BuildContext context) {
+    if (FlavorConfig.current.isTv) return true;
     final media = MediaQuery.of(context);
     return media.size.width >= desktopBreakpoint &&
         media.orientation == Orientation.landscape;
@@ -35,6 +40,7 @@ class ResponsiveWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (FlavorConfig.current.isTv) return desktop;
     final Size size = MediaQuery.of(context).size;
     // If our width is more than 1100 then we consider it a desktop
     if (size.width >= desktopBreakpoint) {

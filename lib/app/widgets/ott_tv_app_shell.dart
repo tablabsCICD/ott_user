@@ -45,6 +45,14 @@ class OttTvRemoteKey {
     LogicalKeyboardKey.mediaPause,
   };
 
+  static final Set<LogicalKeyboardKey> rewind = {
+    LogicalKeyboardKey.mediaRewind,
+  };
+
+  static final Set<LogicalKeyboardKey> fastForward = {
+    LogicalKeyboardKey.mediaFastForward,
+  };
+
   static bool isDirectional(LogicalKeyboardKey key) {
     return up.contains(key) ||
         down.contains(key) ||
@@ -74,38 +82,17 @@ class _OttTvAppShellState extends State<OttTvAppShell> {
     super.dispose();
   }
 
-  KeyEventResult _handleFocusKey(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    return _moveFocusForKey(event.logicalKey)
-        ? KeyEventResult.handled
-        : KeyEventResult.ignored;
-  }
-
-  bool _moveFocusForKey(LogicalKeyboardKey key) {
+  void _dismissKeyboardOrRoute() {
     final primaryFocus = FocusManager.instance.primaryFocus;
-    if (primaryFocus == null) {
-      _keyboardNode.requestFocus();
-      return false;
+    final focusContext = primaryFocus?.context;
+    final editingText = focusContext?.widget is EditableText ||
+        focusContext?.findAncestorWidgetOfExactType<EditableText>() != null;
+    if (editingText) {
+      primaryFocus?.unfocus();
+      SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+      return;
     }
-
-    if (OttTvRemoteKey.up.contains(key)) {
-      primaryFocus.focusInDirection(TraversalDirection.up);
-      return true;
-    } else if (OttTvRemoteKey.down.contains(key)) {
-      primaryFocus.focusInDirection(TraversalDirection.down);
-      return true;
-    } else if (OttTvRemoteKey.left.contains(key)) {
-      primaryFocus.focusInDirection(TraversalDirection.left);
-      return true;
-    } else if (OttTvRemoteKey.right.contains(key)) {
-      primaryFocus.focusInDirection(TraversalDirection.right);
-      return true;
-    } else if (OttTvRemoteKey.back.contains(key)) {
-      if (!mounted) return false;
-      Navigator.of(context).maybePop();
-      return true;
-    }
-    return false;
+    if (mounted) Navigator.of(context).maybePop();
   }
 
   @override
@@ -143,8 +130,7 @@ class _OttTvAppShellState extends State<OttTvAppShell> {
         actions: <Type, Action<Intent>>{
           DismissIntent: CallbackAction<DismissIntent>(
             onInvoke: (_) {
-              if (!mounted) return null;
-              Navigator.of(context).maybePop();
+              _dismissKeyboardOrRoute();
               return null;
             },
           ),
@@ -159,19 +145,12 @@ class _OttTvAppShellState extends State<OttTvAppShell> {
       ),
     );
 
-    return KeyboardListener(
+    // One focus/shortcut layer owns remote traversal. Avoid parallel raw-key
+    // listeners, which can turn a single D-pad press into two actions.
+    return Focus(
       focusNode: _keyboardNode,
       autofocus: true,
-      onKeyEvent: (event) {
-        if (event is KeyDownEvent) {
-          _moveFocusForKey(event.logicalKey);
-        }
-      },
-      child: Focus(
-        autofocus: true,
-        onKeyEvent: _handleFocusKey,
-        child: shortcuts,
-      ),
+      child: shortcuts,
     );
   }
 }

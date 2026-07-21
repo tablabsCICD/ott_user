@@ -9,6 +9,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/utils/text_capitalization_formatter.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
