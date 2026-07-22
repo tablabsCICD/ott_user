@@ -139,6 +139,8 @@ class ShareService {
     switch (contentType) {
       case DeepLinkContentType.movie:
         return 'movie';
+      case DeepLinkContentType.shortFilm:
+        return 'short film';
       case DeepLinkContentType.series:
         return 'series';
       case DeepLinkContentType.short:

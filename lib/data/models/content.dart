@@ -95,138 +95,137 @@ class Content {
   }
 
   factory Content.fromJson(Map<String, dynamic> json) => Content(
-    id: _asInt(json['id']),
-    title: json['title'],
-    description: json['description'],
-    runtime: _asInt(json['runtime']),
-    releaseDate: json['releaseDate'],
+        id: _asInt(json['id']),
+        title: json['title'],
+        description: json['description'],
+        runtime: _asInt(json['runtime']),
+        releaseDate: json['releaseDate'],
 
-    ratings: _asDouble(json['ratings']),
-    price: _asDouble(json['price']),
-    totalRevenue: _asDouble(json['totalRevenue']),
+        ratings: _asDouble(json['ratings']),
+        price: _asDouble(json['price']),
+        totalRevenue: _asDouble(json['totalRevenue']),
 
-    languageList: (json['languageList'] as List?)
-        ?.map((e) => e is Map
-            ? LanguageList.fromJson(Map<String, dynamic>.from(e))
-            : LanguageList(language: e.toString()))
-        .toList(),
+        languageList: (json['languageList'] as List?)
+            ?.map((e) => e is Map
+                ? LanguageList.fromJson(Map<String, dynamic>.from(e))
+                : LanguageList(language: e.toString()))
+            .toList(),
 
-    castList: (json['castList'] as List?)
-        ?.map((e) => e.toString())
-        .toList(),
+        castList:
+            (json['castList'] as List?)?.map((e) => e.toString()).toList(),
 
-    genreList: (json['genreList'] as List?)
-        ?.map((e) => e.toString())
-        .toList(),
+        genreList:
+            (json['genreList'] as List?)?.map((e) => e.toString()).toList(),
 
-    directorList: (json['directorList'] as List?)
-        ?.map((e) => e.toString())
-        .toList(),
+        directorList:
+            (json['directorList'] as List?)?.map((e) => e.toString()).toList(),
 
-    views: _asInt(json['views']),
-    ageRating: json['ageRating'],
+        views: _asInt(json['views']),
+        ageRating: json['ageRating'],
 
-    posterUrlList: (json['posterUrlList'] as List?)
-        ?.map((e) => e.toString())
-        .toList(),
+        posterUrlList:
+            (json['posterUrlList'] as List?)?.map((e) => e.toString()).toList(),
 
-    teaserUrl: _firstStringValue(json, const [
-      'teaserUrl',
-      'teaserFile',
-      'teaserFileUrl',
-      'teaser_url',
-      'teaser_file',
-      'teasurUrl',
-      'teasurFile',
-      'teasurFileUrl',
-      'teasur_url',
-      'teasur_file',
-    ]),
-    trailerUrl: _firstStringValue(json, const [
-      'trailerUrl',
-      'trailerFile',
-      'trailerFileUrl',
-      'trailer_url',
-      'trailer_file',
-      'trailer_file_url',
-    ]),
-    contentUrl: _contentUrlFromJson(json),
-    approvalStatus: json['approvalStatus'],
-    type: json['type'],
-    sensorCertificate: json['sensorCertificate'],
-    isFeatured: json['isFeatured'] == true,
+        teaserUrl: _firstStringValue(json, const [
+          'teaserUrl',
+          'teaserFile',
+          'teaserFileUrl',
+          'teaser_url',
+          'teaser_file',
+          'teasurUrl',
+          'teasurFile',
+          'teasurFileUrl',
+          'teasur_url',
+          'teasur_file',
+        ]),
+        trailerUrl: _firstStringValue(json, const [
+          'trailerUrl',
+          'trailerFile',
+          'trailerFileUrl',
+          'trailer_url',
+          'trailer_file',
+          'trailer_file_url',
+        ]),
+        contentUrl: _contentUrlFromJson(json),
+        approvalStatus: json['approvalStatus'],
+        // Newer APIs use contentType while existing dashboard responses use type.
+        // Keep the backend value intact so activity, playback, and caching can
+        // distinguish SHORT_FILM from MOVIE.
+        type: (json['contentType'] ?? json['content_type'] ?? json['type'])
+            ?.toString(),
+        sensorCertificate: json['sensorCertificate'],
+        isFeatured: json['isFeatured'] == true,
 
-    availability: json['availability'] != null
-        ? Availability.fromJson(json['availability'])
-        : null,
+        availability: json['availability'] != null
+            ? Availability.fromJson(json['availability'])
+            : null,
 
-    audioFormatList: (json['audioFormatList'] as List?)
-        ?.map((e) => e.toString())
-        .toList(),
+        audioFormatList: (json['audioFormatList'] as List?)
+            ?.map((e) => e.toString())
+            .toList(),
 
-    subtitleLanguageList: (json['subtitleLanguageList'] as List?)
-        ?.map((e) => e.toString())
-        .toList(),
+        subtitleLanguageList: (json['subtitleLanguageList'] as List?)
+            ?.map((e) => e.toString())
+            .toList(),
 
-    isDownloadable: json['isDownloadable'] == true,
+        isDownloadable: json['isDownloadable'] == true,
 
-    uploadDateTime: _asInt(json['uploadDateTime']),
-    approvedDateTime: _asInt(json['approvedDateTime']),
+        uploadDateTime: _asInt(json['uploadDateTime']),
+        approvedDateTime: _asInt(json['approvedDateTime']),
 
-    mediaHouseName: json['mediaHouseName'],
-    mediaHouseId: _asInt(json['mediaHouseId']),
+        mediaHouseName: json['mediaHouseName'],
+        mediaHouseId: _asInt(json['mediaHouseId']),
 
-    ratingCount: _asInt(json['ratingCount']),
-    rentlDuration: json['rentlDuration'],
-    isRental: json['isRental'] == true,
+        ratingCount: _asInt(json['ratingCount']),
+        rentlDuration: json['rentlDuration'],
+        isRental: json['isRental'] == true,
 
-    watchedSeconds: _asInt(json['watchedSeconds']),
-    watchedPercentage: _asInt(json['watchedPercentage']),
+        watchedSeconds: _asInt(json['watchedSeconds']),
+        watchedPercentage: _asInt(json['watchedPercentage']),
 
-    seasonId: _asInt(json['seasonId']),
-    episodeId: _asInt(json['episodeId']),
-  );
+        seasonId: _asInt(json['seasonId']),
+        episodeId: _asInt(json['episodeId']),
+      );
 
   Map<String, dynamic> toJson() => {
-    "id": id,
-    "title": title,
-    "description": description,
-    "runtime": runtime,
-    "releaseDate": releaseDate,
-    "ratings": ratings,
-    "price": price,
-    "languageList":
-    languageList?.map((x) => x.toJson()).toList() ?? [],
-    "castList": castList ?? [],
-    "genreList": genreList ?? [],
-    "directorList": directorList ?? [],
-    "views": views,
-    "totalRevenue": totalRevenue,
-    "ageRating": ageRating,
-    "posterUrlList": posterUrlList ?? [],
-    "teaserUrl": teaserUrl,
-    "trailerUrl": trailerUrl,
-    "contentUrl": contentUrl,
-    "approvalStatus": approvalStatus,
-    "type": type,
-    "sensorCertificate": sensorCertificate,
-    "isFeatured": isFeatured,
-    "availability": availability?.toJson(),
-    "audioFormatList": audioFormatList ?? [],
-    "subtitleLanguageList": subtitleLanguageList ?? [],
-    "isDownloadable": isDownloadable,
-    "uploadDateTime": uploadDateTime,
-    "approvedDateTime": approvedDateTime,
-    "mediaHouseName": mediaHouseName,
-    "mediaHouseId": mediaHouseId,
-    "ratingCount": ratingCount,
-    "rentlDuration": rentlDuration,
-    "isRental": isRental,
-    "watchedSeconds": watchedSeconds,
-    "watchedPercentage": watchedPercentage,
-    "seasonId": seasonId,
-    "episodeId": episodeId,
-  };
+        "id": id,
+        "title": title,
+        "description": description,
+        "runtime": runtime,
+        "releaseDate": releaseDate,
+        "ratings": ratings,
+        "price": price,
+        "languageList": languageList?.map((x) => x.toJson()).toList() ?? [],
+        "castList": castList ?? [],
+        "genreList": genreList ?? [],
+        "directorList": directorList ?? [],
+        "views": views,
+        "totalRevenue": totalRevenue,
+        "ageRating": ageRating,
+        "posterUrlList": posterUrlList ?? [],
+        "teaserUrl": teaserUrl,
+        "trailerUrl": trailerUrl,
+        "contentUrl": contentUrl,
+        "approvalStatus": approvalStatus,
+        "type": type,
+        "sensorCertificate": sensorCertificate,
+        "isFeatured": isFeatured,
+        "availability": availability?.toJson(),
+        "audioFormatList": audioFormatList ?? [],
+        "subtitleLanguageList": subtitleLanguageList ?? [],
+        "isDownloadable": isDownloadable,
+        "uploadDateTime": uploadDateTime,
+        "approvedDateTime": approvedDateTime,
+        "mediaHouseName": mediaHouseName,
+        "mediaHouseId": mediaHouseId,
+        "ratingCount": ratingCount,
+        "rentlDuration": rentlDuration,
+        "isRental": isRental,
+        "watchedSeconds": watchedSeconds,
+        "watchedPercentage": watchedPercentage,
+        "seasonId": seasonId,
+        "episodeId": episodeId,
+      };
 }
 
 int? _asInt(dynamic v) {
@@ -307,7 +306,6 @@ String? _stringFromField(dynamic field) {
   final value = field.toString().trim();
   return value.isEmpty ? null : value;
 }
-
 
 class Availability {
   List<String>? regions;
