@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
+import 'package:ott/app/core/utils/content_type.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/shimmer%20loader/comming_soon_shimmer.dart';
@@ -92,8 +93,11 @@ class _UpcomingPageState extends State<UpcomingPage> {
                 isTrailerUrl: true,
                 content: movie)
             :  */
-                movie.type!.toLowerCase() == 'movie'
-                    ? MovieDetailsPage(movieId: movie.id!)
+                ContentType.isMovieLike(movie.type)
+                    ? MovieDetailsPage(
+                        movieId: movie.id!,
+                        contentType: movie.type,
+                      )
                     : SeriesDetailsPage(seriesId: movie.id!, content: movie),
       ),
     );

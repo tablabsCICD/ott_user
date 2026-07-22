@@ -64,6 +64,7 @@ class FooterSection extends StatelessWidget {
                             _FooterLinkData(lang.movie, 'Movies'),
                             _FooterLinkData(lang.series, 'Series'),
                             _FooterLinkData(lang.minSeries, 'Mini Series'),
+                            const _FooterLinkData('Short Film', 'Short Film'),
                           ],
                           onOpenLink: onOpenLink,
                         ),

@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/wallet_platform.dart';
+import 'package:ott/app/core/utils/content_type.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
@@ -32,8 +33,13 @@ import 'component/starRating.dart';
 
 class MovieDetailsPage extends StatefulWidget {
   final int movieId;
+  final String? contentType;
 
-  const MovieDetailsPage({super.key, required this.movieId});
+  const MovieDetailsPage({
+    super.key,
+    required this.movieId,
+    this.contentType,
+  });
 
   @override
   State<MovieDetailsPage> createState() => _MovieDetailsPageState();
@@ -42,6 +48,12 @@ class MovieDetailsPage extends StatefulWidget {
 class _MovieDetailsPageState extends State<MovieDetailsPage>
     with RouteAware, WidgetsBindingObserver {
   static const double _mediaPlayerBottomMargin = 24;
+
+  String get _contentType {
+    final loadedType = context.read<DashboardProvider>().content.type;
+    final resolved = ContentType.normalize(loadedType ?? widget.contentType);
+    return resolved.isEmpty ? ContentType.movie : resolved;
+  }
 
   bool isLoading = true;
   bool _contentLoadCompleted = false;
@@ -133,7 +145,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
             .refreshStatus(loadedContent);
         await Provider.of<BookmarkProvider>(context, listen: false)
             .getUserBookmarks();
-        await dashboardProvider.getContinueWatchedMovieList("MOVIE");
+        await dashboardProvider.getContinueWatchedMovieList(
+          ContentType.normalize(loadedContent.type ?? widget.contentType),
+        );
       }
     } catch (error) {
       debugPrint("Movie details fetch error: $error");
@@ -212,7 +226,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
       ),
     ).then((_) {
       if (!mounted) return;
-      context.read<DashboardProvider>().getContinueWatchedMovieList("MOVIE");
+      context
+          .read<DashboardProvider>()
+          .getContinueWatchedMovieList(_contentType);
     });
   }
 
@@ -631,7 +647,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
           onPressed: () => showContentShareSheet(
             context,
             content,
-            contentType: DeepLinkContentType.movie,
+            contentType: _contentType == ContentType.shortFilm
+                ? DeepLinkContentType.shortFilm
+                : DeepLinkContentType.movie,
             unavailableMessage: "Movie details are not available yet",
           ),
         ),
@@ -949,7 +967,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => MovieDetailsPage(movieId: content.id!),
+                  builder: (_) => MovieDetailsPage(
+                    movieId: content.id!,
+                    contentType: content.type,
+                  ),
                 ),
               );
             },
@@ -2081,7 +2102,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
       onTap: () => showContentShareSheet(
         context,
         movie,
-        contentType: DeepLinkContentType.movie,
+        contentType: _contentType == ContentType.shortFilm
+            ? DeepLinkContentType.shortFilm
+            : DeepLinkContentType.movie,
         unavailableMessage: "Movie details are not available yet",
       ),
     );

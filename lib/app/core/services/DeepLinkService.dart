@@ -20,14 +20,17 @@ class MovieDetailsRouteArgs {
   const MovieDetailsRouteArgs({
     required this.movieId,
     this.source = 'internal',
+    this.contentType = 'MOVIE',
   });
 
   final int movieId;
   final String source;
+  final String contentType;
 }
 
 enum DeepLinkContentType {
   movie,
+  shortFilm,
   series,
   short,
   gift,
@@ -54,6 +57,7 @@ class DeepLinkService {
 
   static const String scheme = 'myapp';
   static const String movieHost = 'movie';
+  static const String shortFilmHost = 'short-film';
   static const String seriesHost = 'series';
   static const String shortHost = 'short';
   static const String giftHost = 'gift';
@@ -143,7 +147,7 @@ class DeepLinkService {
   }) {
     return Uri(
       scheme: scheme,
-      host: type.name,
+      host: _hostForType(type),
       pathSegments: <String>['$id'],
     );
   }
@@ -163,7 +167,7 @@ class DeepLinkService {
     required DeepLinkContentType type,
     required int id,
   }) {
-    return Uri.https(httpsHost, '${type.name}/$id');
+    return Uri.https(httpsHost, '${_hostForType(type)}/$id');
   }
 
   Uri buildPreferredQrLink({
@@ -381,7 +385,20 @@ class DeepLinkService {
 
     switch (target.type) {
       case DeepLinkContentType.movie:
-        await _openMovieDetails(navigator, target.id!, source: source);
+        await _openMovieDetails(
+          navigator,
+          target.id!,
+          source: source,
+          contentType: 'MOVIE',
+        );
+        return;
+      case DeepLinkContentType.shortFilm:
+        await _openMovieDetails(
+          navigator,
+          target.id!,
+          source: source,
+          contentType: 'SHORT_FILM',
+        );
         return;
       case DeepLinkContentType.series:
         await _openSeriesDetails(navigator, target.id!);
@@ -420,6 +437,7 @@ class DeepLinkService {
     NavigatorState navigator,
     int movieId, {
     required String source,
+    required String contentType,
   }) async {
     final dashboardProvider =
         Provider.of<DashboardProvider>(navigator.context, listen: false);
@@ -442,9 +460,13 @@ class DeepLinkService {
           arguments: MovieDetailsRouteArgs(
             movieId: movieId,
             source: source,
+            contentType: contentType,
           ),
         ),
-        builder: (_) => MovieDetailsPage(movieId: movieId),
+        builder: (_) => MovieDetailsPage(
+          movieId: movieId,
+          contentType: contentType,
+        ),
       ),
     );
   }
@@ -514,6 +536,10 @@ class DeepLinkService {
     switch ((rawType ?? '').trim().toLowerCase()) {
       case movieHost:
         return DeepLinkContentType.movie;
+      case shortFilmHost:
+      case 'short_film':
+      case 'shortfilm':
+        return DeepLinkContentType.shortFilm;
       case seriesHost:
         return DeepLinkContentType.series;
       case shortHost:
@@ -522,6 +548,21 @@ class DeepLinkService {
         return DeepLinkContentType.gift;
       default:
         return null;
+    }
+  }
+
+  String _hostForType(DeepLinkContentType type) {
+    switch (type) {
+      case DeepLinkContentType.movie:
+        return movieHost;
+      case DeepLinkContentType.shortFilm:
+        return shortFilmHost;
+      case DeepLinkContentType.series:
+        return seriesHost;
+      case DeepLinkContentType.short:
+        return shortHost;
+      case DeepLinkContentType.gift:
+        return giftHost;
     }
   }
 

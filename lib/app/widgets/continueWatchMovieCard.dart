@@ -11,6 +11,9 @@ import 'package:ott/app/core/utils/direct_trailer_source.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/wallet_platform.dart';
+import 'package:ott/app/core/utils/direct_trailer_source.dart';
+import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
@@ -907,7 +910,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     _playDelayTimer?.cancel();
     _stopAndDisposePreview('opening details');
 
-    if (movie.type!.toLowerCase() == "movie") {
+    if (ContentType.isMovieLike(movie.type)) {
       _playContent();
     } else {
       Navigator.push(
@@ -918,8 +921,11 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                   trailerUrl: movie.teaserOrTrailerUrl ?? "",
                   isTrailerUrl: true,
                   content: movie)
-              : movie.type!.toLowerCase() == 'movie'
-                  ? MovieDetailsPage(movieId: movie.id!)
+              : ContentType.isMovieLike(movie.type)
+                  ? MovieDetailsPage(
+                      movieId: movie.id!,
+                      contentType: movie.type,
+                    )
                   : SeriesDetailsPage(seriesId: movie.id!, content: movie),
         ),
       );
@@ -1200,7 +1206,14 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   void _shareMovie(BuildContext context, Content movie) async {
     final shareLink = movie.id == null
         ? (movie.trailerUrl ?? '')
-        : DeepLinkService.instance.buildMovieAppLink(movie.id!).toString();
+        : DeepLinkService.instance
+            .buildAppLink(
+              type: ContentType.normalize(movie.type) == ContentType.shortFilm
+                  ? DeepLinkContentType.shortFilm
+                  : DeepLinkContentType.movie,
+              id: movie.id!,
+            )
+            .toString();
     final String shareText = '''
 🎬 ${movie.title ?? ''}
 

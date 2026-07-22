@@ -31,6 +31,7 @@ class LandingHeader extends StatelessWidget {
       (target: 'Movies', label: lang.movie),
       (target: 'Series', label: lang.series),
       (target: 'Mini Series', label: 'Mini Series'),
+      (target: 'Short Film', label: 'Short Film'),
     ];
 
     return AnimatedContainer(

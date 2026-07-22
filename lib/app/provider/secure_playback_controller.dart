@@ -36,11 +36,11 @@ class SecurePlaybackController extends ChangeNotifier {
   SecurePlaybackController({
     required this.contentId,
     required this.originalPlaybackUrl,
+    required this.type,
     required this.country,
     required SecureMediaLoader mediaLoader,
     required SecureMediaPauser pausePlayer,
     SecurePlaybackRepository? repository,
-    required this.type,
     this.refreshLead = const Duration(seconds: 60),
     this.watermarkInterval = const Duration(seconds: 60),
   })  : _repository = repository ?? SecurePlaybackRepository.instance,
@@ -63,7 +63,7 @@ class SecurePlaybackController extends ChangeNotifier {
   final SecureMediaLoader _mediaLoader;
   final SecureMediaPauser _pausePlayer;
   late final PlaybackAnalyticsCoordinator _analytics;
-
+  final String type;
   SecurePlaybackState _state = SecurePlaybackState.preparingSecurity;
   SecurePlaybackState get state => _state;
   SignedPlaybackResponse? _currentAuthorization;
@@ -81,7 +81,6 @@ class SecurePlaybackController extends ChangeNotifier {
   Future<void>? _startRequest;
   bool _disposed = false;
   bool _handledPlayer403 = false;
-  String type;
   Future<void> start() {
     return _startRequest ??= _start().whenComplete(() => _startRequest = null);
   }
@@ -220,21 +219,19 @@ class SecurePlaybackController extends ChangeNotifier {
   Future<SignedPlaybackResponse> _requestRefreshWithRetry() async {
     try {
       return await _repository.createSignedPlaybackSession(
-        contentId: contentId,
-        playbackUrl: originalPlaybackUrl,
-        country: country,
-        type: type,
-      );
+          contentId: contentId,
+          playbackUrl: originalPlaybackUrl,
+          country: country,
+          type: type);
     } on SecurePlaybackException catch (error) {
       if (!error.isTransient || _disposed) rethrow;
       await Future<void>.delayed(const Duration(seconds: 2));
       if (_disposed) rethrow;
       return _repository.createSignedPlaybackSession(
-        contentId: contentId,
-        playbackUrl: originalPlaybackUrl,
-        country: country,
-        type: type,
-      );
+          contentId: contentId,
+          playbackUrl: originalPlaybackUrl,
+          country: country,
+          type: type);
     }
   }
 

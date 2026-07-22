@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
+import 'package:ott/app/core/utils/content_type.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/shorts%20page/component/ShortsPlayerPage.dart';
@@ -42,8 +43,11 @@ class BookmarkPosterCard extends StatelessWidget {
                       isTrailerUrl: true,
                       content: movie,
                     )
-                  : movie.type!.toLowerCase() == 'movie'
-                      ? MovieDetailsPage(movieId: movie.id ?? 0)
+                  : ContentType.isMovieLike(movie.type)
+                      ? MovieDetailsPage(
+                          movieId: movie.id ?? 0,
+                          contentType: movie.type,
+                        )
                       : SeriesDetailsPage(
                           seriesId: movie.id ?? 0, content: movie),
             ),

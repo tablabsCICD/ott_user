@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
+import 'package:ott/app/core/utils/content_type.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
@@ -422,9 +423,10 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => movie.type!.toLowerCase() == 'movie'
+              builder: (context) => ContentType.isMovieLike(movie.type)
                   ? MovieDetailsPage(
                       movieId: movie.id!,
+                      contentType: movie.type,
                     )
                   : SeriesDetailsPage(
                       seriesId: movie.id!,

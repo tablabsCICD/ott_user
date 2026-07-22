@@ -124,12 +124,10 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
       case 'Mini Series':
         _showLatestContentType('MINI SERIES');
         break;
-      case 'Live TV':
-        _scrollTo(_liveTvKey);
+      case 'Short Film':
+        _showLatestContentType('SHORT_FILM');
         break;
-      case 'Categories':
-        _scrollTo(_latestKey);
-        break;
+
       default:
         _scrollTo(_homeKey);
     }
@@ -370,6 +368,9 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
         return;
       case 'Mini Series':
         _showLatestContentType('MINI SERIES');
+        return;
+      case 'Short Film':
+        _showLatestContentType('SHORT_FILM');
         return;
       case 'Production House':
         _openExternal(
