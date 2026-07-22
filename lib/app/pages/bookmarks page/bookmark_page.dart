@@ -2,11 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/bookmarks page/component/bookmark_card.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
+import 'package:ott/app/core/utils/content_type.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 
-enum BookmarkFilter { movies, series, shorts }
+enum BookmarkFilter { movies, series, shorts, shortFilms }
 
 class BookmarkPage extends StatefulWidget {
   const BookmarkPage({super.key});
@@ -168,7 +169,8 @@ class _BookmarkPageState extends State<BookmarkPage> {
     switch (selectedFilter) {
       case BookmarkFilter.movies:
         return bookmarks
-            .where((item) => (item.type ?? '').toLowerCase() == 'movie')
+            .where(
+                (item) => ContentType.normalize(item.type) == ContentType.movie)
             .toList();
       case BookmarkFilter.series:
         return bookmarks
@@ -176,6 +178,11 @@ class _BookmarkPageState extends State<BookmarkPage> {
             .toList();
       case BookmarkFilter.shorts:
         return [];
+      case BookmarkFilter.shortFilms:
+        return bookmarks
+            .where((item) =>
+                ContentType.normalize(item.type) == ContentType.shortFilm)
+            .toList();
     }
   }
 
@@ -194,6 +201,7 @@ class _BookmarkPageState extends State<BookmarkPage> {
             _segment(theme, BookmarkFilter.movies, "Movies"),
             _segment(theme, BookmarkFilter.series, "Series"),
             _segment(theme, BookmarkFilter.shorts, "Mini Series"),
+            _segment(theme, BookmarkFilter.shortFilms, "Short Film"),
           ],
         ),
       ),

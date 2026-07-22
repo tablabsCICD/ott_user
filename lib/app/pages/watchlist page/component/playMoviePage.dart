@@ -300,12 +300,14 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
     _currentRemotePlaybackUrl = sourceUrl;
     final controller = SecurePlaybackController(
-      contentId: contentId,
-      originalPlaybackUrl: sourceUrl,
-      country: _resolvePlaybackCountryCode(),
-      mediaLoader: _loadSecureMedia,
-      pausePlayer: _pauseActivePlayer,
-    );
+        contentId: contentId,
+        originalPlaybackUrl: sourceUrl,
+        country: _resolvePlaybackCountryCode(),
+        mediaLoader: _loadSecureMedia,
+        pausePlayer: _pauseActivePlayer,
+        type: widget.content!.type!.toLowerCase() == "series"
+            ? "EPISODE"
+            : widget.content!.type!);
     _securePlaybackController = controller;
     controller.addListener(_onSecurePlaybackChanged);
     await controller.start();
@@ -374,8 +376,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       authorization.playbackUrl,
       httpHeaders: authorization.httpHeaders,
       diagnoseSignedHls: true,
-      automaticAudioTrack:
-          getAutomaticAudioTrack(authorization.audioTracks),
+      automaticAudioTrack: getAutomaticAudioTrack(authorization.audioTracks),
       automaticSubtitleTrack:
           getAutomaticSubtitleTrack(authorization.subtitleTracks),
     );

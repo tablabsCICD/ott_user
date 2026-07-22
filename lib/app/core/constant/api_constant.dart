@@ -1,5 +1,5 @@
 class ApiConstant {
-  static const String baseUrl = "https://filmytell.in/ott/";
+  static const String baseUrl = "https://filmytell.com/ott/";
 
   /*  static const String baseUrl =
       "http://ec2-13-201-5-93.ap-south-1.compute.amazonaws.com:8080/ott/";
@@ -19,7 +19,7 @@ class ApiConstant {
   static String antiPiracyDevice(String deviceId) =>
       "${antiPiracyDevices}/${Uri.encodeComponent(deviceId)}";
   static const String signedPlaybackUrl =
-      "https://filmytell.in/ott2/anti-piracy/playback/signed-url";
+      "${baseUrl}anti-piracy/playback/signed-url";
   static String playbackAnalytics = "${baseUrl}anti-piracy/playback/analytics";
   static String currentWatermark = "${baseUrl}watermark/current";
   static String registration = '${baseUrl}user/RegisterUser';

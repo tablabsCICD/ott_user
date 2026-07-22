@@ -434,6 +434,7 @@ class WebLandingProvider extends ChangeNotifier {
     final normalized = value.replaceAll(RegExp(r'[\s_-]+'), ' ');
     if (normalized == 'movie') return 'MOVIE';
     if (normalized == 'series') return 'SERIES';
+    if (normalized == 'short film') return 'SHORT_FILM';
     if (normalized == 'mini series' ||
         normalized == 'shorts' ||
         normalized == 'short') {
