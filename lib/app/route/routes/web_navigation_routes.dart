@@ -24,11 +24,6 @@ class WebNavigationRoutes {
     homeContentType: 'MOVIE',
   );
   static const series = WebNavigationRoute(path: '/series', index: 1);
-  static const shortFilms = WebNavigationRoute(
-    path: '/short-films',
-    index: 0,
-    homeContentType: 'SHORT_FILM',
-  );
   static const shorts = WebNavigationRoute(path: '/shorts', index: 2);
   static const search = WebNavigationRoute(path: '/search', index: 3);
   static const watchlist = WebNavigationRoute(path: '/watchlist', index: 4);
@@ -46,7 +41,6 @@ class WebNavigationRoutes {
     home,
     movies,
     series,
-    shortFilms,
     shorts,
     search,
     watchlist,
@@ -71,7 +65,6 @@ class WebNavigationRoutes {
     String? homeContentType,
   }) {
     if (index == 0 && homeContentType == 'MOVIE') return movies;
-    if (index == 0 && homeContentType == 'SHORT_FILM') return shortFilms;
     for (final route in values) {
       if (route.index == index) return route;
     }

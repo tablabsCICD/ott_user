@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
-import 'package:ott/app/core/utils/content_type.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/shorts%20page/component/ShortsPlayerPage.dart';
@@ -62,35 +61,10 @@ class BookmarkPosterCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(12),
-<<<<<<< HEAD
       child: OttTvFocus(
         borderRadius: 12,
         onTap: openDetails,
         semanticLabel: movie.title,
-=======
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => movie.isFeatured ?? true
-                  ? TrailerPage(
-                      trailerUrl: movie.trailerUrl ?? "",
-                      isTrailerUrl: true,
-                      content: movie,
-                    )
-                  : ContentType.isMovieLike(movie.type)
-                      ? MovieDetailsPage(
-                          movieId: movie.id ?? 0,
-                          contentType: movie.type,
-                        )
-                      : SeriesDetailsPage(
-                          seriesId: movie.id ?? 0, content: movie),
-            ),
-          );
-        },
->>>>>>> 32708fa (added short film content type)
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
