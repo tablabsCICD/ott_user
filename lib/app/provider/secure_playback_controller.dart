@@ -37,6 +37,7 @@ class SecurePlaybackController extends ChangeNotifier {
     required this.contentId,
     required this.originalPlaybackUrl,
     required this.country,
+    required this.type, // 🔒 added type parameter
     required SecureMediaLoader mediaLoader,
     required SecureMediaPauser pausePlayer,
     SecurePlaybackRepository? repository,
@@ -56,6 +57,7 @@ class SecurePlaybackController extends ChangeNotifier {
   final String contentId;
   final String originalPlaybackUrl;
   final String country;
+  final String type; // 🔒 added type parameter
   final Duration refreshLead;
   final Duration watermarkInterval;
   final SecurePlaybackRepository _repository;
@@ -98,6 +100,7 @@ class SecurePlaybackController extends ChangeNotifier {
         contentId: contentId,
         playbackUrl: originalPlaybackUrl,
         country: country,
+        type: type, // 🔒 added type parameter
       );
       if (_disposed) return;
       final secondsUntilExpiry =
@@ -221,6 +224,7 @@ class SecurePlaybackController extends ChangeNotifier {
         contentId: contentId,
         playbackUrl: originalPlaybackUrl,
         country: country,
+        type: type, // 🔒 added type parameter
       );
     } on SecurePlaybackException catch (error) {
       if (!error.isTransient || _disposed) rethrow;
@@ -230,6 +234,7 @@ class SecurePlaybackController extends ChangeNotifier {
         contentId: contentId,
         playbackUrl: originalPlaybackUrl,
         country: country,
+        type: type, // 🔒 added type parameter
       );
     }
   }

@@ -238,6 +238,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         contentId: updated.partId,
         originalPlaybackUrl: updated.videoUrl,
         country: _resolveShortPlaybackCountryCode(),
+        type: 'SHORT_PART', // 🔒 added type parameter
         mediaLoader: _loadSecureMedia,
         pausePlayer: () async => _controller?.pause(),
       );
@@ -345,8 +346,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         ),
         play: true,
       );
-      final automaticAudio =
-          getAutomaticAudioTrack(authorization.audioTracks);
+      final automaticAudio = getAutomaticAudioTrack(authorization.audioTracks);
       if (automaticAudio != null) {
         try {
           await player.setAudioTrack(

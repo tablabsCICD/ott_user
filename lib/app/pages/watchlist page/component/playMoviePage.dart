@@ -306,6 +306,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       country: _resolvePlaybackCountryCode(),
       mediaLoader: _loadSecureMedia,
       pausePlayer: _pauseActivePlayer,
+      type: _isSeries ? 'EPISODE' : 'MOVIE', // 🔒 added type parameter
     );
     _securePlaybackController = controller;
     controller.addListener(_onSecurePlaybackChanged);
