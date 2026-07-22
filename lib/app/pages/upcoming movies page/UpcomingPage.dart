@@ -1,9 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
+<<<<<<< HEAD
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
+=======
+import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
+import 'package:ott/app/provider/videoProvider.dart';
+>>>>>>> 32708fa (added short film content type)
 import 'package:ott/app/widgets/shimmer%20loader/comming_soon_shimmer.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/content.dart';
@@ -93,8 +99,16 @@ class _UpcomingPageState extends State<UpcomingPage> {
                 isTrailerUrl: true,
                 content: movie)
             :  */
+<<<<<<< HEAD
                 movie.type!.toLowerCase() == 'movie'
                     ? MovieDetailsPage(movieId: movie.id!)
+=======
+                ContentType.isMovieLike(movie.type)
+                    ? MovieDetailsPage(
+                        movieId: movie.id!,
+                        contentType: movie.type,
+                      )
+>>>>>>> 32708fa (added short film content type)
                     : SeriesDetailsPage(seriesId: movie.id!, content: movie),
       ),
     );
@@ -104,6 +118,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
   Widget _upcomingCard(BuildContext context, Content item) {
     final theme = Theme.of(context);
 
+<<<<<<< HEAD
     void openDetails() => _openDetails(item);
 
     final card = ClipRRect(
@@ -225,6 +240,120 @@ class _UpcomingPageState extends State<UpcomingPage> {
       semanticLabel: item.title,
       child: card,
     );
+=======
+    return InkWell(
+      onTap: () {
+        _openDetails(item);
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            // 🎞 Poster
+            Positioned.fill(
+              child: Image.network(
+                item.posterUrlList?.first ?? '',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(color: Colors.black26),
+              ),
+            ),
+
+            // 🌑 Gradient overlay
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black54,
+                      Colors.black87,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // 📄 Content
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 12,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title
+                  Text(
+                    item.title ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  // Release date
+                  Row(
+                    children: [
+                      const Icon(Icons.date_range,
+                          size: 12, color: Colors.white70),
+                      const SizedBox(width: 4),
+                      Text(
+                        item.releaseDate ?? '',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // 🔔 Notify Me button
+                  SizedBox(
+                    height: 28,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        CustomToast.show(
+                          context,
+                          "You’ll be notified on release day",
+                          isSuccess: true,
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.notifications_active,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                      label: Text(
+                        AppLocalizations.of(context)!.notifyMe,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.primaryColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        minimumSize: Size.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+>>>>>>> 32708fa (added short film content type)
   }
 
   Widget _emptyState(ThemeData theme) {
@@ -233,7 +362,11 @@ class _UpcomingPageState extends State<UpcomingPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.upcoming_outlined,
+<<<<<<< HEAD
               size: 80, color: theme.canvasColor.withValues(alpha: 0.6)),
+=======
+              size: 80, color: theme.canvasColor.withOpacity(0.6)),
+>>>>>>> 32708fa (added short film content type)
           const SizedBox(height: 12),
           Text(
             "No upcoming content",

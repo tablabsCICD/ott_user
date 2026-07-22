@@ -36,6 +36,7 @@ class SecurePlaybackController extends ChangeNotifier {
   SecurePlaybackController({
     required this.contentId,
     required this.originalPlaybackUrl,
+    required this.type,
     required this.country,
     required SecureMediaLoader mediaLoader,
     required SecureMediaPauser pausePlayer,
@@ -62,7 +63,7 @@ class SecurePlaybackController extends ChangeNotifier {
   final SecureMediaLoader _mediaLoader;
   final SecureMediaPauser _pausePlayer;
   late final PlaybackAnalyticsCoordinator _analytics;
-
+  final String type;
   SecurePlaybackState _state = SecurePlaybackState.preparingSecurity;
   SecurePlaybackState get state => _state;
   SignedPlaybackResponse? _currentAuthorization;
@@ -98,6 +99,7 @@ class SecurePlaybackController extends ChangeNotifier {
         contentId: contentId,
         playbackUrl: originalPlaybackUrl,
         country: country,
+        type: type,
       );
       if (_disposed) return;
       final secondsUntilExpiry =
@@ -218,19 +220,19 @@ class SecurePlaybackController extends ChangeNotifier {
   Future<SignedPlaybackResponse> _requestRefreshWithRetry() async {
     try {
       return await _repository.createSignedPlaybackSession(
-        contentId: contentId,
-        playbackUrl: originalPlaybackUrl,
-        country: country,
-      );
+          contentId: contentId,
+          playbackUrl: originalPlaybackUrl,
+          country: country,
+          type: type);
     } on SecurePlaybackException catch (error) {
       if (!error.isTransient || _disposed) rethrow;
       await Future<void>.delayed(const Duration(seconds: 2));
       if (_disposed) rethrow;
       return _repository.createSignedPlaybackSession(
-        contentId: contentId,
-        playbackUrl: originalPlaybackUrl,
-        country: country,
-      );
+          contentId: contentId,
+          playbackUrl: originalPlaybackUrl,
+          country: country,
+          type: type);
     }
   }
 
