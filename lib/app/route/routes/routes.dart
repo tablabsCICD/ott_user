@@ -53,14 +53,11 @@ class RouteGenerator {
 
       case AppRoutes.movieDetails:
         final movieId = _parseMovieId(settings.arguments);
-        final contentType = settings.arguments is MovieDetailsRouteArgs
-            ? (settings.arguments as MovieDetailsRouteArgs).contentType
-            : 'MOVIE';
         if (movieId == null || movieId <= 0) {
           return _invalidMovieRoute(settings);
         }
         return buildRoute(
-          MovieDetailsPage(movieId: movieId, contentType: contentType),
+          MovieDetailsPage(movieId: movieId),
           settings: settings,
         );
 

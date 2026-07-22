@@ -91,11 +91,10 @@ class DeviceBinding {
 }
 
 class SignedPlaybackRequest {
-  SignedPlaybackRequest({
+  const SignedPlaybackRequest({
     required this.contentId,
     required this.deviceId,
     required this.playbackUrl,
-    required this.type,
     required this.country,
     required this.platform,
     required this.deviceIntegrity,
@@ -104,7 +103,6 @@ class SignedPlaybackRequest {
   final String contentId;
   final String deviceId;
   final String playbackUrl;
-  final String type;
   final String country;
   final String platform;
   final DeviceIntegrityStatus deviceIntegrity;
@@ -113,7 +111,6 @@ class SignedPlaybackRequest {
         'contentId': contentId,
         'deviceId': deviceId,
         'playbackUrl': playbackUrl,
-        'type': type,
         'country': country,
         'platform': platform,
         'deviceIntegrity': deviceIntegrity.toJson(),

@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/utils/image_url_utils.dart';
-import 'package:ott/app/core/utils/content_type.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/home%20page/category_content_page.dart';
 import 'package:ott/app/pages/madioo%20page/MadiooPage.dart';
@@ -530,8 +529,7 @@ class _HomePageState extends State<HomePage>
                     child: Consumer<DashboardProvider>(
                         builder: (context, dashboardProvider, child) {
                       final showContentLoader = dashboardProvider.isLoading &&
-                          (ContentType.isMovieLike(selectedType) ||
-                              ContentType.isSeries(selectedType));
+                          (selectedType == 'MOVIE' || selectedType == 'SERIES');
 
                       return Column(
                         mainAxisSize: MainAxisSize.min,
@@ -1128,10 +1126,7 @@ class _HomePageState extends State<HomePage>
                 seriesId: item.id ?? 0,
                 content: item,
               )
-            : MovieDetailsPage(
-                movieId: item.id!,
-                contentType: item.type,
-              ),
+            : MovieDetailsPage(movieId: item.id!),
       ),
     );
   }
@@ -1809,7 +1804,10 @@ class _HomePageState extends State<HomePage>
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
-        ...ContentType.homeTypes,
+        "MOVIE",
+        "SERIES",
+        "MINI SERIES",
+        "MADIOO",
       ].map((type) {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -1857,11 +1855,13 @@ class _HomePageState extends State<HomePage>
                 padding:
                     const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
                 child: Text(
-                  type == ContentType.movie
+                  type == 'MOVIE'
                       ? lang.movie
-                      : type == ContentType.series
+                      : type == 'SERIES'
                           ? lang.series
-                          : ContentType.displayLabel(type),
+                          : type == 'MINI SERIES'
+                              ? 'Mini Series'
+                              : 'Madioo',
                   style: TextStyle(
                     color: selectedType == type
                         ? Colors.white

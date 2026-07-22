@@ -89,7 +89,6 @@ class SecurePlaybackRepository {
     required String contentId,
     required String playbackUrl,
     required String country,
-    required String type,
   }) async {
     SecurityDebugLog.event(
       'FLOW',
@@ -133,7 +132,6 @@ class SecurePlaybackRepository {
         contentId: contentId,
         deviceId: current.deviceId,
         playbackUrl: playbackUrl,
-        type: type,
         country: country,
         platform: current.deviceType,
         deviceIntegrity: integrity,

@@ -10,7 +10,6 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:video_player/video_player.dart' as native_video;
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/utils/direct_trailer_source.dart';
-import 'package:ott/app/core/utils/content_type.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
@@ -863,11 +862,8 @@ class _MovieCardState extends State<MovieCard> {
                 isTrailerUrl: true,
                 content: movie)
             :  */
-                ContentType.isMovieLike(movie.type)
-                    ? MovieDetailsPage(
-                        movieId: movie.id!,
-                        contentType: movie.type,
-                      )
+                movie.type!.toLowerCase() == 'movie'
+                    ? MovieDetailsPage(movieId: movie.id!)
                     : SeriesDetailsPage(seriesId: movie.id!, content: movie),
       ),
     ).then((_) => _refreshSingleContent());
@@ -1291,8 +1287,6 @@ class _MovieCardState extends State<MovieCard> {
 
 DeepLinkContentType _shareContentTypeFor(Content movie) {
   switch ((movie.type ?? '').trim().toLowerCase()) {
-    case 'short_film':
-      return DeepLinkContentType.shortFilm;
     case 'series':
       return DeepLinkContentType.series;
     case 'short':

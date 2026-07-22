@@ -235,12 +235,12 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       }
 
       final secureController = SecurePlaybackController(
-          contentId: updated.partId,
-          originalPlaybackUrl: updated.videoUrl,
-          country: _resolveShortPlaybackCountryCode(),
-          mediaLoader: _loadSecureMedia,
-          pausePlayer: () async => _controller?.pause(),
-          type: "SHORT_PART");
+        contentId: updated.partId,
+        originalPlaybackUrl: updated.videoUrl,
+        country: _resolveShortPlaybackCountryCode(),
+        mediaLoader: _loadSecureMedia,
+        pausePlayer: () async => _controller?.pause(),
+      );
       _securePlaybackController = secureController;
       secureController.addListener(_onSecurePlaybackChanged);
       await secureController.start();
@@ -345,7 +345,8 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         ),
         play: true,
       );
-      final automaticAudio = getAutomaticAudioTrack(authorization.audioTracks);
+      final automaticAudio =
+          getAutomaticAudioTrack(authorization.audioTracks);
       if (automaticAudio != null) {
         try {
           await player.setAudioTrack(
