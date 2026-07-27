@@ -1,6 +1,5 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/data/models/seriesModel.dart';
@@ -43,7 +42,15 @@ class PlayMediaProvider extends BaseProvider {
           ? ApiConstant.addViewForEpisode(mediaId, user!.id!)
           : ApiConstant.addViewForMovie(mediaId, user!.id!);
 
-      await http.post(Uri.parse(url));
+      // This endpoint is protected. Going through ApiHelper keeps the view
+      // request consistent with the rest of the authenticated API calls by
+      // attaching the stored bearer token and handling an expired session.
+      final response = await ApiHelper().postApi(url);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        debugPrint(
+          'Add view failed: status=${response.statusCode} mediaId=$mediaId',
+        );
+      }
     } catch (e) {
       log("Add view error: $e");
     }

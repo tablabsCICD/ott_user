@@ -87,8 +87,13 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
                       borderRadius: BorderRadius.circular(12),
                       elevation: 6,
                       selectedItemBuilder: (context) {
-                        return ["All", "Movies", "Series", "Shorts"]
-                            .map((item) {
+                        return [
+                          "All",
+                          "Movies",
+                          "Series",
+                          "Shorts",
+                          "Short Films"
+                        ].map((item) {
                           return Text(
                             item == "Shorts" ? "Mini Series" : item,
                             style: TextStyle(
@@ -104,6 +109,7 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
                         "Movies",
                         "Series",
                         "Shorts",
+                        "Short Films"
                       ].map((value) {
                         return DropdownMenuItem(
                           value: value,
