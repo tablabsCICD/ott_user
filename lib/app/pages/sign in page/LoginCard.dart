@@ -429,7 +429,11 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                         autoDisposeControllers: false,
                                         autoUnfocus: false,
                                         autoDismissKeyboard: false,
-                                        readOnly: false,
+                                        // Android/Google TV's numeric IME can
+                                        // cover the form and does not behave
+                                        // reliably with a D-pad. TV input is
+                                        // handled by the keypad below.
+                                        readOnly: useTvKeypad,
                                         cursorColor: theme.primaryColor,
                                         appContext: context,
                                         length: 6,
@@ -439,9 +443,17 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                           FilteringTextInputFormatter
                                               .digitsOnly,
                                         ],
-                                        enablePinAutofill: true,
+                                        enablePinAutofill: !useTvKeypad,
                                         animationType: AnimationType.fade,
-                                        onTap: _openTvKeypad,
+                                        onTap: () {
+                                          if (!useTvKeypad) return;
+                                          _editingOtp = true;
+                                          SystemChannels.textInput
+                                              .invokeMethod<void>(
+                                            'TextInput.hide',
+                                          );
+                                          _openTvKeypad();
+                                        },
                                         onCompleted: (_) {
                                           if (!isLoading &&
                                               !_authRequestInFlight) {

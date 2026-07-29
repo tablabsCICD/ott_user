@@ -4,17 +4,20 @@ class ApiConstant {
   /*  static const String baseUrl =
       "http://ec2-13-201-5-93.ap-south-1.compute.amazonaws.com:8080/ott/";
  */
-  static String login = "${baseUrl}auth/session/login";
+
   static String twoStepLogin = "${baseUrl}auth/two-step/login";
   static String twoStepVerifyOtp = "${baseUrl}auth/two-step/verify-otp";
-  static String legacyLogin = "${baseUrl}user/email/login2";
+
+  static String login = "${baseUrl}auth/session/login";
   static String sessionLogout = "${baseUrl}auth/session/logout";
   static String activeDevices = "${baseUrl}auth/session/devices";
   static String forceLogoutDevice(sessionRecordId) =>
       "${baseUrl}auth/session/devices/$sessionRecordId/logout";
+
   static String validatePlaybackSecurity =
       "${baseUrl}api/playback/security/validate";
   static String playbackPiracyEvent = "${baseUrl}api/playback/security/event";
+  
   static String antiPiracyDevices = "${baseUrl}anti-piracy/devices";
   static String antiPiracyDevice(String deviceId) =>
       "${antiPiracyDevices}/${Uri.encodeComponent(deviceId)}";
