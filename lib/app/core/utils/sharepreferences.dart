@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../data/models/user.dart';
@@ -46,23 +45,14 @@ class LocalSharePreferences {
   Future<User?> getUser() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     String? userJson = prefs.getString(SharedPreferencesConstant.currentUser);
-    if (kDebugMode) {
-      debugPrint('Cached authenticated user present=${userJson != null}.');
-    }
-
     if (userJson != null) {
       try {
         Map<String, dynamic> userMap = jsonDecode(userJson);
-        if (kDebugMode) {
-          debugPrint('Cached authenticated user decoded successfully.');
-        }
         return User.fromJson(userMap);
       } catch (e) {
-        if (kDebugMode) debugPrint("Error decoding user JSON: $e");
         return null;
       }
     } else {
-      if (kDebugMode) debugPrint('No cached authenticated user found.');
       return null;
     }
   }

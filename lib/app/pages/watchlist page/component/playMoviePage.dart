@@ -477,13 +477,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         ? localResumeSeconds
         : backendResumeSeconds;
 
-    debugPrint(
-      'Continue watching resume: contentId=${widget.content!.id} '
-      'seasonId=${_isSeries ? widget.seasonIndex : null} '
-      'episodeId=${_isSeries ? widget.episodeIndex : null} '
-      'localSeconds=$localResumeSeconds backendSeconds=$backendResumeSeconds '
-      'selectedSeconds=$resumeSeconds',
-    );
+
 
     final controller = youtube.YoutubePlayerController(
       initialVideoId: videoId,
@@ -1084,13 +1078,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         ? localResumeSeconds
         : backendResumeSeconds;
 
-    debugPrint(
-      'Continue watching resume: contentId=${widget.content!.id} '
-      'seasonId=${_isSeries ? widget.seasonIndex : null} '
-      'episodeId=${_isSeries ? widget.episodeIndex : null} '
-      'localSeconds=$localResumeSeconds backendSeconds=$backendResumeSeconds '
-      'selectedSeconds=$resumeSeconds',
-    );
+
 
     if (resumeSeconds > 5) {
       final resumePosition = Duration(seconds: resumeSeconds);
@@ -1211,9 +1199,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
     _lastSavedPosition = position;
 
-    debugPrint(
-      "SAVE PROGRESS => ${position.inSeconds}s / ${duration.inSeconds}s",
-    );
+
 
     context.read<PlayMediaProvider>().saveLocalResume(
           contentId: widget.content!.id!,

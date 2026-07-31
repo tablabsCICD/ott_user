@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter/foundation.dart';
 
 /// Debug-only tracing for the secure playback pipeline.
@@ -8,7 +10,7 @@ import 'package:flutter/foundation.dart';
 abstract final class SecurityDebugLog {
   static void event(String component, String message) {
     if (!kDebugMode) return;
-    debugPrint('[SECURE_PLAYBACK][$component] $message');
+    developer.log(message, name: 'SECURE_PLAYBACK.$component');
   }
 
   static void state(String from, String to) {
@@ -21,7 +23,7 @@ abstract final class SecurityDebugLog {
     final printable = message.length <= maximumLength
         ? message
         : '${message.substring(0, maximumLength)}...[truncated]';
-    debugPrint('[SECURE_PLAYBACK][HTTP_DIAGNOSTIC] $printable');
+    developer.log(printable, name: 'SECURE_PLAYBACK.HTTP_DIAGNOSTIC');
   }
 
   static void exception(

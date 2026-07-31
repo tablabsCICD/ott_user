@@ -43,13 +43,25 @@ import '../../provider/userProvider.dart';
 import '../../widgets/show_toast.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  const ProfilePage({super.key, this.onOpenDetail});
+
+  final void Function(String title, Widget page)? onOpenDetail;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  void _openDetail(String title, Widget page) {
+    final openInShell = widget.onOpenDetail;
+    if (openInShell != null) {
+      openInShell(title, page);
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => page),
+    );
+  }
   bool isLoading = true;
 
   @override
@@ -196,11 +208,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                   icon: Icons.account_balance_wallet,
                                   title: lang.wallet,
                                   balance: walletBalance,
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => WalletPage()),
-                                  ),
+                                  onTap: () =>
+                                      _openDetail(lang.wallet, WalletPage()),
                                 ),
                               ],
                             ),
@@ -210,106 +219,71 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ProfileOption(
                                   icon: Icons.bookmark,
                                   title: "Bookmarks",
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => BookmarkPage()),
-                                  ),
+                                  onTap: () =>
+                                      _openDetail('Bookmarks', BookmarkPage()),
                                 ),
                                 ProfileOption(
                                   icon: Icons.history,
                                   title: lang.watchlist,
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            const WatchlistPage()),
-                                  ),
+                                  onTap: () => _openDetail(
+                                      lang.watchlist, const WatchlistPage()),
                                 ),
                                 ProfileOption(
                                   icon: Icons.receipt_long,
                                   title: lang.purchaseHistory,
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          ChangeNotifierProvider(
-                                        create: (_) =>
-                                            PurchaseHistoryProvider(),
-                                        child: const PurchaseHistoryPage(),
-                                      ),
+                                  onTap: () => _openDetail(
+                                    lang.purchaseHistory,
+                                    ChangeNotifierProvider(
+                                      create: (_) => PurchaseHistoryProvider(),
+                                      child: const PurchaseHistoryPage(),
                                     ),
                                   ),
                                 ),
                                 ProfileOption(
                                   icon: Icons.download_rounded,
                                   title: lang.downloads,
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const WatchlistPage(
-                                        initialFilter:
-                                            WatchlistFilter.downloaded,
-                                      ),
+                                  onTap: () => _openDetail(
+                                    lang.downloads,
+                                    const WatchlistPage(
+                                      initialFilter:
+                                          WatchlistFilter.downloaded,
                                     ),
                                   ),
                                 ),
                                 ProfileOption(
                                   icon: Icons.upcoming,
                                   title: lang.upcoming,
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => UpcomingPage()),
-                                  ),
+                                  onTap: () =>
+                                      _openDetail(lang.upcoming, UpcomingPage()),
                                 ),
                                 ProfileOption(
                                   icon: Icons.notifications,
                                   title: lang.notification,
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            const NotificationPage()),
-                                  ),
+                                  onTap: () => _openDetail(lang.notification,
+                                      const NotificationPage()),
                                 ),
                                 ProfileOption(
                                   icon: Icons.language_sharp,
                                   title: lang.selectPreferredLanguage,
                                   onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const ChangeLanguage(),
-                                      ),
-                                    );
+                                    _openDetail(lang.selectPreferredLanguage,
+                                        const ChangeLanguage());
                                   },
                                 ),
                                 ProfileOption(
                                   icon: Icons.manage_accounts_outlined,
                                   title: lang.accountDetails,
                                   onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const AccountDetailsPage(),
-                                      ),
-                                    );
+                                    _openDetail(lang.accountDetails,
+                                        const AccountDetailsPage());
                                   },
                                 ),
                                 ProfileOption(
                                   icon: Icons.devices_other_outlined,
                                   title: 'Registered Devices',
                                   onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const DeviceManagementPage(),
-                                      ),
-                                    );
+                                    _openDetail('Registered Devices',
+                                        const DeviceManagementPage());
                                   },
                                 ),
                               ],
@@ -320,12 +294,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ProfileOption(
                                   icon: Icons.history_sharp,
                                   title: lang.giftedByYou,
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            GiftedMoviesPage()),
-                                  ),
+                                  onTap: () => _openDetail(
+                                      lang.giftedByYou, GiftedMoviesPage()),
                                 ),
                                 ProfileOption(
                                   icon: LucideIcons.gift,
@@ -342,12 +312,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ProfileOption(
                                   icon: Icons.support_agent_sharp,
                                   title: lang.help,
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            const HelpSupportPage()),
-                                  ),
+                                  onTap: () => _openDetail(
+                                      lang.help, const HelpSupportPage()),
                                 ),
                                 ProfileOption(
                                   icon: Icons.tour_rounded,
@@ -382,13 +348,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                   icon: Icons.info,
                                   title: lang.aboutFilmytell,
                                   onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const AboutFilmytellScreen(),
-                                      ),
-                                    );
+                                    _openDetail(lang.aboutFilmytell,
+                                        const AboutFilmytellScreen());
                                   },
                                 ),
                                 ProfileOption(
@@ -478,8 +439,7 @@ class _ProfilePageState extends State<ProfilePage> {
               LocalSharePreferences localSharePreferences =
                   LocalSharePreferences();
               await localSharePreferences.clearSession();
-              print(
-                  "check  SEtLogin ${await localSharePreferences.getBool(SharedPreferencesConstant.isUserLoggedIn)}");
+
 
               // clear all the APIs used for the user
               Provider.of<DashboardProvider>(context, listen: false).clear();
@@ -663,12 +623,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 10),
                 ElevatedButton(
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const EditProfilePage(),
-                      ),
-                    );
+                    _openDetail(lang.editProfile, const EditProfilePage());
                   },
                   child: Text(
                     lang.editProfile,

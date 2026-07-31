@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
@@ -92,7 +91,7 @@ class WalletService {
         historyResponse = await getTransactionHistory();
       } catch (error) {
         historyError = error;
-        debugPrint('Wallet history refresh error: $error');
+
       }
 
       return {
@@ -106,7 +105,7 @@ class WalletService {
             : 'Wallet balance updated. Transaction history will refresh shortly.',
       };
     } catch (error) {
-      debugPrint('Wallet refresh error: $error');
+
       return {
         'success': false,
         'message': error.toString(),

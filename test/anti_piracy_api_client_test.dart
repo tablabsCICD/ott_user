@@ -43,27 +43,27 @@ void main() {
         client: MockClient((request) async {
           capturedRequest = request;
           return http.Response(
-              jsonEncode({
-                'signedUrl': 'https://cdn.example.com/master.m3u8',
-                'playbackUrl': 'https://cdn.example.com/master.m3u8',
-                'authorizationType': 'CLOUDFRONT_SIGNED_COOKIES',
-                'cookies': {
-                  'CloudFront-Policy': 'policy',
-                  'CloudFront-Signature': 'signature',
-                  'CloudFront-Key-Pair-Id': 'key-pair',
-                },
-                'sessionId': 'session-1',
-                'expiresAt': expiry.toIso8601String(),
-                'expiresAtEpochSeconds': expiryEpoch,
-              }),
-              200,
-            );
+            jsonEncode({
+              'signedUrl': 'https://cdn.example.com/master.m3u8',
+              'playbackUrl': 'https://cdn.example.com/master.m3u8',
+              'authorizationType': 'CLOUDFRONT_SIGNED_COOKIES',
+              'cookies': {
+                'CloudFront-Policy': 'policy',
+                'CloudFront-Signature': 'signature',
+                'CloudFront-Key-Pair-Id': 'key-pair',
+              },
+              'sessionId': 'session-1',
+              'expiresAt': expiry.toIso8601String(),
+              'expiresAtEpochSeconds': expiryEpoch,
+            }),
+            200,
+          );
         }),
         tokenProvider: () async => 'token',
       );
 
       final result = await api.createSignedPlayback(
-        const SignedPlaybackRequest(
+        SignedPlaybackRequest(
           contentId: 'movie-1',
           deviceId: 'device-1',
           playbackUrl: 'https://cdn.example.com/master.m3u8',
@@ -82,14 +82,16 @@ void main() {
       expect(result.playbackUrl, 'https://cdn.example.com/master.m3u8');
       final requestBody = jsonDecode(capturedRequest.body) as Map;
       expect(requestBody['contentId'], isA<String>());
-      expect(requestBody.keys, containsAll(<String>[
-        'contentId',
-        'deviceId',
-        'playbackUrl',
-        'country',
-        'platform',
-        'deviceIntegrity',
-      ]));
+      expect(
+          requestBody.keys,
+          containsAll(<String>[
+            'contentId',
+            'deviceId',
+            'playbackUrl',
+            'country',
+            'platform',
+            'deviceIntegrity',
+          ]));
       expect(requestBody['platform'], 'ANDROID');
       expect(
         result.cookieHeader,

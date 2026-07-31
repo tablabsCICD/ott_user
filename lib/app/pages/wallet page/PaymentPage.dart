@@ -85,7 +85,7 @@ class _PaymentPageState extends State<PaymentPage> {
         userId: user!.id!,
       );
 
-      debugPrint(order.orderId);
+
       if (!mounted) {
         return;
       }

@@ -43,6 +43,7 @@ class MovieCard extends StatefulWidget {
   final double? cardWidth;
   final double? cardMargin;
   final ValueChanged<Content>? onContentUpdated;
+  final bool isShortFilmTab;
 
   const MovieCard({
     super.key,
@@ -52,6 +53,7 @@ class MovieCard extends StatefulWidget {
     this.cardWidth,
     this.cardMargin,
     this.onContentUpdated,
+    this.isShortFilmTab = false,
   });
 
   @override
@@ -165,9 +167,7 @@ class _MovieCardState extends State<MovieCard> {
         setState(() => _isVideoInitialized = true);
         _logPreview('Android ExoPlayer trailer initialized');
         return true;
-      } catch (error, stackTrace) {
-        debugPrint(
-            'Android trailer initialization failed: $error\n$stackTrace');
+      } catch (error) {
         await controller.dispose();
         return false;
       }
@@ -190,7 +190,6 @@ class _MovieCardState extends State<MovieCard> {
           if (mounted) setState(() {});
         }))
         ..add(player.stream.error.listen((error) {
-          debugPrint("Trailer playback error: $error");
           _stopAndDisposePreview('stream error');
           if (_activePreviewState == this) {
             _activePreviewState = null;
@@ -227,7 +226,6 @@ class _MovieCardState extends State<MovieCard> {
       _logPreview('Video Initialized');
       return true;
     } catch (e) {
-      debugPrint("Video init failed: $e");
       await player.dispose();
       _disposeVideoController();
       return false;
@@ -445,7 +443,6 @@ class _MovieCardState extends State<MovieCard> {
       _logPreview('Video Started');
       _logPreview('Current Active Video ID ${widget.movie.id ?? widget.index}');
     } catch (e) {
-      debugPrint("Trailer play failed: $e");
       _stopAndDisposePreview('play failed');
       if (_activePreviewState == this) {
         _activePreviewState = null;
@@ -485,9 +482,7 @@ class _MovieCardState extends State<MovieCard> {
       player?.seek(Duration.zero);
       androidController?.pause();
       androidController?.seekTo(Duration.zero);
-    } catch (e) {
-      debugPrint("Trailer stop failed: $e");
-    }
+    } catch (e) {}
 
     if (!mounted) return;
     setState(() {
@@ -504,12 +499,7 @@ class _MovieCardState extends State<MovieCard> {
   }
 
   void _logPreview(String message) {
-    if (kDebugMode) {
-      debugPrint(
-        'HOME_AUTOPLAY_CARD: $message '
-        'id=${widget.movie.id ?? 'unknown'} index=${widget.index}',
-      );
-    }
+    if (kDebugMode) {}
   }
 
   @override
@@ -579,7 +569,7 @@ class _MovieCardState extends State<MovieCard> {
                         BoxShadow(
                           color: highlightColor.withValues(alpha: 0.12),
                           blurRadius: 3,
-                          spreadRadius: 0.5,  
+                          spreadRadius: 0.5,
                           offset: const Offset(0, 3),
                         ),
                       ]
@@ -803,6 +793,8 @@ class _MovieCardState extends State<MovieCard> {
       ThemeData theme, AppLocalizations lang, double price) {
     final movie = widget.movie;
     final isRental = movie.isRental ?? false;
+    final isShortFilm = widget.isShortFilmTab ||
+        ContentType.normalize(movie.type) == ContentType.shortFilm;
 
     return GestureDetector(
       onTap: () => movie.type!.toLowerCase() == 'series'
@@ -819,12 +811,14 @@ class _MovieCardState extends State<MovieCard> {
         child: Text(
           movie.type!.toLowerCase() == 'series'
               ? isRental
-                  ? "Watch Series"
+                  ? (isShortFilm ? 'Watch Now' : 'Watch Series')
                   : '₹ $price'
               : isRental
-                  ? movie.type?.toLowerCase() == "movie"
-                      ? lang.watchMovie
-                      : lang.watchSeries
+                  ? isShortFilm
+                      ? 'Watch Now'
+                      : movie.type?.toLowerCase() == "movie"
+                          ? lang.watchMovie
+                          : lang.watchSeries
                   : "₹ $price",
           style: const TextStyle(
             fontSize: 12,

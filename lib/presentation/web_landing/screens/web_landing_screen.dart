@@ -119,14 +119,14 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
       case 'Movies':
         _showLatestContentType('MOVIE');
         break;
+      case 'Short Film':
+        _showLatestContentType('SHORT_FILM');
+        break;
       case 'Series':
         _showLatestContentType('SERIES');
         break;
       case 'Mini Series':
         _showLatestContentType('MINI SERIES');
-        break;
-      case 'Short Film':
-        _showLatestContentType('SHORT_FILM');
         break;
 
       default:

@@ -39,6 +39,7 @@ class ContinueWatchMovieCard extends StatefulWidget {
   final ValueListenable<int?>? activeIndexListenable;
   final int? index;
   final bool enableTrailerPreview;
+  final bool isShortFilmTab;
 
   const ContinueWatchMovieCard({
     super.key,
@@ -46,6 +47,7 @@ class ContinueWatchMovieCard extends StatefulWidget {
     this.activeIndexListenable,
     this.index,
     this.enableTrailerPreview = true,
+    this.isShortFilmTab = false,
   });
 
   @override
@@ -156,7 +158,6 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
           if (mounted) setState(() {});
         }))
         ..add(player.stream.error.listen((error) {
-          debugPrint("Trailer playback error: $error");
           _stopPreview();
           if (_activePreviewState == this) {
             _activePreviewState = null;
@@ -178,7 +179,6 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       }
       return true;
     } catch (e) {
-      debugPrint("Video init failed: $e");
       await player.dispose();
       _disposeVideoController();
       return false;
@@ -383,7 +383,6 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       if (!mounted) return;
       setState(() => _isPreviewPlaying = true);
     } catch (e) {
-      debugPrint("Trailer play failed: $e");
       _stopPreview();
       if (_activePreviewState == this) {
         _activePreviewState = null;
@@ -416,9 +415,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     try {
       player.pause();
       player.seek(Duration.zero);
-    } catch (e) {
-      debugPrint("Trailer stop failed: $e");
-    }
+    } catch (e) {}
 
     if (!mounted) return;
     setState(() {
@@ -706,6 +703,8 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       ThemeData theme, AppLocalizations lang, double price) {
     final movie = widget.movie;
     final isRental = movie.isRental ?? false;
+    final isShortFilm = widget.isShortFilmTab ||
+        ContentType.normalize(movie.type) == ContentType.shortFilm;
 
     return GestureDetector(
       onTap: () => movie.type!.toLowerCase() == 'series'
@@ -722,12 +721,14 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
         child: Text(
           movie.type!.toLowerCase() == 'series'
               ? isRental
-                  ? "Watch Series"
+                  ? (isShortFilm ? 'Watch Now' : 'Watch Series')
                   : 'Rent Series'
               : isRental
-                  ? movie.type?.toLowerCase() == "movie"
-                      ? lang.watchMovie
-                      : lang.watchSeries
+                  ? isShortFilm
+                      ? 'Watch Now'
+                      : movie.type?.toLowerCase() == "movie"
+                          ? lang.watchMovie
+                          : lang.watchSeries
                   : "₹ $price",
           style: const TextStyle(
             fontSize: 12,

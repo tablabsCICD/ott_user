@@ -66,13 +66,14 @@ class UserProvider extends BaseProvider {
 
   setValue() async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
-    print("SEtData${user!.firstName}");
-    firstNameController.text = user.firstName ?? "";
-    lastNameController.text = user.lastName ?? "";
-    mobileController.text = user.mobileNumber ?? "";
-    emailController.text = user.emailId ?? "";
-    dobController.text = user.dob ?? "";
-    profileController.text = user.profilePhoto ?? "";
+    final currentUser = user!;
+
+    firstNameController.text = currentUser.firstName ?? "";
+    lastNameController.text = currentUser.lastName ?? "";
+    mobileController.text = currentUser.mobileNumber ?? "";
+    emailController.text = currentUser.emailId ?? "";
+    dobController.text = currentUser.dob ?? "";
+    profileController.text = currentUser.profilePhoto ?? "";
     notifyListeners();
   }
 
@@ -171,14 +172,14 @@ class UserProvider extends BaseProvider {
 
             return {'success': true, 'message': 'User created successfully'};
           } else {
-            debugPrint("Empty data: ${addUserResponse.message}");
+
             return {
               'success': false,
               'message': addUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-          debugPrint("Error: ${addUserResponse.message}");
+
           return {
             'success': false,
             'message': addUserResponse.message ?? 'Error in response'
@@ -193,7 +194,7 @@ class UserProvider extends BaseProvider {
         return {'success': false, 'message': 'Something went wrong!'};
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
       return {
         'success': false,
         'message': 'An error occurred while adding user: $error'
@@ -232,7 +233,7 @@ class UserProvider extends BaseProvider {
             UpdateUserResponse.fromJson(responseBody);
         //log('Update User response === ${updateUserResponse}');
 
-        debugPrint("data: ${updateUserResponse.message}");
+
         if (updateUserResponse.success == true) {
           if (updateUserResponse.data != null) {
             userObject = updateUserResponse.data!.user!;
@@ -242,28 +243,27 @@ class UserProvider extends BaseProvider {
             mobileController.text = userObject.mobileNumber ?? "";
             dobController.text = userObject.dob ?? "";
             profileController.text = userObject.profilePhoto ?? "";
-            print("before SEtData ${user.firstName}");
+
             LocalSharePreferences localSharePreferences =
                 LocalSharePreferences();
             localSharePreferences.setString(
                 SharedPreferencesConstant.currentUser,
                 jsonEncode(updateUserResponse.data!.user));
-            print(
-                "after SEtData ${await localSharePreferences.getString(SharedPreferencesConstant.currentUser)}");
+
             notifyListeners();
             return {
               'success': true,
               'message': updateUserResponse.message ?? ""
             };
           } else {
-            debugPrint("Empty data: ${updateUserResponse.message}");
+
             return {
               'success': false,
               'message': updateUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-          debugPrint("Error: ${updateUserResponse.message}");
+
           return {
             'success': false,
             'message': updateUserResponse.message ?? 'Error in response'
@@ -273,7 +273,7 @@ class UserProvider extends BaseProvider {
         Map<String, dynamic> responseBody = json.decode(response.body);
         AddUserResponse addUserResponse =
             AddUserResponse.fromJson(responseBody);
-        debugPrint("Error: ${addUserResponse.message}");
+
         return {
           'success': false,
           'message': addUserResponse.message ?? 'Error in response'
@@ -283,7 +283,7 @@ class UserProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
       return {
         'success': false,
         'message': 'An error occurred while update user: $error'
@@ -322,32 +322,31 @@ class UserProvider extends BaseProvider {
             UpdateUserResponse.fromJson(responseBody);
         //log('Update User response === ${updateUserResponse}');
 
-        debugPrint("data: ${updateUserResponse.message}");
+
         if (updateUserResponse.success == true) {
           if (updateUserResponse.data != null) {
             userObject = updateUserResponse.data!.user!;
-            print("before SEtData ${user.firstName}");
+
             LocalSharePreferences localSharePreferences =
                 LocalSharePreferences();
             localSharePreferences.setString(
                 SharedPreferencesConstant.currentUser,
                 jsonEncode(updateUserResponse.data!.user));
-            print(
-                "after SEtData ${await localSharePreferences.getString(SharedPreferencesConstant.currentUser)}");
+
             notifyListeners();
             return {
               'success': true,
               'message': updateUserResponse.message ?? ""
             };
           } else {
-            debugPrint("Empty data: ${updateUserResponse.message}");
+
             return {
               'success': false,
               'message': updateUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-          debugPrint("Error: ${updateUserResponse.message}");
+
           return {
             'success': false,
             'message': updateUserResponse.message ?? 'Error in response'
@@ -357,7 +356,7 @@ class UserProvider extends BaseProvider {
         Map<String, dynamic> responseBody = json.decode(response.body);
         AddUserResponse addUserResponse =
             AddUserResponse.fromJson(responseBody);
-        debugPrint("Error: ${addUserResponse.message}");
+
         return {
           'success': false,
           'message': addUserResponse.message ?? 'Error in response'
@@ -367,7 +366,7 @@ class UserProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
       return {
         'success': false,
         'message': 'An error occurred while update user: $error'
@@ -409,32 +408,31 @@ class UserProvider extends BaseProvider {
             UpdateUserResponse.fromJson(responseBody);
         log('Update User response === $updateUserResponse');
 
-        debugPrint("data: ${updateUserResponse.message}");
+
         if (updateUserResponse.success == true) {
           if (updateUserResponse.data != null) {
             userObject = updateUserResponse.data!.user!;
-            print("before SEtData ${user.firstName}");
+
             LocalSharePreferences localSharePreferences =
                 LocalSharePreferences();
             localSharePreferences.setString(
                 SharedPreferencesConstant.currentUser,
                 jsonEncode(updateUserResponse.data!.user));
-            print(
-                "after SEtData ${await localSharePreferences.getString(SharedPreferencesConstant.currentUser)}");
+
             notifyListeners();
             return {
               'success': true,
               'message': updateUserResponse.message ?? ""
             };
           } else {
-            debugPrint("Empty data: ${updateUserResponse.message}");
+
             return {
               'success': false,
               'message': updateUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-          debugPrint("Error: ${updateUserResponse.message}");
+
           return {
             'success': false,
             'message': updateUserResponse.message ?? 'Error in response'
@@ -444,7 +442,7 @@ class UserProvider extends BaseProvider {
         Map<String, dynamic> responseBody = json.decode(response.body);
         AddUserResponse addUserResponse =
             AddUserResponse.fromJson(responseBody);
-        debugPrint("Error: ${addUserResponse.message}");
+
         return {
           'success': false,
           'message': addUserResponse.message ?? 'Error in response'
@@ -454,7 +452,7 @@ class UserProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
       return {
         'success': false,
         'message': 'An error occurred while update user: $error'
@@ -777,35 +775,34 @@ class UserProvider extends BaseProvider {
         UpdateUserResponse updateUserResponse =
             UpdateUserResponse.fromJson(responseBody);
 
-        debugPrint("data: ${updateUserResponse.message}");
+
         if (updateUserResponse.success == true) {
           if (updateUserResponse.data != null) {
             user = updateUserResponse.data!.user!;
             // Keep the provider synchronized with the persisted/backend user so
             // dashboards created after this update see the new preferences.
             userObject = user;
-            print("before SEtData ${user.firstName}");
+
             LocalSharePreferences localSharePreferences =
                 LocalSharePreferences();
             localSharePreferences.setString(
                 SharedPreferencesConstant.currentUser,
                 jsonEncode(updateUserResponse.data!.user));
-            print(
-                "after SEtData ${await localSharePreferences.getString(SharedPreferencesConstant.currentUser)}");
+
             notifyListeners();
             return {
               'success': true,
               'message': updateUserResponse.message ?? ""
             };
           } else {
-            debugPrint("Empty data: ${updateUserResponse.message}");
+
             return {
               'success': false,
               'message': updateUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-          debugPrint("Error: ${updateUserResponse.message}");
+
           return {
             'success': false,
             'message': updateUserResponse.message ?? 'Error in response'
@@ -815,7 +812,7 @@ class UserProvider extends BaseProvider {
         Map<String, dynamic> responseBody = json.decode(response.body);
         AddUserResponse addUserResponse =
             AddUserResponse.fromJson(responseBody);
-        debugPrint("Error: ${addUserResponse.message}");
+
         return {
           'success': false,
           'message': addUserResponse.message ?? 'Error in response'
@@ -825,7 +822,7 @@ class UserProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
       return {
         'success': false,
         'message': 'An error occurred while update user: $error'
@@ -928,7 +925,7 @@ class UserProvider extends BaseProvider {
       deviceToken: deviceToken,
     );
     final apiHelper = ApiHelper();
-    debugPrint("✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓" + apiUrl);
+
     try {
       final apiWatch = Stopwatch()..start();
       var response = await apiHelper.postApiWithoutAuthToken(apiUrl);
@@ -1016,14 +1013,14 @@ class UserProvider extends BaseProvider {
         if (deleteUserResponse.success == true) {
           notifyListeners();
         } else {
-          debugPrint("Error: ${deleteUserResponse.message}");
+
         }
       } else {
         throw Exception(
             'Failed to delete user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
       throw Exception('An error occurred while delete user.');
     }
   }
@@ -1053,18 +1050,18 @@ class UserProvider extends BaseProvider {
             );
             notifyListeners();
           } else {
-            debugPrint("empty data: ${addUserResponse.message}");
+
             await hydrateFromCache();
           }
         } else {
-          debugPrint("Error: ${addUserResponse.message}");
+
           await hydrateFromCache();
         }
       } else {
         await hydrateFromCache();
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
       await hydrateFromCache();
     }
   }
@@ -1126,7 +1123,7 @@ class UserProvider extends BaseProvider {
         Map<String, dynamic> responseBody = json.decode(response.body);
         AddUserResponse addUserResponse =
             AddUserResponse.fromJson(responseBody);
-        debugPrint("Error: ${addUserResponse.message}");
+
         return {
           'success': false,
           'message': addUserResponse.message ?? 'Error in response'
@@ -1136,7 +1133,7 @@ class UserProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
       return {
         'success': false,
         'message': 'An error occurred while logging user: $error'

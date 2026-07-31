@@ -37,9 +37,9 @@ class LandingHeader extends StatelessWidget {
     final navItems = [
       (target: 'Home', label: lang.home),
       (target: 'Movies', label: lang.movie),
+      (target: 'Short Film', label: 'Short Film'),
       (target: 'Series', label: lang.series),
       (target: 'Mini Series', label: 'Mini Series'),
-      (target: 'Short Film', label: 'Short Film'),
     ];
 
     return AnimatedContainer(
@@ -88,14 +88,14 @@ class LandingHeader extends StatelessWidget {
                   InkWell(
                     onTap: () => onNavigate('Home'),
                     child: SizedBox(
-                      height: isMobile ? 56 : 76,
-                      width: isMobile ? 56 : 76,
+                      height: isMobile ? 45 : 60,
+                      width: isMobile ? 45 : 60,
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Image.asset(
                           ImageConstant.logo,
-                          height: isMobile ? 56 : 76,
-                          width: isMobile ? 56 : 76,
+                          height: isMobile ? 45 : 60,
+                          width: isMobile ? 45 : 60,
                           alignment: Alignment.centerLeft,
                           fit: BoxFit.contain,
                           filterQuality: FilterQuality.high,

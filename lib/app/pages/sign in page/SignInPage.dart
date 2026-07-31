@@ -177,7 +177,6 @@
 //         _isLoading = false;
 //       });
 //     } else {
-//       print('Failure: ${result['message']}');
 //       CustomToast.show(context, result['message'].toString(), isSuccess: false);
 //       setState(() {
 //         _isLoading = false;

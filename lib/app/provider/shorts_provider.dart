@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:developer';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
@@ -74,7 +73,7 @@ class ShortProvider extends BaseProvider {
       _shortSections = sections;
       shorts = sections.expand((row) => row.shorts).toList();
     } catch (e) {
-      print("Shorts Fetch Error → $e");
+
       _shortSections = [];
       shorts = [];
       errorMessage = 'Unable to load Mini Series. Please try again.';
@@ -156,7 +155,7 @@ class ShortProvider extends BaseProvider {
         decoded['data'] as Map<String, dynamic>,
       );
     } catch (e) {
-      print("Short Detail Error → $e");
+
     }
 
     isLoading = false;
@@ -211,7 +210,7 @@ class ShortProvider extends BaseProvider {
 
       return false;
     } catch (e) {
-      debugPrint("Short like toggle error: $e");
+
       return false;
     } finally {
       _isLiking = false;
@@ -232,7 +231,7 @@ class ShortProvider extends BaseProvider {
       }
       return false;
     } catch (e) {
-      debugPrint("View API error: $e");
+
       return false;
     }
   }
@@ -274,7 +273,7 @@ class ShortProvider extends BaseProvider {
 
       return null;
     } catch (e) {
-      debugPrint("Purchase short error: $e");
+
       return null;
     }
   }

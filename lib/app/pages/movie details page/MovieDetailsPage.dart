@@ -107,7 +107,6 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
         );
       }
     } catch (error) {
-      debugPrint("Movie details fetch error: $error");
       if (mounted) {
         setState(() {
           _contentLoadFailed = true;
@@ -1016,11 +1015,26 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
 
   Future<void> _openTrailer(Content content) async {
     _stopHeroTrailer();
+    // Movie-detail responses can expose the playable promotional video as
+    // either teaserUrl or trailerUrl. Use the model's established resolver;
+    // both fields are promotional media and neither enters secure playback.
+    final trailerUrl = content.teaserOrTrailerUrl?.trim() ?? '';
+    if (kDebugMode) {
+      debugPrint('TRAILER_FLOW: Trailer button clicked');
+      debugPrint('TRAILER_FLOW: Trailer URL resolved');
+    }
+    if (trailerUrl.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Trailer is not available.')),
+      );
+      return;
+    }
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => TrailerPage(
-          trailerUrl: content.teaserOrTrailerUrl,
+          trailerUrl: trailerUrl,
           isTrailerUrl: true,
           content: content,
         ),
@@ -1807,8 +1821,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 },
               )
             : ActionButtonWidget(
-                label:
-                    contentType == "movie" ? lang.watchMovie : lang.watchSeries,
+                label: contentType == "movie"
+                    ? lang.watchMovie
+                    : contentType == "series"
+                        ? lang.watchSeries
+                        : "Watch Now",
                 icon: Icons.play_circle_fill,
                 iconOnly: showIconOnlyButtons,
                 onTap: () {
@@ -1861,10 +1878,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   }
 
   bool _canDownloadOffline(Content movie) {
-    final contentType = (movie.type ?? '').toLowerCase();
+    final contentType = ContentType.normalize(movie.type ?? widget.contentType);
     return movie.isRental == true &&
         movie.isDownloadable == true &&
-        (contentType == 'movie' || contentType == 'series') &&
+        (ContentType.isMovieLike(contentType) ||
+            ContentType.isSeries(contentType)) &&
         (movie.contentUrl?.trim().isNotEmpty ?? false);
   }
 
@@ -2538,4 +2556,3 @@ class _MovieTvFocusableScaleState extends State<_MovieTvFocusableScale> {
     );
   }
 }
-

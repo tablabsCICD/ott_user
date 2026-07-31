@@ -179,7 +179,7 @@ class WalletProvider extends BaseProvider {
         'message': walletResponse.message ?? 'Wallet recharged successfully.',
       };
     } catch (error) {
-      debugPrint('Wallet credit fallback error: $error');
+
       return {
         'success': false,
         'message':
@@ -200,7 +200,7 @@ class WalletProvider extends BaseProvider {
     notifyListeners();
 
     String apiUrl = ApiConstant.addMoneyToWallet;
-    print(apiUrl);
+
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
     Map<String, dynamic> mapData = {
       "amount": amount,
@@ -211,7 +211,7 @@ class WalletProvider extends BaseProvider {
 
     try {
       var response = await apiHelper.postApiWithBody(apiUrl, mapData);
-      print(response);
+
       if (response.statusCode == 200) {
         Map<String, dynamic> responseBody = json.decode(response.body);
         AddWalletAmountResponse addUserResponse =
@@ -224,14 +224,14 @@ class WalletProvider extends BaseProvider {
             notifyListeners();
             return {'success': true, 'message': addUserResponse.message!};
           } else {
-            debugPrint("Empty data: ${addUserResponse.message}");
+
             return {
               'success': false,
               'message': addUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-          debugPrint("Error: ${addUserResponse.message}");
+
           return {
             'success': false,
             'message': addUserResponse.message ?? 'Error in response'
@@ -242,7 +242,7 @@ class WalletProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
       return {
         'success': false,
         'message': 'An error occurred while adding user: $error'
@@ -280,7 +280,7 @@ class WalletProvider extends BaseProvider {
         'message': withdrawAmountresponse.message ?? 'Payment successful'
       };
     } catch (error) {
-      debugPrint("Error: $error");
+
       return {
         'success': false,
         'message': _cleanWalletError(error),
@@ -321,21 +321,21 @@ class WalletProvider extends BaseProvider {
           notifyListeners();
           return {'success': true, 'message': walletHistory.message!};
         } else {
-          debugPrint("Empty data: ${walletHistory.message}");
+
           return {
             'success': false,
             'message': walletHistory.message ?? 'No data returned'
           };
         }
       } else {
-        debugPrint("Error: ${walletHistory.message}");
+
         return {
           'success': false,
           'message': walletHistory.message ?? 'Error in response'
         };
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
       return {
         'success': false,
         'message': 'An error occurred while adding user: $error'
@@ -353,14 +353,14 @@ class WalletProvider extends BaseProvider {
           notifyListeners();
           return {'success': true, 'message': addUserResponse.message!};
         } else {
-          debugPrint("Empty data: ${addUserResponse.message}");
+
           return {
             'success': false,
             'message': addUserResponse.message ?? 'No data returned'
           };
         }
       } else {
-        debugPrint("Error: ${addUserResponse.message}");
+
         return {
           'success': false,
           'message': addUserResponse.message ?? 'Error in response'
@@ -368,7 +368,7 @@ class WalletProvider extends BaseProvider {
       }
     } catch (error) {
       _walletBalance = 0.0;
-      debugPrint("Error: $error");
+
       return {
         'success': false,
         'message': 'An error occurred while adding user: $error'

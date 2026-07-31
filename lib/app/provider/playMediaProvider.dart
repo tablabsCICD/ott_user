@@ -1,5 +1,4 @@
 import 'dart:developer';
-import 'package:flutter/material.dart';
 
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/data/models/seriesModel.dart';
@@ -48,9 +47,7 @@ class PlayMediaProvider extends BaseProvider {
       // attaching the stored bearer token and handling an expired session.
       final response = await ApiHelper().postApi(url);
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        debugPrint(
-          'Add view failed: status=${response.statusCode} mediaId=$mediaId',
-        );
+
       }
     } catch (e) {
       log("Add view error: $e");
@@ -68,7 +65,7 @@ class PlayMediaProvider extends BaseProvider {
   }) async {
     try {
       if (duration.inSeconds == 0) {
-        debugPrint('Continue watching save skipped: duration is zero');
+
         return;
       }
 
@@ -92,10 +89,8 @@ class PlayMediaProvider extends BaseProvider {
 
       final prefs = LocalSharePreferences();
       final user = await prefs.getUser();
-      final authToken = await prefs.getAuthToken();
       if (user?.id == null) {
-        debugPrint(
-            'Continue watching save skipped: authenticated user ID missing');
+
         return;
       }
 
@@ -113,23 +108,13 @@ class PlayMediaProvider extends BaseProvider {
         if (episodeId != null) "episodeId": episodeId.toString(),
       });
 
-      debugPrint(
-        'Continue watching save request: userId=${user.id} '
-        'contentId=$contentId seasonId=$seasonId episodeId=$episodeId '
-        'watchedSeconds=$currentSeconds watchedPercentage=$watchedPercentage '
-        'authTokenPresent=${authToken != null}',
-      );
+
       final response = await ApiHelper().postApi(uri.toString());
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        debugPrint(
-          'Continue watching save failed: status=${response.statusCode} '
-          'body=${response.body}',
-        );
+
         return;
       }
-      debugPrint(
-        'Continue watching save succeeded: status=${response.statusCode}',
-      );
+
     } catch (e, stackTrace) {
       log('Continue watching save error: $e', stackTrace: stackTrace);
     }

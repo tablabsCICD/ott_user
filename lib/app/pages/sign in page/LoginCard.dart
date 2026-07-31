@@ -695,7 +695,6 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
           await prefs.setBool('isLoggedIn', true);
           if (!mounted) return;
 
-          //print(result['message']);
           setState(() {
             // _initializePromoterLevel();
           });
@@ -719,8 +718,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
           CustomToast.show(context, 'Failure: $message', isSuccess: false);
         }
       }
-    } catch (e, stackTrace) {
-      debugPrintStack(label: 'OTP Error', stackTrace: stackTrace);
+    } catch (e) {
       if (!mounted) return;
       CustomToast.show(
         context,
@@ -780,8 +778,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
       if (mounted) {
         setState(() => _otpHelperText = 'Waiting for OTP SMS...');
       }
-    } catch (error, stackTrace) {
-      debugPrintStack(label: 'Resend OTP Error', stackTrace: stackTrace);
+    } catch (_) {
       if (!mounted) return;
       CustomToast.show(
         context,
@@ -802,9 +799,9 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
 
     try {
       final appSignature = await SmsAutoFill().getAppSignature;
-      debugPrint("✅✅✅AppSignature:  " + appSignature);
+
       if (kDebugMode && appSignature.isNotEmpty) {
-        debugPrint('Android SMS Retriever app signature: $appSignature');
+
       }
       listenForCode(smsCodeRegexPattern: r'\d{6}');
       _otpAutoFillTimeoutTimer = Timer(_otpAutoFillTimeout, () {
@@ -825,7 +822,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
       }
     } catch (error) {
       if (kDebugMode) {
-        debugPrint('OTP auto-fill listener failed: $error');
+
       }
       if (mounted) {
         setState(() {

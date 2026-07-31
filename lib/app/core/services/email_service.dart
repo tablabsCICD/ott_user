@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:ott/app/core/constant/api_constant.dart';
 
@@ -28,11 +27,6 @@ class EmailService {
           )
           .timeout(const Duration(seconds: 15));
 
-      if (kDebugMode) {
-        debugPrint('Email API response [${response.statusCode}]: '
-            '${response.body}');
-      }
-
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return false;
       }
@@ -43,11 +37,7 @@ class EmailService {
       }
 
       return false;
-    } catch (error, stackTrace) {
-      if (kDebugMode) {
-        debugPrint('Email API error: $error');
-        debugPrintStack(stackTrace: stackTrace);
-      }
+    } catch (_) {
       return false;
     }
   }

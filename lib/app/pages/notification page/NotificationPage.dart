@@ -142,7 +142,6 @@ class _NotificationPageState extends State<NotificationPage> {
     return Scaffold(
       backgroundColor: selectedThemeData.scaffoldBackgroundColor,
       appBar: AppBar(
-        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         centerTitle: true,
         backgroundColor: selectedThemeData.primaryColor,
         foregroundColor: Colors.white,

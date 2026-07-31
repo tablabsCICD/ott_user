@@ -292,10 +292,10 @@ class PaymentService {
 
     init();
     try {
-      debugPrint('Opening Razorpay checkout for order ${order.orderId}');
+
       _razorpay!.open(options);
     } catch (error) {
-      debugPrint('Unable to open Razorpay checkout: $error');
+
       return PaymentResult(
         success: false,
         message: 'Unable to open Razorpay checkout: $error',

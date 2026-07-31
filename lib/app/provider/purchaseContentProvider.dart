@@ -1,8 +1,4 @@
 import 'dart:convert';
-import 'dart:developer';
-
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ott/data/models/response/saveUserContent.dart';
@@ -36,7 +32,7 @@ class PurchaseContentProvider extends BaseProvider {
 
     String apiUrl = ApiConstant.saveUserContent;
 
-    debugPrint("save user content=================== $apiUrl");
+
 
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
     Map<String, dynamic> mapData = {
@@ -54,12 +50,12 @@ class PurchaseContentProvider extends BaseProvider {
       "userIdGiftFrom": 0,
       "userIdGiftTo": 0
     };
-    debugPrint(mapData.toString());
+
     ApiHelper apiHelper = ApiHelper();
 
     try {
       var response = await apiHelper.postApiWithBody(apiUrl, mapData);
-      debugPrint("save user content ${response.body}");
+
       final responseBody = _decodeResponseBody(response.body);
       if (response.statusCode == 200) {
         SavePurchaseContentResponse addUserResponse =
@@ -72,14 +68,14 @@ class PurchaseContentProvider extends BaseProvider {
             notifyListeners();
             return {'success': true, 'message': addUserResponse.message!};
           } else {
-            debugPrint("Empty data: ${addUserResponse.message}");
+
             return {
               'success': false,
               'message': addUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-          debugPrint("Error: ${addUserResponse.message}");
+
           return {
             'success': false,
             'message': _cleanPurchaseError(
@@ -97,7 +93,7 @@ class PurchaseContentProvider extends BaseProvider {
         };
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
       return {
         'success': false,
         'message': _cleanPurchaseError(error)
@@ -157,13 +153,13 @@ class PurchaseContentProvider extends BaseProvider {
       isGifted: isGifted,
       isExpired: isExpired,
     );
-    print("API URL: $apiUrl");
+
 
     ApiHelper apiHelper = ApiHelper();
 
     try {
       var response = await apiHelper.getApi(apiUrl);
-      print("API Response: ${response.body}");
+
 
       if (response.statusCode == 200) {
         Map<String, dynamic> responseBody = json.decode(response.body);
@@ -189,21 +185,21 @@ class PurchaseContentProvider extends BaseProvider {
                 'message': parsedResponse.message ?? 'Data loaded successfully'
               };
             } else {
-              debugPrint("Empty data: ${parsedResponse.message}");
+
               return {
                 'success': false,
                 'message': parsedResponse.message ?? 'No data returned'
               };
             }
           } else {
-            debugPrint("API error: ${parsedResponse.message}");
+
             return {
               'success': false,
               'message': parsedResponse.message ?? 'Error in response'
             };
           }
         } catch (e) {
-          debugPrint("Parsing error: $e");
+
           return {'success': false, 'message': 'Error while parsing data: $e'};
         }
       } else {
@@ -216,7 +212,7 @@ class PurchaseContentProvider extends BaseProvider {
         };
       }
     } catch (error) {
-      debugPrint("Network error: $error");
+
       await _loadPurchaseContentCache();
       return {
         'success': _userContentList.isNotEmpty,

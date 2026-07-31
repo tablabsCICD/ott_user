@@ -223,7 +223,7 @@ class OnboardingTourProvider extends BaseProvider {
 
   void _track(String event) {
     if (kDebugMode) {
-      debugPrint('ONBOARDING_ANALYTICS: $event');
+
     }
   }
 }

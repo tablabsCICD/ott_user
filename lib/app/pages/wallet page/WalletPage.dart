@@ -49,8 +49,6 @@ class _WalletPageState extends State<WalletPage> {
         slivers: [
           /// -------- Extended AppBar with Wallet --------
           SliverAppBar(
-            automaticallyImplyLeading:
-                !(kIsWeb || ResponsiveWidget.isTv(context)),
             pinned: true,
             expandedHeight: 280,
             backgroundColor: theme.primaryColor,

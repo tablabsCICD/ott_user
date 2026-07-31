@@ -574,9 +574,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                 ).getContentById(widget.movie.id!).catchError((
                                   error,
                                 ) {
-                                  debugPrint(
-                                    'Dashboard refresh failed after purchase: $error',
-                                  );
+
                                 });
 
                                 if (!mounted) return;
@@ -885,7 +883,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
         'Purchase completed, but invoice generation failed.',
         isSuccess: false,
       );
-      debugPrint('Invoice generation error: $error');
+
     }
   }
 }
