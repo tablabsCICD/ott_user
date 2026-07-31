@@ -1,7 +1,9 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import 'package:ott/app/core/constant/api_constant.dart';
+import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/data/models/seriesModel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/utils/sharepreferences.dart';
@@ -70,10 +72,10 @@ class PlayMediaProvider extends BaseProvider {
 
       final key = episodeId != null && seasonId != null
           ? _episodeKey(
-        contentId: contentId,
-        seasonId: seasonId,
-        episodeId: episodeId,
-      )
+              contentId: contentId,
+              seasonId: seasonId,
+              episodeId: episodeId,
+            )
           : _movieKey(contentId);
 
       final currentSeconds = position.inSeconds;
@@ -91,9 +93,7 @@ class PlayMediaProvider extends BaseProvider {
       if (user?.id == null) return;
 
       final watchedPercentage =
-      ((currentSeconds / duration.inSeconds) * 100)
-          .clamp(0, 100)
-          .toInt();
+          ((currentSeconds / duration.inSeconds) * 100).clamp(0, 100).toInt();
 
       final uri = Uri.parse(
         "${ApiConstant.baseUrl}continue-watching/save",
@@ -121,10 +121,10 @@ class PlayMediaProvider extends BaseProvider {
   }) {
     final key = episodeId != null && seasonId != null
         ? _episodeKey(
-      contentId: contentId,
-      seasonId: seasonId,
-      episodeId: episodeId,
-    )
+            contentId: contentId,
+            seasonId: seasonId,
+            episodeId: episodeId,
+          )
         : _movieKey(contentId);
 
     return _resumeSecondsMap[key] ?? 0;
@@ -150,8 +150,7 @@ class PlayMediaProvider extends BaseProvider {
           }
 
           // first episode of next season
-          if (s + 1 < seasons.length &&
-              seasons[s + 1].episodes.isNotEmpty) {
+          if (s + 1 < seasons.length && seasons[s + 1].episodes.isNotEmpty) {
             return seasons[s + 1].episodes.first;
           }
 
@@ -196,7 +195,6 @@ class PlayMediaProvider extends BaseProvider {
     return _resumeCache[key] ?? 0;
   }
 
-
   String _resumeKey({
     required int contentId,
     int? seasonId,
@@ -216,6 +214,4 @@ class PlayMediaProvider extends BaseProvider {
 
     notifyListeners();
   }
-
-
 }
