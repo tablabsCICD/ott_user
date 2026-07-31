@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -66,11 +67,8 @@ class NotificationService {
       _listenForegroundMessages();
       _listenNotificationTaps();
       await _handleInitialMessage();
-    } catch (error, stackTrace) {
-      if (kDebugMode) {
-        debugPrint('NotificationService init error: $error');
-        debugPrintStack(stackTrace: stackTrace);
-      }
+    } catch (_) {
+      // Initialization failures are intentionally non-fatal.
     }
 
     _isInitialized = true;
@@ -87,11 +85,8 @@ class NotificationService {
         await _persistToken(token);
         return token;
       }
-    } catch (error, stackTrace) {
-      if (kDebugMode) {
-        debugPrint('FCM token read failed: $error');
-        debugPrintStack(stackTrace: stackTrace);
-      }
+    } catch (_) {
+      // Token lookup failures are intentionally non-fatal.
     }
 
     return _storedToken();
@@ -142,7 +137,7 @@ class NotificationService {
   }
 
   Future<void> _requestPermissions() async {
-    final settings = await _messaging.requestPermission(
+    await _messaging.requestPermission(
       alert: true,
       announcement: false,
       badge: true,
@@ -151,11 +146,6 @@ class NotificationService {
       provisional: false,
       sound: true,
     );
-
-    if (kDebugMode) {
-      debugPrint(
-          'Notification permission status: ${settings.authorizationStatus}');
-    }
 
     final androidPlugin =
         _localNotifications.resolvePlatformSpecificImplementation<
@@ -241,10 +231,6 @@ class NotificationService {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_fcmTokenKey, token);
-
-    if (kDebugMode) {
-      debugPrint('FCM token: $token');
-    }
   }
 
   void _listenForegroundMessages() {

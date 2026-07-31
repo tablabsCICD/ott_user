@@ -63,7 +63,7 @@ void main() {
       );
 
       final result = await api.createSignedPlayback(
-        const SignedPlaybackRequest(
+        SignedPlaybackRequest(
           contentId: 'movie-1',
           deviceId: 'device-1',
           playbackUrl: 'https://cdn.example.com/master.m3u8',

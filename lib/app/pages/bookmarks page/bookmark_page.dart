@@ -36,7 +36,6 @@ class _BookmarkPageState extends State<BookmarkPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         title: const Text(
           "My Bookmarks",
           style: TextStyle(fontWeight: FontWeight.bold),

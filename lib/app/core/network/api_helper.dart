@@ -113,23 +113,7 @@ class ApiHelper {
     return response;
   }
 
-  void _logRequest(String method, String url) {
-    if (!kDebugMode) return;
-    final uri = Uri.tryParse(url);
-    final redacted = uri == null
-        ? 'redacted'
-        : uri.replace(queryParameters: const {}).toString();
-    debugPrint("$method $redacted");
-  }
+  void _logRequest(String method, String url) {}
 
-  void _logResponse(Response response) {
-    if (!kDebugMode) return;
-    final uri = response.request?.url;
-    final endpoint = uri == null
-        ? '<unknown>'
-        : '${uri.scheme}://${uri.authority}${uri.path}';
-    debugPrint(
-      'HTTP response endpoint=$endpoint status=${response.statusCode} bytes=${response.bodyBytes.length}',
-    );
-  }
+  void _logResponse(Response response) {}
 }

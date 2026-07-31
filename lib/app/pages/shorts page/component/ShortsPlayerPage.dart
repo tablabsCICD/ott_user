@@ -153,7 +153,6 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       await InvoiceService.instance.showShareOptions(context, invoice);
     } catch (error) {
       if (!mounted) return;
-      debugPrint('Short invoice generation error: $error');
     }
   }
 

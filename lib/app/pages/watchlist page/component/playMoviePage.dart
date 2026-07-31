@@ -468,13 +468,15 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     if (_isDisposed || !mounted || token != _setupToken) return;
 
     final provider = context.read<PlayMediaProvider>();
-    final resumeSeconds = _isSeries
-        ? provider.getLocalResume(
-            contentId: widget.content!.id!,
-            seasonId: widget.seasonIndex,
-            episodeId: widget.episodeIndex,
-          )
-        : widget.content?.watchedSeconds ?? 0;
+    final localResumeSeconds = provider.getLocalResume(
+      contentId: widget.content!.id!,
+      seasonId: _isSeries ? widget.seasonIndex : null,
+      episodeId: _isSeries ? widget.episodeIndex : null,
+    );
+    final backendResumeSeconds = widget.content?.watchedSeconds ?? 0;
+    final resumeSeconds = localResumeSeconds > backendResumeSeconds
+        ? localResumeSeconds
+        : backendResumeSeconds;
 
     final controller = youtube.YoutubePlayerController(
       initialVideoId: videoId,
@@ -991,13 +993,15 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       await player!.setVolume(100);
     }
 
-    final resumeSeconds = _isSeries
-        ? provider.getLocalResume(
-            contentId: widget.content!.id!,
-            seasonId: widget.seasonIndex,
-            episodeId: widget.episodeIndex,
-          )
-        : widget.content?.watchedSeconds ?? 0;
+    final localResumeSeconds = provider.getLocalResume(
+      contentId: widget.content!.id!,
+      seasonId: _isSeries ? widget.seasonIndex : null,
+      episodeId: _isSeries ? widget.episodeIndex : null,
+    );
+    final backendResumeSeconds = widget.content?.watchedSeconds ?? 0;
+    final resumeSeconds = localResumeSeconds > backendResumeSeconds
+        ? localResumeSeconds
+        : backendResumeSeconds;
 
     if (resumeSeconds > 5) {
       final resumePosition = Duration(seconds: resumeSeconds);
@@ -1116,10 +1120,6 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     if (duration.inSeconds == 0) return;
 
     _lastSavedPosition = position;
-
-    debugPrint(
-      "SAVE PROGRESS => ${position.inSeconds}s / ${duration.inSeconds}s",
-    );
 
     context.read<PlayMediaProvider>().saveLocalResume(
           contentId: widget.content!.id!,

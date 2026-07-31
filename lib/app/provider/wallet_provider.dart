@@ -58,7 +58,8 @@ class WalletProvider extends BaseProvider {
     };
   }
 
-  Future<Map<String, Object>> onPaymentVerified({double? expectedAmount}) async {
+  Future<Map<String, Object>> onPaymentVerified(
+      {double? expectedAmount}) async {
     if (_isAddingBalance) {
       return {
         'success': false,
@@ -103,9 +104,8 @@ class WalletProvider extends BaseProvider {
 
         return {
           'success': false,
-          'message':
-              fallbackResult['message']?.toString() ??
-                  'Payment was verified, but the wallet balance has not updated yet. Please check again in a moment.',
+          'message': fallbackResult['message']?.toString() ??
+              'Payment was verified, but the wallet balance has not updated yet. Please check again in a moment.',
         };
       }
 
@@ -173,7 +173,8 @@ class WalletProvider extends BaseProvider {
           notifyListeners();
           return {
             'success': true,
-            'message': addUserResponse.message ?? 'Wallet recharged successfully.',
+            'message':
+                addUserResponse.message ?? 'Wallet recharged successfully.',
             'walletResponse': addUserResponse,
           };
         } else {

@@ -301,8 +301,7 @@ class _WalletPageState extends State<WalletPage> {
                                     if (hasDeduction)
                                       _HistoryMetric(
                                         label: 'Apple Deduction',
-                                        value:
-                                            _formatMoney(deductionAmount),
+                                        value: _formatMoney(deductionAmount),
                                       ),
                                     if (creditedAmount != null)
                                       _HistoryMetric(
@@ -316,16 +315,14 @@ class _WalletPageState extends State<WalletPage> {
                                         .isNotEmpty)
                                       _HistoryMetric(
                                         label: 'Settlement',
-                                        value:
-                                            _formatLabel(tx.settlementType!),
+                                        value: _formatLabel(tx.settlementType!),
                                       ),
                                     if ((tx.paymentGateway ?? '')
                                         .trim()
                                         .isNotEmpty)
                                       _HistoryMetric(
                                         label: 'Gateway',
-                                        value:
-                                            _formatLabel(tx.paymentGateway!),
+                                        value: _formatLabel(tx.paymentGateway!),
                                       ),
                                     if ((tx.operatingSystem ?? '')
                                         .trim()
@@ -347,8 +344,7 @@ class _WalletPageState extends State<WalletPage> {
                                         .toString(),
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color:
-                                          theme.canvasColor.withOpacity(0.6),
+                                      color: theme.canvasColor.withOpacity(0.6),
                                     ),
                                   ),
                                 ],

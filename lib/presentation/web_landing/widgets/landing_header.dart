@@ -29,9 +29,9 @@ class LandingHeader extends StatelessWidget {
     final navItems = [
       (target: 'Home', label: lang.home),
       (target: 'Movies', label: lang.movie),
+      (target: 'Short Film', label: 'Short Film'),
       (target: 'Series', label: lang.series),
       (target: 'Mini Series', label: 'Mini Series'),
-      (target: 'Short Film', label: 'Short Film'),
     ];
 
     return AnimatedContainer(

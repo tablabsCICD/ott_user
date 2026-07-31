@@ -131,9 +131,9 @@ Future<void> main() async {
 Future<void> _initializeNotificationsSafely() async {
   try {
     await NotificationService.instance.init();
-  } catch (error, stackTrace) {
-    debugPrint('Notification initialization failed: $error');
-    debugPrintStack(stackTrace: stackTrace);
+  } catch (_) {
+    // Notification initialization failures are intentionally non-fatal.
+
   }
 }
 
@@ -165,9 +165,7 @@ class _MyAppState extends State<MyApp> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final localeProvider = Provider.of<LocaleLanguageProvider>(context);
     if (kDebugMode) {
-      debugPrint(
-        '[LocaleLanguage] MaterialApp rebuild locale=${localeProvider.locale.languageCode} mounted=$mounted',
-      );
+
     }
     return MaterialApp(
       title: 'Filmytell',

@@ -364,7 +364,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
         });
       }
     } catch (error) {
-      debugPrint('Search cast fetch error: $error');
+
     } finally {
       if (mounted) {
         setState(() => _isLoadingCast = false);

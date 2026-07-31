@@ -127,25 +127,35 @@ class Content {
             (json['posterUrlList'] as List?)?.map((e) => e.toString()).toList(),
 
         teaserUrl: _firstStringValue(json, const [
-          'teaserUrl',
-          'teaserFile',
-          'teaserFileUrl',
-          'teaser_url',
-          'teaser_file',
-          'teasurUrl',
-          'teasurFile',
-          'teasurFileUrl',
-          'teasur_url',
-          'teasur_file',
-        ]),
+              'teaserUrl',
+              'teaserFile',
+              'teaserFileUrl',
+              'teaser_url',
+              'teaser_file',
+              'teasurUrl',
+              'teasurFile',
+              'teasurFileUrl',
+              'teasur_url',
+              'teasur_file',
+            ]) ??
+            _firstMediaListValue(json, const [
+              'teaserAudioUrlList',
+              'teaserUrlList',
+              'teaser_url_list',
+            ]),
         trailerUrl: _firstStringValue(json, const [
-          'trailerUrl',
-          'trailerFile',
-          'trailerFileUrl',
-          'trailer_url',
-          'trailer_file',
-          'trailer_file_url',
-        ]),
+              'trailerUrl',
+              'trailerFile',
+              'trailerFileUrl',
+              'trailer_url',
+              'trailer_file',
+              'trailer_file_url',
+            ]) ??
+            _firstMediaListValue(json, const [
+              'trailerAudioUrlList',
+              'trailerUrlList',
+              'trailer_url_list',
+            ]),
         contentUrl: _contentUrlFromJson(json),
         approvalStatus: json['approvalStatus'],
         // Newer APIs use contentType while existing dashboard responses use type.
@@ -248,6 +258,33 @@ String? _firstStringValue(Map<String, dynamic> json, List<String> keys) {
   for (final key in keys) {
     final value = _stringFromField(json[key]);
     if (value != null && value.isNotEmpty) return value;
+  }
+  return null;
+}
+
+String? _firstMediaListValue(
+  Map<String, dynamic> json,
+  List<String> keys,
+) {
+  for (final key in keys) {
+    final values = json[key];
+    if (values is! List) continue;
+    for (final item in values) {
+      if (item is Map) {
+        final mapped = Map<String, dynamic>.from(item);
+        final nested = _firstStringValue(mapped, const [
+          'url',
+          'fileUrl',
+          'mediaUrl',
+          'trailerUrl',
+          'teaserUrl',
+        ]);
+        if (nested != null) return nested;
+      } else {
+        final value = item?.toString().trim();
+        if (value != null && value.isNotEmpty) return value;
+      }
+    }
   }
   return null;
 }

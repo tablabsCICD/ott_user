@@ -45,9 +45,11 @@ class HomePage extends StatefulWidget {
   const HomePage({
     super.key,
     this.initialSelectedType = "MOVIE",
+    this.lockContentType = false,
   });
 
   final String initialSelectedType;
+  final bool lockContentType;
 
   @override
   _HomePageState createState() => _HomePageState();
@@ -503,9 +505,7 @@ class _HomePageState extends State<HomePage>
     _logHomeAutoPlay('Video Stopped: $reason');
   }
 
-  void _logHomeAutoPlay(String message) {
-    debugPrint('HOME_AUTOPLAY: $message');
-  }
+  void _logHomeAutoPlay(String message) {}
 
   void _scheduleVisibleUpdate() {
     if (_visibleUpdateScheduled) return;
@@ -553,11 +553,12 @@ class _HomePageState extends State<HomePage>
                               selectedThemeData,
                               dashboardProvider,
                             ),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child:
-                                _buildFilterButtons(context, dashboardProvider),
-                          ),
+                          if (!widget.lockContentType)
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: _buildFilterButtons(
+                                  context, dashboardProvider),
+                            ),
                           SizedBox(
                             height: 20,
                           ),
@@ -746,6 +747,9 @@ class _HomePageState extends State<HomePage>
                                                                               i],
                                                                           index:
                                                                               i,
+                                                                          isShortFilmTab: ContentType.normalize(selectedType) ==
+                                                                              ContentType
+                                                                                  .shortFilm,
                                                                           activeIndexListenable:
                                                                               activeIndex);
                                                                     } else if (dashboardData
@@ -1206,6 +1210,8 @@ class _HomePageState extends State<HomePage>
                   child: ContinueWatchMovieCard(
                     movie: item,
                     index: index,
+                    isShortFilmTab: ContentType.normalize(selectedType) ==
+                        ContentType.shortFilm,
                     enableTrailerPreview: false,
                   ),
                 );
@@ -1829,7 +1835,6 @@ class _HomePageState extends State<HomePage>
                           .selectedLanguages ??
                       []; // Ensure it doesn't throw null
 
-              print(selectedLanguages);
               if (selectedType == 'MINI SERIES') {
                 return;
               }

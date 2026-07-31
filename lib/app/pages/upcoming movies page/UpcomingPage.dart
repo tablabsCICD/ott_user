@@ -41,7 +41,6 @@ class _UpcomingPageState extends State<UpcomingPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         centerTitle: true,
         backgroundColor: theme.primaryColor,
         foregroundColor: Colors.white,

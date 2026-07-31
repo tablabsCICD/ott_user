@@ -1,8 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/request/saveRatingAndReview.dart';
 import 'package:ott/data/models/response/getRatingsAndReview.dart';
 import 'package:ott/data/models/response/saveRatingAndReview.dart';
@@ -75,10 +73,10 @@ class VideoProvider extends BaseProvider {
             _filteredContentList = searchResponse.data!.contentList!;
             notifyListeners();
           } else {
-            debugPrint("empty list: ${searchResponse.message}");
+
           }
         } else {
-          debugPrint("Error: ${searchResponse.message}");
+
         }
       } else if (response.statusCode == 404) {
         Map<String, dynamic> responseBody = json.decode(response.body);
@@ -93,7 +91,7 @@ class VideoProvider extends BaseProvider {
             'Failed to fetch content. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
     }
   }
 
@@ -116,13 +114,13 @@ class VideoProvider extends BaseProvider {
             _filteredContentList = searchResponse.data!.contentList!;
             notifyListeners();
           } else {
-            debugPrint("empty list: ${searchResponse.message}");
+
             _filteredContentList.clear();
           }
           notifyListeners();
         } else {
           _filteredContentList.clear();
-          debugPrint("Error: ${searchResponse.message}");
+
         }
         notifyListeners();
       } else if (response.statusCode == 404) {
@@ -138,7 +136,7 @@ class VideoProvider extends BaseProvider {
             'Failed to fetch content. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
     }
   }
 
@@ -166,17 +164,17 @@ class VideoProvider extends BaseProvider {
 
             notifyListeners();
           } else {
-            debugPrint("empty list: ${searchResponse.message}");
+
           }
         } else {
-          debugPrint("Error: ${searchResponse.message}");
+
         }
       } else {
         throw Exception(
             'Failed to fetch content. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
       throw Exception('An error occurred while fetching content.');
     }
   }
@@ -197,17 +195,17 @@ class VideoProvider extends BaseProvider {
 
             notifyListeners();
           } else {
-            debugPrint("empty list: ${searchResponse.message}");
+
           }
         } else {
-          debugPrint("Error: ${searchResponse.message}");
+
         }
       } else {
         throw Exception(
             'Failed to fetch content. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
       throw Exception('An error occurred while fetching content.');
     }
   }
@@ -288,7 +286,7 @@ class VideoProvider extends BaseProvider {
               'message': saveRatingsAndReviewResponse.message!
             };
           } else {
-            debugPrint("Empty data: ${saveRatingsAndReviewResponse.message}");
+
             return {
               'success': false,
               'message':
@@ -296,7 +294,7 @@ class VideoProvider extends BaseProvider {
             };
           }
         } else {
-          debugPrint("Error: ${saveRatingsAndReviewResponse.message}");
+
           return {
             'success': false,
             'message':
@@ -312,7 +310,7 @@ class VideoProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
       return {
         'success': false,
         'message': 'An error occurred while adding user: $error'
@@ -352,14 +350,14 @@ class VideoProvider extends BaseProvider {
             notifyListeners();
             return {'success': true, 'message': getRatingsAndReview.message!};
           } else {
-            debugPrint("Empty data: ${getRatingsAndReview.message}");
+
             return {
               'success': false,
               'message': getRatingsAndReview.message ?? 'No data returned'
             };
           }
         } else {
-          debugPrint("Error: ${getRatingsAndReview.message}");
+
           return {
             'success': false,
             'message': getRatingsAndReview.message ?? 'Error in response'
@@ -379,7 +377,7 @@ class VideoProvider extends BaseProvider {
         return {'failure': true, 'message': 'Something went wrong!'};
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
       return {
         'success': false,
         'message': 'An error occurred while adding user: $error'

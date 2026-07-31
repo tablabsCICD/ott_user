@@ -48,11 +48,7 @@ class PlayMediaProvider extends BaseProvider {
       // request consistent with the rest of the authenticated API calls by
       // attaching the stored bearer token and handling an expired session.
       final response = await ApiHelper().postApi(url);
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        debugPrint(
-          'Add view failed: status=${response.statusCode} mediaId=$mediaId',
-        );
-      }
+      if (response.statusCode < 200 || response.statusCode >= 300) {}
     } catch (e) {
       log("Add view error: $e");
     }
@@ -68,7 +64,9 @@ class PlayMediaProvider extends BaseProvider {
     required Duration duration,
   }) async {
     try {
-      if (duration.inSeconds == 0) return;
+      if (duration.inSeconds == 0) {
+        return;
+      }
 
       final key = episodeId != null && seasonId != null
           ? _episodeKey(
@@ -90,7 +88,9 @@ class PlayMediaProvider extends BaseProvider {
 
       final prefs = LocalSharePreferences();
       final user = await prefs.getUser();
-      if (user?.id == null) return;
+      if (user?.id == null) {
+        return;
+      }
 
       final watchedPercentage =
           ((currentSeconds / duration.inSeconds) * 100).clamp(0, 100).toInt();
@@ -106,9 +106,12 @@ class PlayMediaProvider extends BaseProvider {
         if (episodeId != null) "episodeId": episodeId.toString(),
       });
 
-      await http.post(uri);
-    } catch (e) {
-      log("Continue watching error: $e");
+      final response = await ApiHelper().postApi(uri.toString());
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return;
+      }
+    } catch (e, stackTrace) {
+      log('Continue watching save error: $e', stackTrace: stackTrace);
     }
   }
 
