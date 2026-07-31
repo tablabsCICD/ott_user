@@ -1012,9 +1012,10 @@ class _MovieCardState extends State<MovieCard> {
       ),
     ).then((_) {
       if (!mounted) return;
-      context
-          .read<DashboardProvider>()
-          .getContinueWatchedMovieList(contentToPlay.type ?? "MOVIE");
+      context.read<DashboardProvider>().getContinueWatchedMovieList(
+            contentToPlay.type ?? "MOVIE",
+            forceRefresh: true,
+          );
     });
   }
 

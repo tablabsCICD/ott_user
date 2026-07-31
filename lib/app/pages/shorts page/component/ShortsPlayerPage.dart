@@ -239,6 +239,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         country: _resolveShortPlaybackCountryCode(),
         mediaLoader: _loadSecureMedia,
         pausePlayer: () async => _controller?.pause(),
+        type: "SHORT_PART",
       );
       _securePlaybackController = secureController;
       secureController.addListener(_onSecurePlaybackChanged);

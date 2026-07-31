@@ -1,4 +1,3 @@
-import 'dart:developer';
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
@@ -7,7 +6,6 @@ import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/response/continueWatchedResponse.dart';
 import 'package:ott/data/models/response/getContentResponse.dart';
 import 'package:ott/data/models/user.dart';
-import '../../data/models/request/getAllVideoResponse.dart';
 import '../../data/models/response/get_dashboard_data.dart';
 import '../core/constant/api_constant.dart';
 import '../core/network/api_helper.dart';
@@ -15,6 +13,9 @@ import 'baseProvider.dart';
 
 class DashboardProvider extends BaseProvider {
   DashboardProvider() : super('Ideal');
+
+  static const Duration _continueWatchingCacheDuration = Duration(minutes: 2);
+  static const Duration _continueWatchingRequestTimeout = Duration(seconds: 6);
 
   List<DashboardData> _dashboardData = [];
   List<DashboardData> get dashboardData => _dashboardData;
@@ -33,6 +34,12 @@ class DashboardProvider extends BaseProvider {
 
   List<Content> _continueWatchedMovies = [];
   List<Content> get continueWatchedMovies => _continueWatchedMovies;
+  bool _isLoadingContinueWatching = false;
+  bool get isLoadingContinueWatching => _isLoadingContinueWatching;
+  String? _activeContinueWatchingKey;
+  final Map<String, List<Content>> _continueWatchingCache = {};
+  final Map<String, DateTime> _continueWatchingCacheTimes = {};
+  final Map<String, Future<void>> _continueWatchingRequests = {};
 
   // ==================== DASHBOARD LOAD ====================
 
@@ -44,6 +51,7 @@ class DashboardProvider extends BaseProvider {
     if (_isLoadingDashboard) return;
 
     _isLoadingDashboard = true;
+    notifyListeners();
     List<DashboardData> finalDashboardData = [];
 
     debugPrint("Languages: $languages");
@@ -52,9 +60,15 @@ class DashboardProvider extends BaseProvider {
       debugPrint("➡ Loading dashboard for: $lang");
 
       try {
-        final latest = await getDashboardLatestData(type, [lang], userId);
-        final trending = await getDashboardTrendingData(type, [lang], userId);
-        final upcoming = await getDashboardUpcomingData(type, [lang], userId);
+        final dashboardRows = await Future.wait([
+          getDashboardLatestData(type, [lang], userId),
+          getDashboardTrendingData(type, [lang], userId),
+          getDashboardUpcomingData(type, [lang], userId),
+        ]);
+
+        final latest = dashboardRows[0];
+        final trending = dashboardRows[1];
+        final upcoming = dashboardRows[2];
 
         _initRowLoadingState(latest);
         _initRowLoadingState(trending);
@@ -68,10 +82,9 @@ class DashboardProvider extends BaseProvider {
       }
     }
 
+    _isLoadingDashboard = false;
     _dashboardData = finalDashboardData;
     notifyListeners();
-
-    _isLoadingDashboard = false;
   }
 
   /// Only reset UI loading state — pagination comes from backend
@@ -249,38 +262,122 @@ class DashboardProvider extends BaseProvider {
     }
   }
 
-  getContinueWatchedMovieList(String type) async {
-    final localSharePreferences = LocalSharePreferences();
-    final user = await localSharePreferences.getUser();
-    String apiUrl = ApiConstant.continueWatchedMoviesByUser(user!.id, type);
-    ApiHelper apiHelper = ApiHelper();
-    debugPrint(apiUrl);
+  Future<void> getContinueWatchedMovieList(
+    String type, {
+    bool forceRefresh = false,
+  }) async {
+    final user = await LocalSharePreferences.localSharePreferences.getUser();
+    final userId = user?.id;
+    if (userId == null) {
+      _setActiveContinueWatchingData(null, const <Content>[]);
+      return;
+    }
+
+    final normalizedType = type.toUpperCase();
+    final cacheKey = '$userId:$normalizedType';
+    _activeContinueWatchingKey = cacheKey;
+
+    final cachedItems = _continueWatchingCache[cacheKey];
+    if (cachedItems != null) {
+      _continueWatchedMovies = cachedItems;
+      notifyListeners();
+
+      if (!forceRefresh && _isContinueWatchingCacheFresh(cacheKey)) {
+        return;
+      }
+    } else if (_continueWatchedMovies.isNotEmpty) {
+      _continueWatchedMovies = const <Content>[];
+      notifyListeners();
+    }
+
+    final inFlightRequest = _continueWatchingRequests[cacheKey];
+    if (inFlightRequest != null) {
+      await inFlightRequest;
+      return;
+    }
+
+    _isLoadingContinueWatching = true;
+    notifyListeners();
+
+    final request = _fetchContinueWatching(
+      apiUrl: ApiConstant.continueWatchedMoviesByUser(userId, normalizedType),
+      cacheKey: cacheKey,
+    );
+    _continueWatchingRequests[cacheKey] = request;
+
     try {
-      var response = await apiHelper.getApi1(apiUrl);
+      await request;
+    } finally {
+      _continueWatchingRequests.remove(cacheKey);
+      if (_activeContinueWatchingKey == cacheKey) {
+        _isLoadingContinueWatching = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> _fetchContinueWatching({
+    required String apiUrl,
+    required String cacheKey,
+  }) async {
+    final watch = Stopwatch()..start();
+    try {
+      final response = await ApiHelper()
+          .getApi1(apiUrl)
+          .timeout(_continueWatchingRequestTimeout);
 
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
-
-        ContinueWatchedResponse continueWatchedResponse =
+        final continueWatchedResponse =
             ContinueWatchedResponse.fromJson(responseBody);
 
-        if (continueWatchedResponse.isSuccess == true &&
-            continueWatchedResponse.data != null) {
-          _continueWatchedMovies = continueWatchedResponse.data!;
-          debugPrint(_continueWatchedMovies.length.toString());
-          notifyListeners();
+        if (continueWatchedResponse.isSuccess == true) {
+          final items = continueWatchedResponse.data ?? const <Content>[];
+          _continueWatchingCache[cacheKey] = items;
+          _continueWatchingCacheTimes[cacheKey] = DateTime.now();
+          debugPrint(
+            "✅ continue watching loaded ${items.length} items "
+            "in ${watch.elapsedMilliseconds}ms",
+          );
+          _setActiveContinueWatchingData(cacheKey, items);
+          return;
         }
-      } else {
-        _continueWatchedMovies.clear();
+      }
+
+      if (!_continueWatchingCache.containsKey(cacheKey)) {
+        _setActiveContinueWatchingData(cacheKey, const <Content>[]);
       }
     } catch (error) {
       debugPrint("❌ continue watching error: $error");
+      if (!_continueWatchingCache.containsKey(cacheKey)) {
+        _setActiveContinueWatchingData(cacheKey, const <Content>[]);
+      }
     }
+  }
+
+  bool _isContinueWatchingCacheFresh(String cacheKey) {
+    final fetchedAt = _continueWatchingCacheTimes[cacheKey];
+    if (fetchedAt == null) return false;
+    return DateTime.now().difference(fetchedAt) <
+        _continueWatchingCacheDuration;
+  }
+
+  void _setActiveContinueWatchingData(String? cacheKey, List<Content> items) {
+    if (cacheKey != null && _activeContinueWatchingKey != cacheKey) {
+      return;
+    }
+    _continueWatchedMovies = items;
+    notifyListeners();
   }
 
   void clear() {
     _dashboardData.clear();
     _continueWatchedMovies.clear();
+    _continueWatchingCache.clear();
+    _continueWatchingCacheTimes.clear();
+    _continueWatchingRequests.clear();
+    _isLoadingContinueWatching = false;
+    _activeContinueWatchingKey = null;
     _castList.clear();
     notifyListeners();
   }

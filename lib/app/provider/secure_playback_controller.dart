@@ -40,6 +40,7 @@ class SecurePlaybackController extends ChangeNotifier {
     required SecureMediaLoader mediaLoader,
     required SecureMediaPauser pausePlayer,
     SecurePlaybackRepository? repository,
+    required this.type,
     this.refreshLead = const Duration(seconds: 60),
     this.watermarkInterval = const Duration(seconds: 60),
   })  : _repository = repository ?? SecurePlaybackRepository.instance,
@@ -80,7 +81,7 @@ class SecurePlaybackController extends ChangeNotifier {
   Future<void>? _startRequest;
   bool _disposed = false;
   bool _handledPlayer403 = false;
-
+  String type;
   Future<void> start() {
     return _startRequest ??= _start().whenComplete(() => _startRequest = null);
   }
@@ -98,6 +99,7 @@ class SecurePlaybackController extends ChangeNotifier {
         contentId: contentId,
         playbackUrl: originalPlaybackUrl,
         country: country,
+        type: type,
       );
       if (_disposed) return;
       final secondsUntilExpiry =
@@ -221,6 +223,7 @@ class SecurePlaybackController extends ChangeNotifier {
         contentId: contentId,
         playbackUrl: originalPlaybackUrl,
         country: country,
+        type: type,
       );
     } on SecurePlaybackException catch (error) {
       if (!error.isTransient || _disposed) rethrow;
@@ -230,6 +233,7 @@ class SecurePlaybackController extends ChangeNotifier {
         contentId: contentId,
         playbackUrl: originalPlaybackUrl,
         country: country,
+        type: type,
       );
     }
   }

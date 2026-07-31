@@ -98,6 +98,7 @@ class SignedPlaybackRequest {
     required this.country,
     required this.platform,
     required this.deviceIntegrity,
+    required this.type,
   });
 
   final String contentId;
@@ -106,6 +107,7 @@ class SignedPlaybackRequest {
   final String country;
   final String platform;
   final DeviceIntegrityStatus deviceIntegrity;
+  final String type;
 
   Map<String, dynamic> toJson() => {
         'contentId': contentId,
@@ -114,6 +116,7 @@ class SignedPlaybackRequest {
         'country': country,
         'platform': platform,
         'deviceIntegrity': deviceIntegrity.toJson(),
+        'type': type,
       };
 }
 

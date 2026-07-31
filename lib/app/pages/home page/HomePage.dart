@@ -194,7 +194,7 @@ class _HomePageState extends State<HomePage>
     try {
       await context
           .read<DashboardProvider>()
-          .getContinueWatchedMovieList(selectedType);
+          .getContinueWatchedMovieList(selectedType, forceRefresh: true);
     } finally {
       _continueWatchRefreshInFlight = false;
     }
@@ -272,18 +272,17 @@ class _HomePageState extends State<HomePage>
 
   Future<void> _fetchUserData() async {
     final localSharePreferences = LocalSharePreferences();
+    final dashBoardProvider = context.read<DashboardProvider>();
+    final userProvider = context.read<UserProvider>();
     final user = await localSharePreferences.getUser();
     if (user != null && mounted) {
       _userId = user.id;
-      await Provider.of<UserProvider>(context, listen: false)
-          .getUserById(user.id!);
+      if (selectedType != 'MINI SERIES' && selectedType != 'MADIOO') {
+        unawaited(dashBoardProvider.getContinueWatchedMovieList(selectedType));
+      }
+      await userProvider.getUserById(user.id!);
     }
-    final dashBoardProvider =
-        Provider.of<DashboardProvider>(context, listen: false);
-    final selectedLanguages = Provider.of<UserProvider>(context, listen: false)
-            .userObject
-            .selectedLanguages ??
-        [];
+    final selectedLanguages = userProvider.userObject.selectedLanguages ?? [];
 
     if (selectedLanguages.isEmpty || selectedLanguages == []) {
       await getMovieList(dashBoardProvider, selectedType, ["English"]);
@@ -536,6 +535,9 @@ class _HomePageState extends State<HomePage>
                         builder: (context, dashboardProvider, child) {
                       final showContentLoader = dashboardProvider.isLoading &&
                           (selectedType == 'MOVIE' || selectedType == 'SERIES');
+                      final showContinueWatchLoader =
+                          dashboardProvider.isLoadingContinueWatching &&
+                              dashboardProvider.continueWatchedMovies.isEmpty;
 
                       return Column(
                         mainAxisSize: MainAxisSize.min,
@@ -573,10 +575,12 @@ class _HomePageState extends State<HomePage>
                                         ? SizedBox.shrink()
                                         : _isOffline
                                             ? _continueWatchShimmerWidget()
-                                            : continueWatchWidget(
-                                                continueWatchList:
-                                                    dashboardProvider
-                                                        .continueWatchedMovies),
+                                            : showContinueWatchLoader
+                                                ? _continueWatchShimmerWidget()
+                                                : continueWatchWidget(
+                                                    continueWatchList:
+                                                        dashboardProvider
+                                                            .continueWatchedMovies),
                                     selectedType == 'MINI SERIES'
                                         ? ShortsLibraryPage(
                                             useParentScroll: true)
@@ -1986,7 +1990,7 @@ class _HomePageState extends State<HomePage>
     final localSharePreferences = LocalSharePreferences();
     final user = await localSharePreferences.getUser();
     log('User in getMovieList method ${user!.firstName} ');
-    await dashBoardProvider.getContinueWatchedMovieList(selectedType);
+    unawaited(dashBoardProvider.getContinueWatchedMovieList(selectedType));
 
     await dashBoardProvider.getDashboardData(selectedType, langList, user.id!);
   }
