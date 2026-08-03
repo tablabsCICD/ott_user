@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:ott/app/core/services/download_service.dart';
+import 'package:ott/app/core/services/web_offline_media_store.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -146,6 +147,7 @@ class OfflineDownloadProvider extends BaseProvider {
         if (contentId == null) continue;
 
         if (kIsWeb) {
+          if (!await hasWebOfflineMedia(contentId)) continue;
           _downloadedContentIds.add(contentId);
           _downloadedContents.add(content);
           _downloadMetadata[contentId] = _metadataForContent(
@@ -212,7 +214,23 @@ class OfflineDownloadProvider extends BaseProvider {
   Future<String?> getOfflinePath(Content content) async {
     await loadDownloadedContents();
     final contentId = content.id;
-    if (contentId == null || kIsWeb) return null;
+    if (contentId == null) return null;
+    if (!_downloadedContentIds.contains(contentId) ||
+        _downloadMetadata[contentId]?.status !=
+            OfflineDownloadStatus.completed) {
+      return null;
+    }
+
+    if (kIsWeb) {
+      final objectUrl = await openWebOfflineMedia(contentId);
+      if (objectUrl != null) return objectUrl;
+      _downloadedContentIds.remove(contentId);
+      _downloadedContents.removeWhere((item) => item.id == contentId);
+      _downloadMetadata.remove(contentId);
+      await _persistDownloadedContents();
+      notifyListeners();
+      return null;
+    }
 
     final file = await _existingLocalFileForContent(content);
     if (await file.exists()) {
@@ -232,6 +250,7 @@ class OfflineDownloadProvider extends BaseProvider {
   Future<Map<String, Object>> downloadContent(
     Content content, {
     String? sourceUrl,
+    Map<String, String> httpHeaders = const {},
   }) async {
     await loadDownloadedContents();
     final contentId = content.id;
@@ -283,14 +302,22 @@ class OfflineDownloadProvider extends BaseProvider {
 
     try {
       final uri = Uri.parse(videoUrl);
-      final result = await DownloadService.instance.downloadFile(
-        uri: uri,
-        destination: file,
-        onProgress: (progress) {
-          _downloadProgress[contentId] = progress;
-          notifyListeners();
-        },
-      );
+      final onProgress = (double progress) {
+        _downloadProgress[contentId] = progress;
+        notifyListeners();
+      };
+      final result = uri.path.toLowerCase().endsWith('.m3u8')
+          ? await DownloadService.instance.downloadHlsPackage(
+              masterUri: uri,
+              destination: file,
+              onProgress: onProgress,
+              headers: httpHeaders,
+            )
+          : await DownloadService.instance.downloadFile(
+              uri: uri,
+              destination: file,
+              onProgress: onProgress,
+            );
 
       if (!result.success) {
         _downloadMetadata[contentId] = _metadataForContent(
@@ -357,6 +384,7 @@ class OfflineDownloadProvider extends BaseProvider {
       };
     }
     if (kIsWeb) {
+      await deleteWebOfflineMedia(contentId);
       _downloadedContentIds.remove(contentId);
       _downloadedContents.removeWhere((item) => item.id == contentId);
       _downloadProgress.remove(contentId);
@@ -376,6 +404,10 @@ class OfflineDownloadProvider extends BaseProvider {
     final partial = File('${file.path}.part');
     if (await partial.exists()) {
       await partial.delete();
+    }
+    final hlsAssets = Directory('${file.path}.assets');
+    if (await hlsAssets.exists()) {
+      await hlsAssets.delete(recursive: true);
     }
 
     _downloadedContentIds.remove(contentId);
@@ -433,6 +465,11 @@ class OfflineDownloadProvider extends BaseProvider {
   ) async {
     final contentId = content.id!;
     if (_downloadedContentIds.contains(contentId)) {
+      if (!await hasWebOfflineMedia(contentId)) {
+        _downloadedContentIds.remove(contentId);
+        _downloadedContents.removeWhere((item) => item.id == contentId);
+        _downloadMetadata.remove(contentId);
+      } else {
       _upsertDownloadedContent(content);
       _downloadMetadata[contentId] = _metadataForContent(
         content,
@@ -442,11 +479,21 @@ class OfflineDownloadProvider extends BaseProvider {
       notifyListeners();
       return {
         'success': true,
-        'message': 'Content is already added to downloads.',
+          'message': 'Content is already downloaded for offline playback.',
       };
+      }
     }
 
+    _downloadingContentIds.add(contentId);
+    _downloadProgress[contentId] = 0;
+    _downloadMetadata[contentId] = _metadataForContent(
+      content,
+      status: OfflineDownloadStatus.downloading,
+    );
+    notifyListeners();
+
     try {
+      await storeWebOfflineMedia(contentId, videoUrl);
       _downloadedContentIds.add(contentId);
       _upsertDownloadedContent(content);
       _downloadMetadata[contentId] = _metadataForContent(
@@ -458,13 +505,23 @@ class OfflineDownloadProvider extends BaseProvider {
 
       return {
         'success': true,
-        'message': 'Content added to downloads in app.',
+        'message': 'Content downloaded for offline browser playback.',
       };
     } catch (error) {
+      _downloadMetadata[contentId] = _metadataForContent(
+        content,
+        status: OfflineDownloadStatus.failed,
+        errorMessage: error.toString(),
+      );
+      await _persistDownloadedContents();
       return {
         'success': false,
-        'message': 'Failed to add content to web downloads: $error',
+        'message': 'Failed to download content for offline playback: $error',
       };
+    } finally {
+      _downloadingContentIds.remove(contentId);
+      _downloadProgress.remove(contentId);
+      notifyListeners();
     }
   }
 

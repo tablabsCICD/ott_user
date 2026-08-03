@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
@@ -188,6 +187,53 @@ class _WatchlistPageState extends State<WatchlistPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _deleteDownload(Content item) async {
+    final title = item.title?.trim().isNotEmpty == true
+        ? item.title!.trim()
+        : 'this movie';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete download?'),
+        content: Text(
+          'Delete $title from this device? You can download it again later.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            icon: const Icon(Icons.delete_outline),
+            label: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final result = await context
+          .read<OfflineDownloadProvider>()
+          .deleteContent(item);
+      if (!mounted) return;
+      CustomToast.show(
+        context,
+        result['message']?.toString() ?? 'Download deleted.',
+        isSuccess: result['success'] == true,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      CustomToast.show(
+        context,
+        'Could not delete the download: $error',
+        isSuccess: false,
+      );
+    }
   }
 
   @override
@@ -503,29 +549,54 @@ class _WatchlistPageState extends State<WatchlistPage> {
             Positioned(
               top: 8,
               right: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black87,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.white24),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.download_done_rounded,
-                        color: Colors.white, size: 12),
-                    SizedBox(width: 4),
-                    Text(
-                      'Offline',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.white24),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.download_done_rounded,
+                            color: Colors.white, size: 12),
+                        SizedBox(width: 4),
+                        Text(
+                          'Offline',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Tooltip(
+                    message: 'Delete download',
+                    child: Material(
+                      color: Colors.black87,
+                      shape: const CircleBorder(
+                        side: BorderSide(color: Colors.white24),
+                      ),
+                      child: IconButton(
+                        visualDensity: VisualDensity.compact,
+                        constraints:
+                            const BoxConstraints.tightFor(width: 32, height: 32),
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.delete_outline,
+                            color: Colors.white, size: 18),
+                        onPressed: () => _deleteDownload(item),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           if ((item.watchedPercentage ?? 0) > 0 &&

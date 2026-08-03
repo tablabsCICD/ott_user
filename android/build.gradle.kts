@@ -44,8 +44,15 @@ val newBuildDir: Directory =
 rootProject.layout.buildDirectory.value(newBuildDir)
 
 subprojects {
-    val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
-    project.layout.buildDirectory.value(newSubprojectBuildDir)
+    if (project.name == "media_kit_libs_android_video") {
+        // This plugin downloads checksum-verified native libmpv JARs into its
+        // own build directory. Keeping that cache beside the plugin prevents
+        // every project clean from forcing another GitHub download.
+        project.layout.buildDirectory.value(project.layout.projectDirectory.dir("build"))
+    } else {
+        val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
+        project.layout.buildDirectory.value(newSubprojectBuildDir)
+    }
 }
 subprojects {
     project.evaluationDependsOn(":app")

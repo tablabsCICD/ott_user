@@ -10,6 +10,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:http/http.dart' as http;
 import 'package:ott/app/core/network/anti_piracy_api_client.dart';
 import 'package:ott/app/core/services/anti_piracy_service.dart';
+import 'package:ott/app/core/services/web_offline_media_store.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/core/services/session_manager.dart';
 import 'package:ott/app/provider/secure_playback_controller.dart';
@@ -93,10 +94,14 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   bool _isOfflinePlayback = false;
   String? _playbackMessage;
   String? _currentRemotePlaybackUrl;
+  String? _currentAuthorizedPlaybackUrl;
+  Map<String, String> _currentAuthorizedHttpHeaders = const {};
   SecurePlaybackController? _securePlaybackController;
   bool _handlingSecureAuthenticationFailure = false;
   bool _controlsVisible = true;
   bool _isSeeking = false;
+  bool _resumeAfterLifecyclePause = false;
+  String? _offlineObjectUrl;
   Duration? _lastLoggedDuration;
 
   bool get _isSeries =>
@@ -121,6 +126,10 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
+      _resumeAfterLifecyclePause = _loading ||
+          (_player?.state.playing ?? false) ||
+          (_androidSecurePlayer?.value.isPlaying ?? false) ||
+          (_youtubeController?.value.isPlaying ?? false);
       unawaited(_player?.pause());
       unawaited(_androidSecurePlayer?.pause());
       _youtubeController?.pause();
@@ -128,6 +137,31 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       _saveProgress();
     } else if (state == AppLifecycleState.resumed) {
       unawaited(_securePlaybackController?.onForeground());
+      if (_resumeAfterLifecyclePause) {
+        _resumeAfterLifecyclePause = false;
+        unawaited(_resumeAfterLifecycleInterruption());
+      }
+    }
+  }
+
+  Future<void> _resumeAfterLifecycleInterruption() async {
+    if (_isDisposed || !mounted || _hasPlaybackError) return;
+    try {
+      if (_youtubeController != null) {
+        _youtubeController!.play();
+      } else if (_androidSecurePlayer != null) {
+        await _androidSecurePlayer!.play();
+      } else {
+        await _player?.play();
+      }
+    } catch (error, stackTrace) {
+      if (_isBenignPlayInterruption(error)) return;
+      SecurityDebugLog.exception(
+        'LIFECYCLE_RESUME_PLAYBACK',
+        error,
+        stackTrace,
+      );
+      _showPlaybackError('Failed to resume video');
     }
   }
 
@@ -181,7 +215,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   void _addView() {
-    if (widget.content?.id == null) return;
+    if (widget.content?.id == null || _isOfflinePlayback) return;
 
     context.read<PlayMediaProvider>().addView(
           mediaId: _isSeries ? widget.episodeIndex! : widget.content!.id!,
@@ -246,11 +280,6 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   Future<String> _resolveOfflineSourceUrl(String sourceUrl) async {
-    if (sourceUrl.isNotEmpty && await _isExistingLocalFile(sourceUrl)) {
-      _isOfflinePlayback = true;
-      return sourceUrl;
-    }
-
     final content = widget.content;
     if (content == null) {
       _isOfflinePlayback = false;
@@ -262,8 +291,9 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         await context.read<OfflineDownloadProvider>().getOfflinePath(content);
     if (offlinePath != null &&
         offlinePath.trim().isNotEmpty &&
-        await _isExistingLocalFile(offlinePath)) {
+        (kIsWeb || await _isExistingLocalFile(offlinePath))) {
       _isOfflinePlayback = true;
+      if (kIsWeb) _offlineObjectUrl = offlinePath.trim();
       return offlinePath.trim();
     }
 
@@ -344,6 +374,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           : 'Received platform playback authorization; initializing the player now.',
     );
     final playbackUri = Uri.tryParse(authorization.playbackUrl);
+    _currentAuthorizedPlaybackUrl = authorization.playbackUrl;
+    _currentAuthorizedHttpHeaders = authorization.httpHeaders;
     SecurityDebugLog.diagnostic(
       'SIGNED_MEDIA_METADATA validUri=${playbackUri != null} '
       'scheme=${playbackUri?.scheme ?? '<missing>'} '
@@ -630,7 +662,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       // media_kit is the underlying playback engine; the route keeps the
       // existing fullscreen, resume, continue-watching and auto-next behavior.
       final media = Media(
-        playFromFile ? _localFileMediaUri(url) : url,
+        playFromFile && !kIsWeb ? _localFileMediaUri(url) : url,
         httpHeaders: httpHeaders,
       );
       SecurityDebugLog.diagnostic(
@@ -1044,6 +1076,13 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         }
       }))
       ..add(player.stream.error.listen((error) {
+        if (_isBenignPlayInterruption(error)) {
+          SecurityDebugLog.event(
+            'PLAYER',
+            'A pending browser play request was superseded by pause; playback state remains valid.',
+          );
+          return;
+        }
         SecurityDebugLog.exception(
           'MEDIA_KIT_STREAM playerId=$_activePlayerId',
           error,
@@ -1115,6 +1154,13 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             'playing=$isPlaying buffering=$isBuffering.',
       );
     } catch (error, stackTrace) {
+      if (_isBenignPlayInterruption(error)) {
+        SecurityDebugLog.event(
+          'PLAYER',
+          'The initial browser play request was superseded by pause; waiting for foreground or user playback.',
+        );
+        return;
+      }
       SecurityDebugLog.exception('MEDIA_KIT_PLAY', error, stackTrace);
       _showPlaybackError('Failed to load video');
       return;
@@ -1125,6 +1171,13 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       const Duration(seconds: 15),
       (_) => _saveProgress(),
     );
+  }
+
+  bool _isBenignPlayInterruption(Object error) {
+    if (!kIsWeb) return false;
+    final message = error.toString().toLowerCase();
+    return message.contains('play() request was interrupted') &&
+        message.contains('call to pause()');
   }
 
   void _handlePlayingChanged(bool isPlaying) {
@@ -1208,6 +1261,11 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           seconds: position.inSeconds,
         );
 
+    // A validated local download must remain fully playable without a network
+    // connection. Keep resume state on-device, but do not invoke authenticated
+    // analytics/progress endpoints until playback is online again.
+    if (_isOfflinePlayback) return;
+
     context.read<PlayMediaProvider>().saveContinueWatching(
           contentId: widget.content!.id!,
           seasonId: _isSeries ? widget.seasonIndex : null,
@@ -1267,6 +1325,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     secureController?.dispose();
     _securePlaybackController = null;
     _disposePlayerSync(saveProgress: true);
+    revokeWebOfflineMediaUrl(_offlineObjectUrl);
+    _offlineObjectUrl = null;
     unawaited(_restorePortraitPlayback());
     super.dispose();
   }
@@ -1798,6 +1858,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
               : await offlineProvider.downloadContent(
                   content,
                   sourceUrl: sourceUrl,
+                  httpHeaders: _currentAuthorizedHttpHeaders,
                 );
 
           if (!mounted) return;
@@ -1942,6 +2003,9 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   String _downloadSourceUrl(Content? content) {
+    final authorizedUrl = _currentAuthorizedPlaybackUrl?.trim() ?? '';
+    if (_isRemoteHttpUrl(authorizedUrl)) return authorizedUrl;
+
     final currentUrl = _currentRemotePlaybackUrl?.trim() ?? '';
     if (_isRemoteHttpUrl(currentUrl)) return currentUrl;
 
