@@ -484,6 +484,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         autoPlay: true,
         mute: false,
         loop: false,
+        hideControls: true,
         startAt: resumeSeconds > 5 ? resumeSeconds : 0,
       ),
     );
@@ -1361,6 +1362,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           offset: delta,
         ),
       );
+      if (mounted) setState(() {});
       return;
     }
 
@@ -1376,6 +1378,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           ),
         ),
       );
+      if (mounted) setState(() {});
       return;
     }
 
@@ -1391,7 +1394,91 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           ),
         ),
       );
+      if (mounted) setState(() {});
     }
+  }
+
+  void _seekTo(Duration position) {
+    final duration = _currentDuration;
+    final target = _boundedPosition(position, duration);
+    final youtubeController = _youtubeController;
+    if (youtubeController != null) {
+      youtubeController.seekTo(target);
+      if (mounted) setState(() {});
+      return;
+    }
+
+    final nativePlayer = _nativeNetworkPlayer;
+    if (nativePlayer != null && nativePlayer.value.isInitialized) {
+      unawaited(nativePlayer.seekTo(target));
+      if (mounted) setState(() {});
+      return;
+    }
+
+    final player = _player;
+    if (player != null) {
+      unawaited(player.seek(target));
+      if (mounted) setState(() {});
+    }
+  }
+
+  Duration _boundedPosition(Duration position, Duration duration) {
+    if (position <= Duration.zero) return Duration.zero;
+    if (duration > Duration.zero && position >= duration) return duration;
+    return position;
+  }
+
+  Duration get _currentPosition {
+    final youtubeController = _youtubeController;
+    if (youtubeController != null) return youtubeController.value.position;
+
+    final nativeValue = _nativeNetworkPlayer?.value;
+    if (nativeValue != null && nativeValue.isInitialized) {
+      return nativeValue.position;
+    }
+
+    return _player?.state.position ?? Duration.zero;
+  }
+
+  Duration get _currentDuration {
+    final youtubeController = _youtubeController;
+    if (youtubeController != null) {
+      return youtubeController.value.metaData.duration;
+    }
+
+    final nativeValue = _nativeNetworkPlayer?.value;
+    if (nativeValue != null && nativeValue.isInitialized) {
+      return nativeValue.duration;
+    }
+
+    return _player?.state.duration ?? Duration.zero;
+  }
+
+  bool get _isPlaybackPlaying {
+    final youtubeController = _youtubeController;
+    if (youtubeController != null) return youtubeController.value.isPlaying;
+
+    final nativeValue = _nativeNetworkPlayer?.value;
+    if (nativeValue != null && nativeValue.isInitialized) {
+      return nativeValue.isPlaying;
+    }
+
+    return _player?.state.playing ?? false;
+  }
+
+  String _formatPlaybackTime(Duration value) {
+    final safeValue = value.isNegative ? Duration.zero : value;
+    final totalSeconds = safeValue.inSeconds;
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+    final twoDigitMinutes = minutes.toString().padLeft(2, '0');
+    final twoDigitSeconds = seconds.toString().padLeft(2, '0');
+
+    if (hours > 0) {
+      return '$hours:$twoDigitMinutes:$twoDigitSeconds';
+    }
+    return '$twoDigitMinutes:$twoDigitSeconds';
   }
 
   @override
@@ -1436,32 +1523,15 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                             ? _desktopPlayer()
                             : _mobilePlayer(),
               ),
-              Positioned(
-                top: 8,
-                left: 8,
-                child: SafeArea(child: _backButton()),
-              ),
-              if (!showLoading && !_hasPlaybackError)
-                Positioned.fill(
-                  child: Center(
-                    child: VideoSkipControls(
-                      onBackward: () => _seekBy(const Duration(seconds: -10)),
-                      onForward: () => _seekBy(const Duration(seconds: 10)),
-                      gap: ResponsiveWidget.isMobile(context) ? 82 : 120,
-                    ),
-                  ),
-                ),
-              if (!showLoading && !_hasPlaybackError)
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: SafeArea(child: _downloadButton()),
-                ),
               if (!showLoading && !_hasPlaybackError && watermark != null)
                 Positioned.fill(
                   child: PlaybackWatermarkOverlay(
                     watermark: watermark,
                   ),
+                ),
+              if (!showLoading && !_hasPlaybackError)
+                Positioned.fill(
+                  child: _playbackControlsOverlay(theme),
                 ),
             ],
           ),
@@ -1589,6 +1659,191 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     );
   }
 
+  Widget _playbackControlsOverlay(ThemeData theme) {
+    return Stack(
+      children: [
+        Positioned(
+          top: 8,
+          left: 8,
+          child: SafeArea(child: _backButton()),
+        ),
+        Positioned(
+          top: 12,
+          right: 12,
+          child: SafeArea(child: _downloadButton()),
+        ),
+        Center(
+          child: _centerPlaybackControls(),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: SafeArea(
+            top: false,
+            minimum: EdgeInsets.fromLTRB(
+              ResponsiveWidget.isMobile(context) ? 16 : 28,
+              0,
+              ResponsiveWidget.isMobile(context) ? 16 : 28,
+              ResponsiveWidget.isMobile(context) ? 14 : 22,
+            ),
+            child: _progressControls(theme),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _centerPlaybackControls() {
+    final compact = MediaQuery.sizeOf(context).shortestSide < 420;
+    final skipSize = compact ? 52.0 : 58.0;
+    final playSize = compact ? 68.0 : 78.0;
+    final gap = compact ? 48.0 : 70.0;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _roundPlaybackButton(
+          icon: Icons.replay_10_rounded,
+          size: skipSize,
+          iconSize: compact ? 34 : 38,
+          tooltip: 'Rewind 10 seconds',
+          onTap: () => _seekBy(const Duration(seconds: -10)),
+        ),
+        SizedBox(width: gap),
+        _roundPlaybackButton(
+          icon: _isPlaybackPlaying
+              ? Icons.pause_rounded
+              : Icons.play_arrow_rounded,
+          size: playSize,
+          iconSize: compact ? 46 : 52,
+          tooltip: _isPlaybackPlaying ? 'Pause' : 'Play',
+          onTap: _togglePlayback,
+          opacity: 0.74,
+        ),
+        SizedBox(width: gap),
+        _roundPlaybackButton(
+          icon: Icons.forward_10_rounded,
+          size: skipSize,
+          iconSize: compact ? 34 : 38,
+          tooltip: 'Forward 10 seconds',
+          onTap: () => _seekBy(const Duration(seconds: 10)),
+        ),
+      ],
+    );
+  }
+
+  Widget _roundPlaybackButton({
+    required IconData icon,
+    required double size,
+    required double iconSize,
+    required String tooltip,
+    required VoidCallback onTap,
+    double opacity = 0.58,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.black.withValues(alpha: opacity),
+        shape: const CircleBorder(),
+        elevation: 8,
+        shadowColor: Colors.black54,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox(
+            height: size,
+            width: size,
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: iconSize,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _progressControls(ThemeData theme) {
+    final duration = _currentDuration;
+    final position = _boundedPosition(_currentPosition, duration);
+    final durationMs = duration.inMilliseconds;
+    final sliderMax = durationMs > 0 ? durationMs.toDouble() : 1.0;
+    final sliderValue = durationMs > 0
+        ? position.inMilliseconds.clamp(0, durationMs).toDouble()
+        : 0.0;
+
+    return Container(
+      height: 64,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.74),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black54,
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          _timeLabel(_formatPlaybackTime(position)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 5,
+                activeTrackColor: theme.primaryColor,
+                inactiveTrackColor: Colors.white.withValues(alpha: 0.34),
+                thumbColor: theme.primaryColor,
+                overlayColor: theme.primaryColor.withValues(alpha: 0.18),
+                thumbShape: const RoundSliderThumbShape(
+                  enabledThumbRadius: 8,
+                  disabledThumbRadius: 8,
+                ),
+                overlayShape: const RoundSliderOverlayShape(
+                  overlayRadius: 16,
+                ),
+              ),
+              child: Slider(
+                value: sliderValue,
+                min: 0,
+                max: sliderMax,
+                onChanged: durationMs <= 0
+                    ? null
+                    : (value) => _seekTo(
+                          Duration(milliseconds: value.round()),
+                        ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          _timeLabel(_formatPlaybackTime(duration)),
+        ],
+      ),
+    );
+  }
+
+  Widget _timeLabel(String value) {
+    return SizedBox(
+      width: 54,
+      child: Text(
+        value,
+        textAlign: TextAlign.center,
+        maxLines: 1,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 17,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0,
+        ),
+      ),
+    );
+  }
+
   Widget _mobilePlayer() {
     return SizedBox.expand(
       child: _playerSurface(),
@@ -1619,7 +1874,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
               controller: _youtubeController!,
               width: width,
               aspectRatio: aspectRatio,
-              showVideoProgressIndicator: true,
+              showVideoProgressIndicator: false,
               progressIndicatorColor: theme.primaryColor,
             ),
           );
@@ -1687,6 +1942,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             height: height,
             fit: BoxFit.cover,
             fill: Colors.black,
+            controls: NoVideoControls,
           ),
         );
       },

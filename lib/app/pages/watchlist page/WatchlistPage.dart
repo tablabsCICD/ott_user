@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
@@ -34,6 +33,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
   bool isLoading = true;
   bool isOffline = false;
   late WatchlistFilter selectedFilter;
+  final Set<int> _deletingDownloadIds = <int>{};
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   @override
@@ -163,6 +163,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
     final offlinePath = await context
         .read<OfflineDownloadProvider>()
         .getOfflinePath(contentToPlay);
+    if (!mounted) return;
     if (offlinePath != null && offlinePath.trim().isNotEmpty) {
       contentUrl = offlinePath;
     }
@@ -186,6 +187,61 @@ class _WatchlistPageState extends State<WatchlistPage> {
           seasonIndex: 0,
           episodeIndex: 0,
         ),
+      ),
+    );
+  }
+
+  Future<void> _deleteDownloadedContent(Content item) async {
+    final contentId = item.id;
+    if (contentId == null || _deletingDownloadIds.contains(contentId)) return;
+
+    final confirmed = await _confirmDeleteDownload(item);
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _deletingDownloadIds.add(contentId));
+    Map<String, Object> result;
+    try {
+      result = await context.read<OfflineDownloadProvider>().deleteContent(
+            item,
+          );
+    } catch (error) {
+      result = {
+        'success': false,
+        'message': 'Failed to remove download: $error',
+      };
+    }
+
+    if (!mounted) return;
+    setState(() => _deletingDownloadIds.remove(contentId));
+    CustomToast.show(
+      context,
+      result['message']?.toString() ?? 'Download removed.',
+      isSuccess: result['success'] == true,
+    );
+  }
+
+  Future<bool?> _confirmDeleteDownload(Content item) {
+    final title = item.title?.trim().isNotEmpty == true
+        ? item.title!.trim()
+        : 'this movie';
+
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Remove download?'),
+        content: Text(
+          'This will delete the offline copy of "$title" from this device.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Remove'),
+          ),
+        ],
       ),
     );
   }
@@ -503,29 +559,37 @@ class _WatchlistPageState extends State<WatchlistPage> {
             Positioned(
               top: 8,
               right: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black87,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.white24),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.download_done_rounded,
-                        color: Colors.white, size: 12),
-                    SizedBox(width: 4),
-                    Text(
-                      'Offline',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.white24),
                     ),
-                  ],
-                ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.download_done_rounded,
+                            color: Colors.white, size: 12),
+                        SizedBox(width: 4),
+                        Text(
+                          'Offline',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  _removeDownloadButton(item),
+                ],
               ),
             ),
           if ((item.watchedPercentage ?? 0) > 0 &&
@@ -557,6 +621,44 @@ class _WatchlistPageState extends State<WatchlistPage> {
       borderRadius: 16,
       scale: 1.035,
       child: card,
+    );
+  }
+
+  Widget _removeDownloadButton(Content item) {
+    final contentId = item.id;
+    final isDeleting =
+        contentId != null && _deletingDownloadIds.contains(contentId);
+
+    return Tooltip(
+      message: 'Remove download',
+      child: Material(
+        color: Colors.black87,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: isDeleting ? null : () => _deleteDownloadedContent(item),
+          child: SizedBox(
+            height: 30,
+            width: 30,
+            child: Center(
+              child: isDeleting
+                  ? const SizedBox(
+                      height: 14,
+                      width: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.delete_outline,
+                      color: Colors.white,
+                      size: 17,
+                    ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 

@@ -56,6 +56,15 @@ class MovieCard extends StatefulWidget {
     this.isShortFilmTab = false,
   });
 
+  static void stopActiveTrailerPreview([String reason = 'external stop']) {
+    final activeState = _MovieCardState._activePreviewState;
+    activeState?._playDelayTimer?.cancel();
+    activeState?._stopAndDisposePreview(reason);
+    if (_MovieCardState._activePreviewState == activeState) {
+      _MovieCardState._activePreviewState = null;
+    }
+  }
+
   @override
   State<MovieCard> createState() => _MovieCardState();
 }

@@ -356,6 +356,12 @@ class OfflineDownloadProvider extends BaseProvider {
         'message': 'Offline copy was not found.',
       };
     }
+    if (_downloadingContentIds.contains(contentId)) {
+      return {
+        'success': false,
+        'message': 'Download is still in progress.',
+      };
+    }
     if (kIsWeb) {
       _downloadedContentIds.remove(contentId);
       _downloadedContents.removeWhere((item) => item.id == contentId);
@@ -370,13 +376,23 @@ class OfflineDownloadProvider extends BaseProvider {
     }
 
     final file = await _existingLocalFileForContent(content);
-    if (await file.exists()) {
-      await file.delete();
+    try {
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (error) {
+      return {
+        'success': false,
+        'message': 'Failed to remove offline copy: $error',
+      };
     }
+
     final partial = File('${file.path}.part');
-    if (await partial.exists()) {
-      await partial.delete();
-    }
+    try {
+      if (await partial.exists()) {
+        await partial.delete();
+      }
+    } catch (_) {}
 
     _downloadedContentIds.remove(contentId);
     _downloadedContents.removeWhere((item) => item.id == contentId);
