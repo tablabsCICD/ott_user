@@ -6,6 +6,7 @@ import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/provider/language_provider.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 
@@ -113,8 +114,10 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
             final lang = items[index];
             final isSelected = provider.selectedLanguages.contains(lang.name);
 
-            return InkWell(
+            return OttTvFocus(
               onTap: () => provider.toggleLanguage(lang.name),
+              borderRadius: 12,
+              semanticLabel: '${lang.name} language',
               child: Card(
                 color: isSelected ? theme.primaryColor : theme.cardColor,
                 shape: RoundedRectangleBorder(
@@ -159,8 +162,8 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
     final isSelected = _selectedTabIndex == index;
 
     return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+      child: OttTvFocus(
+        borderRadius: 12,
         onTap: () {
           setState(() {
             _selectedTabIndex = index;

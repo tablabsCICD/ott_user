@@ -11,6 +11,12 @@
         android:banner="@drawable/tv_banner"
         android:isGame="false">
 
+        <!-- Some Android/Google TV chipsets reject Impeller's Vulkan buffer
+             formats. Keep the proven Skia/OpenGL renderer isolated to TV. -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="false" />
+
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -1,7 +1,10 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:ott/app/provider/onboarding_tour_provider.dart';
+import 'package:ott/app/widgets/ott_tv_app_shell.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 
 class FeatureTourTarget extends StatefulWidget {
@@ -88,16 +91,25 @@ class FeatureTourOverlay extends StatelessWidget {
         final theme = Theme.of(context);
         final step = tour.currentStep;
         final screenSize = MediaQuery.of(context).size;
+        final isTv = ResponsiveWidget.isTv(context);
         final rect = tour.rectFor(step.id);
-        final spotlight = rect?.inflate(10);
-        final tooltipWidth = math.min(screenSize.width - 32, 360.0);
+        final spotlight = rect?.inflate(isTv ? 14 : 10);
+        final horizontalMargin = isTv ? 48.0 : 16.0;
+        final tooltipWidth = math.min(
+          screenSize.width - horizontalMargin * 2,
+          isTv ? 560.0 : 360.0,
+        );
         final tooltipTop = _tooltipTop(
           screenSize: screenSize,
           spotlight: spotlight,
+          isTv: isTv,
         );
         final tooltipLeft = ((spotlight?.center.dx ?? screenSize.width / 2) -
                 tooltipWidth / 2)
-            .clamp(16.0, screenSize.width - tooltipWidth - 16)
+            .clamp(
+              horizontalMargin,
+              screenSize.width - tooltipWidth - horizontalMargin,
+            )
             .toDouble();
 
         return Semantics(
@@ -149,6 +161,7 @@ class FeatureTourOverlay extends StatelessWidget {
                   count: tour.activeSteps.length,
                   onNext: tour.next,
                   onSkip: tour.skip,
+                  isTv: isTv,
                 ),
               ),
             ],
@@ -161,31 +174,34 @@ class FeatureTourOverlay extends StatelessWidget {
   double _tooltipTop({
     required Size screenSize,
     required Rect? spotlight,
+    required bool isTv,
   }) {
-    const cardHeight = 230.0;
+    final cardHeight = isTv ? 280.0 : 230.0;
+    final edgeMargin = isTv ? 48.0 : 16.0;
     if (spotlight == null) {
       return (screenSize.height - cardHeight) / 2;
     }
 
     final below = spotlight.bottom + 18;
-    if (below + cardHeight <= screenSize.height - 16) return below;
+    if (below + cardHeight <= screenSize.height - edgeMargin) return below;
 
     final above = spotlight.top - cardHeight - 18;
-    if (above >= 16) return above;
+    if (above >= edgeMargin) return above;
 
-    return (screenSize.height - cardHeight - 16)
-        .clamp(16.0, screenSize.height)
+    return (screenSize.height - cardHeight - edgeMargin)
+        .clamp(edgeMargin, screenSize.height)
         .toDouble();
   }
 }
 
-class _TourCard extends StatelessWidget {
+class _TourCard extends StatefulWidget {
   const _TourCard({
     required this.step,
     required this.index,
     required this.count,
     required this.onNext,
     required this.onSkip,
+    required this.isTv,
   });
 
   final FeatureTourStep step;
@@ -193,17 +209,94 @@ class _TourCard extends StatelessWidget {
   final int count;
   final VoidCallback onNext;
   final VoidCallback onSkip;
+  final bool isTv;
+
+  @override
+  State<_TourCard> createState() => _TourCardState();
+}
+
+class _TourCardState extends State<_TourCard> {
+  final FocusNode _keyboardFocusNode =
+      FocusNode(debugLabel: 'feature-tour-keyboard');
+  final FocusNode _skipFocusNode = FocusNode(debugLabel: 'feature-tour-skip');
+  final FocusNode _nextFocusNode = FocusNode(debugLabel: 'feature-tour-next');
+
+  @override
+  void initState() {
+    super.initState();
+    _requestInitialFocus();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TourCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.index != widget.index || oldWidget.isTv != widget.isTv) {
+      _requestInitialFocus();
+    }
+  }
+
+  void _requestInitialFocus() {
+    if (!widget.isTv) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _nextFocusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _keyboardFocusNode.dispose();
+    _skipFocusNode.dispose();
+    _nextFocusNode.dispose();
+    super.dispose();
+  }
+
+  KeyEventResult _handleTvKey(FocusNode node, KeyEvent event) {
+    if (!widget.isTv || event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    final key = event.logicalKey;
+    if (OttTvRemoteKey.left.contains(key) ||
+        OttTvRemoteKey.up.contains(key)) {
+      _skipFocusNode.requestFocus();
+      return KeyEventResult.handled;
+    }
+    if (OttTvRemoteKey.right.contains(key) ||
+        OttTvRemoteKey.down.contains(key)) {
+      _nextFocusNode.requestFocus();
+      return KeyEventResult.handled;
+    }
+    if (OttTvRemoteKey.activate.contains(key)) {
+      if (_skipFocusNode.hasFocus) {
+        widget.onSkip();
+      } else {
+        widget.onNext();
+      }
+      return KeyEventResult.handled;
+    }
+    if (OttTvRemoteKey.back.contains(key)) {
+      widget.onSkip();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isLast = index == count - 1;
+    final isLast = widget.index == widget.count - 1;
+    final padding = widget.isTv ? 28.0 : 18.0;
 
-    return FocusTraversalGroup(
+    return Focus(
+      focusNode: _keyboardFocusNode,
+      autofocus: widget.isTv,
+      onKeyEvent: _handleTvKey,
+      child: FocusTraversalGroup(
+      policy: WidgetOrderTraversalPolicy(),
       child: Material(
         color: Colors.transparent,
         child: Container(
-          padding: const EdgeInsets.all(18),
+          padding: EdgeInsets.all(padding),
           decoration: BoxDecoration(
             color: theme.cardColor,
             borderRadius: BorderRadius.circular(18),
@@ -224,16 +317,16 @@ class _TourCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      step.title,
+                      widget.step.title,
                       style: TextStyle(
                         color: theme.canvasColor,
-                        fontSize: 20,
+                        fontSize: widget.isTv ? 26 : 20,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
                   Text(
-                    '${index + 1}/$count',
+                    '${widget.index + 1}/${widget.count}',
                     style: TextStyle(
                       color: theme.primaryColor,
                       fontWeight: FontWeight.w700,
@@ -243,10 +336,10 @@ class _TourCard extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                step.description,
+                widget.step.description,
                 style: TextStyle(
                   color: theme.canvasColor.withOpacity(0.76),
-                  fontSize: 14,
+                  fontSize: widget.isTv ? 18 : 14,
                   height: 1.42,
                 ),
               ),
@@ -254,7 +347,8 @@ class _TourCard extends StatelessWidget {
               Row(
                 children: [
                   TextButton(
-                    onPressed: onSkip,
+                    focusNode: _skipFocusNode,
+                    onPressed: widget.onSkip,
                     child: Text(
                       'Skip',
                       style: TextStyle(color: theme.canvasColor),
@@ -262,7 +356,8 @@ class _TourCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   ElevatedButton(
-                    autofocus: true,
+                    focusNode: _nextFocusNode,
+                    autofocus: widget.isTv,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.primaryColor,
                       foregroundColor: Colors.white,
@@ -274,7 +369,7 @@ class _TourCard extends StatelessWidget {
                         vertical: 12,
                       ),
                     ),
-                    onPressed: onNext,
+                    onPressed: widget.onNext,
                     child: Text(isLast ? 'Done' : 'Next'),
                   ),
                 ],
@@ -282,6 +377,7 @@ class _TourCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

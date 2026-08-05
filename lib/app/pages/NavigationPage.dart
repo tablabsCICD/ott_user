@@ -323,6 +323,7 @@ class _NavigationPageState extends State<NavigationPage> {
           ),
           actions: [
             TextButton(
+              autofocus: ResponsiveWidget.isTv(context),
               onPressed: () => Navigator.pop(dialogContext, false),
               child: Text(
                 'Cancel',
@@ -566,6 +567,7 @@ class _NavigationPageState extends State<NavigationPage> {
           ),
           actions: [
             TextButton(
+              autofocus: ResponsiveWidget.isTv(context),
               onPressed: () => Navigator.pop(dialogContext, false),
               child:
                   Text(lang.cancel, style: TextStyle(color: theme.canvasColor)),

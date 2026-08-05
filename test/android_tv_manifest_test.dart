@@ -58,6 +58,16 @@ void main() {
     );
   });
 
+  test('TV flavor uses the compatible non-Vulkan Flutter renderer', () {
+    expect(
+      RegExp(
+        '<meta-data\\s+android:name="io\\.flutter\\.embedding\\.android\\.EnableImpeller"\\s+'
+        'android:value="false"\\s*/>',
+      ).hasMatch(tvManifest.readAsStringSync()),
+      isTrue,
+    );
+  });
+
   test('both Android flavors preserve the production application ID', () {
     final gradle = gradleFile.readAsStringSync();
     expect(RegExp('applicationId = "com\\.filmytell\\.ott"').allMatches(gradle),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ott/app/flavor/app_flavor.dart';
 import 'package:ott/app/widgets/ott_tv_app_shell.dart';
-import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 class OttTvFocus extends StatefulWidget {
   const OttTvFocus({
@@ -16,6 +16,8 @@ class OttTvFocus extends StatefulWidget {
     this.focusColor,
     this.semanticLabel,
     this.onFocusChange,
+    this.enabled = true,
+    this.onKeyEvent,
   });
 
   final Widget child;
@@ -28,6 +30,8 @@ class OttTvFocus extends StatefulWidget {
   final Color? focusColor;
   final String? semanticLabel;
   final ValueChanged<bool>? onFocusChange;
+  final bool enabled;
+  final FocusOnKeyEventCallback? onKeyEvent;
 
   @override
   State<OttTvFocus> createState() => _OttTvFocusState();
@@ -82,9 +86,16 @@ class _OttTvFocusState extends State<OttTvFocus> {
   }
 
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
+    final customResult = widget.onKeyEvent?.call(node, event);
+    if (customResult == KeyEventResult.handled ||
+        customResult == KeyEventResult.skipRemainingHandlers) {
+      return customResult!;
+    }
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
-    if (widget.onTap != null && OttTvRemoteKey.activate.contains(key)) {
+    if (widget.enabled &&
+        widget.onTap != null &&
+        OttTvRemoteKey.activate.contains(key)) {
       widget.onTap?.call();
       return KeyEventResult.handled;
     }
@@ -96,23 +107,28 @@ class _OttTvFocusState extends State<OttTvFocus> {
     final theme = Theme.of(context);
     final focusColor = widget.focusColor ?? theme.primaryColor;
 
-    if (ResponsiveWidget.isMobile(context)) {
+    if (!FlavorConfig.current.isTv) {
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
+        onTap: widget.enabled ? widget.onTap : null,
         child: widget.child,
       );
     }
 
     final focusable = Focus(
       focusNode: _focusNode,
-      autofocus: widget.autofocus,
+      autofocus: widget.enabled && widget.autofocus,
+      canRequestFocus: widget.enabled && widget.onTap != null,
       onKeyEvent: _handleKey,
       child: MouseRegion(
-        onEnter: (_) => _focusNode.requestFocus(),
+        onEnter: (_) {
+          if (widget.enabled && widget.onTap != null) {
+            _focusNode.requestFocus();
+          }
+        },
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
+          onTap: widget.enabled ? widget.onTap : null,
           child: AnimatedScale(
             scale: _focused ? widget.scale : 1,
             duration: const Duration(milliseconds: 170),
@@ -147,8 +163,9 @@ class _OttTvFocusState extends State<OttTvFocus> {
     if (widget.semanticLabel == null) return focusable;
 
     return Semantics(
-      button: widget.onTap != null,
-      focusable: true,
+      button: widget.enabled && widget.onTap != null,
+      enabled: widget.enabled,
+      focusable: widget.enabled && widget.onTap != null,
       label: widget.semanticLabel,
       child: focusable,
     );

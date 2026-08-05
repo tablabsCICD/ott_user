@@ -7,6 +7,7 @@ import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -180,7 +181,9 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
   Widget _shortCard(BuildContext context, ShortModel short) {
     final theme = Theme.of(context);
 
-    return GestureDetector(
+    return OttTvFocus(
+      borderRadius: 12,
+      semanticLabel: 'Open ${short.title}',
       onTap: () async {
         final user =
             await LocalSharePreferences.localSharePreferences.getUser();

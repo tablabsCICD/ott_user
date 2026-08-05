@@ -12,6 +12,7 @@ import 'package:ott/app/core/network/anti_piracy_api_client.dart';
 import 'package:ott/app/core/services/anti_piracy_service.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/core/services/session_manager.dart';
+import 'package:ott/app/flavor/app_flavor.dart';
 import 'package:ott/app/provider/secure_playback_controller.dart';
 import 'package:ott/app/widgets/ott_tv_app_shell.dart';
 import 'package:ott/data/models/anti_piracy_models.dart';
@@ -140,11 +141,16 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
-  Future<void> _restorePortraitPlayback() async {
+  Future<void> _restoreAppOrientation() async {
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    await SystemChrome.setPreferredOrientations(const [
-      DeviceOrientation.portraitUp,
-    ]);
+    await SystemChrome.setPreferredOrientations(
+      FlavorConfig.current.isTv
+          ? const [
+              DeviceOrientation.landscapeLeft,
+              DeviceOrientation.landscapeRight,
+            ]
+          : const [DeviceOrientation.portraitUp],
+    );
     await AntiPiracyService.instance.disableScreenProtection();
   }
 
@@ -224,6 +230,25 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       // Existing downloaded files are local media and do not have a CloudFront
       // URL to sign. Online protected content always follows the secure flow.
       await _setupPlayer(sourceUrl, playFromFile: true);
+      return;
+    }
+
+    // TEMPORARY TV DIAGNOSTIC BYPASS:
+    // MovieDetailsPage and the episode/watchlist callers already pass their
+    // existing content URL through widget.videoUrl. On the dedicated TV
+    // flavor, open that URL directly so physical-device playback can be
+    // separated from anti-piracy authorization failures. Mobile, iOS and web
+    // continue through the unchanged secure playback controller below.
+    if (FlavorConfig.current.isTv) {
+      SecurityDebugLog.event(
+        'PLAYER',
+        'Temporary TV direct-playback path selected; anti-piracy authorization was not requested.',
+      );
+      _currentRemotePlaybackUrl = sourceUrl;
+      await _setupPlayer(
+        sourceUrl,
+        preferAndroidNativeDirect: true,
+      );
       return;
     }
 
@@ -544,6 +569,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     Map<String, String>? httpHeaders,
     SecureAudioTrack? automaticAudioTrack,
     SecureSubtitleTrack? automaticSubtitleTrack,
+    bool preferAndroidNativeDirect = false,
   }) async {
     final token = ++_setupToken;
     _controlsHideTimer?.cancel();
@@ -575,7 +601,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
     if (!kIsWeb &&
         defaultTargetPlatform == TargetPlatform.android &&
-        diagnoseSignedHls &&
+        (diagnoseSignedHls || preferAndroidNativeDirect) &&
         !playFromFile) {
       await _setupAndroidSecureHlsPlayer(
         url,
@@ -1281,7 +1307,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     secureController?.dispose();
     _securePlaybackController = null;
     _disposePlayerSync(saveProgress: true);
-    unawaited(_restorePortraitPlayback());
+    unawaited(_restoreAppOrientation());
     super.dispose();
   }
 
@@ -1408,14 +1434,14 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     _isExiting = true;
     await _securePlaybackController?.stop();
     await _disposePlayer(saveProgress: true);
-    await _restorePortraitPlayback();
+    await _restoreAppOrientation();
     if (mounted) {
       Navigator.pop(context, true);
     }
   }
 
   KeyEventResult _handleRemoteKey(FocusNode node, KeyEvent event) {
-    if (!ResponsiveWidget.isTabletOrTv(context) || event is! KeyDownEvent) {
+    if (!ResponsiveWidget.isTv(context) || event is! KeyDownEvent) {
       return KeyEventResult.ignored;
     }
 
@@ -1627,7 +1653,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         backgroundColor: Colors.black,
         appBar: null,
         body: Focus(
-          autofocus: ResponsiveWidget.isTabletOrTv(context),
+          autofocus: ResponsiveWidget.isTv(context),
           onKeyEvent: _handleRemoteKey,
           child: Stack(
             fit: StackFit.expand,

@@ -804,7 +804,11 @@ class _HomePageState extends State<HomePage>
 
     if (heroItems.isEmpty) return const SizedBox.shrink();
 
-    final height = ResponsiveWidget.isDesktop(context) ? 520.0 : 410.0;
+    final height = ResponsiveWidget.isTv(context)
+        ? 380.0
+        : ResponsiveWidget.isDesktop(context)
+            ? 520.0
+            : 410.0;
     final horizontalMargin = ResponsiveWidget.isDesktop(context) ? 24.0 : 14.0;
 
     return Padding(
@@ -814,8 +818,15 @@ class _HomePageState extends State<HomePage>
         child: SizedBox(
           height: height,
           width: double.infinity,
-          child: Focus(
+          child: OttTvFocus(
             autofocus: true,
+            scale: 1,
+            borderRadius: 22,
+            semanticLabel:
+                'Open ${heroItems[_currentPage % heroItems.length].title}',
+            onTap: () => _openContentDetails(
+              heroItems[_currentPage % heroItems.length],
+            ),
             onKeyEvent: (node, event) {
               if (event is! KeyDownEvent) return KeyEventResult.ignored;
               if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
@@ -824,13 +835,6 @@ class _HomePageState extends State<HomePage>
               }
               if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
                 _moveHeroSlider(heroItems.length, 1);
-                return KeyEventResult.handled;
-              }
-              if (event.logicalKey == LogicalKeyboardKey.enter ||
-                  event.logicalKey == LogicalKeyboardKey.select ||
-                  event.logicalKey == LogicalKeyboardKey.space ||
-                  event.logicalKey == LogicalKeyboardKey.gameButtonA) {
-                _openContentDetails(heroItems[_currentPage % heroItems.length]);
                 return KeyEventResult.handled;
               }
               return KeyEventResult.ignored;

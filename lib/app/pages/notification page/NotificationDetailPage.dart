@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/provider/themeProvider.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/data/models/response/push_notification_response.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
@@ -320,8 +321,9 @@ class NotificationDetailPage extends StatelessWidget {
     final fileSize = _formatFileSize(attachment.fileSize);
     final image = _isImageAttachment(attachment) && fileUrl != null;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
+    return OttTvFocus(
+      borderRadius: 8,
+      semanticLabel: 'Open $fileName',
       onTap: () => _openAttachment(context, fileUrl),
       child: Container(
         padding: const EdgeInsets.all(10),

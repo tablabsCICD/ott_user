@@ -540,8 +540,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                     focusOrderStart: 3,
                                     onDigit: _appendTvDigit,
                                     onBackspace: _removeTvDigit,
-                                    onDone: () =>
-                                        _submitFocusNode.requestFocus(),
+                                    onDone: _handleTvDone,
                                   ),
                                   const SizedBox(height: 20),
                                 ],
@@ -964,12 +963,40 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         event.logicalKey == LogicalKeyboardKey.space ||
         event.logicalKey == LogicalKeyboardKey.gameButtonA) {
       if (_mobileFocusNode.hasFocus || _otpFocusNode.hasFocus) {
-        _openTvKeypad();
+        if (_currentTvCredentialIsComplete) {
+          _handleTvDone();
+        } else {
+          _openTvKeypad();
+        }
         return KeyEventResult.handled;
       }
     }
 
     return KeyEventResult.ignored;
+  }
+
+  bool get _currentTvCredentialIsComplete {
+    if (otpSent && _editingOtp) {
+      return _digitsOnly(_otpController.text).length == _otpLength;
+    }
+    return _digitsOnly(_mobileController.text).length == 10;
+  }
+
+  void _handleTvDone() {
+    if (isLoading || _authRequestInFlight) return;
+
+    if (_currentTvCredentialIsComplete) {
+      _handleLoginOrOtp();
+      return;
+    }
+
+    // Keep incomplete credentials editable and visibly focused instead of
+    // moving to a button that can only fail validation.
+    if (otpSent && _editingOtp) {
+      _otpFocusNode.requestFocus();
+    } else {
+      _mobileFocusNode.requestFocus();
+    }
   }
 
   void _openTvKeypad() {

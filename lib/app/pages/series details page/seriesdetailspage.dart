@@ -23,6 +23,7 @@ import 'package:ott/app/provider/series_provider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
@@ -1685,7 +1686,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
         itemCount: seasons.length,
         itemBuilder: (context, i) {
           final selected = i == _selectedSeasonIndex;
-          return GestureDetector(
+          return OttTvFocus(
+            borderRadius: 10,
+            semanticLabel: 'Season ${seasons[i].seasonNumber}',
             onTap: () {
               setState(() => _selectedSeasonIndex = i);
               _loadSeasonCast(seasons[i].seasonId);
@@ -1998,7 +2001,10 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
         ? (resumeSeconds / (ep.runtime * 60)).clamp(0.0, 1.0)
         : 0.0;
 
-    return GestureDetector(
+    return OttTvFocus(
+      borderRadius: 12,
+      semanticLabel: canPlay ? 'Play ${ep.title}' : '${ep.title} locked',
+      enabled: canPlay,
       onTap: () async {
         if (!canPlay) return;
 
