@@ -1,9 +1,9 @@
 class ApiConstant {
-  static const String baseUrl = "https://filmytell.com/ott/";
+  // static const String baseUrl = "https://filmytell.com/ott/";
 
-  /*  static const String baseUrl =
-      "http://ec2-13-201-5-93.ap-south-1.compute.amazonaws.com:8080/ott/";
- */
+  static const String baseUrl =
+      "http://ec2-13-201-27-141.ap-south-1.compute.amazonaws.com:8080/ott/";
+
   static String login = "${baseUrl}auth/session/login";
   static String twoStepLogin = "${baseUrl}auth/two-step/login";
   static String twoStepVerifyOtp = "${baseUrl}auth/two-step/verify-otp";

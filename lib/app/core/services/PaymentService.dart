@@ -116,8 +116,12 @@ class PaymentService {
 
     for (final url in urls) {
       try {
+        debugPrint('Attempting to create Razorpay order via: $url');
         final postResponse = await _apiHelper.postApiWithoutAuthToken(url);
         lastStatusCode = postResponse.statusCode;
+        debugPrint(
+          'POST response status: ${postResponse.statusCode}, body: ${postResponse.body}',
+        );
         if (postResponse.statusCode == 200) {
           final order = _tryParseOrder(postResponse.body);
           if (order != null) return order;
@@ -292,10 +296,8 @@ class PaymentService {
 
     init();
     try {
-
       _razorpay!.open(options);
     } catch (error) {
-
       return PaymentResult(
         success: false,
         message: 'Unable to open Razorpay checkout: $error',
@@ -313,6 +315,16 @@ class PaymentService {
     required int userId,
     int plan = 0,
   }) async {
+    debugPrint(
+      'Payment verification request : ${ApiConstant.verifyWalletPayment}, body: ${{
+        'amount': amount,
+        'plan': plan,
+        'razorPayOrderId': razorPayOrderId,
+        'signature': signature,
+        'transactionId': transactionId,
+        'userId': userId,
+      }}',
+    );
     final response = await _apiHelper.postApiWithBody(
       ApiConstant.verifyWalletPayment,
       {
@@ -323,6 +335,9 @@ class PaymentService {
         'transactionId': transactionId,
         'userId': userId,
       },
+    );
+    debugPrint(
+      'Payment verification response status: ${response.statusCode}, body: ${response.body}',
     );
 
     final body = _decodeResponseBody(response.body);
