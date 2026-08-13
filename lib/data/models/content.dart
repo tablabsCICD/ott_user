@@ -149,6 +149,7 @@ class Content {
       'trailer_url',
       'trailer_file',
       'trailer_file_url',
+      'trailerAudioUrlList',
     ]),
     contentUrl: _contentUrlFromJson(json),
     approvalStatus: json['approvalStatus'],
@@ -296,6 +297,13 @@ String? _contentUrlFromJson(Map<String, dynamic> json) {
 
 String? _stringFromField(dynamic field) {
   if (field == null) return null;
+  if (field is List) {
+    for (final item in field) {
+      final value = _stringFromField(item);
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return null;
+  }
   if (field is Map) {
     for (final key in const ['url', 'fileUrl', 'file_url', 'path']) {
       final value = field[key]?.toString().trim();

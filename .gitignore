@@ -50,3 +50,11 @@ app.*.map.json
 .dart_tool/
 build/
 
+# Temporary SDKs, dumps & local artifacts
+.android-avd/
+.android-tv-sdk/
+.gradle-tv/
+*.hprof
+artifacts/
+
+

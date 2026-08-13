@@ -1466,14 +1466,22 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         key == LogicalKeyboardKey.space ||
         key == LogicalKeyboardKey.gameButtonA) {
       _togglePlayback();
+      _showControls();
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowRight) {
       _seekBy(const Duration(seconds: 10));
+      _showControls();
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowLeft) {
       _seekBy(const Duration(seconds: -10));
+      _showControls();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown) {
+      _showControls();
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.escape ||

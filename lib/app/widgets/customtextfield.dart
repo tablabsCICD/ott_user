@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:ott/app/provider/themeProvider.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 import 'package:wc_form_validators/wc_form_validators.dart';
@@ -195,19 +196,37 @@ class _CustomTextFieldState extends State<CustomTextField> {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   suffixIcon: widget.isPassword
-                      ? IconButton(
-                          icon: Icon(
-                            _isObscure
-                                ? Icons.visibility
-                                : Icons.visibility_off,
-                            color: selectedTheme.canvasColor,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _isObscure = !_isObscure;
-                            });
-                          },
-                        )
+                      ? (_isTvInput
+                          ? OttTvFocus(
+                              onTap: () {
+                                setState(() {
+                                  _isObscure = !_isObscure;
+                                });
+                              },
+                              borderRadius: 20,
+                              child: Padding(
+                                padding: const EdgeInsets.all(4.0),
+                                child: Icon(
+                                  _isObscure
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                  color: selectedTheme.canvasColor,
+                                ),
+                              ),
+                            )
+                          : IconButton(
+                              icon: Icon(
+                                _isObscure
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
+                                color: selectedTheme.canvasColor,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _isObscure = !_isObscure;
+                                });
+                              },
+                            ))
                       : (widget.suffixIcon != null
                           ? Icon(
                               widget.suffixIcon,

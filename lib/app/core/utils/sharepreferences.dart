@@ -12,20 +12,27 @@ class LocalSharePreferences {
     return localSharePreferences;
   }
 
+
   LocalSharePreferences._internal();
-  setString(String key, String val) async {
+
+  Future<void> setString(String key, String val) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setString(key, val);
+    await prefs.setString(key, val);
   }
 
-  setBool(String key, bool val) async {
+  Future<void> setBool(String key, bool val) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setBool(key, val);
+    await prefs.setBool(key, val);
   }
 
   Future<String> getString(String key) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getString(key)!;
+    return prefs.getString(key) ?? '';
+  }
+
+  Future<void> remove(String key) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove(key);
   }
 
   Future<bool> getBool(String key) async {

@@ -25,6 +25,7 @@ import '../core/network/api_helper.dart';
 import '../core/repositories/secure_playback_repository.dart';
 import '../core/services/device_type_helper.dart';
 import '../core/services/notification_service.dart';
+import '../core/services/referral_service.dart';
 import '../core/services/session_manager.dart';
 import '../core/utils/sharepreferences.dart';
 import 'baseProvider.dart';
@@ -138,7 +139,10 @@ class UserProvider extends BaseProvider {
         ? pinCodeDateController.text.trim()
         : "411017";
     userRequest.profilePhoto = profileController.text;
-    userRequest.refferedBy = refferedByController.text;
+    final pendingReferral = await ReferralService.instance.getReferralCode();
+    userRequest.refferedBy = refferedByController.text.trim().isNotEmpty
+        ? refferedByController.text.trim()
+        : pendingReferral;
     userRequest.taluka = cityController.text;
     userRequest.state = stateController.text;
     userRequest.languages = selectedLanguages;
@@ -167,6 +171,7 @@ class UserProvider extends BaseProvider {
 
             // log("after SEtData ${await localSharePreferences.getString(SharedPreferencesConstant.currentUser)}");
             disposeData();
+            await ReferralService.instance.clearReferralCode();
             notifyListeners();
 
             return {'success': true, 'message': 'User created successfully'};
@@ -917,6 +922,7 @@ class UserProvider extends BaseProvider {
     _logOtpPerformance(
       'OTP device/session prep completed in ${totalWatch.elapsedMilliseconds}ms',
     );
+    final referralCode = await ReferralService.instance.getReferralCode();
     final apiUrl = ApiConstant.verifyOTP(
       mobileNum: mobile,
       otp: otp,
@@ -926,6 +932,7 @@ class UserProvider extends BaseProvider {
       appVersion: deviceInfo.appVersion,
       deviceMetadata: deviceInfo.deviceMetadata,
       deviceToken: deviceToken,
+      referralCode: referralCode,
     );
     final apiHelper = ApiHelper();
     debugPrint("✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓$apiUrl");
@@ -946,6 +953,7 @@ class UserProvider extends BaseProvider {
         if (sessionSuccess) {
           if (sessionUser != null) {
             await _persistAuthenticatedSession(responseBody);
+            await ReferralService.instance.clearReferralCode();
             userObject = sessionUser;
             LocalSharePreferences localSharePreferences =
                 LocalSharePreferences();
@@ -1080,9 +1088,11 @@ class UserProvider extends BaseProvider {
     final deviceInfo = await DeviceTypeHelper.buildSessionInfo(
       context: context,
     );
+    final referralCode = await ReferralService.instance.getReferralCode();
     final data = deviceInfo.toLoginPayload(
       username: email,
       password: password,
+      referralCode: referralCode,
     );
     ApiHelper apiHelper = ApiHelper();
 
@@ -1099,6 +1109,7 @@ class UserProvider extends BaseProvider {
         if (sessionSuccess) {
           if (sessionUser != null) {
             await _persistAuthenticatedSession(responseBody);
+            await ReferralService.instance.clearReferralCode();
             userObject = sessionUser;
             LocalSharePreferences localSharePreferences =
                 LocalSharePreferences();

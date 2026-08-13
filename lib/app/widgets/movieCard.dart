@@ -532,6 +532,15 @@ class _MovieCardState extends State<MovieCard> {
           onFocusChange: (hasFocus) {
             if (ResponsiveWidget.isTabletOrTv(context)) {
               _handleHover(hasFocus);
+              if (hasFocus) {
+                Scrollable.ensureVisible(
+                  context,
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  alignmentPolicy:
+                      ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+                );
+              }
             }
           },
           onKeyEvent: (node, event) {

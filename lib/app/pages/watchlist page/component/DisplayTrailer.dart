@@ -11,7 +11,9 @@ import 'package:ott/app/flavor/app_flavor.dart';
 import 'package:video_player/video_player.dart' as native_video;
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:ott/app/widgets/ott_tv_app_shell.dart';
 import 'package:ott/app/widgets/video_skip_controls.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 import '../../../../data/models/content.dart';
 import '../../../core/constant/api_constant.dart';
@@ -279,41 +281,103 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  void _togglePlayback() {
+    final youtube = _youtubeController;
+    if (youtube != null) {
+      if (youtube.value.isPlaying) {
+        youtube.pause();
+      } else {
+        youtube.play();
+      }
+      return;
+    }
+    final androidController = _androidController;
+    if (androidController != null) {
+      if (androidController.value.isPlaying) {
+        unawaited(androidController.pause());
+      } else {
+        unawaited(androidController.play());
+      }
+      return;
+    }
+    final player = _player;
+    if (player != null) {
+      unawaited(player.playOrPause());
+    }
+  }
+
+  KeyEventResult _handleRemoteKey(FocusNode node, KeyEvent event) {
+    if (!ResponsiveWidget.isTv(context) || event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    if (OttTvRemoteKey.playPause.contains(key) ||
+        key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.space ||
+        key == LogicalKeyboardKey.gameButtonA) {
+      _togglePlayback();
+      return KeyEventResult.handled;
+    }
+    if (OttTvRemoteKey.fastForward.contains(key) ||
+        key == LogicalKeyboardKey.arrowRight) {
+      _seekBy(const Duration(seconds: 10));
+      return KeyEventResult.handled;
+    }
+    if (OttTvRemoteKey.rewind.contains(key) ||
+        key == LogicalKeyboardKey.arrowLeft) {
+      _seekBy(const Duration(seconds: -10));
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.escape ||
+        key == LogicalKeyboardKey.goBack ||
+        key == LogicalKeyboardKey.browserBack ||
+        key == LogicalKeyboardKey.gameButtonB) {
+      Navigator.pop(context);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: !_hasUrl
-          ? const Center(
-              child: Text("No trailer available",
-                  style: TextStyle(color: Colors.white)),
-            )
-          : _hasError
-              ? const Center(
-                  child: Text("Trailer unavailable",
-                      style: TextStyle(color: Colors.white)),
-                )
-              : !_initialized
-                  ? Center(
-                      child: CircularProgressIndicator(
-                        color: Theme.of(context).primaryColor,
-                      ),
-                    )
-                  : Stack(
-                      children: [
-                        Center(child: _playerSurface()),
-                        SafeArea(
-                          child: Align(
-                            alignment: Alignment.topLeft,
-                            child: IconButton(
-                              icon: const Icon(Icons.arrow_back_ios,
-                                  color: Colors.white),
-                              onPressed: () => Navigator.pop(context),
+      body: Focus(
+        autofocus: ResponsiveWidget.isTv(context),
+        onKeyEvent: _handleRemoteKey,
+        child: !_hasUrl
+            ? const Center(
+                child: Text("No trailer available",
+                    style: TextStyle(color: Colors.white)),
+              )
+            : _hasError
+                ? const Center(
+                    child: Text("Trailer unavailable",
+                        style: TextStyle(color: Colors.white)),
+                  )
+                : !_initialized
+                    ? Center(
+                        child: CircularProgressIndicator(
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      )
+                    : Stack(
+                        children: [
+                          Center(child: _playerSurface()),
+                          SafeArea(
+                            child: Align(
+                              alignment: Alignment.topLeft,
+                              child: IconButton(
+                                icon: const Icon(Icons.arrow_back_ios,
+                                    color: Colors.white),
+                                onPressed: () => Navigator.pop(context),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+      ),
     );
   }
 

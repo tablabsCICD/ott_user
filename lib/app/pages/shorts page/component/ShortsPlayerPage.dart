@@ -16,6 +16,7 @@ import 'package:ott/app/provider/secure_playback_controller.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
+import 'package:ott/app/widgets/ott_tv_app_shell.dart';
 import 'package:ott/app/widgets/playback_watermark_overlay.dart';
 import 'package:ott/app/widgets/shimmer%20loader/shimmer_loader.dart';
 import 'package:ott/app/widgets/video_skip_controls.dart';
@@ -448,6 +449,54 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     );
   }
 
+  KeyEventResult _handleShortsRemoteKey(FocusNode node, KeyEvent event) {
+    if (!ResponsiveWidget.isTv(context) || event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    if (OttTvRemoteKey.playPause.contains(key) ||
+        key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.space ||
+        key == LogicalKeyboardKey.gameButtonA) {
+      _togglePlayPause();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowDown && _currentIndex < totalParts - 1) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowUp && _currentIndex > 0) {
+      _pageController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+      return KeyEventResult.handled;
+    }
+    if (OttTvRemoteKey.fastForward.contains(key) ||
+        key == LogicalKeyboardKey.arrowRight) {
+      _seekBy(const Duration(seconds: 10));
+      return KeyEventResult.handled;
+    }
+    if (OttTvRemoteKey.rewind.contains(key) ||
+        key == LogicalKeyboardKey.arrowLeft) {
+      _seekBy(const Duration(seconds: -10));
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.escape ||
+        key == LogicalKeyboardKey.goBack ||
+        key == LogicalKeyboardKey.browserBack ||
+        key == LogicalKeyboardKey.gameButtonB) {
+      _controller?.pause();
+      Navigator.pop(context);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   @override
   Widget build(BuildContext context) {
     final balanceProvider = Provider.of<WalletProvider>(context);
@@ -462,28 +511,32 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Center(
-        child: SizedBox(
-          width: useFullWidthPlayer ? double.infinity : 450,
-          child: Stack(
-            children: [
-              _videoBackground(),
-              GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: _togglePlayPause,
-                onDoubleTap: _handleDoubleTapLike,
-                child: PageView.builder(
-                  controller: _pageController,
-                  scrollDirection: shortsScrollDirection,
-                  itemCount: totalParts,
-                  onPageChanged: _changePage,
-                  itemBuilder: (_, i) => _overlay(i),
+      body: Focus(
+        autofocus: ResponsiveWidget.isTv(context),
+        onKeyEvent: _handleShortsRemoteKey,
+        child: Center(
+          child: SizedBox(
+            width: useFullWidthPlayer ? double.infinity : 450,
+            child: Stack(
+              children: [
+                _videoBackground(),
+                GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: _togglePlayPause,
+                  onDoubleTap: _handleDoubleTapLike,
+                  child: PageView.builder(
+                    controller: _pageController,
+                    scrollDirection: shortsScrollDirection,
+                    itemCount: totalParts,
+                    onPageChanged: _changePage,
+                    itemBuilder: (_, i) => _overlay(i),
+                  ),
                 ),
-              ),
-              if (watermark != null)
-                PlaybackWatermarkOverlay(watermark: watermark),
-              _backButton(),
-            ],
+                if (watermark != null)
+                  PlaybackWatermarkOverlay(watermark: watermark),
+                _backButton(),
+              ],
+            ),
           ),
         ),
       ),

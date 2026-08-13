@@ -2,7 +2,7 @@ class ApiConstant {
   static const String baseUrl = "https://filmytell.com/ott/";
 
   /*  static const String baseUrl =
-      "http://ec2-13-201-5-93.ap-south-1.compute.amazonaws.com:8080/ott/";
+      "http://ec2-13-201-27-141.ap-south-1.compute.amazonaws.com:8080/ott/";
  */
 
   static String twoStepLogin = "${baseUrl}auth/two-step/login";
@@ -17,11 +17,11 @@ class ApiConstant {
   static String validatePlaybackSecurity =
       "${baseUrl}api/playback/security/validate";
   static String playbackPiracyEvent = "${baseUrl}api/playback/security/event";
-  
+
   static String antiPiracyDevices = "${baseUrl}anti-piracy/devices";
   static String antiPiracyDevice(String deviceId) =>
       "${antiPiracyDevices}/${Uri.encodeComponent(deviceId)}";
-  static const String signedPlaybackUrl = "anti-piracy/playback/signed-url";
+  static String signedPlaybackUrl = "${baseUrl}anti-piracy/playback/signed-url";
   static String playbackAnalytics = "${baseUrl}anti-piracy/playback/analytics";
   static String currentWatermark = "${baseUrl}watermark/current";
   static String registration = '${baseUrl}user/RegisterUser';
@@ -38,6 +38,7 @@ class ApiConstant {
     required appVersion,
     deviceMetadata,
     deviceToken,
+    referralCode,
   }) {
     final query = <String, String>{
       'username': mobileNum.toString(),
@@ -51,6 +52,8 @@ class ApiConstant {
         'deviceMetadata': deviceMetadata.toString(),
       if (deviceToken != null && deviceToken.toString().trim().isNotEmpty)
         'deviceToken': deviceToken.toString(),
+      if (referralCode != null && referralCode.toString().trim().isNotEmpty)
+        'referralCode': referralCode.toString().trim(),
     };
 
     return Uri.parse("${baseUrl}userNew/VerifyOtpJWT")

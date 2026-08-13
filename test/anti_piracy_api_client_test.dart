@@ -67,6 +67,7 @@ void main() {
           contentId: 'movie-1',
           deviceId: 'device-1',
           playbackUrl: 'https://cdn.example.com/master.m3u8',
+          type: 'movie',
           country: 'IN',
           platform: 'ANDROID',
           deviceIntegrity: DeviceIntegrityStatus(

@@ -16,6 +16,7 @@ import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
+import 'package:ott/app/core/services/referral_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sms_autofill/sms_autofill.dart';
@@ -157,15 +158,15 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
   @override
   Widget build(BuildContext context) {
     final lang = AppLocalizations.of(context)!;
-
     final theme = Theme.of(context);
     final useTvKeypad = _useTvKeypad(context);
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         forceMaterialTransparency: true,
-        actions: [
+        actions: const [
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0),
             child: LanguageDropdown(),
@@ -174,436 +175,477 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
       ),
       body: Focus(
         onKeyEvent: useTvKeypad ? _handleTvCredentialKey : null,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    height: ResponsiveWidget.isMobile(context) ? 90 : 150,
-                    child: Hero(
-                      tag: "logo",
-                      child: ClipRRect(
-                        borderRadius: BorderRadiusGeometry.circular(25),
-                        child: Image.asset(
-                          ImageConstant.logo,
-                          fit: BoxFit.contain,
-                        ),
+        child: ResponsiveWidget.isTv(context)
+            ? _buildTvLayout(context, lang, theme, useTvKeypad)
+            : _buildMobileLayout(context, lang, theme, useTvKeypad),
+      ),
+    );
+  }
+
+  Widget _buildTvLayout(
+    BuildContext context,
+    AppLocalizations lang,
+    ThemeData theme,
+    bool useTvKeypad,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            flex: 5,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  height: 130,
+                  child: Hero(
+                    tag: "logo",
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(25),
+                      child: Image.asset(
+                        ImageConstant.logo,
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),
-                  SizedBox(
-                    height: 60,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  lang.login,
+                  style: TextStyle(
+                    color: theme.primaryColor,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
                   ),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 400),
-                    child: Card(
-                      elevation: 6,
-                      color: theme.cardColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 32),
-                        child: FocusTraversalGroup(
-                          policy: OrderedTraversalPolicy(),
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (otpSent) ...[
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    children: [
-                                      FocusTraversalOrder(
-                                        order: const NumericFocusOrder(0),
-                                        child: _TvFocusFrame(
-                                          focusNode: _backFocusNode,
-                                          enabled: useTvKeypad,
-                                          child: IconButton(
-                                            focusNode: _backFocusNode,
-                                            tooltip: 'Back',
-                                            onPressed: () {
-                                              Navigator.pushReplacement(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                      builder: (context) =>
-                                                          LoginCard()));
-                                            },
-                                            icon: Icon(
-                                              Icons.arrow_back_ios_new_sharp,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                                Text(
-                                  lang.login,
-                                  style: TextStyle(
-                                    color: theme.primaryColor,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    otpSent
+                        ? 'Enter the 6-digit OTP sent to $selectedCode $_mobileNumberForOtp'
+                        : 'Sign in to start watching unlimited movies & series',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: theme.canvasColor.withOpacity(0.75),
+                      fontSize: 16,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 40),
+          Expanded(
+            flex: 6,
+            child: Center(
+              child: SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: _buildFormCard(context, lang, theme, useTvKeypad),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileLayout(
+    BuildContext context,
+    AppLocalizations lang,
+    ThemeData theme,
+    bool useTvKeypad,
+  ) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                height: ResponsiveWidget.isMobile(context) ? 90 : 150,
+                child: Hero(
+                  tag: "logo",
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(25),
+                    child: Image.asset(
+                      ImageConstant.logo,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 40),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: _buildFormCard(context, lang, theme, useTvKeypad),
+              ),
+              SizedBox(
+                height: ResponsiveWidget.isMobile(context) ? 150 : 60,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormCard(
+    BuildContext context,
+    AppLocalizations lang,
+    ThemeData theme,
+    bool useTvKeypad,
+  ) {
+    return Card(
+      elevation: 6,
+      color: theme.cardColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+        child: FocusTraversalGroup(
+          policy: OrderedTraversalPolicy(),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (otpSent) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      FocusTraversalOrder(
+                        order: const NumericFocusOrder(0),
+                        child: _TvFocusFrame(
+                          focusNode: _backFocusNode,
+                          enabled: useTvKeypad,
+                          child: IconButton(
+                            focusNode: _backFocusNode,
+                            tooltip: 'Back',
+                            onPressed: () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const LoginCard(),
                                 ),
-                                const SizedBox(height: 15),
-
-                                // Phone number row
-                                Row(
-                                  children: [
-                                    Padding(
-                                      padding:
-                                          const EdgeInsets.only(bottom: 8.0),
-                                      child: Text(
-                                        lang.mobileNumber,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (useTvKeypad)
-                                  FocusTraversalOrder(
-                                    order: const NumericFocusOrder(1),
-                                    child: _TvFocusFrame(
-                                      focusNode: _mobileFocusNode,
-                                      enabled: useTvKeypad,
-                                      child: TextFormField(
-                                        focusNode: _mobileFocusNode,
-                                        // TV uses the D-pad keypad below. Do
-                                        // not open a competing platform IME.
-                                        readOnly: true,
-                                        showCursor: true,
-                                        cursorColor: theme.primaryColor,
-                                        controller: _mobileController,
-                                        keyboardType: TextInputType.phone,
-                                        inputFormatters: [
-                                          FilteringTextInputFormatter
-                                              .digitsOnly,
-                                          LengthLimitingTextInputFormatter(10),
-                                        ],
-                                        onTap: _openTvKeypad,
-                                        textInputAction: TextInputAction.done,
-                                        onChanged: (value) {
-                                          _mobileNumberForOtp =
-                                              _digitsOnly(value).trim();
-                                        },
-                                        onFieldSubmitted: (_) {
-                                          if (!isLoading &&
-                                              !_authRequestInFlight) {
-                                            _handleLoginOrOtp();
-                                          }
-                                        },
-                                        decoration: _loginInputDecoration(
-                                          theme,
-                                          lang.enterMobileNumber,
-                                        ),
-                                        validator: (value) {
-                                          if (value == null || value.isEmpty) {
-                                            return 'Please enter a valid mobile number';
-                                          }
-
-                                          return null;
-                                        },
-                                        style: const TextStyle(fontSize: 16),
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  IntlPhoneField(
-                                    focusNode: _mobileFocusNode,
-                                    readOnly: otpSent,
-                                    cursorColor: theme.primaryColor,
-                                    controller: _mobileController,
-                                    keyboardType: TextInputType.phone,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
-                                    ],
-                                    onChanged: (phone) {
-                                      _mobileNumberForOtp =
-                                          _digitsOnly(phone.number);
-                                    },
-
-                                    pickerDialogStyle: PickerDialogStyle(
-                                      backgroundColor: theme.cardColor,
-                                      searchFieldCursorColor:
-                                          theme.primaryColor,
-                                      countryNameStyle: TextStyle(
-                                        color: theme.canvasColor,
-                                      ),
-                                      countryCodeStyle: TextStyle(
-                                        color: theme.canvasColor,
-                                      ),
-                                      searchFieldInputDecoration:
-                                          InputDecoration(
-                                              filled: true,
-                                              fillColor: theme.cardColor,
-                                              counterText: '',
-                                              hintText:
-                                                  'Search by country name and code ..',
-                                              hintStyle:
-                                                  const TextStyle(fontSize: 14),
-                                              // Border properties for search in dropdown
-                                              border: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
-                                                borderSide: BorderSide(
-                                                    color: Colors.grey[
-                                                        400]!), // Default border color
-                                              ),
-                                              enabledBorder: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
-                                                borderSide: BorderSide(
-                                                    color: Colors.grey[
-                                                        400]!), // Border color when enabled
-                                              ),
-                                              focusedBorder: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
-                                                borderSide: BorderSide(
-                                                    color: theme.primaryColor,
-                                                    width:
-                                                        2), // Border color when focused
-                                              ),
-                                              prefixIcon: Icon(Icons.search)),
-                                    ),
-                                    decoration: _loginInputDecoration(
-                                      theme,
-                                      lang.enterMobileNumber,
-                                    ),
-                                    initialCountryCode:
-                                        'IN', // Default to India
-                                    validator: (phone) {
-                                      if (phone == null ||
-                                          phone.number.isEmpty) {
-                                        return 'Please enter a valid mobile number';
-                                      }
-
-                                      return null;
-                                    },
-                                    //invalidNumberMessage: 'Invalid Number',
-                                    style: const TextStyle(fontSize: 16),
-                                    dropdownIconPosition: IconPosition.trailing,
-                                    showDropdownIcon: true,
-                                  ),
-
-                                // CustomTextField(
-                                //   controller: _mobileController,
-                                //   hintText: 'Enter mobile number',
-                                //   label: 'Mobile Number',
-                                //   textInputType: TextInputType.phone,
-                                //   isPhoneNumber: true,
-                                //   isValidator: true,
-                                // ),
-                                const SizedBox(height: 25),
-
-                                /// OTP input
-                                if (otpSent) ...[
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      lang.enterOtp,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                        color: theme.textTheme.bodyLarge?.color,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  FocusTraversalOrder(
-                                    order: const NumericFocusOrder(2),
-                                    child: _TvFocusFrame(
-                                      focusNode: _otpFocusNode,
-                                      enabled: useTvKeypad,
-                                      child: PinCodeTextField(
-                                        focusNode: _otpFocusNode,
-                                        autoDisposeControllers: false,
-                                        autoUnfocus: false,
-                                        autoDismissKeyboard: false,
-                                        // Android/Google TV's numeric IME can
-                                        // cover the form and does not behave
-                                        // reliably with a D-pad. TV input is
-                                        // handled by the keypad below.
-                                        readOnly: useTvKeypad,
-                                        cursorColor: theme.primaryColor,
-                                        appContext: context,
-                                        length: 6,
-                                        controller: _otpController,
-                                        keyboardType: TextInputType.number,
-                                        inputFormatters: [
-                                          FilteringTextInputFormatter
-                                              .digitsOnly,
-                                        ],
-                                        enablePinAutofill: !useTvKeypad,
-                                        animationType: AnimationType.fade,
-                                        onTap: () {
-                                          if (!useTvKeypad) return;
-                                          _editingOtp = true;
-                                          SystemChannels.textInput
-                                              .invokeMethod<void>(
-                                            'TextInput.hide',
-                                          );
-                                          _openTvKeypad();
-                                        },
-                                        onCompleted: (_) {
-                                          if (!isLoading &&
-                                              !_authRequestInFlight) {
-                                            _handleLoginOrOtp();
-                                          }
-                                        },
-                                        pinTheme: PinTheme(
-                                          shape: PinCodeFieldShape.box,
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          fieldHeight: 50,
-                                          fieldWidth:
-                                              ResponsiveWidget.isMobile(context)
-                                                  ? 40
-                                                  : 45,
-                                          activeFillColor: theme.cardColor,
-                                          selectedFillColor: theme.cardColor,
-                                          inactiveFillColor: theme.cardColor,
-                                          activeColor: theme.primaryColor,
-                                          selectedColor: theme.primaryColor,
-                                          inactiveColor: Colors.grey[400]!,
-                                        ),
-                                        backgroundColor: theme.cardColor,
-                                        enableActiveFill: true,
-                                        onChanged: (value) {
-                                          if (_otpAutoFilled &&
-                                              value.length < _otpLength) {
-                                            setState(() {
-                                              _otpAutoFilled = false;
-                                              _otpHelperText = null;
-                                            });
-                                          }
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                  if (_otpHelperText != null) ...[
-                                    const SizedBox(height: 8),
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        _otpHelperText!,
-                                        style: TextStyle(
-                                          color: _otpAutoFilled
-                                              ? Colors.green
-                                              : theme.canvasColor
-                                                  .withOpacity(0.65),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 10),
-                                  FocusTraversalOrder(
-                                    order: const NumericFocusOrder(19),
-                                    child: Align(
-                                      alignment: Alignment.centerRight,
-                                      child: _TvFocusFrame(
-                                        focusNode: _resendFocusNode,
-                                        enabled: useTvKeypad,
-                                        child: TextButton(
-                                          focusNode: _resendFocusNode,
-                                          onPressed: isLoading ||
-                                                  _authRequestInFlight ||
-                                                  _resendSecondsRemaining > 0
-                                              ? null
-                                              : _resendOtp,
-                                          child: Text(
-                                            _resendSecondsRemaining > 0
-                                                ? 'Resend OTP in ${_formatResendTime(_resendSecondsRemaining)}'
-                                                : 'Resend OTP',
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                ],
-
-                                if (useTvKeypad) ...[
-                                  _TvNumberPad(
-                                    focusNodes: _keypadFocusNodes,
-                                    focusOrderStart: 3,
-                                    onDigit: _appendTvDigit,
-                                    onBackspace: _removeTvDigit,
-                                    onDone: _handleTvDone,
-                                  ),
-                                  const SizedBox(height: 20),
-                                ],
-
-                                /// Button
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: FocusTraversalOrder(
-                                    order: const NumericFocusOrder(20),
-                                    child: _TvFocusFrame(
-                                      focusNode: _submitFocusNode,
-                                      enabled: useTvKeypad,
-                                      child: ElevatedButton(
-                                        focusNode: _submitFocusNode,
-                                        onPressed:
-                                            isLoading || _authRequestInFlight
-                                                ? null
-                                                : _handleLoginOrOtp,
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: theme.primaryColor,
-                                          padding: const EdgeInsets.symmetric(
-                                              vertical: 14),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                          ),
-                                        ),
-                                        child: isLoading
-                                            ? const SizedBox(
-                                                height: 22,
-                                                width: 22,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  color: Colors.white,
-                                                ),
-                                              )
-                                            : Text(
-                                                otpSent
-                                                    ? lang.verifyOtp
-                                                    : lang.sendOtp,
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new_sharp,
                             ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (!ResponsiveWidget.isTv(context)) ...[
+                  Text(
+                    lang.login,
+                    style: TextStyle(
+                      color: theme.primaryColor,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                ],
+                Row(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text(
+                        lang.mobileNumber,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (useTvKeypad)
+                  FocusTraversalOrder(
+                    order: const NumericFocusOrder(1),
+                    child: _TvFocusFrame(
+                      focusNode: _mobileFocusNode,
+                      enabled: useTvKeypad,
+                      child: TextFormField(
+                        focusNode: _mobileFocusNode,
+                        readOnly: false,
+                        showCursor: true,
+                        cursorColor: theme.primaryColor,
+                        controller: _mobileController,
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(10),
+                        ],
+                        onTap: () {
+                          SystemChannels.textInput.invokeMethod<void>(
+                            'TextInput.hide',
+                          );
+                        },
+                        textInputAction: TextInputAction.done,
+                        onChanged: (value) {
+                          _mobileNumberForOtp = _digitsOnly(value).trim();
+                        },
+                        onFieldSubmitted: (_) {
+                          if (!isLoading && !_authRequestInFlight) {
+                            _handleLoginOrOtp();
+                          }
+                        },
+                        decoration: _loginInputDecoration(
+                          theme,
+                          lang.enterMobileNumber,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a valid mobile number';
+                          }
+                          return null;
+                        },
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  )
+                else
+                  IntlPhoneField(
+                    focusNode: _mobileFocusNode,
+                    readOnly: otpSent,
+                    cursorColor: theme.primaryColor,
+                    controller: _mobileController,
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    onChanged: (phone) {
+                      _mobileNumberForOtp = _digitsOnly(phone.number);
+                    },
+                    pickerDialogStyle: PickerDialogStyle(
+                      backgroundColor: theme.cardColor,
+                      searchFieldCursorColor: theme.primaryColor,
+                      countryNameStyle: TextStyle(
+                        color: theme.canvasColor,
+                      ),
+                      countryCodeStyle: TextStyle(
+                        color: theme.canvasColor,
+                      ),
+                      searchFieldInputDecoration: InputDecoration(
+                        filled: true,
+                        fillColor: theme.cardColor,
+                        counterText: '',
+                        hintText: 'Search by country name and code ..',
+                        hintStyle: const TextStyle(fontSize: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: BorderSide(color: Colors.grey[400]!),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: BorderSide(color: Colors.grey[400]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                          borderSide: BorderSide(
+                            color: theme.primaryColor,
+                            width: 2,
+                          ),
+                        ),
+                        prefixIcon: const Icon(Icons.search),
+                      ),
+                    ),
+                    decoration: _loginInputDecoration(
+                      theme,
+                      lang.enterMobileNumber,
+                    ),
+                    initialCountryCode: 'IN',
+                    validator: (phone) {
+                      if (phone == null || phone.number.isEmpty) {
+                        return 'Please enter a valid mobile number';
+                      }
+                      return null;
+                    },
+                    style: const TextStyle(fontSize: 16),
+                    dropdownIconPosition: IconPosition.trailing,
+                    showDropdownIcon: true,
+                  ),
+                const SizedBox(height: 20),
+                if (otpSent) ...[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      lang.enterOtp,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: theme.textTheme.bodyLarge?.color,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  FocusTraversalOrder(
+                    order: const NumericFocusOrder(2),
+                    child: _TvFocusFrame(
+                      focusNode: _otpFocusNode,
+                      enabled: useTvKeypad,
+                      child: PinCodeTextField(
+                        focusNode: _otpFocusNode,
+                        autoDisposeControllers: false,
+                        autoUnfocus: false,
+                        autoDismissKeyboard: false,
+                        readOnly: false,
+                        cursorColor: theme.primaryColor,
+                        appContext: context,
+                        length: 6,
+                        controller: _otpController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        enablePinAutofill: !useTvKeypad,
+                        animationType: AnimationType.fade,
+                        onTap: () {
+                          _editingOtp = true;
+                          if (useTvKeypad) {
+                            SystemChannels.textInput.invokeMethod<void>(
+                              'TextInput.hide',
+                            );
+                          }
+                        },
+                        onCompleted: (_) {
+                          if (!isLoading && !_authRequestInFlight) {
+                            _handleLoginOrOtp();
+                          }
+                        },
+                        pinTheme: PinTheme(
+                          shape: PinCodeFieldShape.box,
+                          borderRadius: BorderRadius.circular(8),
+                          fieldHeight: 50,
+                          fieldWidth: ResponsiveWidget.isMobile(context)
+                              ? 40
+                              : 45,
+                          activeFillColor: theme.cardColor,
+                          selectedFillColor: theme.cardColor,
+                          inactiveFillColor: theme.cardColor,
+                          activeColor: theme.primaryColor,
+                          selectedColor: theme.primaryColor,
+                          inactiveColor: Colors.grey[400]!,
+                        ),
+                        backgroundColor: theme.cardColor,
+                        enableActiveFill: true,
+                        onChanged: (value) {
+                          if (_otpAutoFilled && value.length < _otpLength) {
+                            setState(() {
+                              _otpAutoFilled = false;
+                              _otpHelperText = null;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  if (_otpHelperText != null) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _otpHelperText!,
+                        style: TextStyle(
+                          color: _otpAutoFilled
+                              ? Colors.green
+                              : theme.canvasColor.withOpacity(0.65),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  FocusTraversalOrder(
+                    order: const NumericFocusOrder(19),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: _TvFocusFrame(
+                        focusNode: _resendFocusNode,
+                        enabled: useTvKeypad,
+                        child: TextButton(
+                          focusNode: _resendFocusNode,
+                          onPressed: isLoading ||
+                                  _authRequestInFlight ||
+                                  _resendSecondsRemaining > 0
+                              ? null
+                              : _resendOtp,
+                          child: Text(
+                            _resendSecondsRemaining > 0
+                                ? 'Resend OTP in ${_formatResendTime(_resendSecondsRemaining)}'
+                                : 'Resend OTP',
                           ),
                         ),
                       ),
                     ),
                   ),
-                  SizedBox(
-                    height: ResponsiveWidget.isMobile(context) ? 150 : 60,
-                  ),
+                  const SizedBox(height: 16),
                 ],
-              ),
+                if (useTvKeypad) ...[
+                  _TvNumberPad(
+                    focusNodes: _keypadFocusNodes,
+                    focusOrderStart: 3,
+                    onDigit: _appendTvDigit,
+                    onBackspace: _removeTvDigit,
+                    onDone: _handleTvDone,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                SizedBox(
+                  width: double.infinity,
+                  child: FocusTraversalOrder(
+                    order: const NumericFocusOrder(20),
+                    child: _TvFocusFrame(
+                      focusNode: _submitFocusNode,
+                      enabled: useTvKeypad,
+                      child: ElevatedButton(
+                        focusNode: _submitFocusNode,
+                        onPressed: isLoading || _authRequestInFlight
+                            ? null
+                            : _handleLoginOrOtp,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: isLoading
+                            ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(
+                                otpSent ? lang.verifyOtp : lang.sendOtp,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -963,11 +1005,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         event.logicalKey == LogicalKeyboardKey.space ||
         event.logicalKey == LogicalKeyboardKey.gameButtonA) {
       if (_mobileFocusNode.hasFocus || _otpFocusNode.hasFocus) {
-        if (_currentTvCredentialIsComplete) {
-          _handleTvDone();
-        } else {
-          _openTvKeypad();
-        }
+        _handleTvDone();
         return KeyEventResult.handled;
       }
     }
@@ -984,19 +1022,11 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
 
   void _handleTvDone() {
     if (isLoading || _authRequestInFlight) return;
-
     if (_currentTvCredentialIsComplete) {
       _handleLoginOrOtp();
       return;
     }
-
-    // Keep incomplete credentials editable and visibly focused instead of
-    // moving to a button that can only fail validation.
-    if (otpSent && _editingOtp) {
-      _otpFocusNode.requestFocus();
-    } else {
-      _mobileFocusNode.requestFocus();
-    }
+    _handleLoginOrOtp();
   }
 
   void _openTvKeypad() {
@@ -1088,9 +1118,9 @@ class _TvNumberPad extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 2.25,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 2.4,
       ),
       itemCount: keys.length,
       itemBuilder: (context, index) {

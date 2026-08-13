@@ -6,6 +6,7 @@ import 'package:ott/app/core/utils/text_capitalization_formatter.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/email_service.dart';
 import 'package:ott/app/core/services/legal_document_service.dart';
+import 'package:ott/app/core/services/referral_service.dart';
 import 'package:ott/app/core/utils/legal_document_url_utils.dart';
 import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
@@ -55,11 +56,18 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     _loadLegalDocumentUrls();
     _screenLoadWatch.start();
     _scrollController.addListener(_handleScroll);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       _logPerformance(
         'Landing first frame rendered in ${_screenLoadWatch.elapsedMilliseconds}ms',
       );
+      if (kIsWeb) {
+        final referralCode = await ReferralService.instance.captureFromUri(Uri.base);
+        final path = Uri.base.path.toLowerCase().replaceAll('//', '/');
+        if (referralCode != null || path.endsWith('/register') || path.endsWith('/login')) {
+          _openLogin();
+        }
+      }
     });
   }
 

@@ -37,6 +37,7 @@ class DeviceSessionInfo {
   Map<String, dynamic> toLoginPayload({
     required String username,
     required String password,
+    String? referralCode,
   }) {
     return {
       'username': username,
@@ -46,12 +47,15 @@ class DeviceSessionInfo {
       'deviceType': deviceType.apiValue,
       'appVersion': appVersion,
       'deviceMetadata': deviceMetadata,
+      if (referralCode != null && referralCode.trim().isNotEmpty)
+        'referralCode': referralCode.trim(),
     };
   }
 
   Map<String, dynamic> toVerifyOtpPayload({
     required String username,
     required String otp,
+    String? referralCode,
   }) {
     return {
       'username': username,
@@ -61,6 +65,8 @@ class DeviceSessionInfo {
       'deviceType': deviceType.apiValue,
       'appVersion': appVersion,
       'deviceMetadata': deviceMetadata,
+      if (referralCode != null && referralCode.trim().isNotEmpty)
+        'referralCode': referralCode.trim(),
     };
   }
 }

@@ -1557,16 +1557,15 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     final theme = Theme.of(context);
     final releaseDateText = content.releaseDate?.toString().trim();
     final displayText = (releaseDateText != null && releaseDateText.isNotEmpty)
-        ? 'Release On: $releaseDateText'
-        : 'Release On: Coming Soon';
+        ? 'Releasing On: $releaseDateText'
+        : 'Releasing On: Coming Soon';
 
     final child = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: theme.primaryColor.withOpacity(0.18),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.primaryColor.withOpacity(0.65),
+          color: theme.primaryColor,
         ),
       ),
       child: Text(

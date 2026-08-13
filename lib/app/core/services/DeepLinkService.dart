@@ -3,14 +3,20 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/constant/prefrense_constant.dart';
+import 'package:ott/app/core/services/session_manager.dart';
+import 'package:ott/app/core/services/referral_service.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/shorts%20page/component/ShortsPlayerPage.dart';
+import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/route/navigation_service.dart';
 import 'package:ott/app/route/routes/app_routes.dart';
 import 'package:ott/app/widgets/gift_claim_dialog.dart';
+import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:provider/provider.dart';
 import 'package:uni_links/uni_links.dart';
@@ -30,6 +36,7 @@ enum DeepLinkContentType {
   series,
   short,
   gift,
+  referral,
 }
 
 class DeepLinkTarget {
@@ -37,11 +44,13 @@ class DeepLinkTarget {
     required this.type,
     this.id,
     this.couponCode,
+    this.referralCode,
   });
 
   final DeepLinkContentType type;
   final int? id;
   final String? couponCode;
+  final String? referralCode;
 
   String get typeName => type.name;
 }
@@ -84,6 +93,8 @@ class DeepLinkService {
       'Initializing deep link service. platform=${kIsWeb ? 'web' : defaultTargetPlatform.name}',
       name: 'DeepLinkService',
     );
+
+    await ReferralService.instance.init();
 
     if (kIsWeb) {
       await _handleIncomingUri(Uri.base, source: 'initial_uri');
@@ -248,6 +259,21 @@ class DeepLinkService {
       }
     }
 
+    final referralCode = ReferralService.instance.sanitizeCode(
+      uri.queryParameters['referralCode'] ??
+          uri.queryParameters['referral_code'] ??
+          uri.queryParameters['ref'],
+    );
+    final normalizedPath = uri.path.toLowerCase().replaceAll('//', '/');
+    if (referralCode != null ||
+        normalizedPath.endsWith('/register') ||
+        normalizedPath.endsWith('/login')) {
+      return DeepLinkTarget(
+        type: DeepLinkContentType.referral,
+        referralCode: referralCode,
+      );
+    }
+
     return null;
   }
 
@@ -319,6 +345,7 @@ class DeepLinkService {
       return false;
     }
 
+    await ReferralService.instance.captureFromUri(uri);
     final target = parseTarget(uri);
     developer.log(
       'Deep Link Received: $uri source=$source',
@@ -391,7 +418,44 @@ class DeepLinkService {
       case DeepLinkContentType.gift:
         await _openGiftClaimDialog(navigator, target.couponCode!);
         return;
+      case DeepLinkContentType.referral:
+        await _handleReferralNavigation(
+          navigator,
+          target.referralCode,
+          source: source,
+        );
+        return;
     }
+  }
+
+  Future<void> _handleReferralNavigation(
+    NavigatorState navigator,
+    String? referralCode, {
+    required String source,
+  }) async {
+    final isLoggedIn = await LocalSharePreferences.localSharePreferences.getBool(
+      SharedPreferencesConstant.isUserLoggedIn,
+    );
+    final token = await SessionManager.instance.token;
+    final authenticated = isLoggedIn && token != null;
+
+    if (authenticated) {
+      if (navigator.context.mounted) {
+        CustomToast.show(
+          navigator.context,
+          'You are already logged in',
+          isSuccess: true,
+        );
+      }
+      return;
+    }
+
+    navigator.push(
+      MaterialPageRoute<void>(
+        settings: const RouteSettings(name: AppRoutes.login),
+        builder: (_) => const LoginCard(),
+      ),
+    );
   }
 
   Future<void> _openGiftClaimDialog(
