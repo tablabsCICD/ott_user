@@ -470,17 +470,17 @@ class OfflineDownloadProvider extends BaseProvider {
         _downloadedContents.removeWhere((item) => item.id == contentId);
         _downloadMetadata.remove(contentId);
       } else {
-      _upsertDownloadedContent(content);
-      _downloadMetadata[contentId] = _metadataForContent(
-        content,
-        status: OfflineDownloadStatus.completed,
-      );
-      await _persistDownloadedContents();
-      notifyListeners();
-      return {
-        'success': true,
+        _upsertDownloadedContent(content);
+        _downloadMetadata[contentId] = _metadataForContent(
+          content,
+          status: OfflineDownloadStatus.completed,
+        );
+        await _persistDownloadedContents();
+        notifyListeners();
+        return {
+          'success': true,
           'message': 'Content is already downloaded for offline playback.',
-      };
+        };
       }
     }
 
