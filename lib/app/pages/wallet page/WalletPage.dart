@@ -102,7 +102,7 @@ class _WalletPageState extends State<WalletPage> {
 
                               /// Balance
                               Text(
-                                "₹ ${walletProvider.walletBalance.toStringAsFixed(1)}",
+                                "₹ ${walletProvider.walletBalance.toStringAsFixed(2)}",
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 36,
@@ -279,7 +279,7 @@ class _WalletPageState extends State<WalletPage> {
                             ),
                           ),
                           Text(
-                            "${isCredit ? "+" : "-"}${tx.amount?.toStringAsFixed(0) ?? "0"}",
+                            "${isCredit ? "+" : "-"}₹ ${tx.amount?.toStringAsFixed(2) ?? "0.00"}",
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,

@@ -96,7 +96,7 @@ class ShareService {
     if (kIsWeb) {
       final blob = html.Blob(<Object>[data.qrCode.bytes], 'image/png');
       final url = html.Url.createObjectUrlFromBlob(blob);
-      final anchor = html.AnchorElement(href: url)
+      html.AnchorElement(href: url)
         ..download = '${data.contentType.name}_${data.movie.id}_qr.png'
         ..click();
       html.Url.revokeObjectUrl(url);
@@ -130,7 +130,10 @@ class ShareService {
     buffer
       ..writeln()
       ..writeln('Play Store:')
-      ..writeln(DeepLinkService.playStoreUrl);
+      ..writeln(DeepLinkService.playStoreUrl)
+      ..writeln()
+      ..writeln('App Store:')
+      ..writeln(DeepLinkService.appStoreUrl);
 
     return buffer.toString().trim();
   }

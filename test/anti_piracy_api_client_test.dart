@@ -69,6 +69,7 @@ void main() {
           playbackUrl: 'https://cdn.example.com/master.m3u8',
           country: 'IN',
           platform: 'ANDROID',
+          type: 'movie',
           deviceIntegrity: DeviceIntegrityStatus(
             rooted: false,
             jailbroken: false,

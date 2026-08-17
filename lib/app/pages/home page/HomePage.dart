@@ -1462,7 +1462,7 @@ class _HomePageState extends State<HomePage>
                       color: useTransparentAppBar
                           ? selectedThemeData.canvasColor
                           : Colors.white),
-                  tooltip: "${walletProvider.walletBalance}",
+                  tooltip: "₹ ${walletProvider.walletBalance.toStringAsFixed(2)}",
                   style: IconButton.styleFrom(
                       backgroundColor: useTransparentAppBar
                           ? Colors.white.withOpacity(0.3)

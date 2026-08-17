@@ -14,6 +14,7 @@ import 'package:ott/app/widgets/gift_claim_dialog.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:provider/provider.dart';
 import 'package:uni_links/uni_links.dart';
+import 'package:ott/app/core/services/referral_service.dart';
 
 class MovieDetailsRouteArgs {
   const MovieDetailsRouteArgs({
@@ -66,6 +67,8 @@ class DeepLinkService {
   static const String androidPackageName = 'com.filmytell.ott';
   static const String playStoreUrl =
       'https://play.google.com/store/apps/details?id=$androidPackageName';
+  static const String appStoreUrl =
+      'https://apps.apple.com/fr/app/filmytell/id6783863260';
 
   StreamSubscription<Uri?>? _linkSubscription;
   DeepLinkTarget? _pendingTarget;
@@ -323,9 +326,11 @@ class DeepLinkService {
       return false;
     }
 
+    final capturedReferralCode =
+        await ReferralService.instance.captureFromUri(uri);
     final target = parseTarget(uri);
     developer.log(
-      'Deep Link Received: $uri source=$source',
+      'Deep Link Received: $uri source=$source referralCode=${capturedReferralCode ?? 'none'}',
       name: 'DeepLinkService',
     );
     developer.log(
@@ -342,6 +347,13 @@ class DeepLinkService {
     );
 
     if (target == null) {
+      if (capturedReferralCode != null) {
+        developer.log(
+          'Captured referral code $capturedReferralCode from non-target deep link',
+          name: 'DeepLinkService',
+        );
+        return true;
+      }
       developer.log(
         'Ignoring unsupported deep link',
         name: 'DeepLinkService',

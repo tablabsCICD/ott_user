@@ -1,6 +1,6 @@
 class AppConstant {
-  static const String appVersion = "1.0.16";
-  static const int appBuildNumber = 39;
+  static const String appVersion = "1.0.17";
+  static const int appBuildNumber = 42;
   static final String GOOGLE_KEY = "AIzaSyDbIESWMKX_4TqGEiFUhbu8-PUpLnVBPrc";
   static const String razorpayKeyId = String.fromEnvironment(
     'RAZORPAY_KEY_ID',
@@ -14,6 +14,8 @@ class AppConstant {
   );
   static const playStoreLink =
       "https://play.google.com/store/apps/details?id=com.filmytell.ott";
+  static const appStoreLink =
+      "https://apps.apple.com/fr/app/filmytell/id6783863260";
   static const filmytellPartnerPlayStoreLink =
       "https://play.google.com/store/apps/details?id=com.filmytell.partner";
 

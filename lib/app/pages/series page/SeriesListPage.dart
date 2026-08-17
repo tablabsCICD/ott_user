@@ -430,7 +430,7 @@ class _SeriesListViewState extends State<_SeriesListView>
                         ? selectedThemeData.canvasColor
                         : Colors.white,
                   ),
-                  tooltip: '${walletProvider.walletBalance}',
+                  tooltip: '₹ ${walletProvider.walletBalance.toStringAsFixed(2)}',
                   style: _appBarIconStyle(context),
                   onPressed: () => Navigator.push(
                     context,

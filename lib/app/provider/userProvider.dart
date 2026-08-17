@@ -26,6 +26,7 @@ import '../core/repositories/secure_playback_repository.dart';
 import '../core/services/device_type_helper.dart';
 import '../core/services/notification_service.dart';
 import '../core/services/session_manager.dart';
+import '../core/services/referral_service.dart';
 import '../core/utils/sharepreferences.dart';
 import 'baseProvider.dart';
 
@@ -139,7 +140,11 @@ class UserProvider extends BaseProvider {
         ? pinCodeDateController.text.trim()
         : "411017";
     userRequest.profilePhoto = profileController.text;
-    userRequest.refferedBy = refferedByController.text;
+    final pendingReferral =
+        await ReferralService.instance.getPendingReferralCode();
+    userRequest.refferedBy = refferedByController.text.trim().isNotEmpty
+        ? refferedByController.text.trim()
+        : (pendingReferral ?? '');
     userRequest.taluka = cityController.text;
     userRequest.state = stateController.text;
     userRequest.languages = selectedLanguages;
@@ -168,18 +173,17 @@ class UserProvider extends BaseProvider {
 
             // log("after SEtData ${await localSharePreferences.getString(SharedPreferencesConstant.currentUser)}");
             disposeData();
+            await ReferralService.instance.clearReferralCode();
             notifyListeners();
 
             return {'success': true, 'message': 'User created successfully'};
           } else {
-
             return {
               'success': false,
               'message': addUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-
           return {
             'success': false,
             'message': addUserResponse.message ?? 'Error in response'
@@ -194,7 +198,6 @@ class UserProvider extends BaseProvider {
         return {'success': false, 'message': 'Something went wrong!'};
       }
     } catch (error) {
-
       return {
         'success': false,
         'message': 'An error occurred while adding user: $error'
@@ -233,7 +236,6 @@ class UserProvider extends BaseProvider {
             UpdateUserResponse.fromJson(responseBody);
         //log('Update User response === ${updateUserResponse}');
 
-
         if (updateUserResponse.success == true) {
           if (updateUserResponse.data != null) {
             userObject = updateUserResponse.data!.user!;
@@ -256,14 +258,12 @@ class UserProvider extends BaseProvider {
               'message': updateUserResponse.message ?? ""
             };
           } else {
-
             return {
               'success': false,
               'message': updateUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-
           return {
             'success': false,
             'message': updateUserResponse.message ?? 'Error in response'
@@ -283,7 +283,6 @@ class UserProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-
       return {
         'success': false,
         'message': 'An error occurred while update user: $error'
@@ -322,7 +321,6 @@ class UserProvider extends BaseProvider {
             UpdateUserResponse.fromJson(responseBody);
         //log('Update User response === ${updateUserResponse}');
 
-
         if (updateUserResponse.success == true) {
           if (updateUserResponse.data != null) {
             userObject = updateUserResponse.data!.user!;
@@ -339,14 +337,12 @@ class UserProvider extends BaseProvider {
               'message': updateUserResponse.message ?? ""
             };
           } else {
-
             return {
               'success': false,
               'message': updateUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-
           return {
             'success': false,
             'message': updateUserResponse.message ?? 'Error in response'
@@ -366,7 +362,6 @@ class UserProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-
       return {
         'success': false,
         'message': 'An error occurred while update user: $error'
@@ -408,7 +403,6 @@ class UserProvider extends BaseProvider {
             UpdateUserResponse.fromJson(responseBody);
         log('Update User response === $updateUserResponse');
 
-
         if (updateUserResponse.success == true) {
           if (updateUserResponse.data != null) {
             userObject = updateUserResponse.data!.user!;
@@ -425,14 +419,12 @@ class UserProvider extends BaseProvider {
               'message': updateUserResponse.message ?? ""
             };
           } else {
-
             return {
               'success': false,
               'message': updateUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-
           return {
             'success': false,
             'message': updateUserResponse.message ?? 'Error in response'
@@ -452,7 +444,6 @@ class UserProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-
       return {
         'success': false,
         'message': 'An error occurred while update user: $error'
@@ -775,7 +766,6 @@ class UserProvider extends BaseProvider {
         UpdateUserResponse updateUserResponse =
             UpdateUserResponse.fromJson(responseBody);
 
-
         if (updateUserResponse.success == true) {
           if (updateUserResponse.data != null) {
             user = updateUserResponse.data!.user!;
@@ -795,14 +785,12 @@ class UserProvider extends BaseProvider {
               'message': updateUserResponse.message ?? ""
             };
           } else {
-
             return {
               'success': false,
               'message': updateUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-
           return {
             'success': false,
             'message': updateUserResponse.message ?? 'Error in response'
@@ -822,7 +810,6 @@ class UserProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-
       return {
         'success': false,
         'message': 'An error occurred while update user: $error'
@@ -903,8 +890,12 @@ class UserProvider extends BaseProvider {
     String mobile,
     String otp, {
     BuildContext? context,
+    String? referralCode,
   }) async {
     final totalWatch = Stopwatch()..start();
+    final effectiveReferralCode = referralCode?.trim().isNotEmpty == true
+        ? referralCode!.trim()
+        : await ReferralService.instance.getPendingReferralCode();
     final deviceInfoFuture = DeviceTypeHelper.buildSessionInfo(
       context: context,
     );
@@ -923,6 +914,7 @@ class UserProvider extends BaseProvider {
       appVersion: deviceInfo.appVersion,
       deviceMetadata: deviceInfo.deviceMetadata,
       deviceToken: deviceToken,
+      referralCode: effectiveReferralCode,
     );
     final apiHelper = ApiHelper();
 
@@ -950,6 +942,7 @@ class UserProvider extends BaseProvider {
                 SharedPreferencesConstant.isUserLoggedIn, true);
             localSharePreferences.setString(
                 SharedPreferencesConstant.currentUser, jsonEncode(sessionUser));
+            await ReferralService.instance.clearReferralCode();
             notifyListeners();
             _logOtpPerformance(
               'Verify OTP flow completed in ${totalWatch.elapsedMilliseconds}ms',
@@ -1012,15 +1005,12 @@ class UserProvider extends BaseProvider {
             AddUserResponse.fromJson(responseBody);
         if (deleteUserResponse.success == true) {
           notifyListeners();
-        } else {
-
-        }
+        } else {}
       } else {
         throw Exception(
             'Failed to delete user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-
       throw Exception('An error occurred while delete user.');
     }
   }
@@ -1050,18 +1040,15 @@ class UserProvider extends BaseProvider {
             );
             notifyListeners();
           } else {
-
             await hydrateFromCache();
           }
         } else {
-
           await hydrateFromCache();
         }
       } else {
         await hydrateFromCache();
       }
     } catch (error) {
-
       await hydrateFromCache();
     }
   }
@@ -1072,74 +1059,6 @@ class UserProvider extends BaseProvider {
   }
 
 // login email
-  login(String email, String password, {BuildContext? context}) async {
-    String apiUrl = ApiConstant.login;
-    final deviceInfo = await DeviceTypeHelper.buildSessionInfo(
-      context: context,
-    );
-    final data = deviceInfo.toLoginPayload(
-      username: email,
-      password: password,
-    );
-    ApiHelper apiHelper = ApiHelper();
-
-    try {
-      var response = await apiHelper.postApiWithoutBodyAndToken(apiUrl, data);
-      if (response.statusCode == 200) {
-        Map<String, dynamic> responseBody = json.decode(response.body);
-        GetUserResponse addUserResponse =
-            GetUserResponse.fromJson(responseBody);
-        final sessionUser =
-            _extractUser(responseBody) ?? addUserResponse.data?.user;
-        final sessionSuccess = responseBody['success'] != false;
-
-        if (sessionSuccess) {
-          if (sessionUser != null) {
-            await _persistAuthenticatedSession(responseBody);
-            userObject = sessionUser;
-            LocalSharePreferences localSharePreferences =
-                LocalSharePreferences();
-            localSharePreferences.setBool(
-                SharedPreferencesConstant.isUserLoggedIn, true);
-            localSharePreferences.setString(
-                SharedPreferencesConstant.currentUser, jsonEncode(sessionUser));
-            notifyListeners();
-            return {'success': true, 'message': 'User logged in successfully'};
-          } else {
-            return {
-              'success': false,
-              'message': addUserResponse.message ?? 'No data returned'
-            };
-          }
-        } else {
-          return {
-            'success': false,
-            'message': addUserResponse.message ?? 'Error in response'
-          };
-        }
-      } else if (response.statusCode == 401 ||
-          response.statusCode == 500 ||
-          response.statusCode == 404) {
-        Map<String, dynamic> responseBody = json.decode(response.body);
-        AddUserResponse addUserResponse =
-            AddUserResponse.fromJson(responseBody);
-
-        return {
-          'success': false,
-          'message': addUserResponse.message ?? 'Error in response'
-        };
-      } else {
-        return {'failure': true, 'message': 'Something went wrong!'};
-        // throw Exception('Failed to add user. Status code: ${response.statusCode}');
-      }
-    } catch (error) {
-
-      return {
-        'success': false,
-        'message': 'An error occurred while logging user: $error'
-      };
-    }
-  }
 
   io.File? _imageFile; // Mobile/Desktop
   html.File? _webFile; // Web

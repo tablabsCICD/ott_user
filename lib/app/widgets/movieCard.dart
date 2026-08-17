@@ -628,7 +628,43 @@ class _MovieCardState extends State<MovieCard> {
         _isVideoInitialized &&
         androidController != null &&
         androidController.value.isInitialized) {
-      return native_video.VideoPlayer(androidController);
+      return Stack(
+        children: [
+          Positioned.fill(
+            child: native_video.VideoPlayer(androidController),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: _previewProgress(),
+          ),
+          Positioned(
+            right: 5,
+            bottom: 5,
+            child: Semantics(
+              button: true,
+              label: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+              child: Material(
+                color: Colors.black54,
+                shape: const CircleBorder(),
+                child: IconButton(
+                  padding: const EdgeInsets.all(2),
+                  constraints:
+                      const BoxConstraints(minWidth: 20, minHeight: 20),
+                  iconSize: 12,
+                  tooltip: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                  icon: Icon(
+                    _isMuted ? Icons.volume_off : Icons.volume_up,
+                    color: Colors.white,
+                  ),
+                  onPressed: _toggleMute,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
     }
     if (showPreview && _isVideoInitialized && _videoController != null) {
       return Stack(
@@ -649,12 +685,23 @@ class _MovieCardState extends State<MovieCard> {
           Positioned(
             right: 5,
             bottom: 5,
-            child: IconButton(
-              icon: Icon(
-                _isMuted ? Icons.volume_off : Icons.volume_up,
-                color: Colors.white.withOpacity(0.7),
+            child: Semantics(
+              button: true,
+              label: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+              child: Material(
+                color: Colors.black54,
+                shape: const CircleBorder(),
+                child: IconButton(
+                  padding: const EdgeInsets.all(2),
+                  tooltip: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                  icon: Icon(
+                    _isMuted ? Icons.volume_off : Icons.volume_up,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  onPressed: _toggleMute,
+                ),
               ),
-              onPressed: _toggleMute,
             ),
           ),
         ],

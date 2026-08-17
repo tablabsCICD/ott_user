@@ -23,6 +23,7 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart' as youtube;
 
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/playback_watermark_overlay.dart';
+import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/app/widgets/video_skip_controls.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -103,6 +104,54 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   bool _resumeAfterLifecyclePause = false;
   String? _offlineObjectUrl;
   Duration? _lastLoggedDuration;
+  double _currentPlaybackSpeed = 1.0;
+  bool _showResumeBanner = false;
+  String? _resumedTimeText;
+  Timer? _resumeBannerTimer;
+  bool _showForwardIndicator = false;
+  bool _showBackwardIndicator = false;
+  Timer? _seekIndicatorTimer;
+  bool _isMicMuted = false;
+
+  void _changePlaybackSpeed(double speed) {
+    if (!mounted || _isDisposed) return;
+    setState(() {
+      _currentPlaybackSpeed = speed;
+    });
+
+    final player = _player;
+    if (player != null) {
+      unawaited(player.setRate(speed));
+    }
+    final androidPlayer = _androidSecurePlayer;
+    if (androidPlayer != null) {
+      unawaited(androidPlayer.setPlaybackSpeed(speed));
+    }
+    final youtubeController = _youtubeController;
+    if (youtubeController != null) {
+      youtubeController.setPlaybackRate(speed);
+    }
+  }
+
+  void _triggerResumeBanner(int seconds) {
+    if (seconds <= 10) return;
+    final duration = Duration(seconds: seconds);
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final secs = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final formatted = duration.inHours > 0
+        ? '${duration.inHours}:$minutes:$secs'
+        : '$minutes:$secs';
+    _resumeBannerTimer?.cancel();
+    if (mounted) {
+      setState(() {
+        _resumedTimeText = formatted;
+        _showResumeBanner = true;
+      });
+    }
+    _resumeBannerTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _showResumeBanner = false);
+    });
+  }
 
   bool get _isSeries =>
       widget.content?.type?.toLowerCase() == "series" &&
@@ -509,8 +558,6 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         ? localResumeSeconds
         : backendResumeSeconds;
 
-
-
     final controller = youtube.YoutubePlayerController(
       initialVideoId: videoId,
       flags: youtube.YoutubePlayerFlags(
@@ -640,24 +687,31 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       // underlying libmpv option because some native HLS paths do not retain
       // Media headers when opening child playlists and segments.
       if (!kIsWeb && !playFromFile && httpHeaders != null) {
-        final nativeHeaderFields = httpHeaders.entries
-            .map((entry) => '${entry.key}: ${entry.value}')
-            .join('\n');
-        await (player.platform as dynamic).setProperty(
-          'http-header-fields',
-          nativeHeaderFields,
-        );
-        final configuredHeaders = await (player.platform as dynamic)
-            .getProperty('http-header-fields') as String;
-        SecurityDebugLog.diagnostic(
-          'MEDIA_KIT_NATIVE_PROPERTIES playerId=$playerId '
-          'httpHeaderFieldsConfigured=${configuredHeaders.isNotEmpty} '
-          'nativeCookiePresent=${configuredHeaders.contains('Cookie:')} '
-          'protocolWhitelist=http,https,tls,tcp,crypto,data '
-          'headers=${httpHeaders.keys.toList()} '
-          'cookieHeaderPresent=${httpHeaders['Cookie']?.isNotEmpty == true} '
-          'cookieValuesRedacted=true',
-        );
+        try {
+          final nativeHeaderFields = httpHeaders.entries
+              .map((entry) => '${entry.key}: ${entry.value}')
+              .join('\n');
+          await (player.platform as dynamic).setProperty(
+            'http-header-fields',
+            nativeHeaderFields,
+          );
+          final configuredHeaders = await (player.platform as dynamic)
+              .getProperty('http-header-fields') as String;
+          SecurityDebugLog.diagnostic(
+            'MEDIA_KIT_NATIVE_PROPERTIES playerId=$playerId '
+            'httpHeaderFieldsConfigured=${configuredHeaders.isNotEmpty} '
+            'nativeCookiePresent=${configuredHeaders.contains('Cookie:')} '
+            'protocolWhitelist=http,https,tls,tcp,crypto,data '
+            'headers=${httpHeaders.keys.toList()} '
+            'cookieHeaderPresent=${httpHeaders['Cookie']?.isNotEmpty == true} '
+            'cookieValuesRedacted=true',
+          );
+        } catch (e) {
+          SecurityDebugLog.event(
+            'PLAYER',
+            'Native property configuration skipped for platform compatibility.',
+          );
+        }
       }
       // media_kit is the underlying playback engine; the route keeps the
       // existing fullscreen, resume, continue-watching and auto-next behavior.
@@ -727,6 +781,18 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         'MEDIA_KIT_DISPOSE_DONE playerId=$playerId reason=open_exception',
       );
       if (mounted && token == _setupToken) {
+        if (playFromFile && widget.content?.id != null) {
+          SecurityDebugLog.event(
+            'PLAYER',
+            'Local downloaded playback failed to initialize; falling back to online protected streaming.',
+          );
+          _isOfflinePlayback = false;
+          await _startSecurePlayback(
+            sourceUrl: _currentRemotePlaybackUrl ?? widget.videoUrl.trim(),
+            contentId: widget.content!.id.toString(),
+          );
+          return;
+        }
         _showPlaybackError('Failed to load video');
       }
       return;
@@ -822,13 +888,17 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       await controller.setVolume(1);
     } catch (error, stackTrace) {
       SecurityDebugLog.exception(
-        'ANDROID_EXOPLAYER_INITIALIZE playerId=$playerId',
+        'ANDROID_EXOPLAYER_INITIALIZE playerId=$playerId fallback=media_kit',
         error,
         stackTrace,
       );
       await controller.dispose();
       if (mounted && token == _setupToken) {
-        _showPlaybackError('Failed to load video');
+        await _setupPlayer(
+          url,
+          httpHeaders: httpHeaders,
+          diagnoseSignedHls: false,
+        );
       }
       return;
     }
@@ -1117,8 +1187,6 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         ? localResumeSeconds
         : backendResumeSeconds;
 
-
-
     if (resumeSeconds > 5) {
       final resumePosition = Duration(seconds: resumeSeconds);
       if (_androidSecurePlayer != null) {
@@ -1126,6 +1194,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       } else {
         await _player!.seek(resumePosition);
       }
+      _triggerResumeBanner(resumeSeconds);
     }
 
     try {
@@ -1251,8 +1320,6 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     if (duration.inSeconds == 0) return;
 
     _lastSavedPosition = position;
-
-
 
     context.read<PlayMediaProvider>().saveLocalResume(
           contentId: widget.content!.id!,
@@ -1553,10 +1620,10 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
   }
 
-  void _scheduleControlsAutoHide() {
+  void _scheduleControlsAutoHide({Duration? delay}) {
     _controlsHideTimer?.cancel();
     if (!_isPlaybackPlaying || _isPlaybackBuffering || _isSeeking) return;
-    _controlsHideTimer = Timer(const Duration(seconds: 4), () {
+    _controlsHideTimer = Timer(delay ?? const Duration(seconds: 4), () {
       if (!mounted ||
           !_isPlaybackPlaying ||
           _isPlaybackBuffering ||
@@ -1584,6 +1651,26 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   void _seekBy(Duration delta) {
+    _showControls();
+    _seekIndicatorTimer?.cancel();
+    setState(() {
+      if (delta.inSeconds > 0) {
+        _showForwardIndicator = true;
+        _showBackwardIndicator = false;
+      } else {
+        _showBackwardIndicator = true;
+        _showForwardIndicator = false;
+      }
+    });
+    _seekIndicatorTimer = Timer(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        setState(() {
+          _showForwardIndicator = false;
+          _showBackwardIndicator = false;
+        });
+      }
+    });
+
     final youtubeController = _youtubeController;
     if (youtubeController != null) {
       final duration = youtubeController.value.metaData.duration;
@@ -1594,6 +1681,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           offset: delta,
         ),
       );
+      _scheduleControlsAutoHide(delay: const Duration(milliseconds: 1200));
       return;
     }
 
@@ -1609,6 +1697,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           ),
         ),
       );
+      _scheduleControlsAutoHide(delay: const Duration(milliseconds: 1200));
       return;
     }
     final androidPlayer = _androidSecurePlayer;
@@ -1622,6 +1711,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           ),
         ),
       );
+      _scheduleControlsAutoHide(delay: const Duration(milliseconds: 1200));
     }
   }
 
@@ -1637,10 +1727,11 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     final showLoading = _loading || secureLoading;
     final watermark = _securePlaybackController?.watermark;
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
         await _handleExit();
-        return false;
       },
       child: Scaffold(
         backgroundColor: Colors.black,
@@ -1696,6 +1787,9 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                     watermark: watermark,
                   ),
                 ),
+              if (!showLoading && !_hasPlaybackError) _buildSeekIndicators(),
+              if (!showLoading && !_hasPlaybackError && _showResumeBanner)
+                _buildResumeBanner(theme),
               if (!showLoading && !_hasPlaybackError && _controlsVisible)
                 Positioned(
                   left: 20,
@@ -1742,7 +1836,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
   Widget _centerPlaybackControls() {
     final compact = ResponsiveWidget.isMobile(context);
-    final spacing = compact ? 30.0 : 48.0;
+    final spacing = compact ? 18.0 : 32.0;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1789,18 +1883,25 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     bool prominent = false,
     bool loading = false,
   }) {
-    final size = prominent ? 66.0 : 54.0;
+    final compact = ResponsiveWidget.isMobile(context);
+    final size = prominent
+        ? (compact ? 40.0 : 46.0)
+        : (compact ? 34.0 : 38.0);
+    final iconSize = prominent
+        ? (compact ? 24.0 : 28.0)
+        : (compact ? 18.0 : 22.0);
+
     return Semantics(
       button: true,
       label: semanticsLabel,
       child: Material(
-        color: Colors.black.withValues(alpha: prominent ? 0.72 : 0.58),
+        color: Colors.black.withValues(alpha: prominent ? 0.65 : 0.50),
         shape: CircleBorder(
           side: BorderSide(
-            color: Colors.white.withValues(alpha: 0.5),
+            color: Colors.white.withValues(alpha: 0.4),
           ),
         ),
-        elevation: 4,
+        elevation: 2,
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: loading ? null : onPressed,
@@ -1809,18 +1910,18 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             height: size,
             child: Center(
               child: loading
-                  ? const SizedBox(
-                      width: 26,
-                      height: 26,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3,
+                  ? SizedBox(
+                      width: compact ? 18 : 22,
+                      height: compact ? 18 : 22,
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 2,
                         color: Colors.white,
                       ),
                     )
                   : Icon(
                       icon,
                       color: Colors.white,
-                      size: prominent ? 42 : 34,
+                      size: iconSize,
                     ),
             ),
           ),
@@ -1891,6 +1992,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     final duration = _currentPlaybackDuration;
     final durationMs = duration.inMilliseconds;
     final positionMs = position.inMilliseconds.clamp(0, durationMs);
+    final isLongDuration = duration.inHours > 0;
+    final minLabelWidth = isLongDuration ? 68.0 : 50.0;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -1901,8 +2004,10 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         child: Row(
           children: [
-            SizedBox(
-              width: 54,
+            _mikeOptionButton(theme),
+            const SizedBox(width: 8),
+            ConstrainedBox(
+              constraints: BoxConstraints(minWidth: minLabelWidth),
               child: Text(
                 _formatPlaybackTime(position),
                 style: const TextStyle(
@@ -1943,8 +2048,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                 ),
               ),
             ),
-            SizedBox(
-              width: 54,
+            ConstrainedBox(
+              constraints: BoxConstraints(minWidth: minLabelWidth),
               child: Text(
                 _formatPlaybackTime(duration),
                 textAlign: TextAlign.right,
@@ -1956,6 +2061,293 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                 ),
               ),
             ),
+            const SizedBox(width: 8),
+            _speedSelectorButton(theme),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _mikeOptionButton(ThemeData theme) {
+    return Semantics(
+      button: true,
+      label: _isMicMuted ? 'Unmute Mic' : 'Mute Mic',
+      child: Tooltip(
+        message: _isMicMuted ? 'Unmute Mic' : 'Mute Mic',
+        child: Material(
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(6),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(6),
+            onTap: () {
+              _toggleMicOption();
+              _showControls();
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              child: Icon(
+                _isMicMuted
+                    ? Icons.volume_off_rounded
+                    : Icons.volume_up_rounded,
+                color: _isMicMuted ? Colors.redAccent : Colors.white,
+                size: 18,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _toggleMicOption() {
+    if (!mounted || _isDisposed) return;
+    setState(() {
+      _isMicMuted = !_isMicMuted;
+    });
+
+    final player = _player;
+    if (player != null) {
+      unawaited(player.setVolume(_isMicMuted ? 0 : 100));
+    }
+    final androidPlayer = _androidSecurePlayer;
+    if (androidPlayer != null) {
+      unawaited(androidPlayer.setVolume(_isMicMuted ? 0 : 1));
+    }
+    final youtubeController = _youtubeController;
+    if (youtubeController != null) {
+      if (_isMicMuted) {
+        youtubeController.mute();
+      } else {
+        youtubeController.unMute();
+      }
+    }
+
+    CustomToast.show(
+      context,
+      _isMicMuted ? 'Mic Muted' : 'Mic Enabled',
+      isSuccess: !_isMicMuted,
+    );
+  }
+
+  Widget _speedSelectorButton(ThemeData theme) {
+    return PopupMenuButton<double>(
+      tooltip: 'Playback speed',
+      initialValue: _currentPlaybackSpeed,
+      onSelected: (speed) {
+        _changePlaybackSpeed(speed);
+        _showControls();
+      },
+      color: Colors.grey.shade900,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          '${_currentPlaybackSpeed}x',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+        ),
+      ),
+      itemBuilder: (context) => [0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((speed) {
+        final isSelected = speed == _currentPlaybackSpeed;
+        return PopupMenuItem<double>(
+          value: speed,
+          child: Row(
+            children: [
+              Text(
+                '${speed}x',
+                style: TextStyle(
+                  color: isSelected ? theme.primaryColor : Colors.white,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              if (isSelected) ...[
+                const SizedBox(width: 8),
+                Icon(Icons.check, size: 16, color: theme.primaryColor),
+              ],
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildResumeBanner(ThemeData theme) {
+    if (!_showResumeBanner || _resumedTimeText == null) {
+      return const SizedBox.shrink();
+    }
+
+    final isMobile = ResponsiveWidget.isMobile(context);
+    final topPadding = MediaQuery.of(context).padding.top;
+
+    return Positioned(
+      top: isMobile ? topPadding + 6 : 45,
+      left: 12,
+      right: 12,
+      child: Center(
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 300),
+          opacity: _showResumeBanner ? 1.0 : 0.0,
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 10 : 14,
+              vertical: isMobile ? 4 : 6,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: theme.primaryColor.withValues(alpha: 0.5),
+                width: 1,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black38,
+                  blurRadius: 6,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.history_rounded,
+                  color: theme.primaryColor,
+                  size: isMobile ? 14 : 16,
+                ),
+                SizedBox(width: isMobile ? 4 : 6),
+                Flexible(
+                  child: Text(
+                    'Resumed from $_resumedTimeText',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                      fontSize: isMobile ? 11 : 12,
+                    ),
+                  ),
+                ),
+                SizedBox(width: isMobile ? 6 : 10),
+                InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () {
+                    _seekTo(Duration.zero);
+                    setState(() => _showResumeBanner = false);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 2,
+                    ),
+                    child: Text(
+                      'Start Over',
+                      style: TextStyle(
+                        color: theme.primaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: isMobile ? 10 : 11,
+                        decoration: TextDecoration.underline,
+                        decorationColor: theme.primaryColor,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: isMobile ? 2 : 6),
+                InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () {
+                    setState(() => _showResumeBanner = false);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Icon(
+                      Icons.close_rounded,
+                      color: Colors.white70,
+                      size: isMobile ? 14 : 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSeekIndicators() {
+    if (!_showBackwardIndicator && !_showForwardIndicator) {
+      return const SizedBox.shrink();
+    }
+
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Stack(
+          children: [
+            if (_showBackwardIndicator)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  margin: const EdgeInsets.only(left: 40),
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.replay_10_rounded,
+                          color: Colors.white, size: 36),
+                      SizedBox(height: 2),
+                      Text(
+                        '-10s',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            if (_showForwardIndicator)
+              Align(
+                alignment: Alignment.centerRight,
+                child: Container(
+                  margin: const EdgeInsets.only(right: 40),
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.forward_10_rounded,
+                          color: Colors.white, size: 36),
+                      SizedBox(height: 2),
+                      Text(
+                        '+10s',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),

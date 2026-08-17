@@ -12,6 +12,8 @@ import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/presentation/web_landing/screens/web_landing_screen.dart';
 
 import '../../pages/onboarding pages/SplashScreen.dart';
+import '../../pages/sign in page/LoginCard.dart';
+import 'package:ott/app/core/services/referral_service.dart';
 import 'app_routes.dart';
 import 'web_navigation_routes.dart';
 
@@ -34,9 +36,21 @@ class RouteGenerator {
       );
     }
 
+    if (settings.name != null) {
+      final uri = Uri.tryParse(settings.name!);
+      if (uri != null) {
+        ReferralService.instance.captureFromUri(uri);
+        final pathLower = uri.path.trim().toLowerCase();
+        if (pathLower == '/register' || pathLower == 'register' || pathLower == '/login' || pathLower == 'login') {
+          return buildRoute(const LoginCard(), settings: settings);
+        }
+      }
+    }
+
     switch (settings.name) {
-      // case AppRoutes.login:
-      //   return buildRoute(SignInPage(), settings: settings);
+      case AppRoutes.login:
+      case '/register':
+        return buildRoute(const LoginCard(), settings: settings);
 
       case AppRoutes.entry:
         return buildRoute(SplashScreen(), settings: settings);

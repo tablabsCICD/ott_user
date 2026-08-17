@@ -682,6 +682,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
   Future<void>? _initializationFuture;
   bool _manuallyPaused = false;
   bool _appIsActive = true;
+  bool _isMuted = false;
 
   String get _trailerUrl =>
       DirectTrailerSource.fromBackend(widget.trailerUrl) ?? '';
@@ -690,6 +691,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
   @override
   void initState() {
     super.initState();
+    _isMuted = widget.muted;
     WidgetsBinding.instance.addObserver(this);
     _appIsActive = WidgetsBinding.instance.lifecycleState == null ||
         WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
@@ -710,12 +712,14 @@ class _TrailerPreviewState extends State<TrailerPreview>
     };
 
     widget.controller.mute = () {
+      if (mounted) setState(() => _isMuted = true);
       _player?.setVolume(0);
       _androidController?.setVolume(0);
       _youtubeController?.mute();
     };
 
     widget.controller.unmute = () {
+      if (mounted) setState(() => _isMuted = false);
       _player?.setVolume(100);
       _androidController?.setVolume(1);
       _youtubeController?.unMute();
@@ -1048,6 +1052,52 @@ class _TrailerPreviewState extends State<TrailerPreview>
     }
   }
 
+  void _toggleMute() {
+    setState(() {
+      _isMuted = !_isMuted;
+    });
+
+    if (_player != null) {
+      unawaited(_player!.setVolume(_isMuted ? 0 : 100));
+    }
+    if (_androidController != null) {
+      unawaited(_androidController!.setVolume(_isMuted ? 0 : 1));
+    }
+    if (_youtubeController != null) {
+      if (_isMuted) {
+        _youtubeController!.mute();
+      } else {
+        _youtubeController!.unMute();
+      }
+    }
+  }
+
+  Widget _volumeButton({double rightOffset = 56, double bottomOffset = 8}) {
+    return Positioned(
+      right: rightOffset,
+      bottom: bottomOffset,
+      child: Semantics(
+        button: true,
+        label: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+        child: Material(
+          color: Colors.black54,
+          shape: const CircleBorder(),
+          child: IconButton(
+            padding: const EdgeInsets.all(4),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            iconSize: 16,
+            tooltip: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+            onPressed: _toggleMute,
+            icon: Icon(
+              _isMuted ? Icons.volume_off : Icons.volume_up,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _fullscreenButton() {
     return Positioned(
       right: 8,
@@ -1098,6 +1148,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
           fit: StackFit.expand,
           children: [
             native_video.VideoPlayer(androidController),
+            _volumeButton(),
             _fullscreenButton(),
           ],
         ),
@@ -1119,7 +1170,10 @@ class _TrailerPreviewState extends State<TrailerPreview>
                 color: Theme.of(context).primaryColor,
               ),
             ),
-            if (_trailerUrl.isNotEmpty) _fullscreenButton(),
+            if (_trailerUrl.isNotEmpty) ...[
+              _volumeButton(),
+              _fullscreenButton(),
+            ],
           ],
         ),
       );
@@ -1179,7 +1233,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
                 ),
                 Positioned(
                   left: 12,
-                  right: 58,
+                  right: 104,
                   bottom: 8,
                   child: Row(
                     children: [
@@ -1200,23 +1254,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
                   ),
                 ),
               ],
-              Positioned(
-                top: 0,
-                left: 1,
-                child: IconButton(
-                  icon: Icon(
-                    player.state.volume == 0
-                        ? Icons.volume_off
-                        : Icons.volume_up,
-                    color: Colors.white,
-                  ),
-                  onPressed: () {
-                    final muted = player.state.volume == 0;
-                    player.setVolume(muted ? 100 : 0);
-                    setState(() {});
-                  },
-                ),
-              ),
+              _volumeButton(),
               _fullscreenButton(),
             ],
           ),
@@ -1278,6 +1316,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
                   ),
                 ),
               ),
+              _volumeButton(),
               _fullscreenButton(),
               if (_showControls)
                 Center(

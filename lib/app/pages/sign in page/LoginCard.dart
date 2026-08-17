@@ -22,6 +22,7 @@ import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sms_autofill/sms_autofill.dart';
+import 'package:ott/app/core/services/referral_service.dart';
 
 class LoginCard extends StatefulWidget {
   const LoginCard({super.key});
@@ -58,6 +59,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
   Timer? _resendTimer;
   Timer? _otpAutoFillTimeoutTimer;
   final Stopwatch _screenLoadWatch = Stopwatch();
+  String? _pendingReferralCode;
 
   String selectedCode = '+91';
   final List<String> countryCodes = ['+91', '+1', '+44', '+61', '+971'];
@@ -69,6 +71,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     _screenLoadWatch.start();
     _mobileFocusNode.addListener(_handleInputFocusChanged);
     _otpFocusNode.addListener(_handleInputFocusChanged);
+    _checkPendingReferralCode();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (kDebugMode) {
         log(
@@ -99,6 +102,15 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     _mobileController.dispose();
     _otpController.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkPendingReferralCode() async {
+    final code = await ReferralService.instance.getPendingReferralCode();
+    if (mounted && code != _pendingReferralCode) {
+      setState(() {
+        _pendingReferralCode = code;
+      });
+    }
   }
 
   @override
@@ -241,6 +253,39 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
+                                if (_pendingReferralCode != null) ...[
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: theme.primaryColor.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: theme.primaryColor.withOpacity(0.3),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.card_giftcard,
+                                          size: 16,
+                                          color: theme.primaryColor,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Referral Code: $_pendingReferralCode',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.primaryColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 15),
 
                                 // Phone number row
@@ -680,6 +725,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
           mobile,
           otp,
           context: context,
+          referralCode: _pendingReferralCode,
         );
         _logOtpPerformance(
           'Verify OTP action completed in ${actionWatch.elapsedMilliseconds}ms',

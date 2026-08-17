@@ -261,7 +261,7 @@ class SignedPlaybackResponse {
   bool isValidAt(DateTime now) {
     final uri = Uri.tryParse(playbackUrl);
     return uri != null &&
-        uri.scheme == 'https' &&
+        (uri.scheme == 'https' || uri.scheme == 'http') &&
         uri.host.isNotEmpty &&
         (authorizationType == cloudFrontSignedUrl ||
             (authorizationType == cloudFrontSignedCookies &&
@@ -285,7 +285,9 @@ class SignedPlaybackResponse {
   }) {
     final playbackUrl = (json['playbackUrl'] ?? '').toString().trim();
     final uri = Uri.tryParse(playbackUrl);
-    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+    if (uri == null ||
+        (uri.scheme != 'https' && uri.scheme != 'http') ||
+        uri.host.isEmpty) {
       throw const FormatException('Invalid secure playback URL.');
     }
 

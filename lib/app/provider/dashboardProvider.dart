@@ -44,11 +44,7 @@ class DashboardProvider extends BaseProvider {
     _isLoadingDashboard = true;
     List<DashboardData> finalDashboardData = [];
 
-
-
     for (final lang in languages) {
-
-
       try {
         final latest = await getDashboardLatestData(type, [lang], userId);
         final trending = await getDashboardTrendingData(type, [lang], userId);
@@ -61,9 +57,7 @@ class DashboardProvider extends BaseProvider {
         finalDashboardData.addAll(latest);
         finalDashboardData.addAll(trending);
         finalDashboardData.addAll(upcoming);
-      } catch (e) {
-
-      }
+      } catch (e) {}
     }
 
     _dashboardData = finalDashboardData;
@@ -115,9 +109,7 @@ class DashboardProvider extends BaseProvider {
         row.movies!.addAll(newData.first.movies!);
         row.pagination = newData.first.pagination;
       }
-    } catch (e) {
-
-    }
+    } catch (e) {}
 
     row.isRowLoading = false;
     notifyListeners();
@@ -213,9 +205,7 @@ class DashboardProvider extends BaseProvider {
           return _content;
         }
       }
-    } catch (error) {
-
-    }
+    } catch (error) {}
     return null;
   }
 
@@ -239,7 +229,6 @@ class DashboardProvider extends BaseProvider {
         _castList = [];
       }
     } catch (error) {
-
       _castList = [];
     } finally {
       _isLoadingCast = false;
@@ -251,7 +240,6 @@ class DashboardProvider extends BaseProvider {
     final localSharePreferences = LocalSharePreferences();
     final user = await localSharePreferences.getUser();
     if (user?.id == null) {
-
       _continueWatchedMovies.clear();
       notifyListeners();
       return;
@@ -263,7 +251,6 @@ class DashboardProvider extends BaseProvider {
       var response = await apiHelper.getApi1(apiUrl);
 
       if (response.statusCode == 200) {
-
         final responseBody = json.decode(response.body);
 
         ContinueWatchedResponse continueWatchedResponse =
@@ -272,17 +259,13 @@ class DashboardProvider extends BaseProvider {
         if (continueWatchedResponse.isSuccess == true &&
             continueWatchedResponse.data != null) {
           _continueWatchedMovies = continueWatchedResponse.data!;
-
         } else {
           _continueWatchedMovies.clear();
-
         }
       } else {
         _continueWatchedMovies.clear();
-
       }
     } catch (error) {
-
       _continueWatchedMovies.clear();
     } finally {
       notifyListeners();
