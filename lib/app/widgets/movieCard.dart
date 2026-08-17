@@ -73,7 +73,7 @@ class _MovieCardState extends State<MovieCard> {
   static _MovieCardState? _activePreviewState;
   Player? _previewPlayer;
   VideoController? _videoController;
-  native_video.VideoPlayerController? _androidPreviewController;
+  native_video.VideoPlayerController? _nativePreviewController;
   final List<StreamSubscription<dynamic>> _previewSubscriptions = [];
   bool _isHovered = false;
   bool _isMuted = true;
@@ -147,7 +147,37 @@ class _MovieCardState extends State<MovieCard> {
       _isMuted = !_isMuted;
     });
     player?.setVolume(_isMuted ? 0 : 100);
-    _androidPreviewController?.setVolume(_isMuted ? 0 : 1);
+    _nativePreviewController?.setVolume(_isMuted ? 0 : 1);
+  }
+
+  bool get _isNativePreviewPlatform =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
+  Future<bool> _initNativePreview(String trailerUrl, int generation) async {
+    final controller = native_video.VideoPlayerController.networkUrl(
+      Uri.parse(trailerUrl),
+    );
+    try {
+      await controller.initialize();
+      await controller.setLooping(true);
+      await controller.setVolume(_isMuted ? 0 : 1);
+      if (!mounted ||
+          generation != _previewGeneration ||
+          !_isPlayTriggerActive ||
+          _activePreviewState != this) {
+        await controller.dispose();
+        return false;
+      }
+      _nativePreviewController = controller;
+      setState(() => _isVideoInitialized = true);
+      _logPreview('Native trailer preview initialized');
+      return true;
+    } catch (error) {
+      await controller.dispose();
+      return false;
+    }
   }
 
   Future<bool> _ensureVideoInitialized() async {
@@ -157,29 +187,14 @@ class _MovieCardState extends State<MovieCard> {
     if (trailerUrl == null) return false;
     final generation = _previewGeneration;
 
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      final controller = native_video.VideoPlayerController.networkUrl(
-        Uri.parse(trailerUrl),
-      );
-      try {
-        await controller.initialize();
-        await controller.setLooping(true);
-        await controller.setVolume(_isMuted ? 0 : 1);
-        if (!mounted ||
-            generation != _previewGeneration ||
-            !_isPlayTriggerActive ||
-            _activePreviewState != this) {
-          await controller.dispose();
-          return false;
-        }
-        _androidPreviewController = controller;
-        setState(() => _isVideoInitialized = true);
-        _logPreview('Android ExoPlayer trailer initialized');
-        return true;
-      } catch (error) {
-        await controller.dispose();
-        return false;
-      }
+    if (_isNativePreviewPlatform) {
+      final nativeReady = await _initNativePreview(trailerUrl, generation);
+      if (nativeReady) return true;
+      // Android has no media_kit fallback; the native player is the only
+      // engine used for its trailer preview. iOS falls back to media_kit
+      // below when the native AVPlayer path fails to initialize.
+      if (defaultTargetPlatform == TargetPlatform.android) return false;
+      _logPreview('Native iOS trailer preview failed; falling back to media_kit');
     }
 
     final player = Player();
@@ -248,18 +263,18 @@ class _MovieCardState extends State<MovieCard> {
     }
     _previewSubscriptions.clear();
     final player = _previewPlayer;
-    final androidController = _androidPreviewController;
+    final nativeController = _nativePreviewController;
     _previewPlayer = null;
     _videoController = null;
-    _androidPreviewController = null;
+    _nativePreviewController = null;
     _isVideoInitialized = false;
     _isPreviewPlaying = false;
     if (player != null) {
       unawaited(player.dispose());
       _logPreview('Video Disposed');
     }
-    if (androidController != null) {
-      unawaited(androidController.dispose());
+    if (nativeController != null) {
+      unawaited(nativeController.dispose());
       _logPreview('Android ExoPlayer trailer disposed');
     }
   }
@@ -273,10 +288,10 @@ class _MovieCardState extends State<MovieCard> {
     }
     _previewSubscriptions.clear();
     final player = _previewPlayer;
-    final androidController = _androidPreviewController;
+    final nativeController = _nativePreviewController;
     _previewPlayer = null;
     _videoController = null;
-    _androidPreviewController = null;
+    _nativePreviewController = null;
     _isVideoInitialized = false;
     _isPreviewPlaying = false;
     if (_activePreviewState == this) _activePreviewState = null;
@@ -291,8 +306,8 @@ class _MovieCardState extends State<MovieCard> {
         'MovieCard preview disposal completed before secure playback.',
       );
     }
-    if (androidController != null) {
-      await androidController.dispose();
+    if (nativeController != null) {
+      await nativeController.dispose();
     }
   }
 
@@ -436,9 +451,9 @@ class _MovieCardState extends State<MovieCard> {
 
       _ensureMuted();
 
-      final androidController = _androidPreviewController;
-      if (androidController != null) {
-        await androidController.play();
+      final nativeController = _nativePreviewController;
+      if (nativeController != null) {
+        await nativeController.play();
       } else {
         await _previewPlayer!.play();
       }
@@ -470,27 +485,27 @@ class _MovieCardState extends State<MovieCard> {
 
   void _ensureMuted() {
     final player = _previewPlayer;
-    final androidController = _androidPreviewController;
-    if (player == null && androidController == null) return;
+    final nativeController = _nativePreviewController;
+    if (player == null && nativeController == null) return;
     if (!_isMuted) {
       setState(() => _isMuted = true);
     }
     player?.setVolume(0);
-    androidController?.setVolume(0);
+    nativeController?.setVolume(0);
   }
 
   void _stopPreview({bool external = false}) {
     final player = _previewPlayer;
-    final androidController = _androidPreviewController;
-    if ((player == null && androidController == null) || !_isVideoInitialized) {
+    final nativeController = _nativePreviewController;
+    if ((player == null && nativeController == null) || !_isVideoInitialized) {
       return;
     }
 
     try {
       player?.pause();
       player?.seek(Duration.zero);
-      androidController?.pause();
-      androidController?.seekTo(Duration.zero);
+      nativeController?.pause();
+      nativeController?.seekTo(Duration.zero);
     } catch (e) {}
 
     if (!mounted) return;
@@ -630,14 +645,35 @@ class _MovieCardState extends State<MovieCard> {
     );
   }
 
+  Widget _muteToggleButton() {
+    return IconButton(
+      icon: Icon(
+        _isMuted ? Icons.volume_off : Icons.volume_up,
+        color: Colors.white.withOpacity(0.7),
+      ),
+      onPressed: _toggleMute,
+    );
+  }
+
   Widget _buildMediaPreview(
       String? posterUrl, ThemeData theme, Content content, bool showPreview) {
-    final androidController = _androidPreviewController;
+    final nativeController = _nativePreviewController;
     if (showPreview &&
         _isVideoInitialized &&
-        androidController != null &&
-        androidController.value.isInitialized) {
-      return native_video.VideoPlayer(androidController);
+        nativeController != null &&
+        nativeController.value.isInitialized) {
+      return Stack(
+        children: [
+          Positioned.fill(
+            child: native_video.VideoPlayer(nativeController),
+          ),
+          Positioned(
+            right: 5,
+            bottom: 5,
+            child: _muteToggleButton(),
+          ),
+        ],
+      );
     }
     if (showPreview && _isVideoInitialized && _videoController != null) {
       return Stack(
@@ -658,13 +694,7 @@ class _MovieCardState extends State<MovieCard> {
           Positioned(
             right: 5,
             bottom: 5,
-            child: IconButton(
-              icon: Icon(
-                _isMuted ? Icons.volume_off : Icons.volume_up,
-                color: Colors.white.withOpacity(0.7),
-              ),
-              onPressed: _toggleMute,
-            ),
+            child: _muteToggleButton(),
           ),
         ],
       );

@@ -53,6 +53,112 @@ String _resolvePlaybackCountryCode() {
 const Duration _nativeNetworkInitializeTimeout = Duration(seconds: 12);
 const Duration _mediaKitOpenTimeout = Duration(seconds: 25);
 
+class _SeekDirectionFlash extends StatefulWidget {
+  const _SeekDirectionFlash({required this.visible, required this.forward});
+
+  final bool visible;
+  final bool forward;
+
+  @override
+  State<_SeekDirectionFlash> createState() => _SeekDirectionFlashState();
+}
+
+class _SeekDirectionFlashState extends State<_SeekDirectionFlash>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.visible) _controller.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SeekDirectionFlash oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.visible && !_controller.isAnimating) {
+      _controller.repeat();
+    } else if (!widget.visible && _controller.isAnimating) {
+      _controller.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Widget _travellingChevrons() {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final chevrons = List.generate(3, (i) {
+          final t = (_controller.value + i / 3) % 1.0;
+          final opacity = (1 - (2 * t - 1).abs()).clamp(0.15, 1.0);
+          final dx = (widget.forward ? 1 : -1) * (t * 8 - 4);
+          return Opacity(
+            opacity: opacity,
+            child: Transform.translate(
+              offset: Offset(dx, 0),
+              child: Icon(
+                widget.forward
+                    ? Icons.chevron_right_rounded
+                    : Icons.chevron_left_rounded,
+                color: Colors.white,
+                size: 24,
+                shadows: _shadows,
+              ),
+            ),
+          );
+        });
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: widget.forward ? chevrons : chevrons.reversed.toList(),
+        );
+      },
+    );
+  }
+
+  static const List<Shadow> _shadows = [
+    Shadow(color: Colors.black87, blurRadius: 8, offset: Offset(0, 1)),
+    Shadow(color: Colors.black54, blurRadius: 3),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    const label = Text(
+      '10',
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: 22,
+        fontWeight: FontWeight.w800,
+        shadows: _shadows,
+      ),
+    );
+
+    return AnimatedOpacity(
+      opacity: widget.visible ? 1 : 0,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      child: AnimatedScale(
+        scale: widget.visible ? 1 : 0.6,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutBack,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: widget.forward
+              ? [label, const SizedBox(width: 2), _travellingChevrons()]
+              : [_travellingChevrons(), const SizedBox(width: 2), label],
+        ),
+      ),
+    );
+  }
+}
+
 class PlayMediaPage extends StatefulWidget {
   final Content? content;
   final int? seasonIndex;
@@ -103,6 +209,46 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   bool _showBackwardIndicator = false;
   Timer? _seekIndicatorTimer;
   bool _isMicMuted = false;
+  double _playbackSpeed = 1.0;
+  bool _controlsVisible = true;
+  Timer? _hideControlsTimer;
+
+  static const Duration _controlsHideDelay = Duration(seconds: 3);
+
+  void _scheduleHideControls() {
+    _hideControlsTimer?.cancel();
+    _hideControlsTimer = Timer(_controlsHideDelay, () {
+      if (!mounted) return;
+      setState(() => _controlsVisible = false);
+    });
+  }
+
+  void _toggleControlsVisibility() {
+    if (!mounted) return;
+    setState(() => _controlsVisible = !_controlsVisible);
+    if (_controlsVisible) {
+      _scheduleHideControls();
+    } else {
+      _hideControlsTimer?.cancel();
+    }
+  }
+
+  void _revealControls() {
+    if (mounted && !_controlsVisible) {
+      setState(() => _controlsVisible = true);
+    }
+    _scheduleHideControls();
+  }
+
+  static const List<double> _speedOptions = [
+    0.5,
+    0.75,
+    1.0,
+    1.25,
+    1.5,
+    1.75,
+    2.0,
+  ];
 
   void _triggerResumeBanner(int seconds) {
     if (seconds <= 10) return;
@@ -544,6 +690,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
 
     _youtubeController = controller;
+    controller.setPlaybackRate(_playbackSpeed);
     SecurityDebugLog.event(
       'PLAYER',
       'YouTube player initialized without exposing the source URL.',
@@ -551,6 +698,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
     if (mounted && token == _setupToken) {
       setState(() => _loading = false);
+      _scheduleHideControls();
     }
 
     _progressTimer = Timer.periodic(
@@ -692,6 +840,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
     if (mounted && token == _setupToken) {
       setState(() => _loading = false);
+      _scheduleHideControls();
     }
 
     await _resumeAndPlay(token);
@@ -818,6 +967,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
     if (mounted && token == _setupToken) {
       setState(() => _loading = false);
+      _scheduleHideControls();
     }
 
     await _resumeAndPlay(token);
@@ -1030,8 +1180,10 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     final provider = context.read<PlayMediaProvider>();
     if (nativePlayer != null) {
       await nativePlayer.setVolume(1.0);
+      await nativePlayer.setPlaybackSpeed(_playbackSpeed);
     } else {
       await player!.setVolume(100);
+      await player.setRate(_playbackSpeed);
     }
 
     final localResumeSeconds = provider.getLocalResume(
@@ -1222,6 +1374,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   void dispose() {
     _isDisposed = true;
     _setupToken++;
+    _hideControlsTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     final secureController = _securePlaybackController;
     secureController?.removeListener(_onSecurePlaybackChanged);
@@ -1345,14 +1498,17 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.space ||
         key == LogicalKeyboardKey.gameButtonA) {
+      _revealControls();
       _togglePlayback();
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowRight) {
+      _revealControls();
       _seekBy(const Duration(seconds: 10));
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowLeft) {
+      _revealControls();
       _seekBy(const Duration(seconds: -10));
       return KeyEventResult.handled;
     }
@@ -1363,6 +1519,128 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
+  }
+
+  Future<void> _setPlaybackSpeed(double rate) async {
+    if (mounted) {
+      setState(() => _playbackSpeed = rate);
+    } else {
+      _playbackSpeed = rate;
+    }
+
+    final youtubeController = _youtubeController;
+    if (youtubeController != null) {
+      youtubeController.setPlaybackRate(rate);
+      return;
+    }
+
+    final nativePlayer = _nativeNetworkPlayer;
+    if (nativePlayer != null) {
+      await nativePlayer.setPlaybackSpeed(rate);
+      return;
+    }
+
+    await _player?.setRate(rate);
+  }
+
+  String _speedLabel(double rate) {
+    final isWhole = rate == rate.roundToDouble();
+    final value = isWhole
+        ? rate.toStringAsFixed(0)
+        : rate.toStringAsFixed(2).replaceFirst(RegExp(r'0$'), '');
+    return '${value}x';
+  }
+
+  void _showSpeedSelector() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.black.withValues(alpha: 0.92),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (sheetContext) {
+        final maxHeight = MediaQuery.sizeOf(sheetContext).height * 0.7;
+        return SafeArea(
+          top: false,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(20, 18, 20, 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Playback speed',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.only(bottom: 8),
+                    children: [
+                      for (final option in _speedOptions)
+                        ListTile(
+                          title: Text(
+                            _speedLabel(option),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: option == _playbackSpeed
+                                  ? FontWeight.w700
+                                  : FontWeight.w400,
+                            ),
+                          ),
+                          trailing: option == _playbackSpeed
+                              ? Icon(Icons.check,
+                                  color: Theme.of(context).primaryColor)
+                              : null,
+                          onTap: () {
+                            Navigator.of(sheetContext).pop();
+                            unawaited(_setPlaybackSpeed(option));
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _speedButton() {
+    return Material(
+      color: Colors.black.withValues(alpha: 0.25),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: _showSpeedSelector,
+        child: SizedBox(
+          height: 36,
+          width: 36,
+          child: Center(
+            child: Text(
+              _speedLabel(_playbackSpeed),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _togglePlayback() {
@@ -1573,17 +1851,21 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             fit: StackFit.expand,
             children: [
               Positioned.fill(
-                child: showLoading
-                    ? Center(
-                        child: CircularProgressIndicator(
-                          color: theme.primaryColor,
-                        ),
-                      )
-                    : _hasPlaybackError
-                        ? _secureErrorView()
-                        : ResponsiveWidget.isDesktop(context)
-                            ? _desktopPlayer()
-                            : _mobilePlayer(),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _toggleControlsVisibility,
+                  child: showLoading
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            color: theme.primaryColor,
+                          ),
+                        )
+                      : _hasPlaybackError
+                          ? _secureErrorView()
+                          : ResponsiveWidget.isDesktop(context)
+                              ? _desktopPlayer()
+                              : _mobilePlayer(),
+                ),
               ),
               if (!showLoading && !_hasPlaybackError && watermark != null)
                 Positioned.fill(
@@ -1593,7 +1875,17 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                 ),
               if (!showLoading && !_hasPlaybackError)
                 Positioned.fill(
-                  child: _playbackControlsOverlay(theme),
+                  child: IgnorePointer(
+                    ignoring: !_controlsVisible,
+                    child: AnimatedOpacity(
+                      opacity: _controlsVisible ? 1 : 0,
+                      duration: const Duration(milliseconds: 220),
+                      child: Listener(
+                        onPointerDown: (_) => _scheduleHideControls(),
+                        child: _playbackControlsOverlay(theme),
+                      ),
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -1642,7 +1934,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
 
     return Material(
-      color: Colors.black.withValues(alpha: 0.48),
+      color: Colors.black.withValues(alpha: 0.25),
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
@@ -1703,7 +1995,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
   Widget _backButton() {
     return Material(
-      color: Colors.black.withValues(alpha: 0.45),
+      color: Colors.black.withValues(alpha: 0.25),
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
@@ -1732,11 +2024,20 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         Positioned(
           top: 12,
           right: 12,
-          child: SafeArea(child: _downloadButton()),
+          child: SafeArea(
+            child: Row(
+              children: [
+                _speedButton(),
+                const SizedBox(width: 8),
+                _downloadButton(),
+              ],
+            ),
+          ),
         ),
         Center(
           child: _centerPlaybackControls(),
         ),
+        _seekFlashOverlay(),
         Positioned(
           left: 0,
           right: 0,
@@ -1753,6 +2054,37 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _seekFlashOverlay() {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Align(
+                alignment: Alignment.center,
+                child: _SeekDirectionFlash(
+                  visible: _showBackwardIndicator,
+                  forward: false,
+                ),
+              ),
+            ),
+            const Spacer(flex: 2),
+            Expanded(
+              child: Align(
+                alignment: Alignment.center,
+                child: _SeekDirectionFlash(
+                  visible: _showForwardIndicator,
+                  forward: true,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1781,7 +2113,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           iconSize: compact ? 46 : 52,
           tooltip: _isPlaybackPlaying ? 'Pause' : 'Play',
           onTap: _togglePlayback,
-          opacity: 0.74,
+          opacity: 0.28,
         ),
         SizedBox(width: gap),
         _roundPlaybackButton(
@@ -1801,7 +2133,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     required double iconSize,
     required String tooltip,
     required VoidCallback onTap,
-    double opacity = 0.58,
+    double opacity = 0.22,
   }) {
     return Tooltip(
       message: tooltip,
@@ -1837,10 +2169,10 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         : 0.0;
 
     return Container(
-      height: 64,
+      height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.74),
+        color: Colors.black.withValues(alpha: 0.30),
         borderRadius: BorderRadius.circular(8),
         boxShadow: const [
           BoxShadow(

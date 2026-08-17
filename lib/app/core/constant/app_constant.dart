@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 class AppConstant {
-  static const String appVersion = "1.0.1";
+  static const String appVersion = "1.0.2";
   static const int appBuildNumber = 1;
   static final String GOOGLE_KEY = "AIzaSyDbIESWMKX_4TqGEiFUhbu8-PUpLnVBPrc";
   static const String razorpayKeyId = String.fromEnvironment(
