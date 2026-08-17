@@ -116,7 +116,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            "₹ ${walletProvider.walletBalance.toStringAsFixed(0)}",
+                            "₹ ${walletProvider.walletBalance.toStringAsFixed(2)}",
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 36,
@@ -192,7 +192,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   //const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
-                                      "Wallet: ₹ ${provider.walletBalance.toStringAsFixed(0)}",
+                                      "Wallet: ₹ ${provider.walletBalance.toStringAsFixed(2)}",
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,

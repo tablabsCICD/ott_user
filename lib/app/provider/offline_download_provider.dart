@@ -226,6 +226,10 @@ class OfflineDownloadProvider extends BaseProvider {
     }
 
     _downloadedContentIds.remove(contentId);
+    _downloadedContents.removeWhere((item) => item.id == contentId);
+    _downloadMetadata.remove(contentId);
+    await _persistDownloadedContents();
+    notifyListeners();
     return null;
   }
 

@@ -284,7 +284,9 @@ class SignedPlaybackResponse {
   }) {
     final playbackUrl = (json['playbackUrl'] ?? '').toString().trim();
     final uri = Uri.tryParse(playbackUrl);
-    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+    if (uri == null ||
+        (uri.scheme != 'https' && uri.scheme != 'http') ||
+        uri.host.isEmpty) {
       throw const FormatException('Invalid secure playback URL.');
     }
 

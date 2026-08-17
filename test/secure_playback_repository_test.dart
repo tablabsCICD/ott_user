@@ -124,6 +124,7 @@ void main() {
       contentId: 'movie-123',
       playbackUrl: 'https://cdn.example.com/master.m3u8',
       country: 'IN',
+      type: 'movie',
     );
 
     expect(response.sessionId, 'session-id');

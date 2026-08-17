@@ -681,7 +681,7 @@ class _ProfileOptionState extends State<ProfileOption> {
         ),
         subtitle: widget.balance != null
             ? Text(
-                'Rs ${widget.balance}',
+                '₹ ${widget.balance!.toStringAsFixed(2)}',
                 style: TextStyle(
                   color: theme.canvasColor.withOpacity(0.6),
                   fontWeight: FontWeight.normal,

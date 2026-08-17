@@ -36,6 +36,7 @@ class ApiConstant {
     required appVersion,
     deviceMetadata,
     deviceToken,
+    String? referralCode,
   }) {
     final query = <String, String>{
       'username': mobileNum.toString(),
@@ -49,6 +50,8 @@ class ApiConstant {
         'deviceMetadata': deviceMetadata.toString(),
       if (deviceToken != null && deviceToken.toString().trim().isNotEmpty)
         'deviceToken': deviceToken.toString(),
+      if (referralCode != null && referralCode.trim().isNotEmpty)
+        'referralCode': referralCode.trim(),
     };
 
     return Uri.parse("${baseUrl}userNew/VerifyOtpJWT")

@@ -58,6 +58,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
   bool isLoading = true;
   bool _contentLoadCompleted = false;
   bool _contentLoadFailed = false;
+  bool _isDescriptionExpanded = false;
   final TrailerPreviewController _trailerController =
       TrailerPreviewController();
   final TrailerPreviewController _teaserController = TrailerPreviewController();
@@ -186,9 +187,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
     if (movie.id == null) return;
 
     Content contentToPlay = movie;
-    var contentUrl = contentToPlay.contentUrl;
+    var contentUrl = contentToPlay.contentUrl?.trim();
 
-    if (contentUrl == null || contentUrl.trim().isEmpty) {
+    if (contentUrl == null || contentUrl.isEmpty) {
       final fetchedContent =
           await context.read<DashboardProvider>().getContentById(movie.id!);
       if (!mounted) return;
@@ -197,11 +198,16 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
         fetchedContent.watchedSeconds ??= movie.watchedSeconds;
         fetchedContent.watchedPercentage ??= movie.watchedPercentage;
         contentToPlay = fetchedContent;
-        contentUrl = contentToPlay.contentUrl;
+        contentUrl = contentToPlay.contentUrl?.trim();
       }
     }
 
-    if (contentUrl == null || contentUrl.trim().isEmpty) {
+    if (contentUrl == null || contentUrl.isEmpty) {
+      contentUrl =
+          (contentToPlay.trailerUrl ?? contentToPlay.teaserUrl)?.trim();
+    }
+
+    if (contentUrl == null || contentUrl.isEmpty) {
       CustomToast.show(
         context,
         "Video is not available",
@@ -210,7 +216,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
       return;
     }
 
-    _trailerController.pause?.call();
+    final sanitizedUrl = Uri.encodeFull(contentUrl);
+
+    if (!mounted) return;
 
     Navigator.push(
       context,
@@ -219,7 +227,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
           seasons: null,
           seasonIndex: 0,
           episodeIndex: 0,
-          videoUrl: contentUrl!,
+          videoUrl: sanitizedUrl,
           content: contentToPlay,
         ),
       ),
@@ -491,16 +499,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                   const SizedBox(height: 16),
                   _buildTvMetaRow(content, theme),
                   const SizedBox(height: 16),
-                  Text(
+                  _buildExpandableDescription(
                     content.description ?? 'N/A',
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.82),
-                      fontSize: 17,
-                      height: 1.42,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    theme,
+                    maxCollapsedLines: 4,
                   ),
                   const SizedBox(height: 24),
                   content.isFeatured == true
@@ -1470,15 +1472,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                 ],
               ),
               const SizedBox(height: 9),
-              Text(
+              _buildExpandableDescription(
                 content.description ?? 'N/A',
-                textAlign: TextAlign.left,
-                maxLines: 6,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.7),
-                  fontWeight: FontWeight.normal,
-                ),
+                selectedThemeData,
+                maxCollapsedLines: 3,
               ),
               const SizedBox(height: 8),
               content.isFeatured == true
@@ -1561,11 +1558,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
   }) {
     final theme = Theme.of(context);
     final posters = content.posterUrlList ?? [];
-    final teaserUrl = _galleryVideoUrl(content);
-    final hasPosters = posters.isNotEmpty;
-    final hasTeaser = teaserUrl.isNotEmpty;
 
-    if (!hasPosters && !hasTeaser) return const SizedBox.shrink();
+    if (posters.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1583,30 +1577,13 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
           height: 180,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: posters.length + (hasTeaser ? 1 : 0),
+            itemCount: posters.length,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
-              if (hasTeaser && index == 0) {
-                return SizedBox(
-                  width: 320,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: TrailerPreview(
-                      trailerUrl: teaserUrl,
-                      content: content,
-                      controller: _teaserController,
-                      autoPlay: previewAutoPlay,
-                      muted: !previewAutoPlay,
-                    ),
-                  ),
-                );
-              }
-
-              final posterIndex = hasTeaser ? index - 1 : index;
               return ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
-                  posters[posterIndex],
+                  posters[index],
                   width: 320,
                   height: 180,
                   fit: BoxFit.cover,
@@ -2125,6 +2102,78 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
             : DeepLinkContentType.movie,
         unavailableMessage: "Movie details are not available yet",
       ),
+    );
+  }
+
+  Widget _buildExpandableDescription(
+    String text,
+    ThemeData theme, {
+    int maxCollapsedLines = 3,
+  }) {
+    final cleanText = text.trim();
+    if (cleanText.isEmpty || cleanText == 'N/A') {
+      return Text(
+        'N/A',
+        style: TextStyle(
+          color: Colors.white.withOpacity(0.7),
+          fontWeight: FontWeight.normal,
+        ),
+      );
+    }
+
+    final isLongText = cleanText.length > 130;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          cleanText,
+          textAlign: TextAlign.left,
+          maxLines: _isDescriptionExpanded ? null : maxCollapsedLines,
+          overflow: _isDescriptionExpanded
+              ? TextOverflow.visible
+              : TextOverflow.ellipsis,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.75),
+            fontWeight: FontWeight.normal,
+            fontSize: 14,
+            height: 1.4,
+          ),
+        ),
+        if (isLongText)
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isDescriptionExpanded = !_isDescriptionExpanded;
+              });
+            },
+            borderRadius: BorderRadius.circular(4),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _isDescriptionExpanded ? "Read Less" : "Read More",
+                    style: TextStyle(
+                      color: theme.primaryColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    _isDescriptionExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    color: theme.primaryColor,
+                    size: 16,
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 

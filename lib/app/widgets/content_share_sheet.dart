@@ -230,6 +230,7 @@ class _ContentShareSheetBody extends StatelessWidget {
       BuildContext context, PreparedMovieShareData data) async {
     try {
       final playStoreLink = AppConstant.playStoreLink;
+      final appStoreLink = AppConstant.appStoreLink;
       final webAppLink = AppConstant.webAppLink;
 
       final message = '''
@@ -239,6 +240,7 @@ Watch now 👇
 ${data.qrLink}
 
 📲 Download App:
+iOS: $appStoreLink
 Android: $playStoreLink
 Web: $webAppLink
 ''';

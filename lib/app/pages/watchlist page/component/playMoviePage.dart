@@ -22,6 +22,7 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart' as youtube;
 
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/playback_watermark_overlay.dart';
+import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/app/widgets/video_skip_controls.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -95,6 +96,33 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   SecurePlaybackController? _securePlaybackController;
   bool _handlingSecureAuthenticationFailure = false;
   Duration? _lastLoggedDuration;
+  bool _showResumeBanner = false;
+  String? _resumedTimeText;
+  Timer? _resumeBannerTimer;
+  bool _showForwardIndicator = false;
+  bool _showBackwardIndicator = false;
+  Timer? _seekIndicatorTimer;
+  bool _isMicMuted = false;
+
+  void _triggerResumeBanner(int seconds) {
+    if (seconds <= 10) return;
+    final duration = Duration(seconds: seconds);
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final secs = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final formatted = duration.inHours > 0
+        ? '${duration.inHours}:$minutes:$secs'
+        : '$minutes:$secs';
+    _resumeBannerTimer?.cancel();
+    if (mounted) {
+      setState(() {
+        _resumedTimeText = formatted;
+        _showResumeBanner = true;
+      });
+    }
+    _resumeBannerTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _showResumeBanner = false);
+    });
+  }
 
   bool get _isSeries =>
       widget.content?.type?.toLowerCase() == "series" &&
@@ -632,6 +660,18 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       );
       await player.dispose();
       if (mounted && token == _setupToken) {
+        if (playFromFile && widget.content?.id != null) {
+          SecurityDebugLog.event(
+            'PLAYER',
+            'Local downloaded playback failed to initialize; falling back to online protected streaming.',
+          );
+          _isOfflinePlayback = false;
+          await _startSecurePlayback(
+            sourceUrl: _currentRemotePlaybackUrl ?? widget.videoUrl.trim(),
+            contentId: widget.content!.id.toString(),
+          );
+          return;
+        }
         _showPlaybackError('Failed to load video');
       }
       return;
@@ -1011,6 +1051,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       } else {
         await player!.seek(resumePosition);
       }
+      _triggerResumeBanner(resumeSeconds);
     }
 
     if (nativePlayer != null) {
@@ -1352,6 +1393,26 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   void _seekBy(Duration delta) {
+    // _showControls();
+    _seekIndicatorTimer?.cancel();
+    setState(() {
+      if (delta.inSeconds > 0) {
+        _showForwardIndicator = true;
+        _showBackwardIndicator = false;
+      } else {
+        _showBackwardIndicator = true;
+        _showForwardIndicator = false;
+      }
+    });
+    _seekIndicatorTimer = Timer(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        setState(() {
+          _showForwardIndicator = false;
+          _showBackwardIndicator = false;
+        });
+      }
+    });
+
     final youtubeController = _youtubeController;
     if (youtubeController != null) {
       final duration = youtubeController.value.metaData.duration;
@@ -1496,10 +1557,11 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     final showLoading = (_loading && !playerSurfaceReady) || secureLoading;
     final watermark = _securePlaybackController?.watermark;
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
         await _handleExit();
-        return false;
       },
       child: Scaffold(
         backgroundColor: Colors.black,

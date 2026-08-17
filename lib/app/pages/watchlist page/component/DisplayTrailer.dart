@@ -567,6 +567,10 @@ class _TrailerPreviewState extends State<TrailerPreview>
   bool _wasPlayingBeforeRoutePause = false;
   bool _wasPlayingBeforeLifecyclePause = false;
   int _initToken = 0;
+  Future<void>? _initializationFuture;
+  bool _manuallyPaused = false;
+  bool _appIsActive = true;
+  bool _isMuted = false;
 
   String get _trailerUrl =>
       DirectTrailerSource.fromBackend(widget.trailerUrl) ?? '';
@@ -575,6 +579,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
   @override
   void initState() {
     super.initState();
+    _isMuted = widget.muted;
     WidgetsBinding.instance.addObserver(this);
 
     widget.controller.pause = () {
@@ -589,12 +594,14 @@ class _TrailerPreviewState extends State<TrailerPreview>
         () => !_userPaused && _trailerUrl.isNotEmpty;
 
     widget.controller.mute = () {
+      if (mounted) setState(() => _isMuted = true);
       _player?.setVolume(0);
       _nativePlayer?.setVolume(0);
       _youtubeController?.mute();
     };
 
     widget.controller.unmute = () {
+      if (mounted) setState(() => _isMuted = false);
       _player?.setVolume(100);
       _nativePlayer?.setVolume(1);
       _youtubeController?.unMute();

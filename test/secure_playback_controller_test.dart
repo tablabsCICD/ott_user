@@ -15,6 +15,7 @@ class _ControllerRepository extends SecurePlaybackRepository {
     required String contentId,
     required String playbackUrl,
     required String country,
+    required String type,
   }) async {
     createCalls++;
     if (createCalls > 1 && pendingRefresh != null) {
@@ -69,6 +70,7 @@ void main() {
       contentId: 'movie-1',
       originalPlaybackUrl: 'https://origin.example.com/master.m3u8',
       country: 'IN',
+      type: 'movie',
       repository: repository,
       mediaLoader: (authorization, {required isRefresh}) async {
         loaded.add(authorization);
@@ -102,6 +104,7 @@ void main() {
       contentId: 'movie-1',
       originalPlaybackUrl: 'https://origin.example.com/master.m3u8',
       country: 'IN',
+      type: 'movie',
       repository: repository,
       mediaLoader: (authorization, {required isRefresh}) async {
         refreshModes.add(isRefresh);
@@ -143,6 +146,7 @@ void main() {
       contentId: 'movie-1',
       originalPlaybackUrl: 'https://origin.example.com/master.m3u8',
       country: 'IN',
+      type: 'movie',
       repository: repository,
       mediaLoader: (authorization, {required isRefresh}) async {
         throw StateError('player rejected source');

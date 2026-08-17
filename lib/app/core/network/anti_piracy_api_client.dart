@@ -145,7 +145,7 @@ class AntiPiracyApiClient {
     Map<String, String>? extraHeaders,
     Duration timeout = const Duration(seconds: 10),
   }) async {
-    if (uri.scheme != 'https') {
+    if (uri.scheme != 'https' && uri.scheme != 'http') {
       throw const SecurePlaybackException(
         SecurePlaybackFailure.invalidResponse,
         'A secure connection is required for playback.',
