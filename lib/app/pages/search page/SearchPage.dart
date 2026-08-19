@@ -26,7 +26,8 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   bool isLoading = true;
-  final FocusNode _searchFocusNode = FocusNode(debugLabel: 'search-field');
+  final FocusNode _searchFocusNode =
+      FocusNode(debugLabel: 'search-field', skipTraversal: true);
 
   @override
   void initState() {
@@ -51,30 +52,28 @@ class _SearchPageState extends State<SearchPage> {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     final selectedThemeData = themeProvider.getTheme;
     final lang = AppLocalizations.of(context)!;
-
-    final movies = featuredContent["movies"];
-    final genreSet = {
-      for (var movie in movies)
-        ...List<String>.from([
-          'Action',
-          'Drama',
-          'Comedy',
-          'Thriller',
-          'Horror',
-          'Romance',
-          'Sci-Fi',
-          'Fantasy',
-          'Mystery',
-          'Documentary',
-          'Animation',
-          'Adventure',
-          'Musical',
-          'Historical',
-          'Crime'
-        ])
+    final movies = featuredContent["movies"] as List<dynamic>? ?? [];
+    final genreSet = <String>{
+      'Action',
+      'Drama',
+      'Comedy',
+      'Thriller',
+      'Horror',
+      'Romance',
+      'Sci-Fi',
+      'Fantasy',
+      'Mystery',
+      'Documentary',
+      'Animation',
+      'Adventure',
+      'Musical',
+      'Historical',
+      'Crime',
     };
     final languageSet = {
-      for (var movie in movies) movie['language'].toString()
+      for (var movie in movies)
+        if (movie is Map && movie['language'] != null)
+          movie['language'].toString()
     };
 
     return Consumer<VideoProvider>(
@@ -121,155 +120,195 @@ class _SearchPageState extends State<SearchPage> {
             actions: [
               Padding(
                 padding: const EdgeInsets.only(right: 8.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: selectedThemeData.cardColor.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(
-                      22,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      ResponsiveWidget.isMobile(context)
-                          ? SizedBox()
-                          : Padding(
-                              padding: EdgeInsets.only(
-                                left: 10,
-                              ),
-                              child: Text(
-                                lang.filter,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                child: ResponsiveWidget.isTabletOrTv(context)
+                    ? OttTvFocus(
+                        borderRadius: 22,
+                        scale: 1.05,
+                        semanticLabel: lang.filter,
+                        onTap: () => _showTvFilterDialog(
+                          context,
+                          provider,
+                          genreSet,
+                          languageSet,
+                          selectedThemeData,
+                          lang,
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(22),
+                          onTap: () => _showTvFilterDialog(
+                            context,
+                            provider,
+                            genreSet,
+                            languageSet,
+                            selectedThemeData,
+                            lang,
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: selectedThemeData.cardColor.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(22),
                             ),
-                      PopupMenuButton(
-                        color: selectedThemeData.cardColor,
-                        tooltip: lang.filter,
-                        icon:
-                            const Icon(Icons.filter_list, color: Colors.white),
-                        itemBuilder: (context) => [
-                          PopupMenuItem(
-                            child: StatefulBuilder(
-                              builder: (context, setState) {
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      lang.filterOptions,
-                                      style: TextStyle(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            child: Row(
+                              children: [
+                                Text(
+                                  lang.filter,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.filter_list,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    : Container(
+                        decoration: BoxDecoration(
+                          color: selectedThemeData.cardColor.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        child: Row(
+                          children: [
+                            ResponsiveWidget.isMobile(context)
+                                ? const SizedBox.shrink()
+                                : Padding(
+                                    padding: const EdgeInsets.only(left: 10),
+                                    child: Text(
+                                      lang.filter,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.bold,
-                                        color: selectedThemeData.primaryColor,
                                       ),
                                     ),
-                                    const Divider(),
-                                    Text(lang.genre),
-                                    DropdownButton<String>(
-                                      dropdownColor:
-                                          selectedThemeData.cardColor,
-                                      isExpanded: true,
-                                      value: provider.selectedGenre,
-                                      hint: Text(lang.selectGenre),
-                                      onChanged: (value) {
-                                        setState(() {
-                                          provider.selectedGenre = value;
-                                        });
-                                        provider.applyFilter(
-                                          value,
-                                          provider.selectedLanguage,
-                                          provider.selectedRating,
-                                        );
-                                      },
-                                      items: genreSet
-                                          .map((genre) =>
-                                              DropdownMenuItem<String>(
-                                                value: genre,
-                                                child: Text(genre),
-                                              ))
-                                          .toList(),
-                                    ),
-                                    Text(lang.language),
-                                    DropdownButton<String>(
-                                      dropdownColor:
-                                          selectedThemeData.cardColor,
-                                      isExpanded: true,
-                                      value: provider.selectedLanguage,
-                                      hint: Text(lang.selectLanguage),
-                                      onChanged: (value) {
-                                        setState(() {
-                                          provider.selectedLanguage = value;
-                                        });
-                                        provider.applyFilter(
-                                          provider.selectedGenre,
-                                          value,
-                                          provider.selectedRating,
-                                        );
-                                      },
-                                      items: languageSet
-                                          .map((language) =>
-                                              DropdownMenuItem<String>(
-                                                value: language,
-                                                child: Text(language),
-                                              ))
-                                          .toList(),
-                                    ),
-                                    Text(lang.minimumRating),
-                                    DropdownButton<double>(
-                                      dropdownColor:
-                                          selectedThemeData.cardColor,
-                                      isExpanded: true,
-                                      value: provider.selectedRating,
-                                      hint: Text(lang.selectRating),
-                                      onChanged: (value) {
-                                        setState(() {
-                                          provider.selectedRating = value;
-                                        });
-                                        provider.applyFilter(
-                                          provider.selectedGenre,
-                                          provider.selectedLanguage,
-                                          value,
-                                        );
-                                      },
-                                      items: [3.0, 4.0, 4.5, 5.0]
-                                          .map((rating) =>
-                                              DropdownMenuItem<double>(
-                                                value: rating,
-                                                child: Text("$rating+"),
-                                              ))
-                                          .toList(),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Center(
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                          provider.clearFilters();
-                                          Navigator.pop(context);
+                                  ),
+                            PopupMenuButton(
+                              color: selectedThemeData.cardColor,
+                              tooltip: lang.filter,
+                              icon: const Icon(Icons.filter_list, color: Colors.white),
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                              child: StatefulBuilder(
+                                builder: (context, setState) {
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        lang.filterOptions,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: selectedThemeData.primaryColor,
+                                        ),
+                                      ),
+                                      const Divider(),
+                                      Text(lang.genre),
+                                      DropdownButton<String>(
+                                        dropdownColor: selectedThemeData.cardColor,
+                                        isExpanded: true,
+                                        value: provider.selectedGenre,
+                                        hint: Text(lang.selectGenre),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            provider.selectedGenre = value;
+                                          });
+                                          provider.applyFilter(
+                                            value,
+                                            provider.selectedLanguage,
+                                            provider.selectedRating,
+                                          );
                                         },
-                                        child: Text(
-                                          lang.clearFilter,
-                                          style: TextStyle(
-                                            color:
-                                                selectedThemeData.primaryColor,
+                                        items: genreSet
+                                            .map((genre) => DropdownMenuItem<String>(
+                                                  value: genre,
+                                                  child: Text(genre),
+                                                ))
+                                            .toList(),
+                                      ),
+                                      Text(lang.language),
+                                      DropdownButton<String>(
+                                        dropdownColor: selectedThemeData.cardColor,
+                                        isExpanded: true,
+                                        value: provider.selectedLanguage,
+                                        hint: Text(lang.selectLanguage),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            provider.selectedLanguage = value;
+                                          });
+                                          provider.applyFilter(
+                                            provider.selectedGenre,
+                                            value,
+                                            provider.selectedRating,
+                                          );
+                                        },
+                                        items: languageSet
+                                            .map((language) => DropdownMenuItem<String>(
+                                                  value: language,
+                                                  child: Text(language),
+                                                ))
+                                            .toList(),
+                                      ),
+                                      Text(lang.minimumRating),
+                                      DropdownButton<double>(
+                                        dropdownColor: selectedThemeData.cardColor,
+                                        isExpanded: true,
+                                        value: provider.selectedRating,
+                                        hint: Text(lang.selectRating),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            provider.selectedRating = value;
+                                          });
+                                          provider.applyFilter(
+                                            provider.selectedGenre,
+                                            provider.selectedLanguage,
+                                            value,
+                                          );
+                                        },
+                                        items: [3.0, 4.0, 4.5, 5.0]
+                                            .map((rating) => DropdownMenuItem<double>(
+                                                  value: rating,
+                                                  child: Text("$rating+"),
+                                                ))
+                                            .toList(),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Center(
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            provider.clearFilters();
+                                            Navigator.pop(context);
+                                          },
+                                          child: Text(
+                                            lang.clearFilter,
+                                            style: TextStyle(
+                                              color: selectedThemeData.primaryColor,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                );
-                              },
+                                    ],
+                                  );
+                                },
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
                     ],
                   ),
                 ),
               ),
             ],
           ),
-          // Inside _SearchPageState's build method where `body:` is assigned:
           body: isLoading
               ? SearchShimmer()
               : ResponsiveWidget.isMobile(context)
@@ -395,6 +434,236 @@ class _SearchPageState extends State<SearchPage> {
           },
         ),
       ),
+    );
+  }
+
+  Future<void> _showTvFilterDialog(
+    BuildContext context,
+    VideoProvider provider,
+    Set<String> genreSet,
+    Set<String> languageSet,
+    ThemeData selectedThemeData,
+    AppLocalizations lang,
+  ) async {
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: selectedThemeData.cardColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    lang.filterOptions,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: selectedThemeData.primaryColor,
+                    ),
+                  ),
+                  OttTvFocus(
+                    borderRadius: 12,
+                    scale: 1.05,
+                    semanticLabel: "Close filters",
+                    onTap: () => Navigator.pop(dialogContext),
+                    child: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(dialogContext),
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 500,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        lang.genre,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: genreSet.map((genre) {
+                          final isSelected = provider.selectedGenre == genre;
+                          return OttTvFocus(
+                            borderRadius: 16,
+                            scale: 1.04,
+                            semanticLabel: genre,
+                            onTap: () {
+                              setDialogState(() {
+                                provider.selectedGenre =
+                                    isSelected ? null : genre;
+                              });
+                              provider.applyFilter(
+                                provider.selectedGenre,
+                                provider.selectedLanguage,
+                                provider.selectedRating,
+                              );
+                            },
+                            child: FilterChip(
+                              selected: isSelected,
+                              label: Text(genre),
+                              selectedColor: selectedThemeData.primaryColor,
+                              onSelected: (_) {
+                                setDialogState(() {
+                                  provider.selectedGenre =
+                                      isSelected ? null : genre;
+                                });
+                                provider.applyFilter(
+                                  provider.selectedGenre,
+                                  provider.selectedLanguage,
+                                  provider.selectedRating,
+                                );
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        lang.language,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: languageSet.map((language) {
+                          final isSelected =
+                              provider.selectedLanguage == language;
+                          return OttTvFocus(
+                            borderRadius: 16,
+                            scale: 1.04,
+                            semanticLabel: language,
+                            onTap: () {
+                              setDialogState(() {
+                                provider.selectedLanguage =
+                                    isSelected ? null : language;
+                              });
+                              provider.applyFilter(
+                                provider.selectedGenre,
+                                provider.selectedLanguage,
+                                provider.selectedRating,
+                              );
+                            },
+                            child: FilterChip(
+                              selected: isSelected,
+                              label: Text(language),
+                              selectedColor: selectedThemeData.primaryColor,
+                              onSelected: (_) {
+                                setDialogState(() {
+                                  provider.selectedLanguage =
+                                      isSelected ? null : language;
+                                });
+                                provider.applyFilter(
+                                  provider.selectedGenre,
+                                  provider.selectedLanguage,
+                                  provider.selectedRating,
+                                );
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        lang.minimumRating,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [3.0, 4.0, 4.5, 5.0].map((rating) {
+                          final isSelected =
+                              provider.selectedRating == rating;
+                          return OttTvFocus(
+                            borderRadius: 16,
+                            scale: 1.04,
+                            semanticLabel: "$rating+ rating",
+                            onTap: () {
+                              setDialogState(() {
+                                provider.selectedRating =
+                                    isSelected ? null : rating;
+                              });
+                              provider.applyFilter(
+                                provider.selectedGenre,
+                                provider.selectedLanguage,
+                                provider.selectedRating,
+                              );
+                            },
+                            child: FilterChip(
+                              selected: isSelected,
+                              label: Text("$rating+"),
+                              selectedColor: selectedThemeData.primaryColor,
+                              onSelected: (_) {
+                                setDialogState(() {
+                                  provider.selectedRating =
+                                      isSelected ? null : rating;
+                                });
+                                provider.applyFilter(
+                                  provider.selectedGenre,
+                                  provider.selectedLanguage,
+                                  provider.selectedRating,
+                                );
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                OttTvFocus(
+                  borderRadius: 10,
+                  scale: 1.05,
+                  semanticLabel: lang.clearFilter,
+                  onTap: () {
+                    provider.clearFilters();
+                    setDialogState(() {});
+                  },
+                  child: TextButton(
+                    onPressed: () {
+                      provider.clearFilters();
+                      setDialogState(() {});
+                    },
+                    child: Text(
+                      lang.clearFilter,
+                      style:
+                          TextStyle(color: selectedThemeData.primaryColor),
+                    ),
+                  ),
+                ),
+                OttTvFocus(
+                  borderRadius: 10,
+                  scale: 1.05,
+                  semanticLabel: "Done",
+                  onTap: () => Navigator.pop(dialogContext),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: selectedThemeData.primaryColor,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text("Done"),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

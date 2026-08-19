@@ -4,6 +4,7 @@ import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -127,24 +128,32 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             backgroundImage: avatarImage,
                           ),
                         ),
-                        InkWell(
+                        OttTvFocus(
+                          borderRadius: 25,
+                          scale: 1.1,
+                          semanticLabel: 'Change profile picture',
                           onTap: userProvider.isUploading
                               ? null
                               : () => userProvider.pickImage(),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: selectedThemeData.cardColor,
-                              border: Border.all(
-                                color: selectedThemeData.canvasColor,
-                                width: 0.5,
+                          child: InkWell(
+                            onTap: userProvider.isUploading
+                                ? null
+                                : () => userProvider.pickImage(),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: selectedThemeData.cardColor,
+                                border: Border.all(
+                                  color: selectedThemeData.canvasColor,
+                                  width: 0.5,
+                                ),
                               ),
-                            ),
-                            padding: const EdgeInsets.all(8.0),
-                            child: Icon(
-                              Icons.edit,
-                              color: selectedThemeData.canvasColor,
-                              size: 20,
+                              padding: const EdgeInsets.all(8.0),
+                              child: Icon(
+                                Icons.edit,
+                                color: selectedThemeData.canvasColor,
+                                size: 20,
+                              ),
                             ),
                           ),
                         ),
@@ -196,18 +205,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           userProvider.userObj.emailId ?? 'Enter valid email',
                       textInputType: TextInputType.emailAddress,
                     ),
-                    /*  CustomTextField(
-                      controller: userProvider.mobileController,
-                      label: 'Mobile Number',
-                      isPhoneNumber: true,
-                      isValidator: true,
-                      hintText: userProvider.userObj.mobileNumber != null
-                          ? userProvider.userObj.mobileNumber!.isNotEmpty
-                              ? userProvider.userObj.mobileNumber!
-                              : 'Enter mobile number'
-                          : 'Enter mobile number',
-                      textInputType: TextInputType.phone,
-                    ), */
                     CustomTextField(
                       controller: userProvider.dobController,
                       label: 'Birth Date',
@@ -223,69 +220,125 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       onTap: () => _selectDate(userProvider),
                     ),
                     const SizedBox(height: 30),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: selectedThemeData.primaryColor,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6)),
-                      ),
-                      onPressed: userProvider.isUploading
+                    OttTvFocus(
+                      borderRadius: 6,
+                      scale: 1.02,
+                      semanticLabel: "Save profile",
+                      onTap: userProvider.isUploading
                           ? null
                           : () async {
-                        if (userProvider.profileController.text.isEmpty) {
-                          userProvider.profileController.text =
-                              userProvider.userObj.profilePhoto ?? '';
-                        }
-                        if (userProvider.emailController.text.isEmpty) {
-                          userProvider.emailController.text =
-                              userProvider.userObj.emailId ?? '';
-                        }
-                        if (userProvider.firstNameController.text.isEmpty) {
-                          userProvider.firstNameController.text =
-                              userProvider.userObj.firstName ?? '';
-                        }
-                        if (userProvider.lastNameController.text.isEmpty) {
-                          userProvider.lastNameController.text =
-                              userProvider.userObj.lastName ?? '';
-                        }
-                        if (userProvider.mobileController.text.isEmpty) {
-                          userProvider.mobileController.text =
-                              userProvider.userObj.mobileNumber ?? '';
-                        }
-                        if (userProvider.dobController.text.isEmpty) {
-                          userProvider.dobController.text =
-                              userProvider.userObj.dob ?? '';
-                        }
-                        if (!_formKey.currentState!.validate()) return;
-                        var result = await userProvider.updateUser();
-                        if (!mounted) return;
-                        if (result['success'] == true) {
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setBool('isLoggedIn', true);
-                          if (!mounted) return;
+                              if (userProvider.profileController.text.isEmpty) {
+                                userProvider.profileController.text =
+                                    userProvider.userObj.profilePhoto ?? '';
+                              }
+                              if (userProvider.emailController.text.isEmpty) {
+                                userProvider.emailController.text =
+                                    userProvider.userObj.emailId ?? '';
+                              }
+                              if (userProvider.firstNameController.text.isEmpty) {
+                                userProvider.firstNameController.text =
+                                    userProvider.userObj.firstName ?? '';
+                              }
+                              if (userProvider.lastNameController.text.isEmpty) {
+                                userProvider.lastNameController.text =
+                                    userProvider.userObj.lastName ?? '';
+                              }
+                              if (userProvider.mobileController.text.isEmpty) {
+                                userProvider.mobileController.text =
+                                    userProvider.userObj.mobileNumber ?? '';
+                              }
+                              if (userProvider.dobController.text.isEmpty) {
+                                userProvider.dobController.text =
+                                    userProvider.userObj.dob ?? '';
+                              }
+                              if (!_formKey.currentState!.validate()) return;
+                              var result = await userProvider.updateUser();
+                              if (!mounted) return;
+                              if (result['success'] == true) {
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+                                await prefs.setBool('isLoggedIn', true);
+                                if (!mounted) return;
 
-                          CustomToast.show(
-                            context,
-                            "Profile updated successfully!",
-                            isSuccess: true,
-                          );
-                          Navigator.of(context).pop();
-                        } else {
-                          CustomToast.show(
-                            context,
-                            'Failure: ${result['message']}',
-                            isSuccess: false,
-                          );
-                        }
-                      },
-                      child: const Center(
-                        child: Text(
-                          "Save",
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white),
+                                CustomToast.show(
+                                  context,
+                                  "Profile updated successfully!",
+                                  isSuccess: true,
+                                );
+                                Navigator.of(context).pop();
+                              } else {
+                                CustomToast.show(
+                                  context,
+                                  'Failure: ${result['message']}',
+                                  isSuccess: false,
+                                );
+                              }
+                            },
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: selectedThemeData.primaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6)),
+                        ),
+                        onPressed: userProvider.isUploading
+                            ? null
+                            : () async {
+                                if (userProvider.profileController.text.isEmpty) {
+                                  userProvider.profileController.text =
+                                      userProvider.userObj.profilePhoto ?? '';
+                                }
+                                if (userProvider.emailController.text.isEmpty) {
+                                  userProvider.emailController.text =
+                                      userProvider.userObj.emailId ?? '';
+                                }
+                                if (userProvider.firstNameController.text.isEmpty) {
+                                  userProvider.firstNameController.text =
+                                      userProvider.userObj.firstName ?? '';
+                                }
+                                if (userProvider.lastNameController.text.isEmpty) {
+                                  userProvider.lastNameController.text =
+                                      userProvider.userObj.lastName ?? '';
+                                }
+                                if (userProvider.mobileController.text.isEmpty) {
+                                  userProvider.mobileController.text =
+                                      userProvider.userObj.mobileNumber ?? '';
+                                }
+                                if (userProvider.dobController.text.isEmpty) {
+                                  userProvider.dobController.text =
+                                      userProvider.userObj.dob ?? '';
+                                }
+                                if (!_formKey.currentState!.validate()) return;
+                                var result = await userProvider.updateUser();
+                                if (!mounted) return;
+                                if (result['success'] == true) {
+                                  final prefs =
+                                      await SharedPreferences.getInstance();
+                                  await prefs.setBool('isLoggedIn', true);
+                                  if (!mounted) return;
+
+                                  CustomToast.show(
+                                    context,
+                                    "Profile updated successfully!",
+                                    isSuccess: true,
+                                  );
+                                  Navigator.of(context).pop();
+                                } else {
+                                  CustomToast.show(
+                                    context,
+                                    'Failure: ${result['message']}',
+                                    isSuccess: false,
+                                  );
+                                }
+                              },
+                        child: const Center(
+                          child: Text(
+                            "Save",
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white),
+                          ),
                         ),
                       ),
                     ),

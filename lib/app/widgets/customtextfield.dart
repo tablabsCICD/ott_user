@@ -101,8 +101,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
   }
 
   void _handleFocusChanged() {
-    if (!_isTvInput || !_focusNode.hasFocus) return;
-    _showTextInputKeyboard();
+    // Don't auto-open IME on TV focus change; user presses Select/Enter to open keyboard
   }
 
   bool get _isTvInput => !kIsWeb && ResponsiveWidget.isTv(context);

@@ -645,6 +645,41 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                     ),
                   ),
                 ),
+                const SizedBox(height: 12),
+                FocusTraversalOrder(
+                  order: const NumericFocusOrder(21),
+                  child: OttTvFocus(
+                    borderRadius: 8,
+                    scale: 1.03,
+                    semanticLabel: "Browse as Guest",
+                    onTap: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NavigationPage(),
+                        ),
+                      );
+                    },
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const NavigationPage(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        "Skip & Browse App",
+                        style: TextStyle(
+                          color: theme.canvasColor.withOpacity(0.75),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

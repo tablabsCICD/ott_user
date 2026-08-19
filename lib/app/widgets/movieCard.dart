@@ -521,9 +521,12 @@ class _MovieCardState extends State<MovieCard> {
     final showPreview = _isPreviewPlaying;
     final cardWidth = widget.cardWidth ?? MovieCard.itemWidth;
     final cardMargin = widget.cardMargin ?? MovieCard.itemMargin;
-    final highlightColor = theme.brightness == Brightness.light
-        ? const Color.fromARGB(255, 185, 169, 169)
-        : const Color.fromARGB(255, 58, 49, 49);
+    final isHighlighted = showPreview || _isHovered;
+    final highlightColor = ResponsiveWidget.isTabletOrTv(context)
+        ? theme.primaryColor
+        : (theme.brightness == Brightness.light
+            ? const Color.fromARGB(255, 185, 169, 169)
+            : const Color.fromARGB(255, 58, 49, 49));
 
     return Stack(
       children: [
@@ -568,7 +571,7 @@ class _MovieCardState extends State<MovieCard> {
                   left: cardMargin,
                   right: cardMargin,
                   bottom: cardMargin,
-                  top: showPreview
+                  top: isHighlighted
                       ? 4
                       : 12, // 👈 selected card moves slightly up
                 ),
@@ -577,21 +580,21 @@ class _MovieCardState extends State<MovieCard> {
                   color: theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: showPreview
+                    color: isHighlighted
                         ? highlightColor
                         : theme.canvasColor.withValues(alpha: 0.2),
-                    width: showPreview ? 2.5 : 1,
+                    width: isHighlighted ? 2.5 : 1,
                   ),
-                  /*  boxShadow: showPreview
-                    ? [
-                        BoxShadow(
-                          color: highlightColor.withValues(alpha: 0.12),
-                          blurRadius: 3,
-                          spreadRadius: 0.5,  
-                          offset: const Offset(0, 3),
-                        ),
-                      ]
-                    : null, */
+                  boxShadow: (isHighlighted && ResponsiveWidget.isTabletOrTv(context))
+                      ? [
+                          BoxShadow(
+                            color: highlightColor.withValues(alpha: 0.35),
+                            blurRadius: 12,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
                 ),
                 child: Column(
                   children: [

@@ -661,8 +661,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: () {
+                OttTvFocus(
+                  onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -670,10 +670,23 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     );
                   },
-                  child: Text(
-                    lang.editProfile,
-                    style: TextStyle(
-                      color: theme.canvasColor,
+                  borderRadius: 12,
+                  scale: 1.05,
+                  semanticLabel: lang.editProfile,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EditProfilePage(),
+                        ),
+                      );
+                    },
+                    child: Text(
+                      lang.editProfile,
+                      style: TextStyle(
+                        color: theme.canvasColor,
+                      ),
                     ),
                   ),
                 ),

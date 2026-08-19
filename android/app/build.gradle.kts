@@ -44,7 +44,7 @@ android {
     defaultConfig {
         applicationId = "com.filmytell.ott"
         minSdk = flutter.minSdkVersion
-        targetSdk = 35
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

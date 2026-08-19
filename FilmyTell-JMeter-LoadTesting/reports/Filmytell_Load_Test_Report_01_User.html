@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Filmytell - 1 User Smoke Test Performance Report</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 25px; color: #333; }
+    .container { max-width: 1100px; margin: 0 auto; background: #fff; padding: 35px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    header { border-bottom: 3px solid #e50914; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+    h1 { color: #e50914; margin: 0; font-size: 24px; }
+    .badge { background: #e50914; color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px; }
+    .card { background: #f8f9fa; border-left: 4px solid #007bff; padding: 15px; border-radius: 4px; }
+    .card .value { font-size: 22px; font-weight: bold; color: #111; margin-top: 5px; }
+    .card .label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 25px; }
+    th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #ddd; font-size: 13px; }
+    th { background-color: #111; color: #fff; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    .q-title { font-size: 18px; color: #111; border-left: 4px solid #e50914; padding-left: 10px; margin-top: 30px; margin-bottom: 12px; }
+    .status-pass { color: #28a745; font-weight: bold; }
+    footer { text-align: center; color: #777; font-size: 12px; margin-top: 35px; border-top: 1px solid #eee; padding-top: 15px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Filmytell — 1 User Smoke Test Performance Report</h1>
+        <div style="color: #666; font-size: 13px; margin-top: 4px;">Target Environment: <strong>https://filmytell.com/ott</strong></div>
+      </div>
+      <span class="badge">1 USER CONCURRENCY</span>
+    </header>
+
+    <div class="kpi-grid">
+      <div class="card" style="border-color: #e50914;">
+        <div class="label">Concurrent Users</div>
+        <div class="value">1 User(s)</div>
+      </div>
+      <div class="card" style="border-color: #007bff;">
+        <div class="label">Throughput</div>
+        <div class="value">0.9 req/s</div>
+      </div>
+      <div class="card" style="border-color: #28a745;">
+        <div class="label">P95 Response Time</div>
+        <div class="value">29 ms</div>
+      </div>
+      <div class="card" style="border-color: #17a2b8;">
+        <div class="label">Average Latency</div>
+        <div class="value">144 ms</div>
+      </div>
+    </div>
+
+    <div class="q-title">1. How many users did we test?</div>
+    <p style="line-height: 1.6; color: #444;">
+      The Filmytell application was tested with <strong>1 concurrent virtual user(s)</strong> during this smoke test cycle targeting <code>https://filmytell.com/ott</code>.
+    </p>
+
+    <div class="q-title">2. Authentication Flow & Token Correlation Results</div>
+    <table>
+      <thead>
+        <tr><th>Authentication Metric</th><th>Result</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Authentication Attempts (OTP & JWT)</td><td>2</td></tr>
+        <tr><td>Successful Authentications</td><td>2</td></tr>
+        <tr><td>Authentication Failures</td><td>0</td></tr>
+        <tr><td>Authentication Error Rate</td><td>0.0%</td></tr>
+        <tr><td>Average Authentication Time</td><td>805 ms</td></tr>
+        <tr><td>P95 Authentication Time</td><td>1581 ms</td></tr>
+        <tr><td>P99 Authentication Time</td><td>1581 ms</td></tr>
+      </tbody>
+    </table>
+
+    <div class="q-title">3. Authenticated API Performance Results</div>
+    <table>
+      <thead>
+        <tr><th>Authenticated API Metric</th><th>Result</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Authenticated API Requests</td><td>10</td></tr>
+        <tr><td>Successful API Requests (HTTP 200)</td><td>10</td></tr>
+        <tr><td>Failed API Requests</td><td>0</td></tr>
+        <tr><td>API Error Rate</td><td>0.0%</td></tr>
+        <tr><td>Average API Response Time</td><td>12 ms</td></tr>
+        <tr><td>P95 API Response Time</td><td>22 ms</td></tr>
+        <tr><td>P99 API Response Time</td><td>35 ms</td></tr>
+        <tr><td>API Throughput</td><td>0.9 req/s</td></tr>
+      </tbody>
+    </table>
+
+    <div class="q-title">4. At what load did performance start degrading?</div>
+    <p style="line-height: 1.6; color: #444;">
+      This test represents the baseline/smoke level. Performance degradation cannot be determined from this test alone because only one concurrency level was tested.
+    </p>
+
+    <div class="q-title">5. Conclusion & Overall Status</div>
+    <p style="line-height: 1.6; color: #444;">
+      <strong>Overall Performance Status: <span class="status-pass">PASS</span></strong><br>
+      The 1 user smoke test was executed against <code>https://filmytell.com/ott</code>. Verified authentication flow and API latency satisfy the configured test thresholds.
+    </p>
+
+    <footer>
+      Filmytell Performance Test Report | Apache JMeter 5.6.3 | Target: https://filmytell.com/ott
+    </footer>
+  </div>
+</body>
+</html>

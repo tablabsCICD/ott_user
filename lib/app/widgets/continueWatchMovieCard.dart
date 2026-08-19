@@ -433,15 +433,27 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
         ? widget.movie.posterUrlList!.first
         : null;
     final showPreview = _isPreviewPlaying;
-    final highlightColor = theme.brightness == Brightness.light
-        ? const Color.fromARGB(255, 185, 169, 169)
-        : const Color.fromARGB(255, 58, 49, 49);
+    final isHighlighted = showPreview || _isHovered;
+    final highlightColor = ResponsiveWidget.isTabletOrTv(context)
+        ? theme.primaryColor
+        : (theme.brightness == Brightness.light
+            ? const Color.fromARGB(255, 185, 169, 169)
+            : const Color.fromARGB(255, 58, 49, 49));
     return Stack(children: [
       Focus(
         canRequestFocus: ResponsiveWidget.isTabletOrTv(context),
         onFocusChange: (hasFocus) {
           if (ResponsiveWidget.isTabletOrTv(context)) {
             _handleHover(hasFocus);
+            if (hasFocus) {
+              Scrollable.ensureVisible(
+                context,
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                alignmentPolicy:
+                    ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+              );
+            }
           }
         },
         onKeyEvent: (node, event) {
@@ -465,21 +477,24 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
               width: ContinueWatchMovieCard.itemWidth,
-              //  margin: const EdgeInsets.all(ContinueWatchMovieCard.itemMargin),
               margin: EdgeInsets.only(
                 left: ContinueWatchMovieCard.itemMargin,
                 right: ContinueWatchMovieCard.itemMargin,
                 bottom: ContinueWatchMovieCard.itemMargin,
-                top: showPreview ? 4 : 12, // 👈 selected card moves slightly up
+                top: isHighlighted
+                    ? 4
+                    : 12, // 👈 selected card moves slightly up
               ),
               decoration: BoxDecoration(
                 color: theme.cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: showPreview ? highlightColor : Colors.transparent,
-                  width: showPreview ? 2.5 : 1,
+                  color: isHighlighted
+                      ? highlightColor
+                      : Colors.transparent,
+                  width: isHighlighted ? 2.5 : 1,
                 ),
-                boxShadow: showPreview
+                boxShadow: isHighlighted
                     ? [
                         BoxShadow(
                           color: highlightColor.withValues(alpha: 0.35),

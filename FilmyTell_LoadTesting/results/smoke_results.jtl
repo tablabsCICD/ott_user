@@ -1,0 +1,13 @@
+timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage,bytes,sentBytes,grpThreads,allThreads,URL,Latency,IdleTime,Connect
+1786701595636,357,01 - Send OTP,500,,End-To-End OTT User Journey 1-1,text,false,,778,227,1,1,https://filmytell.in/ott/userNew/SendOTPOnMobileWithRegistration?mobileNumber=9876500001,357,0,337
+1786701597014,16,02 - Verify OTP,500,,End-To-End OTT User Journey 1-1,text,false,,759,327,1,1,https://filmytell.in/ott/userNew/VerifyOtpJWT?username=9876500001&mobileNumber=9876500001&otp=123456&deviceId=DEVICE_001&deviceName=Android%20Phone%201&deviceType=ANDROID&appVersion=1.0.16,15,0,0
+1786701598106,13,01 - Dashboard Filter Type3,401,,End-To-End OTT User Journey 1-1,text,false,,766,201,1,1,https://filmytell.in/ott/api/forUser/filter/content-list/type3,12,0,0
+1786701599135,25,02 - Public Latest Content,200,,End-To-End OTT User Journey 1-1,text,true,,3051,223,1,1,https://filmytell.in/ott/api/forUser/public/Content/Latest?page=0&size=10&type=MOVIE,25,0,0
+1786701600162,21,03 - Public Top Ten Content,200,,End-To-End OTT User Journey 1-1,text,true,,2967,197,1,1,https://filmytell.in/ott/api/forUser/public/Content/TopTen,20,0,0
+1786701601193,11,01 - Movie or Content Details,401,,End-To-End OTT User Journey 1-1,text,false,,766,217,1,1,https://filmytell.in/ott/api/ContentList/getContentByIdAndUserId?id=1&userId=1,11,0,0
+1786701602207,12,02 - Series Details,401,,End-To-End OTT User Journey 1-1,text,false,,766,202,1,1,https://filmytell.in/ott/api/userSeries/1/user-details?userId=1,12,0,0
+1786701603222,12,01 - Search Content By Key,401,,End-To-End OTT User Journey 1-1,text,false,,766,223,1,1,https://filmytell.in/ott/api/forUser/user/Content/getByAnyKey?userId=1&keyword=movie,12,0,0
+1786701604247,18,01 - Request Signed Playback URL,401,,End-To-End OTT User Journey 1-1,text,false,,766,383,1,1,https://filmytell.in/ott/anti-piracy/playback/signed-url,18,0,0
+1786701605279,12,01 - Get User Profile,401,,End-To-End OTT User Journey 1-1,text,false,,766,178,1,1,https://filmytell.in/ott/user/getUser/1,12,0,0
+1786701606295,13,02 - Continue Watching List,401,,End-To-End OTT User Journey 1-1,text,false,,766,206,1,1,https://filmytell.in/ott/continue-watching/user/1?contentType=MOVIE,13,0,0
+1786701607311,31,01 - Get User Push Notifications,401,,End-To-End OTT User Journey 1-1,text,false,,766,214,1,1,https://filmytell.in/ott/api/notifications/user/1/push?pageNo=1&pageSize=10,31,0,0

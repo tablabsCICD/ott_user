@@ -1,0 +1,50 @@
+{
+  "AUTH - Send OTP" : {
+    "transaction" : "AUTH - Send OTP",
+    "sampleCount" : 1,
+    "errorCount" : 1,
+    "errorPct" : 100.0,
+    "meanResTime" : 544.0,
+    "medianResTime" : 544.0,
+    "minResTime" : 544.0,
+    "maxResTime" : 544.0,
+    "pct1ResTime" : 544.0,
+    "pct2ResTime" : 544.0,
+    "pct3ResTime" : 544.0,
+    "throughput" : 1.838235294117647,
+    "receivedKBytesPerSec" : 1.3966279871323528,
+    "sentKBytesPerSec" : 0.4092945772058823
+  },
+  "Total" : {
+    "transaction" : "Total",
+    "sampleCount" : 1,
+    "errorCount" : 1,
+    "errorPct" : 100.0,
+    "meanResTime" : 544.0,
+    "medianResTime" : 544.0,
+    "minResTime" : 544.0,
+    "maxResTime" : 544.0,
+    "pct1ResTime" : 544.0,
+    "pct2ResTime" : 544.0,
+    "pct3ResTime" : 544.0,
+    "throughput" : 1.838235294117647,
+    "receivedKBytesPerSec" : 1.3966279871323528,
+    "sentKBytesPerSec" : 0.4092945772058823
+  },
+  "AUTH - Authentication Flow" : {
+    "transaction" : "AUTH - Authentication Flow",
+    "sampleCount" : 1,
+    "errorCount" : 1,
+    "errorPct" : 100.0,
+    "meanResTime" : 544.0,
+    "medianResTime" : 544.0,
+    "minResTime" : 544.0,
+    "maxResTime" : 544.0,
+    "pct1ResTime" : 544.0,
+    "pct2ResTime" : 544.0,
+    "pct3ResTime" : 544.0,
+    "throughput" : 1.838235294117647,
+    "receivedKBytesPerSec" : 1.3966279871323528,
+    "sentKBytesPerSec" : 0.4092945772058823
+  }
+}

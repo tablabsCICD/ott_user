@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:ott/app/provider/onboarding_tour_provider.dart';
 import 'package:ott/app/provider/ticketProvider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -205,28 +206,36 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          backgroundColor: theme.primaryColor.withOpacity(0.14),
-          child: Icon(Icons.tour_rounded, color: theme.primaryColor),
-        ),
-        title: Text(
-          'App Tour',
-          style: TextStyle(
-            color: theme.canvasColor,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        subtitle: Text(
-          'Replay the quick guide to important app features.',
-          style: TextStyle(color: theme.canvasColor.withOpacity(0.68)),
-        ),
-        trailing: Icon(Icons.arrow_forward_ios_rounded,
-            size: 16, color: theme.canvasColor.withOpacity(0.7)),
+      child: OttTvFocus(
+        borderRadius: 16,
+        scale: 1.02,
+        semanticLabel: "App Tour",
         onTap: () {
           context.read<OnboardingTourProvider>().replayTour(context: context);
         },
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          leading: CircleAvatar(
+            backgroundColor: theme.primaryColor.withOpacity(0.14),
+            child: Icon(Icons.tour_rounded, color: theme.primaryColor),
+          ),
+          title: Text(
+            'App Tour',
+            style: TextStyle(
+              color: theme.canvasColor,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          subtitle: Text(
+            'Replay the quick guide to important app features.',
+            style: TextStyle(color: theme.canvasColor.withOpacity(0.68)),
+          ),
+          trailing: Icon(Icons.arrow_forward_ios_rounded,
+              size: 16, color: theme.canvasColor.withOpacity(0.7)),
+          onTap: () {
+            context.read<OnboardingTourProvider>().replayTour(context: context);
+          },
+        ),
       ),
     );
   }
@@ -311,39 +320,50 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                         ),
                       ],
                     )
-                  : OutlinedButton.icon(
-                      onPressed: provider.isUploading
+                  : OttTvFocus(
+                      borderRadius: 12,
+                      scale: 1.02,
+                      semanticLabel: lang.attachImage,
+                      onTap: provider.isUploading
                           ? null
                           : () => provider.pickImage(),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: theme.primaryColor,
-                        side: BorderSide(color: theme.primaryColor),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                      ),
-                      icon: provider.isUploading
-                          ? SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: theme.primaryColor,
-                              ),
-                            )
-                          : const Icon(Icons.attach_file),
-                      label: Text(
-                        provider.isUploading
-                            ? 'Uploading...'
-                            : lang.attachImage,
+                      child: OutlinedButton.icon(
+                        onPressed: provider.isUploading
+                            ? null
+                            : () => provider.pickImage(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: theme.primaryColor,
+                          side: BorderSide(color: theme.primaryColor),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: provider.isUploading
+                            ? SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: theme.primaryColor,
+                                ),
+                              )
+                            : const Icon(Icons.attach_file),
+                        label: Text(
+                          provider.isUploading
+                              ? 'Uploading...'
+                              : lang.attachImage,
+                        ),
                       ),
                     ),
               const SizedBox(height: 14),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: provider.isSubmitting || provider.isUploading
+                child: OttTvFocus(
+                  borderRadius: 12,
+                  scale: 1.02,
+                  semanticLabel: lang.submit,
+                  onTap: provider.isSubmitting || provider.isUploading
                       ? null
                       : () async {
                           if (!(_supportFormKey.currentState?.validate() ??
@@ -369,26 +389,54 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                             await provider.getRaisedTicketByUserId();
                           }
                         },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 30, vertical: 14),
-                    textStyle: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                  child: ElevatedButton(
+                    onPressed: provider.isSubmitting || provider.isUploading
+                        ? null
+                        : () async {
+                            if (!(_supportFormKey.currentState?.validate() ??
+                                false)) {
+                              return;
+                            }
+
+                            final confirmed =
+                                await _showSubmitConfirmationDialog(theme);
+                            if (!mounted || confirmed != true) return;
+
+                            final result = await provider.raiseTicket();
+                            if (!mounted) return;
+
+                            CustomToast.show(
+                              context,
+                              result['message']?.toString() ??
+                                  'Something went wrong',
+                              isSuccess: result['success'] == true,
+                            );
+
+                            if (result['success'] == true) {
+                              await provider.getRaisedTicketByUserId();
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 30, vertical: 14),
+                      textStyle: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: provider.isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(lang.submit),
                   ),
-                  child: provider.isSubmitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(lang.submit),
                 ),
               ),
             ],

@@ -17,6 +17,7 @@ import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/movieCard.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/shimmer%20loader/home_shimmer.dart';
 import 'package:ott/app/widgets/shimmer%20loader/shimmer_loader.dart';
 import 'package:ott/data/models/content.dart';
@@ -567,8 +568,7 @@ class _SeriesListViewState extends State<_SeriesListView>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          InkWell(
-            splashColor: Colors.transparent,
+          OttTvFocus(
             onTap: () {
               Navigator.push(
                 context,
@@ -580,26 +580,46 @@ class _SeriesListViewState extends State<_SeriesListView>
                 ),
               );
             },
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
-                      fontWeight: FontWeight.bold,
-                      color: selectedThemeData.canvasColor,
+            borderRadius: 8,
+            scale: 1.01,
+            semanticLabel: 'See all $title',
+            child: InkWell(
+              splashColor: Colors.transparent,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CategoryContentPage(
+                      categoryTitle: title,
+                      contents: dashboardData.movies ?? [],
                     ),
                   ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
+                          fontWeight: FontWeight.bold,
+                          color: selectedThemeData.canvasColor,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 18,
+                      color: selectedThemeData.primaryColor,
+                    ),
+                    const SizedBox(width: 3),
+                  ],
                 ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 18,
-                  color: selectedThemeData.primaryColor,
-                ),
-                const SizedBox(width: 3),
-              ],
+              ),
             ),
           ),
           SizedBox(

@@ -16,31 +16,34 @@ class ResponsiveWidget extends StatelessWidget {
     required this.desktop,
   });
 
+  static bool isTv(BuildContext context) {
+    if (FlavorConfig.current.isTv) return true;
+    final media = MediaQuery.of(context);
+    return media.size.width >= 800 &&
+        media.orientation == Orientation.landscape;
+  }
+
   static bool isMobile(BuildContext context) =>
       !FlavorConfig.current.isTv &&
+      !isTv(context) &&
       MediaQuery.of(context).size.width < mobileBreakpoint;
 
   static bool isTablet(BuildContext context) =>
       !FlavorConfig.current.isTv &&
+      !isTv(context) &&
       MediaQuery.of(context).size.width < desktopBreakpoint &&
       MediaQuery.of(context).size.width >= mobileBreakpoint;
 
   static bool isDesktop(BuildContext context) =>
       FlavorConfig.current.isTv ||
+      isTv(context) ||
       MediaQuery.of(context).size.width >= desktopBreakpoint;
-
-  static bool isTv(BuildContext context) {
-    if (FlavorConfig.current.isTv) return true;
-    final media = MediaQuery.of(context);
-    return media.size.width >= desktopBreakpoint &&
-        media.orientation == Orientation.landscape;
-  }
 
   static bool isTabletOrTv(BuildContext context) => !isMobile(context);
 
   @override
   Widget build(BuildContext context) {
-    if (FlavorConfig.current.isTv) return desktop;
+    if (FlavorConfig.current.isTv || isTv(context)) return desktop;
     final Size size = MediaQuery.of(context).size;
     // If our width is more than 1100 then we consider it a desktop
     if (size.width >= desktopBreakpoint) {

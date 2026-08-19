@@ -7,6 +7,7 @@ import 'package:ott/app/core/utils/image_url_utils.dart';
 import 'package:ott/app/core/utils/text_capitalization_formatter.dart';
 import 'package:ott/app/pages/profile%20page/component/EditProfilePage.dart';
 import 'package:ott/app/provider/userProvider.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/presentation/web_landing/utils/post_logout_navigation.dart';
 import 'package:provider/provider.dart';
@@ -265,43 +266,57 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
         Row(
           children: [
             Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _isDeletingAccount ? null : _openDeletionPage,
-                icon: const Icon(Icons.open_in_new, size: 18),
-                label: const Text("Deletion Info"),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: theme.primaryColor,
-                  side: BorderSide(color: theme.primaryColor.withOpacity(0.45)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+              child: OttTvFocus(
+                borderRadius: 10,
+                scale: 1.02,
+                semanticLabel: "Deletion Info",
+                onTap: _isDeletingAccount ? null : _openDeletionPage,
+                child: OutlinedButton.icon(
+                  onPressed: _isDeletingAccount ? null : _openDeletionPage,
+                  icon: const Icon(Icons.open_in_new, size: 18),
+                  label: const Text("Deletion Info"),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.primaryColor,
+                    side: BorderSide(color: theme.primaryColor.withOpacity(0.45)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _isDeletingAccount
+              child: OttTvFocus(
+                borderRadius: 10,
+                scale: 1.02,
+                semanticLabel: "Delete Account",
+                onTap: _isDeletingAccount
                     ? null
                     : () => _confirmAndDeleteAccount(userProvider),
-                icon: _isDeletingAccount
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.delete_forever, size: 18),
-                label: Text(_isDeletingAccount ? "Deleting..." : "Delete"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                child: ElevatedButton.icon(
+                  onPressed: _isDeletingAccount
+                      ? null
+                      : () => _confirmAndDeleteAccount(userProvider),
+                  icon: _isDeletingAccount
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.delete_forever, size: 18),
+                  label: Text(_isDeletingAccount ? "Deleting..." : "Delete"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ),
@@ -351,20 +366,32 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
             style: TextStyle(color: theme.canvasColor.withOpacity(0.78)),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(
-                "Cancel",
-                style: TextStyle(color: theme.canvasColor),
+            OttTvFocus(
+              borderRadius: 8,
+              scale: 1.05,
+              semanticLabel: "Cancel deletion",
+              onTap: () => Navigator.of(dialogContext).pop(false),
+              child: TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(
+                  "Cancel",
+                  style: TextStyle(color: theme.canvasColor),
+                ),
               ),
             ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                foregroundColor: Colors.white,
+            OttTvFocus(
+              borderRadius: 8,
+              scale: 1.05,
+              semanticLabel: "Confirm Delete",
+              onTap: () => Navigator.of(dialogContext).pop(true),
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text("Delete"),
               ),
-              child: const Text("Delete"),
             ),
           ],
         );
@@ -406,20 +433,26 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
     required String label,
     required VoidCallback onPressed,
   }) {
-    return ElevatedButton.icon(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: theme.primaryColor,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-      onPressed: onPressed,
-      icon: Icon(icon, size: 18),
-      label: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontWeight: FontWeight.w600),
+    return OttTvFocus(
+      borderRadius: 10,
+      scale: 1.02,
+      semanticLabel: label,
+      onTap: onPressed,
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: theme.primaryColor,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        label: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }

@@ -2610,7 +2610,27 @@ class _TvFocusableScaleState extends State<_TvFocusableScale> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           width: widget.width,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: _active
+                ? Border.all(
+                    color: theme.primaryColor,
+                    width: 2.5,
+                  )
+                : Border.all(
+                    color: Colors.transparent,
+                    width: 2.5,
+                  ),
+            boxShadow: _active
+                ? [
+                    BoxShadow(
+                      color: theme.primaryColor.withOpacity(0.45),
+                      blurRadius: 10,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : null,
+          ),
           child: widget.child,
         ),
       ),

@@ -93,7 +93,7 @@ class _SplashScreenState extends State<SplashScreen> {
       MaterialPageRoute(
         settings: RouteSettings(name: routeName),
         builder: (routeContext) {
-          if (isLoggedIn) {
+          if (isLoggedIn || ResponsiveWidget.isTv(routeContext)) {
             final route = initialNavigationRoute;
             return NavigationPage(
               initialIndex: route?.index ?? 0,
@@ -131,7 +131,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   static bool _shouldShowWebLandingForContext(BuildContext context) {
-    return kIsWeb || ResponsiveWidget.isTablet(context);
+    return kIsWeb;
   }
 
   void _logWebAuth(String message) {

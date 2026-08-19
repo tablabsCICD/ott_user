@@ -253,16 +253,19 @@ class _HomePageState extends State<HomePage>
     final userProvider =
         Provider.of<UserProvider>(context, listen: false).userObject;
 
-    if (userProvider.emailId!.isEmpty ||
-        userProvider.firstName!.isEmpty ||
-        userProvider.lastName!.isEmpty ||
-        //userProvider.gender!.isEmpty ||
-        userProvider.dob!.isEmpty) {
+    if (userProvider.id == null || userProvider.id == 0) {
+      return;
+    }
+
+    if ((userProvider.emailId?.isEmpty ?? true) ||
+        (userProvider.firstName?.isEmpty ?? true) ||
+        (userProvider.lastName?.isEmpty ?? true) ||
+        (userProvider.dob?.isEmpty ?? true)) {
       userDetailsPopUp(context);
       return;
-    } else if (userProvider.location!.country == null ||
-        userProvider.location!.state == null ||
-        userProvider.location!.district == null) {
+    } else if (userProvider.location?.country == null ||
+        userProvider.location?.state == null ||
+        userProvider.location?.district == null) {
       userLocationPopUp(context);
       return;
     } else {
@@ -285,8 +288,8 @@ class _HomePageState extends State<HomePage>
             .selectedLanguages ??
         [];
 
-    if (selectedLanguages.isEmpty || selectedLanguages == []) {
-      await getMovieList(dashBoardProvider, selectedType, ["English"]);
+    if (selectedLanguages.isEmpty) {
+      await getMovieList(dashBoardProvider, selectedType, ["Hindi", "English", "Marathi"]);
     } else {
       await getMovieList(dashBoardProvider, selectedType, selectedLanguages);
     }
@@ -652,9 +655,7 @@ class _HomePageState extends State<HomePage>
                                                                     .movies!
                                                                     .isEmpty)
                                                             ? SizedBox.shrink()
-                                                            : InkWell(
-                                                                splashColor: Colors
-                                                                    .transparent,
+                                                            : OttTvFocus(
                                                                 onTap: () {
                                                                   Navigator
                                                                       .push(
@@ -672,37 +673,68 @@ class _HomePageState extends State<HomePage>
                                                                     ),
                                                                   );
                                                                 },
-                                                                child: Row(
-                                                                  children: [
-                                                                    Expanded(
-                                                                      child:
-                                                                          Text(
-                                                                        "${dashboardData.language} - ${dashboardData.category}",
-                                                                        overflow:
-                                                                            TextOverflow.ellipsis,
-                                                                        style: GoogleFonts
-                                                                            .inter(
-                                                                          fontSize: ResponsiveWidget.isMobile(context)
-                                                                              ? 18
-                                                                              : 20,
-                                                                          fontWeight:
-                                                                              FontWeight.bold,
-                                                                          color:
-                                                                              selectedThemeData.canvasColor,
+                                                                borderRadius: 8,
+                                                                scale: 1.01,
+                                                                semanticLabel:
+                                                                    "See all ${dashboardData.language} ${dashboardData.category}",
+                                                                child: InkWell(
+                                                                  splashColor: Colors
+                                                                      .transparent,
+                                                                  onTap: () {
+                                                                    Navigator
+                                                                        .push(
+                                                                      context,
+                                                                      MaterialPageRoute(
+                                                                        builder:
+                                                                            (_) =>
+                                                                                CategoryContentPage(
+                                                                          categoryTitle:
+                                                                              "${dashboardData.language} - ${dashboardData.category}",
+                                                                          contents:
+                                                                              dashboardData.movies ??
+                                                                                  [],
                                                                         ),
                                                                       ),
+                                                                    );
+                                                                  },
+                                                                  child: Padding(
+                                                                    padding: const EdgeInsets.symmetric(
+                                                                      horizontal: 4,
+                                                                      vertical: 4,
                                                                     ),
-                                                                    Icon(
-                                                                      Icons
-                                                                          .arrow_forward_ios,
-                                                                      size: 18,
-                                                                      color: selectedThemeData
-                                                                          .primaryColor,
+                                                                    child: Row(
+                                                                      children: [
+                                                                        Expanded(
+                                                                          child:
+                                                                              Text(
+                                                                            "${dashboardData.language} - ${dashboardData.category}",
+                                                                            overflow:
+                                                                                TextOverflow.ellipsis,
+                                                                            style: GoogleFonts
+                                                                                .inter(
+                                                                              fontSize: ResponsiveWidget.isMobile(context)
+                                                                                  ? 18
+                                                                                  : 20,
+                                                                              fontWeight:
+                                                                                  FontWeight.bold,
+                                                                              color:
+                                                                                  selectedThemeData.canvasColor,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                        Icon(
+                                                                          Icons
+                                                                              .arrow_forward_ios,
+                                                                          size: 18,
+                                                                          color: selectedThemeData
+                                                                              .primaryColor,
+                                                                        ),
+                                                                        SizedBox(
+                                                                          width: 3,
+                                                                        )
+                                                                      ],
                                                                     ),
-                                                                    SizedBox(
-                                                                      width: 3,
-                                                                    )
-                                                                  ],
+                                                                  ),
                                                                 ),
                                                               ),
                                                         (dashboardData.movies ==
@@ -1813,72 +1845,74 @@ class _HomePageState extends State<HomePage>
         "MINI SERIES",
         "MADIOO",
       ].map((type) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4.0),
-          child: GestureDetector(
-            onTap: () async {
-              setState(() {
-                selectedType = type;
-              });
-              final selectedLanguages =
-                  Provider.of<UserProvider>(context, listen: false)
-                          .userObject
-                          .selectedLanguages ??
-                      []; // Ensure it doesn't throw null
+        Future<void> onSelectType() async {
+          setState(() {
+            selectedType = type;
+          });
+          final selectedLanguages =
+              Provider.of<UserProvider>(context, listen: false)
+                      .userObject
+                      .selectedLanguages ??
+                  []; // Ensure it doesn't throw null
 
-              print(selectedLanguages);
-              if (selectedType == 'MINI SERIES') {
-                return;
-              }
-              if (selectedType == 'MADIOO') {
-                return;
-              }
-              if (selectedLanguages.isEmpty || selectedLanguages == []) {
-                await getMovieList(
-                    dashboardProvider, selectedType, ["Hindi", "English"]);
-              } else {
-                await getMovieList(
-                    dashboardProvider, selectedType, selectedLanguages);
-              }
-            },
-            child: Container(
-              decoration: BoxDecoration(
+          if (selectedType == 'MINI SERIES' || selectedType == 'MADIOO') {
+            return;
+          }
+          if (selectedLanguages.isEmpty) {
+            await getMovieList(
+                dashboardProvider, selectedType, ["Hindi", "English"]);
+          } else {
+            await getMovieList(
+                dashboardProvider, selectedType, selectedLanguages);
+          }
+        }
+
+        final chip = Container(
+          decoration: BoxDecoration(
+            color: selectedType == type
+                ? selectedThemeData.primaryColor
+                : Colors.transparent,
+            border: Border.all(
+              color: selectedType == type
+                  ? selectedThemeData.primaryColor
+                  : selectedThemeData.canvasColor.withOpacity(0.6),
+            ),
+            borderRadius: BorderRadius.circular(
+              10,
+            ),
+          ),
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+            child: Text(
+              type == 'MOVIE'
+                  ? lang.movie
+                  : type == 'SERIES'
+                      ? lang.series
+                      : type == 'MINI SERIES'
+                          ? 'Mini Series'
+                          : 'Madioo',
+              style: TextStyle(
                 color: selectedType == type
-                    ? selectedThemeData.primaryColor
-                    : Colors.transparent,
-                border: Border.all(
-                  color: selectedType == type
-                      ? selectedThemeData.primaryColor
-                      : selectedThemeData.canvasColor.withOpacity(0.6),
-                ),
-                borderRadius: BorderRadius.circular(
-                  10,
-                ),
-              ),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-                child: Text(
-                  type == 'MOVIE'
-                      ? lang.movie
-                      : type == 'SERIES'
-                          ? lang.series
-                          : type == 'MINI SERIES'
-                              ? 'Mini Series'
-                              : 'Madioo',
-                  style: TextStyle(
-                    color: selectedType == type
-                        ? Colors.white
-                        : selectedThemeData.primaryColor,
-                    fontWeight: selectedType == type
-                        ? FontWeight.bold
-                        : FontWeight.w600,
-                  ),
-                ),
+                    ? Colors.white
+                    : selectedThemeData.primaryColor,
+                fontWeight: selectedType == type
+                    ? FontWeight.bold
+                    : FontWeight.w600,
               ),
             ),
           ),
-          //
+        );
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: OttTvFocus(
+            onTap: onSelectType,
+            borderRadius: 10,
+            scale: 1.04,
+            semanticLabel: 'Filter by $type',
+            child: chip,
+          ),
         );
       }).toList(),
     );
@@ -1983,10 +2017,11 @@ class _HomePageState extends State<HomePage>
       String selectedType, List<String> langList) async {
     final localSharePreferences = LocalSharePreferences();
     final user = await localSharePreferences.getUser();
-    log('User in getMovieList method ${user!.firstName} ');
+    log('User in getMovieList method ${user?.firstName} ');
     await dashBoardProvider.getContinueWatchedMovieList(selectedType);
 
-    await dashBoardProvider.getDashboardData(selectedType, langList, user.id!);
+    final userId = user?.id ?? 0;
+    await dashBoardProvider.getDashboardData(selectedType, langList, userId);
   }
 
 //get user baisc details after sign in

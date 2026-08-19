@@ -296,43 +296,67 @@ class GiftCard extends StatelessWidget {
                         ),
                       ),
                       if (onCopy != null)
-                        IconButton(
-                          icon: const Icon(Icons.copy, size: 18),
-                          color: theme.primaryColor,
-                          onPressed: onCopy,
-                          tooltip: "Copy coupon code",
+                        OttTvFocus(
+                          borderRadius: 20,
+                          scale: 1.05,
+                          semanticLabel: "Copy coupon code",
+                          onTap: onCopy,
+                          child: IconButton(
+                            icon: const Icon(Icons.copy, size: 18),
+                            color: theme.primaryColor,
+                            onPressed: onCopy,
+                            tooltip: "Copy coupon code",
+                          ),
                         ),
                       if (onShare != null)
-                        IconButton(
-                          icon: const Icon(Icons.share, size: 18),
-                          color: theme.primaryColor,
-                          onPressed: onShare,
-                          tooltip: "Share gift link",
+                        OttTvFocus(
+                          borderRadius: 20,
+                          scale: 1.05,
+                          semanticLabel: "Share gift link",
+                          onTap: onShare,
+                          child: IconButton(
+                            icon: const Icon(Icons.share, size: 18),
+                            color: theme.primaryColor,
+                            onPressed: onShare,
+                            tooltip: "Share gift link",
+                          ),
                         ),
                     ],
                   ),
                 ),
                 if (onShare != null) ...[
                   const SizedBox(height: 8),
-                  InkWell(
+                  OttTvFocus(
+                    borderRadius: 8,
+                    scale: 1.02,
+                    semanticLabel: "Share gift claim link",
                     onTap: onShare,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.link,
-                          size: 16,
-                          color: theme.primaryColor,
+                    child: InkWell(
+                      onTap: onShare,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.link,
+                              size: 16,
+                              color: theme.primaryColor,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              "Share gift claim link",
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: theme.primaryColor,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          "Share gift claim link",
-                          style: TextStyle(
-                            color: theme.primaryColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ],
