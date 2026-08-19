@@ -11,6 +11,7 @@ import 'package:video_player/video_player.dart' as native_video;
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/utils/direct_trailer_source.dart';
 import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
@@ -693,6 +694,9 @@ class _MovieCardState extends State<MovieCard> {
                 shape: const CircleBorder(),
                 child: IconButton(
                   padding: const EdgeInsets.all(2),
+                  constraints:
+                      const BoxConstraints(minWidth: 25, minHeight: 25),
+                  iconSize: 20,
                   tooltip: _isMuted ? 'Unmute trailer' : 'Mute trailer',
                   icon: Icon(
                     _isMuted ? Icons.volume_off : Icons.volume_up,
@@ -788,7 +792,7 @@ class _MovieCardState extends State<MovieCard> {
                       fontSize: 12,
                     ),
                     children: [
-                      TextSpan(text: movie.releaseDate ?? ''),
+                      TextSpan(text: formatReleaseDate(movie.releaseDate)),
                       const TextSpan(text: ' | '),
                       TextSpan(
                         text: movie.genreList?.join(', ') ?? 'N/A',

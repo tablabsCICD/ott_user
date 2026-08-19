@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/l10n/app_localizations.dart';
 
@@ -210,7 +211,7 @@ class _HeroCopy extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final genres = (item.genreList ?? const <String>[]).take(4).toList();
-    final releaseYear = _releaseYear(item.releaseDate);
+    final releaseDate = formatReleaseDate(item.releaseDate);
     final lang = AppLocalizations.of(context)!;
 
     return TweenAnimationBuilder<double>(
@@ -253,7 +254,7 @@ class _HeroCopy extends StatelessWidget {
                 _MetaBadge(label: item.ageRating ?? 'U/A'),
                 if ((item.runtime ?? 0) > 0)
                   _MetaBadge(label: '${item.runtime} min'),
-                if (releaseYear != null) _MetaBadge(label: releaseYear),
+                if (releaseDate.isNotEmpty) _MetaBadge(label: releaseDate),
                 _MetaBadge(label: item.type ?? 'Movie'),
               ],
             ),
@@ -334,19 +335,6 @@ class _HeroCopy extends StatelessWidget {
     );
   }
 
-  String? _releaseYear(dynamic releaseDate) {
-    if (releaseDate == null) return null;
-    if (releaseDate is DateTime) return '${releaseDate.year}';
-
-    final value = releaseDate.toString().trim();
-    if (value.length >= 4) {
-      final firstFour = value.substring(0, 4);
-      if (int.tryParse(firstFour) != null) return firstFour;
-    }
-
-    final parsed = DateTime.tryParse(value);
-    return parsed == null ? null : '${parsed.year}';
-  }
 }
 
 class _HeroMoviePrice extends StatelessWidget {

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
@@ -575,7 +576,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                               ),
                               children: [
                                 TextSpan(
-                                  text: movie.releaseDate ?? '',
+                                  text: formatReleaseDate(movie.releaseDate),
                                   style: TextStyle(
                                     color: theme.canvasColor,
                                     fontSize: 12,

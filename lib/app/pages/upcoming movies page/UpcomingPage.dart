@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/shimmer%20loader/comming_soon_shimmer.dart';
@@ -169,7 +170,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
                           size: 12, color: Colors.white70),
                       const SizedBox(width: 4),
                       Text(
-                        item.releaseDate ?? '',
+                        formatReleaseDate(item.releaseDate),
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 12,

@@ -11,6 +11,7 @@ import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/utils/direct_trailer_source.dart';
 import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
@@ -666,7 +667,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                     fontSize: 12,
                   ),
                   children: [
-                    TextSpan(text: movie.releaseDate ?? ''),
+                    TextSpan(text: formatReleaseDate(movie.releaseDate)),
                     const TextSpan(text: ' | '),
                     TextSpan(
                       text: movie.genreList?.join(', ') ?? 'N/A',

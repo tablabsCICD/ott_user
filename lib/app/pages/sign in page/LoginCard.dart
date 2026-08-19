@@ -188,436 +188,423 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(20),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    height: ResponsiveWidget.isMobile(context) ? 90 : 150,
-                    child: Hero(
-                      tag: "logo",
-                      child: ClipRRect(
-                        borderRadius: BorderRadiusGeometry.circular(25),
-                        child: Image.asset(
-                          ImageConstant.logo,
-                          fit: BoxFit.contain,
-                        ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: ResponsiveWidget.isMobile(context) ? 90 : 130,
+                  child: Hero(
+                    tag: "logo",
+                    child: ClipRRect(
+                      borderRadius: BorderRadiusGeometry.circular(25),
+                      child: Image.asset(
+                        ImageConstant.logo,
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),
-                  SizedBox(
-                    height: 60,
-                  ),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 400),
-                    child: Card(
-                      elevation: 6,
-                      color: theme.cardColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 32),
-                        child: FocusTraversalGroup(
-                          policy: OrderedTraversalPolicy(),
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (otpSent) ...[
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    children: [
-                                      IconButton(
-                                        onPressed: () {
-                                          Navigator.pushReplacement(
-                                              context,
-                                              MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      LoginCard()));
-                                        },
-                                        icon: Icon(
-                                          Icons.arrow_back_ios_new_sharp,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                                Text(
-                                  lang.login,
-                                  style: TextStyle(
-                                    color: theme.primaryColor,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                if (_pendingReferralCode != null) ...[
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: theme.primaryColor.withOpacity(0.12),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                        color: theme.primaryColor.withOpacity(0.3),
+                ),
+                SizedBox(
+                  height: ResponsiveWidget.isMobile(context) ? 24 : 24,
+                ),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: Card(
+                    elevation: 6,
+                    color: theme.cardColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 32),
+                      child: FocusTraversalGroup(
+                        policy: OrderedTraversalPolicy(),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (otpSent) ...[
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: [
+                                    IconButton(
+                                      onPressed: () {
+                                        Navigator.pushReplacement(
+                                            context,
+                                            MaterialPageRoute(
+                                                builder: (context) =>
+                                                    LoginCard()));
+                                      },
+                                      icon: Icon(
+                                        Icons.arrow_back_ios_new_sharp,
                                       ),
                                     ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.card_giftcard,
-                                          size: 16,
+                                  ],
+                                ),
+                              ],
+                              Text(
+                                lang.login,
+                                style: TextStyle(
+                                  color: theme.primaryColor,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (_pendingReferralCode != null) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: theme.primaryColor.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color:
+                                          theme.primaryColor.withOpacity(0.3),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.card_giftcard,
+                                        size: 16,
+                                        color: theme.primaryColor,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Referral Code: $_pendingReferralCode',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
                                           color: theme.primaryColor,
                                         ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          'Referral Code: $_pendingReferralCode',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: theme.primaryColor,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                                const SizedBox(height: 15),
-
-                                // Phone number row
-                                Row(
-                                  children: [
-                                    Padding(
-                                      padding:
-                                          const EdgeInsets.only(bottom: 8.0),
-                                      child: Text(
-                                        lang.mobileNumber,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                if (useTvKeypad)
-                                  FocusTraversalOrder(
-                                    order: const NumericFocusOrder(1),
-                                    child: _TvFocusFrame(
-                                      focusNode: _mobileFocusNode,
-                                      enabled: useTvKeypad,
-                                      child: TextFormField(
-                                        focusNode: _mobileFocusNode,
-                                        readOnly: otpSent,
-                                        showCursor: true,
-                                        cursorColor: theme.primaryColor,
-                                        controller: _mobileController,
-                                        keyboardType: TextInputType.phone,
-                                        inputFormatters: [
-                                          FilteringTextInputFormatter
-                                              .digitsOnly,
-                                          LengthLimitingTextInputFormatter(10),
-                                        ],
-                                        textInputAction: TextInputAction.done,
-                                        onChanged: (value) {
-                                          _mobileNumberForOtp =
-                                              _digitsOnly(value).trim();
-                                        },
-                                        onFieldSubmitted: (_) {
-                                          if (!isLoading &&
-                                              !_authRequestInFlight) {
-                                            _handleLoginOrOtp();
-                                          }
-                                        },
-                                        decoration: _loginInputDecoration(
-                                          theme,
-                                          lang.enterMobileNumber,
-                                        ),
-                                        validator: (value) {
-                                          if (value == null || value.isEmpty) {
-                                            return 'Please enter a valid mobile number';
-                                          }
-
-                                          return null;
-                                        },
-                                        style: const TextStyle(fontSize: 16),
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  IntlPhoneField(
-                                    focusNode: _mobileFocusNode,
-                                    readOnly: otpSent,
-                                    cursorColor: theme.primaryColor,
-                                    controller: _mobileController,
-                                    keyboardType: TextInputType.phone,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
                                     ],
-                                    onChanged: (phone) {
-                                      _mobileNumberForOtp =
-                                          _digitsOnly(phone.number);
-                                    },
-
-                                    pickerDialogStyle: PickerDialogStyle(
-                                      backgroundColor: theme.cardColor,
-                                      searchFieldCursorColor:
-                                          theme.primaryColor,
-                                      countryNameStyle: TextStyle(
-                                        color: theme.canvasColor,
-                                      ),
-                                      countryCodeStyle: TextStyle(
-                                        color: theme.canvasColor,
-                                      ),
-                                      searchFieldInputDecoration:
-                                          InputDecoration(
-                                              filled: true,
-                                              fillColor: theme.cardColor,
-                                              counterText: '',
-                                              hintText:
-                                                  'Search by country name and code ..',
-                                              hintStyle:
-                                                  const TextStyle(fontSize: 14),
-                                              // Border properties for search in dropdown
-                                              border: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
-                                                borderSide: BorderSide(
-                                                    color: Colors.grey[
-                                                        400]!), // Default border color
-                                              ),
-                                              enabledBorder: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
-                                                borderSide: BorderSide(
-                                                    color: Colors.grey[
-                                                        400]!), // Border color when enabled
-                                              ),
-                                              focusedBorder: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
-                                                borderSide: BorderSide(
-                                                    color: theme.primaryColor,
-                                                    width:
-                                                        2), // Border color when focused
-                                              ),
-                                              prefixIcon: Icon(Icons.search)),
-                                    ),
-                                    decoration: _loginInputDecoration(
-                                      theme,
-                                      lang.enterMobileNumber,
-                                    ),
-                                    initialCountryCode:
-                                        'IN', // Default to India
-                                    validator: (phone) {
-                                      if (phone == null ||
-                                          phone.number.isEmpty) {
-                                        return 'Please enter a valid mobile number';
-                                      }
-
-                                      return null;
-                                    },
-                                    //invalidNumberMessage: 'Invalid Number',
-                                    style: const TextStyle(fontSize: 16),
-                                    dropdownIconPosition: IconPosition.trailing,
-                                    showDropdownIcon: true,
-                                  ),
-
-                                // CustomTextField(
-                                //   controller: _mobileController,
-                                //   hintText: 'Enter mobile number',
-                                //   label: 'Mobile Number',
-                                //   textInputType: TextInputType.phone,
-                                //   isPhoneNumber: true,
-                                //   isValidator: true,
-                                // ),
-                                const SizedBox(height: 25),
-
-                                /// OTP input
-                                if (otpSent) ...[
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      lang.enterOtp,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                        color: theme.textTheme.bodyLarge?.color,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  FocusTraversalOrder(
-                                    order: const NumericFocusOrder(2),
-                                    child: _TvFocusFrame(
-                                      focusNode: _otpFocusNode,
-                                      enabled: useTvKeypad,
-                                      child: PinCodeTextField(
-                                        focusNode: _otpFocusNode,
-                                        autoDisposeControllers: false,
-                                        autoUnfocus: false,
-                                        autoDismissKeyboard: false,
-                                        readOnly: false,
-                                        cursorColor: theme.primaryColor,
-                                        appContext: context,
-                                        length: 6,
-                                        controller: _otpController,
-                                        keyboardType: TextInputType.number,
-                                        inputFormatters: [
-                                          FilteringTextInputFormatter
-                                              .digitsOnly,
-                                        ],
-                                        enablePinAutofill: true,
-                                        animationType: AnimationType.fade,
-                                        onTap: () => _showTextInputKeyboard(
-                                            _otpFocusNode),
-                                        onCompleted: (_) {
-                                          if (!isLoading &&
-                                              !_authRequestInFlight) {
-                                            _handleLoginOrOtp();
-                                          }
-                                        },
-                                        pinTheme: PinTheme(
-                                          shape: PinCodeFieldShape.box,
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          fieldHeight: 50,
-                                          fieldWidth:
-                                              ResponsiveWidget.isMobile(context)
-                                                  ? 40
-                                                  : 45,
-                                          activeFillColor: theme.cardColor,
-                                          selectedFillColor: theme.cardColor,
-                                          inactiveFillColor: theme.cardColor,
-                                          activeColor: theme.primaryColor,
-                                          selectedColor: theme.primaryColor,
-                                          inactiveColor: Colors.grey[400]!,
-                                        ),
-                                        backgroundColor: theme.cardColor,
-                                        enableActiveFill: true,
-                                        onChanged: (value) {
-                                          if (_otpAutoFilled &&
-                                              value.length < _otpLength) {
-                                            setState(() {
-                                              _otpAutoFilled = false;
-                                              _otpHelperText = null;
-                                            });
-                                          }
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                  if (_otpHelperText != null) ...[
-                                    const SizedBox(height: 8),
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        _otpHelperText!,
-                                        style: TextStyle(
-                                          color: _otpAutoFilled
-                                              ? Colors.green
-                                              : theme.canvasColor
-                                                  .withOpacity(0.65),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 10),
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: TextButton(
-                                      onPressed: isLoading ||
-                                              _authRequestInFlight ||
-                                              _resendSecondsRemaining > 0
-                                          ? null
-                                          : _resendOtp,
-                                      child: Text(
-                                        _resendSecondsRemaining > 0
-                                            ? 'Resend OTP in ${_formatResendTime(_resendSecondsRemaining)}'
-                                            : 'Resend OTP',
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                ],
-
-                                if (useTvKeypad) ...[
-                                  _TvNumberPad(
-                                    focusNodes: _keypadFocusNodes,
-                                    focusOrderStart: 3,
-                                    onDigit: _appendTvDigit,
-                                    onBackspace: _removeTvDigit,
-                                    onDone: () =>
-                                        _submitFocusNode.requestFocus(),
-                                  ),
-                                  const SizedBox(height: 20),
-                                ],
-
-                                /// Button
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: FocusTraversalOrder(
-                                    order: const NumericFocusOrder(20),
-                                    child: _TvFocusFrame(
-                                      focusNode: _submitFocusNode,
-                                      enabled: useTvKeypad,
-                                      child: ElevatedButton(
-                                        focusNode: _submitFocusNode,
-                                        onPressed:
-                                            isLoading || _authRequestInFlight
-                                                ? null
-                                                : _handleLoginOrOtp,
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: theme.primaryColor,
-                                          padding: const EdgeInsets.symmetric(
-                                              vertical: 14),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                          ),
-                                        ),
-                                        child: isLoading
-                                            ? const SizedBox(
-                                                height: 22,
-                                                width: 22,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  color: Colors.white,
-                                                ),
-                                              )
-                                            : Text(
-                                                otpSent
-                                                    ? lang.verifyOtp
-                                                    : lang.sendOtp,
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                      ),
-                                    ),
                                   ),
                                 ),
                               ],
-                            ),
+                              const SizedBox(height: 15),
+
+                              // Phone number row
+                              Row(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 8.0),
+                                    child: Text(
+                                      lang.mobileNumber,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (useTvKeypad)
+                                FocusTraversalOrder(
+                                  order: const NumericFocusOrder(1),
+                                  child: _TvFocusFrame(
+                                    focusNode: _mobileFocusNode,
+                                    enabled: useTvKeypad,
+                                    child: TextFormField(
+                                      focusNode: _mobileFocusNode,
+                                      readOnly: otpSent,
+                                      showCursor: true,
+                                      cursorColor: theme.primaryColor,
+                                      controller: _mobileController,
+                                      keyboardType: TextInputType.phone,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                        LengthLimitingTextInputFormatter(10),
+                                      ],
+                                      textInputAction: TextInputAction.done,
+                                      onChanged: (value) {
+                                        _mobileNumberForOtp =
+                                            _digitsOnly(value).trim();
+                                      },
+                                      onFieldSubmitted: (_) {
+                                        if (!isLoading &&
+                                            !_authRequestInFlight) {
+                                          _handleLoginOrOtp();
+                                        }
+                                      },
+                                      decoration: _loginInputDecoration(
+                                        theme,
+                                        lang.enterMobileNumber,
+                                      ),
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Please enter a valid mobile number';
+                                        }
+
+                                        return null;
+                                      },
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
+                                  ),
+                                )
+                              else
+                                IntlPhoneField(
+                                  focusNode: _mobileFocusNode,
+                                  readOnly: otpSent,
+                                  cursorColor: theme.primaryColor,
+                                  controller: _mobileController,
+                                  keyboardType: TextInputType.phone,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                  ],
+                                  onChanged: (phone) {
+                                    _mobileNumberForOtp =
+                                        _digitsOnly(phone.number);
+                                  },
+
+                                  pickerDialogStyle: PickerDialogStyle(
+                                    backgroundColor: theme.cardColor,
+                                    searchFieldCursorColor: theme.primaryColor,
+                                    countryNameStyle: TextStyle(
+                                      color: theme.canvasColor,
+                                    ),
+                                    countryCodeStyle: TextStyle(
+                                      color: theme.canvasColor,
+                                    ),
+                                    searchFieldInputDecoration: InputDecoration(
+                                        filled: true,
+                                        fillColor: theme.cardColor,
+                                        counterText: '',
+                                        hintText:
+                                            'Search by country name and code ..',
+                                        hintStyle:
+                                            const TextStyle(fontSize: 14),
+                                        // Border properties for search in dropdown
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                          borderSide: BorderSide(
+                                              color: Colors.grey[
+                                                  400]!), // Default border color
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                          borderSide: BorderSide(
+                                              color: Colors.grey[
+                                                  400]!), // Border color when enabled
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                          borderSide: BorderSide(
+                                              color: theme.primaryColor,
+                                              width:
+                                                  2), // Border color when focused
+                                        ),
+                                        prefixIcon: Icon(Icons.search)),
+                                  ),
+                                  decoration: _loginInputDecoration(
+                                    theme,
+                                    lang.enterMobileNumber,
+                                  ),
+                                  initialCountryCode: 'IN', // Default to India
+                                  validator: (phone) {
+                                    if (phone == null || phone.number.isEmpty) {
+                                      return 'Please enter a valid mobile number';
+                                    }
+
+                                    return null;
+                                  },
+                                  //invalidNumberMessage: 'Invalid Number',
+                                  style: const TextStyle(fontSize: 16),
+                                  dropdownIconPosition: IconPosition.trailing,
+                                  showDropdownIcon: true,
+                                ),
+
+                              // CustomTextField(
+                              //   controller: _mobileController,
+                              //   hintText: 'Enter mobile number',
+                              //   label: 'Mobile Number',
+                              //   textInputType: TextInputType.phone,
+                              //   isPhoneNumber: true,
+                              //   isValidator: true,
+                              // ),
+                              const SizedBox(height: 25),
+
+                              /// OTP input
+                              if (otpSent) ...[
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    lang.enterOtp,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: theme.textTheme.bodyLarge?.color,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                FocusTraversalOrder(
+                                  order: const NumericFocusOrder(2),
+                                  child: _TvFocusFrame(
+                                    focusNode: _otpFocusNode,
+                                    enabled: useTvKeypad,
+                                    child: PinCodeTextField(
+                                      focusNode: _otpFocusNode,
+                                      autoDisposeControllers: false,
+                                      autoUnfocus: false,
+                                      autoDismissKeyboard: false,
+                                      readOnly: false,
+                                      cursorColor: theme.primaryColor,
+                                      appContext: context,
+                                      length: 6,
+                                      controller: _otpController,
+                                      keyboardType: TextInputType.number,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                      ],
+                                      enablePinAutofill: true,
+                                      animationType: AnimationType.fade,
+                                      onTap: () =>
+                                          _showTextInputKeyboard(_otpFocusNode),
+                                      onCompleted: (_) {
+                                        if (!isLoading &&
+                                            !_authRequestInFlight) {
+                                          _handleLoginOrOtp();
+                                        }
+                                      },
+                                      pinTheme: PinTheme(
+                                        shape: PinCodeFieldShape.box,
+                                        borderRadius: BorderRadius.circular(8),
+                                        fieldHeight: 50,
+                                        fieldWidth:
+                                            ResponsiveWidget.isMobile(context)
+                                                ? 40
+                                                : 45,
+                                        activeFillColor: theme.cardColor,
+                                        selectedFillColor: theme.cardColor,
+                                        inactiveFillColor: theme.cardColor,
+                                        activeColor: theme.primaryColor,
+                                        selectedColor: theme.primaryColor,
+                                        inactiveColor: Colors.grey[400]!,
+                                      ),
+                                      backgroundColor: theme.cardColor,
+                                      enableActiveFill: true,
+                                      onChanged: (value) {
+                                        if (_otpAutoFilled &&
+                                            value.length < _otpLength) {
+                                          setState(() {
+                                            _otpAutoFilled = false;
+                                            _otpHelperText = null;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                if (_otpHelperText != null) ...[
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      _otpHelperText!,
+                                      style: TextStyle(
+                                        color: _otpAutoFilled
+                                            ? Colors.green
+                                            : theme.canvasColor
+                                                .withOpacity(0.65),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 10),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: isLoading ||
+                                            _authRequestInFlight ||
+                                            _resendSecondsRemaining > 0
+                                        ? null
+                                        : _resendOtp,
+                                    child: Text(
+                                      _resendSecondsRemaining > 0
+                                          ? 'Resend OTP in ${_formatResendTime(_resendSecondsRemaining)}'
+                                          : 'Resend OTP',
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                              ],
+
+                              if (useTvKeypad) ...[
+                                _TvNumberPad(
+                                  focusNodes: _keypadFocusNodes,
+                                  focusOrderStart: 3,
+                                  onDigit: _appendTvDigit,
+                                  onBackspace: _removeTvDigit,
+                                  onDone: () => _submitFocusNode.requestFocus(),
+                                ),
+                                const SizedBox(height: 20),
+                              ],
+
+                              /// Button
+                              SizedBox(
+                                width: double.infinity,
+                                child: FocusTraversalOrder(
+                                  order: const NumericFocusOrder(20),
+                                  child: _TvFocusFrame(
+                                    focusNode: _submitFocusNode,
+                                    enabled: useTvKeypad,
+                                    child: ElevatedButton(
+                                      focusNode: _submitFocusNode,
+                                      onPressed:
+                                          isLoading || _authRequestInFlight
+                                              ? null
+                                              : _handleLoginOrOtp,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: theme.primaryColor,
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 14),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                      child: isLoading
+                                          ? const SizedBox(
+                                              height: 22,
+                                              width: 22,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.white,
+                                              ),
+                                            )
+                                          : Text(
+                                              otpSent
+                                                  ? lang.verifyOtp
+                                                  : lang.sendOtp,
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
                   ),
-                  SizedBox(
-                    height: ResponsiveWidget.isMobile(context) ? 150 : 60,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -846,9 +833,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     try {
       final appSignature = await SmsAutoFill().getAppSignature;
 
-      if (kDebugMode && appSignature.isNotEmpty) {
-
-      }
+      if (kDebugMode && appSignature.isNotEmpty) {}
       listenForCode(smsCodeRegexPattern: r'\d{6}');
       _otpAutoFillTimeoutTimer = Timer(_otpAutoFillTimeout, () {
         if (!mounted || !_isListeningForOtp) return;
@@ -867,9 +852,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         });
       }
     } catch (error) {
-      if (kDebugMode) {
-
-      }
+      if (kDebugMode) {}
       if (mounted) {
         setState(() {
           _isListeningForOtp = false;

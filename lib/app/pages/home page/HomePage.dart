@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/utils/image_url_utils.dart';
 import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/home%20page/category_content_page.dart';
 import 'package:ott/app/pages/madioo%20page/MadiooPage.dart';
@@ -1019,7 +1020,8 @@ class _HomePageState extends State<HomePage>
     final genres =
         item.genreList?.where((e) => e.trim().isNotEmpty).join('  -  ');
     final meta = [
-      if (item.releaseDate != null) item.releaseDate.toString(),
+      if (formatReleaseDate(item.releaseDate).isNotEmpty)
+        formatReleaseDate(item.releaseDate),
       if (genres != null && genres.isNotEmpty) genres,
       if (item.ratings != null) '${item.ratings!.toStringAsFixed(0)} star',
     ].join('  -  ');

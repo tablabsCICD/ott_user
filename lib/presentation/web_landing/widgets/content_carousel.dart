@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/l10n/app_localizations.dart';
 
@@ -443,7 +444,7 @@ class _HoverDetailPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final poster = _posterFor(content);
-    final year = _releaseYear(content.releaseDate);
+    final releaseDate = formatReleaseDate(content.releaseDate);
     final lang = AppLocalizations.of(context)!;
     final runtime =
         (content.runtime ?? 0) > 0 ? '${content.runtime} min' : null;
@@ -594,7 +595,8 @@ class _HoverDetailPreview extends StatelessWidget {
                           ),
                           if ((content.ageRating ?? '').trim().isNotEmpty)
                             _MetaPill(label: content.ageRating!),
-                          if (year != null) _MetaPill(label: year),
+                          if (releaseDate.isNotEmpty)
+                            _MetaPill(label: releaseDate),
                           if (runtime != null) _MetaPill(label: runtime),
                           _MetaPill(label: content.type ?? 'Movie'),
                         ],
@@ -645,16 +647,6 @@ class _HoverDetailPreview extends StatelessWidget {
     return null;
   }
 
-  static String? _releaseYear(dynamic releaseDate) {
-    if (releaseDate == null) return null;
-    final value = releaseDate.toString().trim();
-    if (value.length >= 4) {
-      final year = value.substring(0, 4);
-      if (int.tryParse(year) != null) return year;
-    }
-    final parsed = DateTime.tryParse(value);
-    return parsed == null ? null : '${parsed.year}';
-  }
 }
 
 class _PriceBadge extends StatelessWidget {
