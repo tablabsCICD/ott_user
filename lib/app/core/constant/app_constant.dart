@@ -74,6 +74,6 @@ class AppConstant {
     'Dogri',
     'Tulu',
     'Mizo',
-    'Bodo'
+    'Bodo',
   ];
 }

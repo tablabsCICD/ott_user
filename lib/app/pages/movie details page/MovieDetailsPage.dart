@@ -479,7 +479,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
             ),
             Positioned(
               left: ResponsiveWidget.isDesktop(context) ? 64 : 32,
-              right: size.width * 0.43,
+              right: kIsWeb ? size.width * 0.52 : size.width * 0.43,
               bottom: 54,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -515,7 +515,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
             Positioned(
               right: ResponsiveWidget.isDesktop(context) ? 64 : 32,
               bottom: 70,
-              width: ResponsiveWidget.isDesktop(context) ? 500 : 390,
+              width: kIsWeb
+                  ? 620
+                  : ResponsiveWidget.isDesktop(context)
+                      ? 500
+                      : 390,
               child: _buildTvTrailerPanel(content, theme),
             ),
           ],
@@ -1246,7 +1250,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
         Row(
           children: [
             Expanded(
-              flex: 2,
+              flex: 3,
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -1344,20 +1348,19 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                 ),
               ),
             ),
-            const SizedBox(width: 20),
+            const SizedBox(width: 24),
             Expanded(
-              flex: 2,
+              flex: 4,
               child: SingleChildScrollView(
+                padding: const EdgeInsets.only(top: 20, right: 24),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    SizedBox(
-                      height: 100,
-                    ),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(14),
-                      child: AspectRatio(
-                        aspectRatio: 16 / 9,
+                      child: SizedBox(
+                        width: 500,
+                        height: 500,
                         child: TrailerPreview(
                           trailerUrl: content.teaserOrTrailerUrl,
                           content: content,
