@@ -929,6 +929,10 @@ class _TrailerPreviewState extends State<TrailerPreview>
   String _format(Duration d) {
     if (d == Duration.zero) return "00:00";
     String two(int n) => n.toString().padLeft(2, '0');
+    final hours = d.inHours;
+    if (hours > 0) {
+      return "${two(hours)}:${two(d.inMinutes.remainder(60))}:${two(d.inSeconds.remainder(60))}";
+    }
     return "${two(d.inMinutes.remainder(60))}:${two(d.inSeconds.remainder(60))}";
   }
 

@@ -1815,7 +1815,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     final twoDigitSeconds = seconds.toString().padLeft(2, '0');
 
     if (hours > 0) {
-      return '$hours:$twoDigitMinutes:$twoDigitSeconds';
+      final twoDigitHours = hours.toString().padLeft(2, '0');
+      return '$twoDigitHours:$twoDigitMinutes:$twoDigitSeconds';
     }
     return '$twoDigitMinutes:$twoDigitSeconds';
   }
@@ -2222,17 +2223,23 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   Widget _timeLabel(String value) {
+    final width = value.length > 5 ? 68.0 : 54.0;
     return SizedBox(
-      width: 54,
-      child: Text(
-        value,
-        textAlign: TextAlign.center,
-        maxLines: 1,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 17,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0,
+      width: width,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.center,
+        child: Text(
+          value,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0,
+          ),
         ),
       ),
     );
