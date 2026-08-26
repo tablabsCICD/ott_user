@@ -7,8 +7,10 @@ import 'package:ott/app/core/utils/image_url_utils.dart';
 import 'package:ott/app/core/utils/text_capitalization_formatter.dart';
 import 'package:ott/app/pages/profile%20page/component/EditProfilePage.dart';
 import 'package:ott/app/provider/userProvider.dart';
+import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/presentation/web_landing/utils/post_logout_navigation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -277,7 +279,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                   label: const Text("Deletion Info"),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: theme.primaryColor,
-                    side: BorderSide(color: theme.primaryColor.withOpacity(0.45)),
+                    side:
+                        BorderSide(color: theme.primaryColor.withOpacity(0.45)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -403,16 +406,13 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
     setState(() => _isDeletingAccount = true);
     try {
       await userProvider.deleteUser(id);
-      await SessionManager.instance.clearLocalSession();
-      userProvider.clear();
-      userProvider.disposeData();
       if (!mounted) return;
       CustomToast.show(
         context,
         "Your account has been deleted.",
         isSuccess: true,
       );
-      pushPostLogoutReplacement(context);
+      await SessionManager.instance.performLogout(context);
     } catch (_) {
       if (!mounted) return;
       CustomToast.show(
@@ -443,7 +443,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           backgroundColor: theme.primaryColor,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
         onPressed: onPressed,
         icon: Icon(icon, size: 18),
@@ -509,91 +510,53 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      TextFormField(
+                      CustomTextField(
+                        textInputType: TextInputType.text,
                         controller: provider.officeBuildingController,
-                        maxLines: 2,
-                        textCapitalization: TextCapitalization.words,
-                        inputFormatters: [
-                          CapitalizeWordsTextInputFormatter(),
-                        ],
-                        cursorColor: selectedThemeData.primaryColor,
-                        onChanged: provider.searchAddressSuggestions,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: selectedThemeData.cardColor,
-                          labelText: 'Address',
-                          hintText: 'Search your address',
-                          labelStyle: TextStyle(
-                            color: selectedThemeData.canvasColor,
-                          ),
-                          hintStyle: TextStyle(
-                            color: selectedThemeData.canvasColor,
-                            fontSize: 13,
-                          ),
-                          border: OutlineInputBorder(
-                            borderSide:
-                                const BorderSide(color: Colors.transparent),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide:
-                                const BorderSide(color: Colors.transparent),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: selectedThemeData.primaryColor,
-                            ),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          prefixIcon: Icon(
-                            Icons.location_on_outlined,
-                            color: selectedThemeData.canvasColor,
-                          ),
-                          suffixIcon: provider.isSearchingAddress
-                              ? Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: selectedThemeData.primaryColor,
-                                    ),
-                                  ),
-                                )
-                              : null,
+                        label: 'Address',
+                        hintText: 'Search your address',
+                        prefixIcon: Icon(
+                          Icons.location_on_outlined,
+                          color: selectedThemeData.canvasColor,
                         ),
-                        style: TextStyle(color: selectedThemeData.canvasColor),
+                        autofocus: ResponsiveWidget.isTabletOrTv(context),
+                        isValidator: false,
+                        onValueChange: provider.searchAddressSuggestions,
                       ),
                       const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: provider.isFetchingCurrentLocation
+                      OttTvFocus(
+                        borderRadius: 8,
+                        onTap: provider.isFetchingCurrentLocation
                             ? null
                             : provider.useCurrentLocationFromGoogle,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: selectedThemeData.primaryColor,
-                          side: BorderSide(
-                            color: selectedThemeData.primaryColor,
+                        child: OutlinedButton.icon(
+                          onPressed: provider.isFetchingCurrentLocation
+                              ? null
+                              : provider.useCurrentLocationFromGoogle,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: selectedThemeData.primaryColor,
+                            side: BorderSide(
+                              color: selectedThemeData.primaryColor,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                          icon: provider.isFetchingCurrentLocation
+                              ? SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: selectedThemeData.primaryColor,
+                                  ),
+                                )
+                              : const Icon(Icons.my_location),
+                          label: Text(
+                            provider.isFetchingCurrentLocation
+                                ? 'Fetching location...'
+                                : 'Use current location',
                           ),
-                        ),
-                        icon: provider.isFetchingCurrentLocation
-                            ? SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: selectedThemeData.primaryColor,
-                                ),
-                              )
-                            : const Icon(Icons.my_location),
-                        label: Text(
-                          provider.isFetchingCurrentLocation
-                              ? 'Fetching location...'
-                              : 'Use current location',
                         ),
                       ),
                       if (provider.addressSuggestions.isNotEmpty)
@@ -619,22 +582,29 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                             itemBuilder: (context, index) {
                               final suggestion =
                                   provider.addressSuggestions[index];
-                              return ListTile(
-                                dense: true,
-                                leading: Icon(
-                                  Icons.place_outlined,
-                                  color: selectedThemeData.primaryColor,
-                                ),
-                                title: Text(
-                                  suggestion['description'] ?? '',
-                                  style: TextStyle(
-                                    color: selectedThemeData.canvasColor,
-                                    fontSize: 13,
-                                  ),
-                                ),
+                              return OttTvFocus(
+                                borderRadius: 6,
                                 onTap: () {
                                   provider.selectAddressSuggestion(suggestion);
                                 },
+                                child: ListTile(
+                                  dense: true,
+                                  leading: Icon(
+                                    Icons.place_outlined,
+                                    color: selectedThemeData.primaryColor,
+                                  ),
+                                  title: Text(
+                                    suggestion['description'] ?? '',
+                                    style: TextStyle(
+                                      color: selectedThemeData.canvasColor,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  onTap: () {
+                                    provider
+                                        .selectAddressSuggestion(suggestion);
+                                  },
+                                ),
                               );
                             },
                           ),
@@ -693,22 +663,20 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                 ),
               ),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: Text(
-                    "Cancel",
-                    style: TextStyle(color: selectedThemeData.canvasColor),
-                  ),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: selectedThemeData.primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
+                OttTvFocus(
+                  borderRadius: 6,
+                  onTap: () => Navigator.of(dialogContext).pop(),
+                  child: TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    child: Text(
+                      "Cancel",
+                      style: TextStyle(color: selectedThemeData.canvasColor),
                     ),
                   ),
-                  onPressed: () async {
+                ),
+                OttTvFocus(
+                  borderRadius: 6,
+                  onTap: () async {
                     if (!formKey.currentState!.validate()) return;
                     final result = await provider.updateUserLocation();
                     if (!mounted) return;
@@ -730,7 +698,38 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                       );
                     }
                   },
-                  child: const Text("Save"),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: selectedThemeData.primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    onPressed: () async {
+                      if (!formKey.currentState!.validate()) return;
+                      final result = await provider.updateUserLocation();
+                      if (!mounted) return;
+
+                      if (result['success'] == true) {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool('isLoggedIn', true);
+                        CustomToast.show(
+                          context,
+                          "Address updated successfully!",
+                          isSuccess: true,
+                        );
+                        Navigator.of(dialogContext).pop();
+                      } else {
+                        CustomToast.show(
+                          context,
+                          'Failure: ${result['message']}',
+                          isSuccess: false,
+                        );
+                      }
+                    },
+                    child: const Text("Save"),
+                  ),
                 ),
               ],
             );
@@ -757,110 +756,58 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
         options.where((option) => option.trim().isNotEmpty).toSet().toList();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: selectedThemeData.canvasColor,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: CustomTextField(
+        controller: controller,
+        label: label,
+        hintText: hintText,
+        textInputType: keyboardType,
+        isValidator: isRequired,
+        onValueChange: onChanged,
+        onFieldSubmitted: onFieldSubmitted,
+        suffixWidget: PopupMenuButton<String>(
+          icon: Icon(
+            Icons.arrow_drop_down,
+            color: selectedThemeData.primaryColor,
           ),
-          const SizedBox(height: 5),
-          TextFormField(
-            controller: controller,
-            keyboardType: keyboardType,
-            textCapitalization: keyboardType == TextInputType.number
-                ? TextCapitalization.none
-                : TextCapitalization.words,
-            inputFormatters: keyboardType == TextInputType.number
-                ? [FilteringTextInputFormatter.digitsOnly]
-                : [CapitalizeWordsTextInputFormatter()],
-            cursorColor: selectedThemeData.primaryColor,
-            onChanged: onChanged,
-            onFieldSubmitted: onFieldSubmitted,
-            validator: isRequired
-                ? (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return '$hintText is required';
-                    }
-                    return null;
-                  }
-                : null,
-            style: TextStyle(
-              color: selectedThemeData.canvasColor,
-              fontSize: 14,
-            ),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: selectedThemeData.cardColor,
-              hintText: hintText,
-              hintStyle: TextStyle(
-                color: selectedThemeData.canvasColor,
-                fontSize: 14,
-              ),
-              border: OutlineInputBorder(
-                borderSide: const BorderSide(color: Colors.transparent),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: Colors.transparent),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: selectedThemeData.primaryColor),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              suffixIcon: PopupMenuButton<String>(
-                icon: Icon(
-                  Icons.arrow_drop_down,
-                  color: selectedThemeData.primaryColor,
+          color: selectedThemeData.cardColor,
+          enabled: cleanOptions.isNotEmpty,
+          onSelected: (value) {
+            controller.text = value;
+            if (onOptionSelected != null) {
+              onOptionSelected(value);
+            }
+          },
+          itemBuilder: (context) {
+            if (cleanOptions.isEmpty) {
+              return [
+                PopupMenuItem<String>(
+                  enabled: false,
+                  child: Text(
+                    'No options available',
+                    style: TextStyle(
+                      color: selectedThemeData.canvasColor.withOpacity(0.7),
+                    ),
+                  ),
                 ),
-                color: selectedThemeData.cardColor,
-                enabled: cleanOptions.isNotEmpty,
-                onSelected: (value) {
-                  controller.text = value;
-                  if (onOptionSelected != null) {
-                    onOptionSelected(value);
-                  }
-                },
-                itemBuilder: (context) {
-                  if (cleanOptions.isEmpty) {
-                    return [
-                      PopupMenuItem<String>(
-                        enabled: false,
-                        child: Text(
-                          'No options available',
-                          style: TextStyle(
-                            color:
-                                selectedThemeData.canvasColor.withOpacity(0.7),
-                          ),
-                        ),
-                      ),
-                    ];
-                  }
+              ];
+            }
 
-                  return cleanOptions
-                      .map(
-                        (option) => PopupMenuItem<String>(
-                          value: option,
-                          child: Text(
-                            option,
-                            style: TextStyle(
-                              color: selectedThemeData.canvasColor,
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList();
-                },
-              ),
-            ),
-          ),
-        ],
+            return cleanOptions
+                .map(
+                  (option) => PopupMenuItem<String>(
+                    value: option,
+                    child: Text(
+                      option,
+                      style: TextStyle(
+                        color: selectedThemeData.canvasColor,
+                      ),
+                    ),
+                  ),
+                )
+                .toList();
+          },
+        ),
       ),
     );
   }

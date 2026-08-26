@@ -16,8 +16,9 @@ Route<dynamic> buildPostLogoutRoute() {
 }
 
 void pushPostLogoutReplacement(BuildContext context) {
-  _logPostLogout('pushReplacement to ${kIsWeb ? 'web landing /' : 'login'}');
-  Navigator.pushReplacement(context, buildPostLogoutRoute());
+  _logPostLogout('pushAndRemoveUntil to ${kIsWeb ? 'web landing /' : 'login'}');
+  Navigator.of(context, rootNavigator: true)
+      .pushAndRemoveUntil(buildPostLogoutRoute(), (_) => false);
 }
 
 void pushPostLogoutAndRemoveUntil(NavigatorState navigator) {

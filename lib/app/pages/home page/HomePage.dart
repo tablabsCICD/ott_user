@@ -289,7 +289,8 @@ class _HomePageState extends State<HomePage>
         [];
 
     if (selectedLanguages.isEmpty) {
-      await getMovieList(dashBoardProvider, selectedType, ["Hindi", "English", "Marathi"]);
+      await getMovieList(
+          dashBoardProvider, selectedType, ["Hindi", "English", "Marathi"]);
     } else {
       await getMovieList(dashBoardProvider, selectedType, selectedLanguages);
     }
@@ -370,8 +371,7 @@ class _HomePageState extends State<HomePage>
 
       if (bestIndex == null ||
           visibility > bestVisibility ||
-          (visibility == bestVisibility &&
-              candidate > bestIndex)) {
+          (visibility == bestVisibility && candidate > bestIndex)) {
         bestVisibility = visibility;
         bestIndex = candidate;
       }
@@ -678,8 +678,9 @@ class _HomePageState extends State<HomePage>
                                                                 semanticLabel:
                                                                     "See all ${dashboardData.language} ${dashboardData.category}",
                                                                 child: InkWell(
-                                                                  splashColor: Colors
-                                                                      .transparent,
+                                                                  splashColor:
+                                                                      Colors
+                                                                          .transparent,
                                                                   onTap: () {
                                                                     Navigator
                                                                         .push(
@@ -691,16 +692,20 @@ class _HomePageState extends State<HomePage>
                                                                           categoryTitle:
                                                                               "${dashboardData.language} - ${dashboardData.category}",
                                                                           contents:
-                                                                              dashboardData.movies ??
-                                                                                  [],
+                                                                              dashboardData.movies ?? [],
                                                                         ),
                                                                       ),
                                                                     );
                                                                   },
-                                                                  child: Padding(
-                                                                    padding: const EdgeInsets.symmetric(
-                                                                      horizontal: 4,
-                                                                      vertical: 4,
+                                                                  child:
+                                                                      Padding(
+                                                                    padding:
+                                                                        const EdgeInsets
+                                                                            .symmetric(
+                                                                      horizontal:
+                                                                          4,
+                                                                      vertical:
+                                                                          4,
                                                                     ),
                                                                     child: Row(
                                                                       children: [
@@ -710,27 +715,25 @@ class _HomePageState extends State<HomePage>
                                                                             "${dashboardData.language} - ${dashboardData.category}",
                                                                             overflow:
                                                                                 TextOverflow.ellipsis,
-                                                                            style: GoogleFonts
-                                                                                .inter(
-                                                                              fontSize: ResponsiveWidget.isMobile(context)
-                                                                                  ? 18
-                                                                                  : 20,
-                                                                              fontWeight:
-                                                                                  FontWeight.bold,
-                                                                              color:
-                                                                                  selectedThemeData.canvasColor,
+                                                                            style:
+                                                                                GoogleFonts.inter(
+                                                                              fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
+                                                                              fontWeight: FontWeight.bold,
+                                                                              color: selectedThemeData.canvasColor,
                                                                             ),
                                                                           ),
                                                                         ),
                                                                         Icon(
                                                                           Icons
                                                                               .arrow_forward_ios,
-                                                                          size: 18,
-                                                                          color: selectedThemeData
-                                                                              .primaryColor,
+                                                                          size:
+                                                                              18,
+                                                                          color:
+                                                                              selectedThemeData.primaryColor,
                                                                         ),
                                                                         SizedBox(
-                                                                          width: 3,
+                                                                          width:
+                                                                              3,
                                                                         )
                                                                       ],
                                                                     ),
@@ -862,8 +865,11 @@ class _HomePageState extends State<HomePage>
             onKeyEvent: (node, event) {
               if (event is! KeyDownEvent) return KeyEventResult.ignored;
               if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                _moveHeroSlider(heroItems.length, -1);
-                return KeyEventResult.handled;
+                final moved = node.focusInDirection(TraversalDirection.left);
+                if (moved) return KeyEventResult.handled;
+                final prevMoved = node.previousFocus();
+                if (prevMoved) return KeyEventResult.handled;
+                return KeyEventResult.ignored;
               }
               if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
                 _moveHeroSlider(heroItems.length, 1);
@@ -893,7 +899,7 @@ class _HomePageState extends State<HomePage>
                             alignment: Alignment.center,
                             child: Icon(
                               Icons.movie_creation_outlined,
-                              color: theme.canvasColor.withOpacity(0.5),
+                              color: theme.canvasColor.withValues(alpha: 0.5),
                               size: 72,
                             ),
                           ),
@@ -980,7 +986,7 @@ class _HomePageState extends State<HomePage>
                           decoration: BoxDecoration(
                             color: active
                                 ? Colors.white
-                                : Colors.white.withOpacity(0.35),
+                                : Colors.white.withValues(alpha: 0.35),
                             borderRadius: BorderRadius.circular(999),
                           ),
                         );
@@ -1001,24 +1007,19 @@ class _HomePageState extends State<HomePage>
     required IconData icon,
     required VoidCallback onTap,
   }) {
-    return OttTvFocus(
-      onTap: onTap,
-      borderRadius: 999,
-      scale: 1.1,
-      child: Material(
-        color: Colors.black.withOpacity(0.42),
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onTap,
-          child: SizedBox(
-            width: 54,
-            height: 54,
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 38,
-            ),
+    return Material(
+      color: Colors.black.withValues(alpha: 0.42),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 54,
+          height: 54,
+          child: Icon(
+            icon,
+            color: Colors.white,
+            size: 38,
           ),
         ),
       ),
@@ -1882,8 +1883,7 @@ class _HomePageState extends State<HomePage>
             ),
           ),
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
             child: Text(
               type == 'MOVIE'
                   ? lang.movie
@@ -1896,9 +1896,8 @@ class _HomePageState extends State<HomePage>
                 color: selectedType == type
                     ? Colors.white
                     : selectedThemeData.primaryColor,
-                fontWeight: selectedType == type
-                    ? FontWeight.bold
-                    : FontWeight.w600,
+                fontWeight:
+                    selectedType == type ? FontWeight.bold : FontWeight.w600,
               ),
             ),
           ),
@@ -2203,63 +2202,23 @@ class _HomePageState extends State<HomePage>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextFormField(
+                  CustomTextField(
+                    textInputType: TextInputType.text,
                     controller: userProvider.officeBuildingController,
-                    maxLines: 2,
-                    textCapitalization: TextCapitalization.words,
-                    inputFormatters: [CapitalizeWordsTextInputFormatter()],
-                    cursorColor: selectedThemeData.primaryColor,
-                    onChanged: (value) {
-                      userProvider.searchAddressSuggestions(value);
-                    },
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: selectedThemeData.cardColor,
-                      labelText: 'Address',
-                      hintText: 'Search your address',
-                      labelStyle:
-                          TextStyle(color: selectedThemeData.canvasColor),
-                      hintStyle: TextStyle(
-                        color: selectedThemeData.canvasColor,
-                        fontSize: 13,
-                      ),
-                      border: OutlineInputBorder(
-                        borderSide: const BorderSide(color: Colors.transparent),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: const BorderSide(color: Colors.transparent),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: selectedThemeData.primaryColor,
-                        ),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      prefixIcon: Icon(
-                        Icons.location_on_outlined,
-                        color: selectedThemeData.canvasColor,
-                      ),
-                      suffixIcon: userProvider.isSearchingAddress
-                          ? Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: selectedThemeData.primaryColor,
-                                ),
-                              ),
-                            )
-                          : null,
+                    label: 'Address',
+                    hintText: 'Search your address',
+                    prefixIcon: Icon(
+                      Icons.location_on_outlined,
+                      color: selectedThemeData.canvasColor,
                     ),
-                    style: TextStyle(color: selectedThemeData.canvasColor),
+                    autofocus: ResponsiveWidget.isTabletOrTv(context),
+                    isValidator: false,
+                    onValueChange: userProvider.searchAddressSuggestions,
                   ),
                   const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: userProvider.isFetchingCurrentLocation
+                  OttTvFocus(
+                    borderRadius: 8,
+                    onTap: userProvider.isFetchingCurrentLocation
                         ? null
                         : () async {
                             final allowed =
@@ -2278,27 +2237,48 @@ class _HomePageState extends State<HomePage>
                               );
                             }
                           },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: selectedThemeData.primaryColor,
-                      side: BorderSide(color: selectedThemeData.primaryColor),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                    child: OutlinedButton.icon(
+                      onPressed: userProvider.isFetchingCurrentLocation
+                          ? null
+                          : () async {
+                              final allowed =
+                                  await _showLocationPermissionPrompt(ctx);
+                              if (!ctx.mounted) return;
+                              if (allowed != true) return;
+
+                              final locationFilled = await userProvider
+                                  .useCurrentLocationFromGoogle();
+                              if (!ctx.mounted) return;
+                              if (!locationFilled) {
+                                CustomToast.show(
+                                  ctx,
+                                  'Unable to fetch your location. Please enter address manually.',
+                                  isSuccess: false,
+                                );
+                              }
+                            },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: selectedThemeData.primaryColor,
+                        side: BorderSide(color: selectedThemeData.primaryColor),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                    ),
-                    icon: userProvider.isFetchingCurrentLocation
-                        ? SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: selectedThemeData.primaryColor,
-                            ),
-                          )
-                        : const Icon(Icons.my_location),
-                    label: Text(
-                      userProvider.isFetchingCurrentLocation
-                          ? 'Fetching location...'
-                          : 'Use current location',
+                      icon: userProvider.isFetchingCurrentLocation
+                          ? SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: selectedThemeData.primaryColor,
+                              ),
+                            )
+                          : const Icon(Icons.my_location),
+                      label: Text(
+                        userProvider.isFetchingCurrentLocation
+                            ? 'Fetching location...'
+                            : 'Use current location',
+                      ),
                     ),
                   ),
                   if (userProvider.addressSuggestions.isNotEmpty)
@@ -2324,22 +2304,29 @@ class _HomePageState extends State<HomePage>
                         itemBuilder: (context, index) {
                           final suggestion =
                               userProvider.addressSuggestions[index];
-                          return ListTile(
-                            dense: true,
-                            leading: Icon(
-                              Icons.place_outlined,
-                              color: selectedThemeData.primaryColor,
-                            ),
-                            title: Text(
-                              suggestion['description'] ?? '',
-                              style: TextStyle(
-                                color: selectedThemeData.canvasColor,
-                                fontSize: 13,
-                              ),
-                            ),
+                          return OttTvFocus(
+                            borderRadius: 6,
                             onTap: () {
                               userProvider.selectAddressSuggestion(suggestion);
                             },
+                            child: ListTile(
+                              dense: true,
+                              leading: Icon(
+                                Icons.place_outlined,
+                                color: selectedThemeData.primaryColor,
+                              ),
+                              title: Text(
+                                suggestion['description'] ?? '',
+                                style: TextStyle(
+                                  color: selectedThemeData.canvasColor,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              onTap: () {
+                                userProvider
+                                    .selectAddressSuggestion(suggestion);
+                              },
+                            ),
                           );
                         },
                       ),
@@ -2402,14 +2389,9 @@ class _HomePageState extends State<HomePage>
             ),
           ),
           actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: selectedThemeData.primaryColor,
-                padding: EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6)),
-              ),
-              onPressed: () async {
+            OttTvFocus(
+              borderRadius: 6,
+              onTap: () async {
                 if (!formKey.currentState!.validate()) return;
                 var result = await userProvider.updateUserLocation();
                 if (result['success'] == true) {
@@ -2426,13 +2408,38 @@ class _HomePageState extends State<HomePage>
                   Navigator.of(context).pop();
                 }
               },
-              child: Center(
-                child: Text(
-                  lang.save,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: selectedThemeData.primaryColor,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6)),
+                ),
+                onPressed: () async {
+                  if (!formKey.currentState!.validate()) return;
+                  var result = await userProvider.updateUserLocation();
+                  if (result['success'] == true) {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setBool('isLoggedIn', true);
+
+                    CustomToast.show(context, lang.profileUpdatedSuccessfully,
+                        isSuccess: true);
+
+                    Navigator.of(context).pop();
+                  } else {
+                    CustomToast.show(context, 'Failure: ${result['message']}',
+                        isSuccess: false);
+                    Navigator.of(context).pop();
+                  }
+                },
+                child: Center(
+                  child: Text(
+                    lang.save,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -2471,23 +2478,31 @@ class _HomePageState extends State<HomePage>
             style: TextStyle(color: selectedThemeData.canvasColor),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(permissionContext).pop(false),
-              child: Text(
-                'Not now',
-                style: TextStyle(color: selectedThemeData.canvasColor),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: selectedThemeData.primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+            OttTvFocus(
+              borderRadius: 8,
+              onTap: () => Navigator.of(permissionContext).pop(false),
+              child: TextButton(
+                onPressed: () => Navigator.of(permissionContext).pop(false),
+                child: Text(
+                  'Not now',
+                  style: TextStyle(color: selectedThemeData.canvasColor),
                 ),
               ),
-              onPressed: () => Navigator.of(permissionContext).pop(true),
-              child: const Text('Allow'),
+            ),
+            OttTvFocus(
+              borderRadius: 8,
+              onTap: () => Navigator.of(permissionContext).pop(true),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: selectedThemeData.primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: () => Navigator.of(permissionContext).pop(true),
+                child: const Text('Allow'),
+              ),
             ),
           ],
         );
@@ -2512,115 +2527,59 @@ class _HomePageState extends State<HomePage>
         options.where((option) => option.trim().isNotEmpty).toSet().toList();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: selectedThemeData.canvasColor,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: CustomTextField(
+        controller: controller,
+        label: label,
+        hintText: hintText,
+        textInputType: keyboardType,
+        isValidator: isRequired,
+        onValueChange: onChanged,
+        onFieldSubmitted: onFieldSubmitted,
+        suffixWidget: PopupMenuButton<String>(
+          icon: Icon(
+            Icons.arrow_drop_down,
+            color: selectedThemeData.primaryColor,
           ),
-          const SizedBox(height: 5),
-          TextFormField(
-            controller: controller,
-            keyboardType: keyboardType,
-            textCapitalization: keyboardType == TextInputType.number
-                ? TextCapitalization.none
-                : TextCapitalization.words,
-            inputFormatters: keyboardType == TextInputType.number
-                ? [FilteringTextInputFormatter.digitsOnly]
-                : [CapitalizeWordsTextInputFormatter()],
-            cursorColor: selectedThemeData.primaryColor,
-            onChanged: onChanged,
-            onFieldSubmitted: onFieldSubmitted,
-            validator: isRequired
-                ? (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return '$hintText is required';
-                    }
-                    return null;
-                  }
-                : null,
-            style: TextStyle(
-              color: selectedThemeData.canvasColor,
-              fontSize: 14,
-            ),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: selectedThemeData.cardColor,
-              hintText: hintText,
-              hintStyle: TextStyle(
-                color: selectedThemeData.canvasColor,
-                fontSize: 14,
-              ),
-              border: OutlineInputBorder(
-                borderSide: const BorderSide(color: Colors.transparent),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: Colors.transparent),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: selectedThemeData.primaryColor),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              suffixIcon: cleanOptions.isEmpty
-                  ? PopupMenuButton<String>(
-                      icon: Icon(
-                        Icons.arrow_drop_down,
-                        color: selectedThemeData.primaryColor,
-                      ),
-                      color: selectedThemeData.cardColor,
-                      enabled: false,
-                      itemBuilder: (context) => [
-                        PopupMenuItem<String>(
-                          enabled: false,
-                          child: Text(
-                            'No options available',
-                            style: TextStyle(
-                              color: selectedThemeData.canvasColor
-                                  .withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : PopupMenuButton<String>(
-                      icon: Icon(
-                        Icons.arrow_drop_down,
-                        color: selectedThemeData.primaryColor,
-                      ),
-                      color: selectedThemeData.cardColor,
-                      onSelected: (value) {
-                        controller.text = value;
-                        if (onOptionSelected != null) {
-                          onOptionSelected(value);
-                        }
-                      },
-                      itemBuilder: (context) {
-                        return cleanOptions
-                            .map(
-                              (option) => PopupMenuItem<String>(
-                                value: option,
-                                child: Text(
-                                  option,
-                                  style: TextStyle(
-                                    color: selectedThemeData.canvasColor,
-                                  ),
-                                ),
-                              ),
-                            )
-                            .toList();
-                      },
+          color: selectedThemeData.cardColor,
+          enabled: cleanOptions.isNotEmpty,
+          onSelected: (value) {
+            controller.text = value;
+            if (onOptionSelected != null) {
+              onOptionSelected(value);
+            }
+          },
+          itemBuilder: (context) {
+            if (cleanOptions.isEmpty) {
+              return [
+                PopupMenuItem<String>(
+                  enabled: false,
+                  child: Text(
+                    'No options available',
+                    style: TextStyle(
+                      color:
+                          selectedThemeData.canvasColor.withValues(alpha: 0.7),
                     ),
-            ),
-          ),
-        ],
+                  ),
+                ),
+              ];
+            }
+
+            return cleanOptions
+                .map(
+                  (option) => PopupMenuItem<String>(
+                    value: option,
+                    child: Text(
+                      option,
+                      style: TextStyle(
+                        color: selectedThemeData.canvasColor,
+                      ),
+                    ),
+                  ),
+                )
+                .toList();
+          },
+        ),
       ),
     );
   }

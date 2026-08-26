@@ -8,7 +8,6 @@ import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/session_manager.dart';
 import 'package:ott/app/core/utils/image_url_utils.dart';
-import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/help%20support%20page/HelpSupportPage.dart';
 import 'package:ott/app/pages/profile%20page/component/change_language.dart';
 import 'package:ott/app/pages/shorts%20page/ShortsPage.dart';
@@ -19,8 +18,6 @@ import 'package:ott/app/pages/home%20page/HomePage.dart';
 import 'package:ott/app/pages/profile%20page/ProfilePage.dart';
 import 'package:ott/app/pages/search%20page/SearchPage.dart';
 import 'package:ott/app/pages/series%20page/SeriesListPage.dart';
-import 'package:ott/app/provider/bookmarkProvider.dart';
-import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/onboarding_tour_provider.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/feature_tour.dart';
@@ -28,9 +25,7 @@ import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/route/routes/web_navigation_routes.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
-import 'package:ott/presentation/web_landing/utils/post_logout_navigation.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../provider/userProvider.dart';
 
@@ -154,7 +149,13 @@ class _NavigationPageState extends State<NavigationPage> {
                         child: MouseRegion(
                           onEnter: (_) => _setSidebarExpanded(true),
                           onExit: (_) => _setSidebarExpanded(false),
-                          child: _buildDrawerContent(context),
+                          child: Focus(
+                            canRequestFocus: false,
+                            onFocusChange: (hasScopeFocus) {
+                              _setSidebarExpanded(hasScopeFocus);
+                            },
+                            child: _buildDrawerContent(context),
+                          ),
                         ),
                       ),
                       Expanded(
@@ -407,6 +408,21 @@ class _NavigationPageState extends State<NavigationPage> {
 
     return OttTvFocus(
       onTap: handleTap,
+      onFocusChange: (focused) {
+        if (focused) {
+          _setSidebarExpanded(true);
+        }
+      },
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+          final moved = node.focusInDirection(TraversalDirection.right);
+          if (moved) return KeyEventResult.handled;
+          final nextMoved = node.nextFocus();
+          if (nextMoved) return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
       borderRadius: 14,
       scale: 1.02,
       child: tile,
@@ -531,6 +547,10 @@ class _NavigationPageState extends State<NavigationPage> {
         _buildDrawerTile(context,
             index: 4, icon: Icons.movie, title: lang.watchlist),
         _buildDrawerTile(context,
+            index: 7,
+            icon: Icons.account_balance_wallet,
+            title: lang.wallet),
+        _buildDrawerTile(context,
             index: 8, icon: Icons.download_rounded, title: "Downloads"),
         _buildDrawerTile(context,
             index: 5, icon: Icons.person, title: lang.profile),
@@ -563,25 +583,41 @@ class _NavigationPageState extends State<NavigationPage> {
           ),
           title: Text(
             'Are you sure you want Logout?',
-            style: TextStyle(color: theme.canvasColor),
+            style: TextStyle(
+              color: theme.canvasColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           actions: [
-            TextButton(
-              autofocus: ResponsiveWidget.isTv(context),
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child:
-                  Text(lang.cancel, style: TextStyle(color: theme.canvasColor)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.primaryColor,
-                foregroundColor: Colors.white,
+            OttTvFocus(
+              autofocus: true,
+              borderRadius: 8,
+              onTap: () => Navigator.pop(dialogContext, false),
+              child: TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(
+                  lang.cancel,
+                  style: TextStyle(color: theme.canvasColor),
+                ),
               ),
-              onPressed: () async {
+            ),
+            OttTvFocus(
+              borderRadius: 8,
+              onTap: () async {
                 Navigator.pop(dialogContext, true);
                 await _logout();
               },
-              child: Text(lang.logout),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () async {
+                  Navigator.pop(dialogContext, true);
+                  await _logout();
+                },
+                child: Text(lang.logout),
+              ),
             ),
           ],
         );
@@ -590,16 +626,6 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   Future<void> _logout() async {
-    await SessionManager.instance.logoutFromServer();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('isLoggedIn');
-    final localSharePreferences = LocalSharePreferences();
-    await localSharePreferences.clearSession();
-    if (!mounted) return;
-    Provider.of<DashboardProvider>(context, listen: false).clear();
-    Provider.of<BookmarkProvider>(context, listen: false).clear();
-    Provider.of<UserProvider>(context, listen: false).clear();
-    Provider.of<UserProvider>(context, listen: false).disposeData();
-    pushPostLogoutReplacement(context);
+    await SessionManager.instance.performLogout(context);
   }
 }

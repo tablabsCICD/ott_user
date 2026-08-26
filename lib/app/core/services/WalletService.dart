@@ -45,15 +45,25 @@ class WalletService {
       throw Exception('User not found');
     }
 
-    final response =
-        await _apiHelper.getApi(ApiConstant.walletHistory(user!.id!));
-    if (response.statusCode != 200) {
-      throw Exception('Failed to fetch wallet history');
+    final primaryUrl = ApiConstant.walletHistory(user!.id!);
+    final response = await _apiHelper.getApi(primaryUrl);
+    if (response.statusCode == 200) {
+      return WalletHistory.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
     }
 
-    return WalletHistory.fromJson(
-      jsonDecode(response.body) as Map<String, dynamic>,
-    );
+    // Fallback if query parameter or alternative route is expected
+    final fallbackUrl =
+        "${ApiConstant.baseUrl}api/walletHistory/user?userId=${user.id}";
+    final fallbackResponse = await _apiHelper.getApi(fallbackUrl);
+    if (fallbackResponse.statusCode == 200) {
+      return WalletHistory.fromJson(
+        jsonDecode(fallbackResponse.body) as Map<String, dynamic>,
+      );
+    }
+
+    throw Exception('Failed to fetch wallet history (Status: ${response.statusCode})');
   }
 
   Future<WithdrawAmountresponse> deductAmount({

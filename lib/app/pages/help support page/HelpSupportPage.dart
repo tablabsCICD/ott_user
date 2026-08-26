@@ -19,6 +19,17 @@ class HelpSupportPage extends StatefulWidget {
 
 class _HelpSupportPageState extends State<HelpSupportPage> {
   final _supportFormKey = GlobalKey<FormState>();
+  final FocusNode _queryFocusNode = FocusNode(debugLabel: 'support-query');
+  final FocusNode _attachFocusNode = FocusNode(debugLabel: 'support-attach');
+  final FocusNode _submitFocusNode = FocusNode(debugLabel: 'support-submit');
+
+  @override
+  void dispose() {
+    _queryFocusNode.dispose();
+    _attachFocusNode.dispose();
+    _submitFocusNode.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -138,69 +149,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
     );
   }
 
-  Widget _buildHeaderCard(ThemeData theme, AppLocalizations lang) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        gradient: LinearGradient(
-          colors: [
-            theme.primaryColor.withOpacity(0.92),
-            theme.primaryColor.withOpacity(0.65),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: theme.primaryColor.withOpacity(0.25),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(
-              Icons.support_agent,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  lang.helpAndSupport,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  "We typically respond within 24 hours. Add details for faster help.",
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildAppTourCard(ThemeData theme) {
     return Card(
@@ -263,9 +212,12 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
               const SizedBox(height: 10),
               CustomTextField(
                 controller: provider.topicController,
+                focusNode: _queryFocusNode,
                 hintText: lang.enterYourQuery,
                 textInputType: TextInputType.multiline,
                 maxLine: 5,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) => _submitFocusNode.requestFocus(),
                 validator: (value) {
                   final query = value?.trim() ?? '';
                   if (query.isEmpty) {
@@ -306,13 +258,17 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              TextButton.icon(
-                                onPressed: () => provider.clearAttachment(),
-                                icon: Icon(Icons.delete,
-                                    color: theme.primaryColor),
-                                label: Text(
-                                  'Remove',
-                                  style: TextStyle(color: theme.primaryColor),
+                              OttTvFocus(
+                                borderRadius: 8,
+                                onTap: () => provider.clearAttachment(),
+                                child: TextButton.icon(
+                                  onPressed: () => provider.clearAttachment(),
+                                  icon: Icon(Icons.delete,
+                                      color: theme.primaryColor),
+                                  label: Text(
+                                    'Remove',
+                                    style: TextStyle(color: theme.primaryColor),
+                                  ),
                                 ),
                               ),
                             ],
@@ -321,6 +277,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                       ],
                     )
                   : OttTvFocus(
+                      focusNode: _attachFocusNode,
                       borderRadius: 12,
                       scale: 1.02,
                       semanticLabel: lang.attachImage,
@@ -360,6 +317,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
               SizedBox(
                 width: double.infinity,
                 child: OttTvFocus(
+                  focusNode: _submitFocusNode,
                   borderRadius: 12,
                   scale: 1.02,
                   semanticLabel: lang.submit,
@@ -451,36 +409,48 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          backgroundColor: theme.scaffoldBackgroundColor,
+          backgroundColor: theme.cardColor,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
           ),
           title: Text(
             'Submit support request?',
-            style: TextStyle(color: theme.canvasColor),
+            style: TextStyle(
+              color: theme.canvasColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           content: Text(
             'Please confirm you want to send this help support request.',
-            style: TextStyle(color: theme.canvasColor),
+            style: TextStyle(color: theme.canvasColor.withOpacity(0.75)),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: theme.canvasColor),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+            OttTvFocus(
+              borderRadius: 8,
+              onTap: () => Navigator.of(dialogContext).pop(false),
+              child: TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(color: theme.canvasColor),
                 ),
               ),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Submit'),
+            ),
+            OttTvFocus(
+              autofocus: true,
+              borderRadius: 8,
+              onTap: () => Navigator.of(dialogContext).pop(true),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Submit'),
+              ),
             ),
           ],
         );

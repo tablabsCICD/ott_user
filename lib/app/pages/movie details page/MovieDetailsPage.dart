@@ -368,7 +368,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
 
     return Focus(
       focusNode: _heroFocusNode,
-      autofocus: true,
+      canRequestFocus: false,
       onFocusChange: (hasFocus) {
         if (hasFocus) {
           _queueHeroTrailerAutoplay();

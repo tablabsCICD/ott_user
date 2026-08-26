@@ -16,6 +16,7 @@ import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/offline_download_provider.dart';
 import 'package:ott/app/provider/secure_playback_controller.dart';
 import 'package:ott/app/provider/userProvider.dart';
+import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/route/navigation_service.dart';
 import 'package:ott/presentation/web_landing/utils/post_logout_navigation.dart';
 
@@ -52,6 +53,8 @@ class SessionManager {
     await SecurePlaybackSessionRegistry.instance.stopAll();
     SecurePlaybackRepository.instance.markRegistrationUnknown();
     await LocalSharePreferences.localSharePreferences.clearSession();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('isLoggedIn');
   }
 
   Future<bool> logoutFromServer() async {
@@ -76,6 +79,26 @@ class SessionManager {
     }
   }
 
+  Future<void> performLogout(BuildContext context) async {
+    _logWebAuth('performLogout initiated');
+    try {
+      await logoutFromServer();
+    } catch (_) {}
+    await clearLocalSession();
+
+    if (context.mounted) {
+      _clearProviders(context);
+      final navigator = Navigator.of(context, rootNavigator: true);
+      pushPostLogoutAndRemoveUntil(navigator);
+    } else {
+      final navigator = navigatorKey.currentState;
+      if (navigator != null && navigator.mounted) {
+        _clearProviders(navigator.context);
+        pushPostLogoutAndRemoveUntil(navigator);
+      }
+    }
+  }
+
   Future<void> handleSessionExpired(String message) async {
     if (_handlingForcedLogout) return;
     _handlingForcedLogout = true;
@@ -84,16 +107,13 @@ class SessionManager {
     await clearLocalSession();
 
     final navigator = navigatorKey.currentState;
-    final context = navigator?.context;
-    if (context != null && context.mounted) {
+    if (navigator != null && navigator.mounted) {
+      final context = navigator.context;
       _clearProviders(context);
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
       );
-    }
-
-    if (navigator != null) {
       pushPostLogoutAndRemoveUntil(navigator);
     }
 
@@ -125,11 +145,22 @@ class SessionManager {
   }
 
   void _clearProviders(BuildContext context) {
-    Provider.of<DashboardProvider>(context, listen: false).clear();
-    Provider.of<BookmarkProvider>(context, listen: false).clear();
-    Provider.of<UserProvider>(context, listen: false).clear();
-    Provider.of<UserProvider>(context, listen: false).disposeData();
-    Provider.of<OfflineDownloadProvider>(context, listen: false).clear();
+    try {
+      Provider.of<DashboardProvider>(context, listen: false).clear();
+    } catch (_) {}
+    try {
+      Provider.of<BookmarkProvider>(context, listen: false).clear();
+    } catch (_) {}
+    try {
+      Provider.of<UserProvider>(context, listen: false).clear();
+      Provider.of<UserProvider>(context, listen: false).disposeData();
+    } catch (_) {}
+    try {
+      Provider.of<WalletProvider>(context, listen: false).clear();
+    } catch (_) {}
+    try {
+      Provider.of<OfflineDownloadProvider>(context, listen: false).clear();
+    } catch (_) {}
   }
 
   void _logWebAuth(String message) {

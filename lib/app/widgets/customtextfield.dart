@@ -25,6 +25,7 @@ class CustomTextField extends StatefulWidget {
   final String? label;
   final Function? onTap;
   final Function(String)? onValueChange;
+  final Widget? suffixWidget;
   final IconData? suffixIcon;
   final Widget? prefixIcon;
   final Color? backgroundColor;
@@ -52,6 +53,7 @@ class CustomTextField extends StatefulWidget {
     this.onTap,
     this.label,
     this.onValueChange,
+    this.suffixWidget,
     this.suffixIcon,
     this.prefixIcon,
     this.backgroundColor,
@@ -74,8 +76,24 @@ class _CustomTextFieldState extends State<CustomTextField> {
   @override
   void initState() {
     super.initState();
+    _initFocusNode();
+  }
+
+  void _initFocusNode() {
     _focusNode = widget.focusNode ?? FocusNode(debugLabel: 'custom-text-field');
     _focusNode.addListener(_handleFocusChanged);
+    _focusNode.onKeyEvent = (node, event) {
+      if (!_isTvInput) return KeyEventResult.ignored;
+      if (event is! KeyDownEvent) return KeyEventResult.ignored;
+      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        final moved = node.focusInDirection(TraversalDirection.down);
+        if (moved) return KeyEventResult.handled;
+      } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        final moved = node.focusInDirection(TraversalDirection.up);
+        if (moved) return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    };
   }
 
   @override
@@ -87,8 +105,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
     if (oldWidget.focusNode == null) {
       _focusNode.dispose();
     }
-    _focusNode = widget.focusNode ?? FocusNode(debugLabel: 'custom-text-field');
-    _focusNode.addListener(_handleFocusChanged);
+    _initFocusNode();
   }
 
   @override
@@ -101,7 +118,9 @@ class _CustomTextFieldState extends State<CustomTextField> {
   }
 
   void _handleFocusChanged() {
-    // Don't auto-open IME on TV focus change; user presses Select/Enter to open keyboard
+    if (_focusNode.hasFocus && _isTvInput) {
+      SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+    }
   }
 
   bool get _isTvInput => !kIsWeb && ResponsiveWidget.isTv(context);
@@ -226,12 +245,13 @@ class _CustomTextFieldState extends State<CustomTextField> {
                                 });
                               },
                             ))
-                      : (widget.suffixIcon != null
-                          ? Icon(
-                              widget.suffixIcon,
-                              color: selectedTheme.canvasColor,
-                            )
-                          : null),
+                      : (widget.suffixWidget ??
+                          (widget.suffixIcon != null
+                              ? Icon(
+                                  widget.suffixIcon,
+                                  color: selectedTheme.canvasColor,
+                                )
+                              : null)),
                   prefixIcon: widget.prefixIcon,
                 ),
               ),

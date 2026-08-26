@@ -12,6 +12,7 @@ import 'package:video_player/video_player.dart' as native_video;
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:ott/app/widgets/ott_tv_app_shell.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/video_skip_controls.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 
@@ -29,6 +30,17 @@ String? _extractYoutubeId(String urlOrId) {
 
   final looksLikeVideoId = RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(value);
   return looksLikeVideoId ? value : null;
+}
+
+Duration boundedSeekPosition({
+  required Duration position,
+  required Duration duration,
+  required Duration offset,
+}) {
+  final target = position + offset;
+  if (target < Duration.zero) return Duration.zero;
+  if (duration > Duration.zero && target > duration) return duration;
+  return target;
 }
 
 class TrailerPage extends StatefulWidget {
@@ -57,11 +69,45 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
   bool _initialized = false;
   bool _historySaved = false;
   bool _hasError = false;
+  bool _isMuted = false;
+  bool _showControls = true;
+  Timer? _hideControlsTimer;
 
   String get _trailerUrl =>
       DirectTrailerSource.fromBackend(widget.trailerUrl) ?? '';
   bool get _hasUrl => _trailerUrl.isNotEmpty;
   String? get _youtubeId => _extractYoutubeId(_trailerUrl);
+
+  Duration get _currentPosition {
+    if (_player != null) return _player!.state.position;
+    if (_androidController != null && _androidController!.value.isInitialized) {
+      return _androidController!.value.position;
+    }
+    if (_youtubeController != null) return _youtubeController!.value.position;
+    return Duration.zero;
+  }
+
+  Duration get _totalDuration {
+    if (_player != null) return _player!.state.duration;
+    if (_androidController != null && _androidController!.value.isInitialized) {
+      return _androidController!.value.duration;
+    }
+    if (_youtubeController != null) {
+      return _youtubeController!.value.metaData.duration;
+    }
+    return Duration.zero;
+  }
+
+  bool get _isPlaying {
+    if (_player != null) return _player!.state.playing;
+    if (_androidController != null && _androidController!.value.isInitialized) {
+      return _androidController!.value.isPlaying;
+    }
+    if (_youtubeController != null) {
+      return _youtubeController!.value.isPlaying;
+    }
+    return false;
+  }
 
   @override
   void initState() {
@@ -100,10 +146,12 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
           _youtubeController!.value.isPlaying
               ? WakelockPlus.enable()
               : WakelockPlus.disable();
+          setState(() {});
         });
 
       if (mounted) {
         setState(() => _initialized = true);
+        _scheduleHideControls();
       }
       return;
     }
@@ -118,7 +166,14 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
       final controller = native_video.VideoPlayerController.networkUrl(uri);
       try {
         await controller.initialize();
-        await controller.setVolume(1);
+        await controller.setVolume(_isMuted ? 0 : 1);
+        controller.addListener(() {
+          if (!mounted) return;
+          controller.value.isPlaying
+              ? WakelockPlus.enable()
+              : WakelockPlus.disable();
+          setState(() {});
+        });
         if (!mounted) {
           await controller.dispose();
           return;
@@ -127,6 +182,7 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
         await controller.play();
         WakelockPlus.enable();
         setState(() => _initialized = true);
+        _scheduleHideControls();
         return;
       } catch (error, stackTrace) {
         debugPrint('Android trailer ExoPlayer error: $error\n$stackTrace');
@@ -140,12 +196,19 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
     final controller = VideoController(player);
 
     try {
-      // media_kit powers direct trailer URLs while YouTube URLs keep their
-      // existing YouTube-specific controller.
       _subscriptions
-        ..add(player.stream.playing.listen((isPlaying) {
-          isPlaying ? WakelockPlus.enable() : WakelockPlus.disable();
-          if (isPlaying && !_historySaved && !widget.isTrailerUrl) {
+        ..add(player.stream.playing.listen((playing) {
+          if (!mounted) return;
+          if (playing) {
+            WakelockPlus.enable();
+            _scheduleHideControls();
+          } else {
+            WakelockPlus.disable();
+          }
+          if (mounted) setState(() {});
+        }))
+        ..add(player.stream.completed.listen((completed) {
+          if (completed && !_historySaved) {
             _historySaved = true;
             _saveHistory();
           }
@@ -167,7 +230,7 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
         'Passing the direct backend trailer URL to media_kit.',
       );
       await player.open(Media(_trailerUrl), play: true);
-      await player.setVolume(100);
+      await player.setVolume(_isMuted ? 0 : 100);
 
       if (!mounted) {
         await player.dispose();
@@ -179,11 +242,29 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
         _videoController = controller;
         _initialized = true;
       });
+      _scheduleHideControls();
     } catch (error) {
       debugPrint('Trailer init error: $error');
       await player.dispose();
       if (mounted) setState(() => _hasError = true);
     }
+  }
+
+  void _scheduleHideControls() {
+    _hideControlsTimer?.cancel();
+    _hideControlsTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted && _isPlaying) {
+        setState(() => _showControls = false);
+      }
+    });
+  }
+
+  void _showControlsTemporarily() {
+    _hideControlsTimer?.cancel();
+    if (!_showControls) {
+      setState(() => _showControls = true);
+    }
+    _scheduleHideControls();
   }
 
   Future<void> _saveHistory() async {
@@ -205,6 +286,7 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
   }
 
   void _seekBy(Duration offset) {
+    _showControlsTemporarily();
     final youtube = _youtubeController;
     if (youtube != null) {
       youtube.seekTo(
@@ -239,6 +321,7 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
   }
 
   Future<void> _disposePlayer() async {
+    _hideControlsTimer?.cancel();
     for (final subscription in _subscriptions) {
       await subscription.cancel();
     }
@@ -282,6 +365,7 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
   }
 
   void _togglePlayback() {
+    _showControlsTemporarily();
     final youtube = _youtubeController;
     if (youtube != null) {
       if (youtube.value.isPlaying) {
@@ -289,6 +373,7 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
       } else {
         youtube.play();
       }
+      setState(() {});
       return;
     }
     final androidController = _androidController;
@@ -298,34 +383,48 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
       } else {
         unawaited(androidController.play());
       }
+      setState(() {});
       return;
     }
     final player = _player;
     if (player != null) {
       unawaited(player.playOrPause());
+      setState(() {});
     }
   }
 
+  void _toggleMute() {
+    _showControlsTemporarily();
+    final newMuted = !_isMuted;
+    _isMuted = newMuted;
+    if (_player != null) {
+      _player!.setVolume(newMuted ? 0 : 100);
+    }
+    if (_androidController != null) {
+      unawaited(_androidController!.setVolume(newMuted ? 0.0 : 1.0));
+    }
+    if (_youtubeController != null) {
+      newMuted ? _youtubeController!.mute() : _youtubeController!.unMute();
+    }
+    setState(() {});
+  }
+
   KeyEventResult _handleRemoteKey(FocusNode node, KeyEvent event) {
-    if (!ResponsiveWidget.isTv(context) || event is! KeyDownEvent) {
+    if (event is! KeyDownEvent) {
       return KeyEventResult.ignored;
     }
+    _showControlsTemporarily();
     final key = event.logicalKey;
     if (OttTvRemoteKey.playPause.contains(key) ||
-        key == LogicalKeyboardKey.select ||
-        key == LogicalKeyboardKey.enter ||
-        key == LogicalKeyboardKey.space ||
-        key == LogicalKeyboardKey.gameButtonA) {
+        key == LogicalKeyboardKey.space) {
       _togglePlayback();
       return KeyEventResult.handled;
     }
-    if (OttTvRemoteKey.fastForward.contains(key) ||
-        key == LogicalKeyboardKey.arrowRight) {
+    if (OttTvRemoteKey.fastForward.contains(key)) {
       _seekBy(const Duration(seconds: 10));
       return KeyEventResult.handled;
     }
-    if (OttTvRemoteKey.rewind.contains(key) ||
-        key == LogicalKeyboardKey.arrowLeft) {
+    if (OttTvRemoteKey.rewind.contains(key)) {
       _seekBy(const Duration(seconds: -10));
       return KeyEventResult.handled;
     }
@@ -339,75 +438,285 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
     return KeyEventResult.ignored;
   }
 
+  String _format(Duration d) {
+    if (d == Duration.zero) return "00:00";
+    String two(int n) => n.toString().padLeft(2, '0');
+    return "${two(d.inMinutes.remainder(60))}:${two(d.inSeconds.remainder(60))}";
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Focus(
-        autofocus: ResponsiveWidget.isTv(context),
-        onKeyEvent: _handleRemoteKey,
-        child: !_hasUrl
-            ? const Center(
-                child: Text("No trailer available",
-                    style: TextStyle(color: Colors.white)),
-              )
-            : _hasError
-                ? const Center(
-                    child: Text("Trailer unavailable",
-                        style: TextStyle(color: Colors.white)),
-                  )
-                : !_initialized
-                    ? Center(
-                        child: CircularProgressIndicator(
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      )
-                    : Stack(
-                        children: [
-                          Center(child: _playerSurface()),
-                          SafeArea(
-                            child: Align(
-                              alignment: Alignment.topLeft,
-                              child: IconButton(
-                                icon: const Icon(Icons.arrow_back_ios,
-                                    color: Colors.white),
-                                onPressed: () => Navigator.pop(context),
-                              ),
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          _disposePlayer();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Focus(
+          autofocus: ResponsiveWidget.isTv(context),
+          onKeyEvent: _handleRemoteKey,
+          child: !_hasUrl
+              ? const Center(
+                  child: Text("No trailer available",
+                      style: TextStyle(color: Colors.white)),
+                )
+              : _hasError
+                  ? const Center(
+                      child: Text("Trailer unavailable",
+                          style: TextStyle(color: Colors.white)),
+                    )
+                  : !_initialized
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        )
+                      : MouseRegion(
+                          onHover: (_) => _showControlsTemporarily(),
+                          child: GestureDetector(
+                            onTap: () {
+                              if (_showControls) {
+                                setState(() => _showControls = false);
+                              } else {
+                                _showControlsTemporarily();
+                              }
+                            },
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Center(child: _playerSurface()),
+                                _buildControlOverlay(),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildControlOverlay() {
+    final title = widget.content.title ?? 'Trailer';
+    return AnimatedOpacity(
+      opacity: _showControls ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 250),
+      child: IgnorePointer(
+        ignoring: !_showControls,
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black87,
+                Colors.transparent,
+                Colors.transparent,
+                Colors.black87,
+              ],
+              stops: [0.0, 0.25, 0.72, 1.0],
+            ),
+          ),
+          child: SafeArea(
+            child: Stack(
+              children: [
+                Positioned(
+                  top: 10,
+                  left: 16,
+                  right: 16,
+                  child: Row(
+                    children: [
+                      OttTvFocus(
+                        onTap: () => Navigator.pop(context),
+                        borderRadius: 24,
+                        semanticLabel: 'Back',
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                              color: Colors.white),
+                          onPressed: () => Navigator.pop(context),
+                        ),
                       ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      OttTvFocus(
+                        onTap: _toggleMute,
+                        borderRadius: 24,
+                        semanticLabel: _isMuted ? 'Unmute' : 'Mute',
+                        child: IconButton(
+                          icon: Icon(
+                            _isMuted
+                                ? Icons.volume_off_rounded
+                                : Icons.volume_up_rounded,
+                            color: Colors.white,
+                          ),
+                          onPressed: _toggleMute,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      OttTvFocus(
+                        onTap: () => Navigator.pop(context),
+                        borderRadius: 24,
+                        semanticLabel: 'Close Full Screen',
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.fullscreen_exit_rounded,
+                            color: Colors.white,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      OttTvFocus(
+                        onTap: () => _seekBy(const Duration(seconds: -10)),
+                        borderRadius: 30,
+                        semanticLabel: 'Rewind 10 seconds',
+                        child: IconButton(
+                          iconSize: 42,
+                          icon: const Icon(Icons.replay_10_rounded,
+                              color: Colors.white),
+                          onPressed: () =>
+                              _seekBy(const Duration(seconds: -10)),
+                        ),
+                      ),
+                      const SizedBox(width: 36),
+                      OttTvFocus(
+                        autofocus: true,
+                        onTap: _togglePlayback,
+                        borderRadius: 36,
+                        semanticLabel: _isPlaying ? 'Pause' : 'Play',
+                        child: IconButton(
+                          iconSize: 58,
+                          icon: Icon(
+                            _isPlaying
+                                ? Icons.pause_circle_filled_rounded
+                                : Icons.play_circle_filled_rounded,
+                            color: Colors.white,
+                          ),
+                          onPressed: _togglePlayback,
+                        ),
+                      ),
+                      const SizedBox(width: 36),
+                      OttTvFocus(
+                        onTap: () => _seekBy(const Duration(seconds: 10)),
+                        borderRadius: 30,
+                        semanticLabel: 'Forward 10 seconds',
+                        child: IconButton(
+                          iconSize: 42,
+                          icon: const Icon(Icons.forward_10_rounded,
+                              color: Colors.white),
+                          onPressed: () =>
+                              _seekBy(const Duration(seconds: 10)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  bottom: 14,
+                  left: 24,
+                  right: 24,
+                  child: Row(
+                    children: [
+                      Text(
+                        _format(_currentPosition),
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 13),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildProgressSlider(),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        _format(_totalDuration),
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgressSlider() {
+    final durationMs = _totalDuration.inMilliseconds;
+    final posMs = _currentPosition.inMilliseconds;
+    if (durationMs <= 0) {
+      return const LinearProgressIndicator(
+        value: 0,
+        color: Colors.redAccent,
+        backgroundColor: Colors.white24,
+      );
+    }
+    return SliderTheme(
+      data: SliderTheme.of(context).copyWith(
+        trackHeight: 4,
+        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+        overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+        activeTrackColor: Theme.of(context).primaryColor,
+        inactiveTrackColor: Colors.white24,
+        thumbColor: Theme.of(context).primaryColor,
+      ),
+      child: Slider(
+        min: 0,
+        max: durationMs.toDouble(),
+        value: posMs.clamp(0, durationMs).toDouble(),
+        onChanged: (value) {
+          final target = Duration(milliseconds: value.round());
+          if (_player != null) {
+            _player!.seek(target);
+          } else if (_androidController != null) {
+            _androidController!.seekTo(target);
+          } else if (_youtubeController != null) {
+            _youtubeController!.seekTo(target);
+          }
+          setState(() {});
+        },
       ),
     );
   }
 
   Widget _playerSurface() {
     if (_youtubeController != null) {
-      return YoutubePlayerBuilder(
-        player: YoutubePlayer(
-          controller: _youtubeController!,
-          showVideoProgressIndicator: true,
-          progressIndicatorColor: Colors.redAccent,
-          progressColors: const ProgressBarColors(
-            playedColor: Colors.redAccent,
-            handleColor: Colors.redAccent,
-          ),
-        ),
-        builder: (context, player) {
-          return AspectRatio(
-            aspectRatio: 16 / 9,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                player,
-                Center(
-                  child: VideoSkipControls(
-                    onBackward: () => _seekBy(const Duration(seconds: -10)),
-                    onForward: () => _seekBy(const Duration(seconds: 10)),
-                    gap: 92,
-                  ),
-                ),
-              ],
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final height = constraints.maxHeight;
+          if (width <= 0 || height <= 0) return const SizedBox.expand();
+          final aspectRatio = width / height;
+
+          return SizedBox(
+            width: width,
+            height: height,
+            child: YoutubePlayer(
+              controller: _youtubeController!,
+              width: width,
+              aspectRatio: aspectRatio,
+              showVideoProgressIndicator: false,
             ),
           );
         },
@@ -416,22 +725,18 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
 
     final androidController = _androidController;
     if (androidController != null && androidController.value.isInitialized) {
-      return AspectRatio(
-        aspectRatio: androidController.value.aspectRatio == 0
-            ? 16 / 9
-            : androidController.value.aspectRatio,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            native_video.VideoPlayer(androidController),
-            Center(
-              child: VideoSkipControls(
-                onBackward: () => _seekBy(const Duration(seconds: -10)),
-                onForward: () => _seekBy(const Duration(seconds: 10)),
-                gap: 92,
-              ),
-            ),
-          ],
+      return SizedBox.expand(
+        child: FittedBox(
+          fit: BoxFit.contain,
+          child: SizedBox(
+            width: androidController.value.size.width > 0
+                ? androidController.value.size.width
+                : 1920,
+            height: androidController.value.size.height > 0
+                ? androidController.value.size.height
+                : 1080,
+            child: native_video.VideoPlayer(androidController),
+          ),
         ),
       );
     }
@@ -442,55 +747,12 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
       return const SizedBox.shrink();
     }
 
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Video(
-              controller: controller,
-              fit: BoxFit.contain,
-            ),
-          ),
-          Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onDoubleTapDown: (details) async {
-                final box = context.findRenderObject() as RenderBox;
-                final local = box.globalToLocal(details.globalPosition);
-                final isLeft = local.dx < box.size.width / 2;
-
-                final current = player.state.position;
-                final duration = player.state.duration;
-
-                final target = isLeft
-                    ? current - const Duration(seconds: 10)
-                    : current + const Duration(seconds: 10);
-
-                await player.seek(
-                  target < Duration.zero
-                      ? Duration.zero
-                      : target > duration
-                          ? duration
-                          : target,
-                );
-              },
-              onLongPressStart: (_) {
-                player.setRate(2.0);
-              },
-              onLongPressEnd: (_) {
-                player.setRate(1.0);
-              },
-            ),
-          ),
-          Center(
-            child: VideoSkipControls(
-              onBackward: () => _seekBy(const Duration(seconds: -10)),
-              onForward: () => _seekBy(const Duration(seconds: 10)),
-              gap: 92,
-            ),
-          ),
-        ],
+    return SizedBox.expand(
+      child: Video(
+        controller: controller,
+        fit: BoxFit.contain,
+        fill: Colors.black,
+        controls: NoVideoControls,
       ),
     );
   }
@@ -526,6 +788,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
   bool _showControls = false;
   bool _isDisposed = false;
   bool _hasError = false;
+  bool _isMuted = false;
   int _initToken = 0;
   Future<void>? _initializationFuture;
   bool _manuallyPaused = false;
@@ -535,9 +798,41 @@ class _TrailerPreviewState extends State<TrailerPreview>
       DirectTrailerSource.fromBackend(widget.trailerUrl) ?? '';
   String? get _youtubeId => _extractYoutubeId(_trailerUrl);
 
+  Duration get _currentPosition {
+    if (_player != null) return _player!.state.position;
+    if (_androidController != null && _androidController!.value.isInitialized) {
+      return _androidController!.value.position;
+    }
+    if (_youtubeController != null) return _youtubeController!.value.position;
+    return Duration.zero;
+  }
+
+  Duration get _totalDuration {
+    if (_player != null) return _player!.state.duration;
+    if (_androidController != null && _androidController!.value.isInitialized) {
+      return _androidController!.value.duration;
+    }
+    if (_youtubeController != null) {
+      return _youtubeController!.value.metaData.duration;
+    }
+    return Duration.zero;
+  }
+
+  bool get _isPlaying {
+    if (_player != null) return _player!.state.playing;
+    if (_androidController != null && _androidController!.value.isInitialized) {
+      return _androidController!.value.isPlaying;
+    }
+    if (_youtubeController != null) {
+      return _youtubeController!.value.isPlaying;
+    }
+    return false;
+  }
+
   @override
   void initState() {
     super.initState();
+    _isMuted = widget.muted;
     WidgetsBinding.instance.addObserver(this);
     _appIsActive = WidgetsBinding.instance.lifecycleState == null ||
         WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
@@ -547,6 +842,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
       _player?.pause();
       _androidController?.pause();
       _youtubeController?.pause();
+      if (mounted) setState(() {});
     };
 
     widget.controller.play = () {
@@ -555,18 +851,23 @@ class _TrailerPreviewState extends State<TrailerPreview>
       _player?.play();
       _androidController?.play();
       _youtubeController?.play();
+      if (mounted) setState(() {});
     };
 
     widget.controller.mute = () {
+      _isMuted = true;
       _player?.setVolume(0);
       _androidController?.setVolume(0);
       _youtubeController?.mute();
+      if (mounted) setState(() {});
     };
 
     widget.controller.unmute = () {
+      _isMuted = false;
       _player?.setVolume(100);
       _androidController?.setVolume(1);
       _youtubeController?.unMute();
+      if (mounted) setState(() {});
     };
     widget.controller.disposePlayer = _disposeControllerAsync;
 
@@ -602,16 +903,15 @@ class _TrailerPreviewState extends State<TrailerPreview>
       _youtubeController?.dispose();
       final controller = YoutubePlayerController(
         initialVideoId: youtubeId,
-        flags: const YoutubePlayerFlags(
-          autoPlay: true,
-          mute: true,
+        flags: YoutubePlayerFlags(
+          autoPlay: widget.autoPlay,
+          mute: _isMuted,
           loop: true,
         ),
-      );
+      )..addListener(() {
+          if (mounted) setState(() {});
+        });
 
-      if (!widget.muted) {
-        controller.unMute();
-      }
       if (!widget.autoPlay || _manuallyPaused || !_appIsActive) {
         controller.pause();
       }
@@ -643,7 +943,10 @@ class _TrailerPreviewState extends State<TrailerPreview>
       try {
         await controller.initialize();
         await controller.setLooping(true);
-        await controller.setVolume(widget.muted ? 0 : 1);
+        await controller.setVolume(_isMuted ? 0 : 1);
+        controller.addListener(() {
+          if (mounted) setState(() {});
+        });
         if (widget.autoPlay && !_manuallyPaused && _appIsActive) {
           await controller.play();
         }
@@ -705,7 +1008,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
         'Passing the direct backend trailer URL to the embedded media_kit player.',
       );
       await player.open(Media(_trailerUrl), play: false);
-      await player.setVolume(widget.muted ? 0 : 100);
+      await player.setVolume(_isMuted ? 0 : 100);
       if (widget.autoPlay && !_manuallyPaused && _appIsActive) {
         await player.play();
       }
@@ -744,6 +1047,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
       return;
     }
     if (oldWidget.muted != widget.muted) {
+      _isMuted = widget.muted;
       unawaited(_player?.setVolume(widget.muted ? 0 : 100));
       unawaited(_androidController?.setVolume(widget.muted ? 0 : 1));
       widget.muted ? _youtubeController?.mute() : _youtubeController?.unMute();
@@ -873,6 +1177,79 @@ class _TrailerPreviewState extends State<TrailerPreview>
     );
   }
 
+  void _togglePlayback() {
+    final youtube = _youtubeController;
+    if (youtube != null) {
+      if (youtube.value.isPlaying) {
+        _manuallyPaused = true;
+        youtube.pause();
+      } else {
+        _manuallyPaused = false;
+        if (_appIsActive) youtube.play();
+      }
+      setState(() {});
+      return;
+    }
+    final androidController = _androidController;
+    if (androidController != null) {
+      if (androidController.value.isPlaying) {
+        _manuallyPaused = true;
+        unawaited(androidController.pause());
+      } else {
+        _manuallyPaused = false;
+        if (_appIsActive) unawaited(androidController.play());
+      }
+      setState(() {});
+      return;
+    }
+    final player = _player;
+    if (player != null) {
+      if (player.state.playing) {
+        _manuallyPaused = true;
+        player.pause();
+      } else {
+        _manuallyPaused = false;
+        if (_appIsActive) player.play();
+      }
+      setState(() {});
+    }
+  }
+
+  void _toggleMute() {
+    final newMuted = !_isMuted;
+    _isMuted = newMuted;
+    if (_player != null) {
+      _player!.setVolume(newMuted ? 0 : 100);
+    }
+    if (_androidController != null) {
+      unawaited(_androidController!.setVolume(newMuted ? 0.0 : 1.0));
+    }
+    if (_youtubeController != null) {
+      newMuted ? _youtubeController!.mute() : _youtubeController!.unMute();
+    }
+    setState(() {});
+  }
+
+  Future<void> _openFullScreen() async {
+    final trailerUrl = widget.trailerUrl;
+    _disposeController();
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TrailerPage(
+          trailerUrl: trailerUrl,
+          isTrailerUrl: true,
+          content: widget.content,
+        ),
+      ),
+    );
+    if (mounted &&
+        !_isDisposed &&
+        (trailerUrl?.trim().isNotEmpty ?? false)) {
+      _init();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_hasError) {
@@ -887,21 +1264,11 @@ class _TrailerPreviewState extends State<TrailerPreview>
       );
     }
 
-    final androidController = _androidController;
-    if (androidController != null && androidController.value.isInitialized) {
-      return AspectRatio(
-        aspectRatio: androidController.value.aspectRatio == 0
-            ? 16 / 9
-            : androidController.value.aspectRatio,
-        child: native_video.VideoPlayer(androidController),
-      );
-    }
+    final isInitialized = (_youtubeController != null) ||
+        (_androidController != null && _androidController!.value.isInitialized) ||
+        (_player != null && _videoController != null);
 
-    if (_player == null || _videoController == null) {
-      if (_youtubeController != null) {
-        return _buildYoutubePreview();
-      }
-
+    if (!isInitialized) {
       return AspectRatio(
         aspectRatio: 16 / 9,
         child: Center(
@@ -912,7 +1279,9 @@ class _TrailerPreviewState extends State<TrailerPreview>
       );
     }
 
-    final player = _player!;
+    final isTv = ResponsiveWidget.isTv(context);
+    final showOverlay = _showControls || isTv;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _showControls = true),
       onExit: (_) => setState(() => _showControls = false),
@@ -921,47 +1290,76 @@ class _TrailerPreviewState extends State<TrailerPreview>
         child: AspectRatio(
           aspectRatio: 16 / 9,
           child: Stack(
+            fit: StackFit.expand,
             children: [
-              Positioned.fill(
-                child: Video(
-                  controller: _videoController!,
-                  fit: BoxFit.cover,
-                  controls: null,
-                ),
-              ),
-              if (_showControls) ...[
+              _buildSurface(),
+              if (showOverlay) ...[
                 Positioned.fill(
-                  child: Container(color: Colors.black.withOpacity(0.35)),
-                ),
-                Center(
-                  child: IconButton(
-                    iconSize: 40,
-                    icon: Icon(
-                      player.state.playing
-                          ? Icons.pause_circle_filled
-                          : Icons.play_circle_filled,
-                      color: Colors.white,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.55),
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.65),
+                        ],
+                        stops: const [0.0, 0.45, 1.0],
+                      ),
                     ),
-                    onPressed: () {
-                      if (player.state.playing) {
-                        _manuallyPaused = true;
-                        player.pause();
-                      } else {
-                        _manuallyPaused = false;
-                        if (_appIsActive) player.play();
-                      }
-                      setState(() {});
-                    },
                   ),
                 ),
                 Center(
-                  child: VideoSkipControls(
-                    onBackward: () =>
-                        _seekPreviewBy(const Duration(seconds: -10)),
-                    onForward: () =>
-                        _seekPreviewBy(const Duration(seconds: 10)),
-                    gap: 72,
-                    compact: true,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      OttTvFocus(
+                        onTap: () => _seekPreviewBy(const Duration(seconds: -10)),
+                        borderRadius: 24,
+                        semanticLabel: 'Rewind 10s',
+                        child: IconButton(
+                          iconSize: 32,
+                          icon: const Icon(
+                            Icons.replay_10_rounded,
+                            color: Colors.white,
+                          ),
+                          onPressed: () =>
+                              _seekPreviewBy(const Duration(seconds: -10)),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      OttTvFocus(
+                        onTap: _togglePlayback,
+                        borderRadius: 28,
+                        semanticLabel: _isPlaying ? 'Pause' : 'Play',
+                        child: IconButton(
+                          iconSize: 44,
+                          icon: Icon(
+                            _isPlaying
+                                ? Icons.pause_circle_filled_rounded
+                                : Icons.play_circle_filled_rounded,
+                            color: Colors.white,
+                          ),
+                          onPressed: _togglePlayback,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      OttTvFocus(
+                        onTap: () => _seekPreviewBy(const Duration(seconds: 10)),
+                        borderRadius: 24,
+                        semanticLabel: 'Forward 10s',
+                        child: IconButton(
+                          iconSize: 32,
+                          icon: const Icon(
+                            Icons.forward_10_rounded,
+                            color: Colors.white,
+                          ),
+                          onPressed: () =>
+                              _seekPreviewBy(const Duration(seconds: 10)),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Positioned(
@@ -971,65 +1369,55 @@ class _TrailerPreviewState extends State<TrailerPreview>
                   child: Row(
                     children: [
                       Text(
-                        _format(player.state.position),
+                        _format(_currentPosition),
                         style:
-                            const TextStyle(color: Colors.white, fontSize: 12),
+                            const TextStyle(color: Colors.white, fontSize: 11),
                       ),
                       const SizedBox(width: 6),
-                      Expanded(child: _progressSlider(player)),
+                      Expanded(child: _buildSlider()),
                       const SizedBox(width: 6),
                       Text(
-                        _format(player.state.duration),
+                        _format(_totalDuration),
                         style:
-                            const TextStyle(color: Colors.white, fontSize: 12),
+                            const TextStyle(color: Colors.white, fontSize: 11),
                       ),
                     ],
                   ),
                 ),
               ],
               Positioned(
-                top: 0,
-                left: 1,
-                child: IconButton(
-                  icon: Icon(
-                    player.state.volume == 0
-                        ? Icons.volume_off
-                        : Icons.volume_up,
-                    color: Colors.white,
+                top: 4,
+                left: 4,
+                child: OttTvFocus(
+                  onTap: _toggleMute,
+                  borderRadius: 20,
+                  semanticLabel: _isMuted ? 'Unmute' : 'Mute',
+                  child: IconButton(
+                    iconSize: 22,
+                    icon: Icon(
+                      _isMuted
+                          ? Icons.volume_off_rounded
+                          : Icons.volume_up_rounded,
+                      color: Colors.white,
+                    ),
+                    onPressed: _toggleMute,
                   ),
-                  onPressed: () {
-                    final muted = player.state.volume == 0;
-                    player.setVolume(muted ? 100 : 0);
-                    setState(() {});
-                  },
                 ),
               ),
               Positioned(
-                top: 0,
-                right: 1,
-                child: IconButton(
-                  onPressed: () async {
-                    final trailerUrl = widget.trailerUrl;
-                    _disposeController();
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => TrailerPage(
-                          trailerUrl: trailerUrl,
-                          isTrailerUrl: true,
-                          content: widget.content,
-                        ),
-                      ),
-                    );
-                    if (mounted &&
-                        !_isDisposed &&
-                        (trailerUrl?.trim().isNotEmpty ?? false)) {
-                      _init();
-                    }
-                  },
-                  icon: const Icon(
-                    Icons.fullscreen,
-                    color: Colors.white,
+                top: 4,
+                right: 4,
+                child: OttTvFocus(
+                  onTap: _openFullScreen,
+                  borderRadius: 20,
+                  semanticLabel: 'Full Screen',
+                  child: IconButton(
+                    iconSize: 22,
+                    onPressed: _openFullScreen,
+                    icon: const Icon(
+                      Icons.fullscreen_rounded,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -1040,13 +1428,34 @@ class _TrailerPreviewState extends State<TrailerPreview>
     );
   }
 
-  Widget _progressSlider(Player player) {
-    final durationMs = player.state.duration.inMilliseconds;
-    final positionMs = player.state.position.inMilliseconds;
+  Widget _buildSurface() {
+    if (_youtubeController != null) {
+      return YoutubePlayer(
+        controller: _youtubeController!,
+        showVideoProgressIndicator: false,
+      );
+    }
+    final androidController = _androidController;
+    if (androidController != null && androidController.value.isInitialized) {
+      return native_video.VideoPlayer(androidController);
+    }
+    if (_player != null && _videoController != null) {
+      return Video(
+        controller: _videoController!,
+        fit: BoxFit.cover,
+        controls: null,
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildSlider() {
+    final durationMs = _totalDuration.inMilliseconds;
+    final positionMs = _currentPosition.inMilliseconds;
     if (durationMs <= 0) {
       return const LinearProgressIndicator(
         value: 0,
-        color: Colors.red,
+        color: Colors.redAccent,
         backgroundColor: Colors.white24,
       );
     }
@@ -1054,88 +1463,27 @@ class _TrailerPreviewState extends State<TrailerPreview>
     return SliderTheme(
       data: SliderTheme.of(context).copyWith(
         trackHeight: 3,
-        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-        overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
+        overlayShape: const RoundSliderOverlayShape(overlayRadius: 8),
+        activeTrackColor: Theme.of(context).primaryColor,
+        inactiveTrackColor: Colors.white24,
+        thumbColor: Theme.of(context).primaryColor,
       ),
       child: Slider(
         min: 0,
         max: durationMs.toDouble(),
         value: positionMs.clamp(0, durationMs).toDouble(),
-        activeColor: Colors.red,
-        inactiveColor: Colors.white24,
         onChanged: (value) {
-          player.seek(Duration(milliseconds: value.round()));
+          final target = Duration(milliseconds: value.round());
+          if (_player != null) {
+            _player!.seek(target);
+          } else if (_androidController != null) {
+            _androidController!.seekTo(target);
+          } else if (_youtubeController != null) {
+            _youtubeController!.seekTo(target);
+          }
+          setState(() {});
         },
-      ),
-    );
-  }
-
-  Widget _buildYoutubePreview() {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _showControls = true),
-      onExit: (_) => setState(() => _showControls = false),
-      child: GestureDetector(
-        onTap: () => setState(() => _showControls = !_showControls),
-        child: AspectRatio(
-          aspectRatio: 16 / 9,
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: YoutubePlayer(
-                  controller: _youtubeController!,
-                  showVideoProgressIndicator: true,
-                  progressIndicatorColor: Colors.red,
-                  progressColors: const ProgressBarColors(
-                    playedColor: Colors.red,
-                    handleColor: Colors.red,
-                    bufferedColor: Colors.white54,
-                    backgroundColor: Colors.white24,
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 0,
-                right: 1,
-                child: IconButton(
-                  onPressed: () async {
-                    final trailerUrl = widget.trailerUrl;
-                    _disposeController();
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => TrailerPage(
-                          trailerUrl: trailerUrl,
-                          isTrailerUrl: true,
-                          content: widget.content,
-                        ),
-                      ),
-                    );
-                    if (mounted &&
-                        !_isDisposed &&
-                        (trailerUrl?.trim().isNotEmpty ?? false)) {
-                      _init();
-                    }
-                  },
-                  icon: const Icon(
-                    Icons.fullscreen,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              if (_showControls)
-                Center(
-                  child: VideoSkipControls(
-                    onBackward: () =>
-                        _seekPreviewBy(const Duration(seconds: -10)),
-                    onForward: () =>
-                        _seekPreviewBy(const Duration(seconds: 10)),
-                    gap: 72,
-                    compact: true,
-                  ),
-                ),
-            ],
-          ),
-        ),
       ),
     );
   }

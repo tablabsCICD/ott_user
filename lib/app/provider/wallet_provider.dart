@@ -200,7 +200,6 @@ class WalletProvider extends BaseProvider {
     notifyListeners();
 
     String apiUrl = ApiConstant.addMoneyToWallet;
-    print(apiUrl);
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
     Map<String, dynamic> mapData = {
       "amount": amount,
@@ -211,7 +210,6 @@ class WalletProvider extends BaseProvider {
 
     try {
       var response = await apiHelper.postApiWithBody(apiUrl, mapData);
-      print(response);
       if (response.statusCode == 200) {
         Map<String, dynamic> responseBody = json.decode(response.body);
         AddWalletAmountResponse addUserResponse =
@@ -239,13 +237,12 @@ class WalletProvider extends BaseProvider {
         }
       } else {
         return {'failure': true, 'message': 'Something went wrong!'};
-        // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
       debugPrint("Error: $error");
       return {
         'success': false,
-        'message': 'An error occurred while adding user: $error'
+        'message': 'An error occurred while adding balance: $error'
       };
     } finally {
       _isAddingBalance = false;
@@ -335,45 +332,57 @@ class WalletProvider extends BaseProvider {
         };
       }
     } catch (error) {
-      debugPrint("Error: $error");
+      debugPrint("Wallet history error: $error");
       return {
         'success': false,
-        'message': 'An error occurred while adding user: $error'
+        'message': 'Failed to load transaction history: $error'
       };
     }
   }
 
   Future<Map<String, Object>> getBalance() async {
     try {
-      final addUserResponse = await _walletService.getBalance();
-      if (addUserResponse.success == true) {
-        if (addUserResponse.data != null) {
-          _wallet = addUserResponse.data!;
-          _walletBalance = addUserResponse.data!.balance!;
+      final balanceResponse = await _walletService.getBalance();
+      if (balanceResponse.success == true) {
+        if (balanceResponse.data != null) {
+          _wallet = balanceResponse.data!;
+          _walletBalance = balanceResponse.data!.balance!;
           notifyListeners();
-          return {'success': true, 'message': addUserResponse.message!};
+          return {'success': true, 'message': balanceResponse.message!};
         } else {
-          debugPrint("Empty data: ${addUserResponse.message}");
+          debugPrint("Empty data: ${balanceResponse.message}");
           return {
             'success': false,
-            'message': addUserResponse.message ?? 'No data returned'
+            'message': balanceResponse.message ?? 'No data returned'
           };
         }
       } else {
-        debugPrint("Error: ${addUserResponse.message}");
+        debugPrint("Error: ${balanceResponse.message}");
         return {
           'success': false,
-          'message': addUserResponse.message ?? 'Error in response'
+          'message': balanceResponse.message ?? 'Error in response'
         };
       }
     } catch (error) {
       _walletBalance = 0.0;
-      debugPrint("Error: $error");
+      debugPrint("Wallet balance error: $error");
       return {
         'success': false,
-        'message': 'An error occurred while adding user: $error'
+        'message': 'Failed to load wallet balance: $error'
       };
     }
+  }
+
+  void clear() {
+    _walletBalance = 0.0;
+    _wallet = Wallet();
+    _transactionHistory.clear();
+    _filteredTransactionHistory.clear();
+    _isAddingBalance = false;
+    _isDeductingBalance = false;
+    amountController.clear();
+    referController.clear();
+    notifyListeners();
   }
 
   void resetTransactionFilters() {

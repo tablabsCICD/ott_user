@@ -23,8 +23,6 @@ import 'package:ott/app/pages/upcoming%20movies%20page/UpcomingPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/pages/watchlist%20page/WatchlistPage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
-import 'package:ott/app/provider/bookmarkProvider.dart';
-import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/purchase_history_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/LanguageDropdown.dart';
@@ -33,11 +31,8 @@ import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/shimmer%20loader/profile_shimmer.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
-import 'package:ott/presentation/web_landing/utils/post_logout_navigation.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../core/constant/prefrense_constant.dart';
 import '../../core/utils/sharepreferences.dart';
 import '../../provider/userProvider.dart';
 import '../../widgets/show_toast.dart';
@@ -454,39 +449,76 @@ class _ProfilePageState extends State<ProfilePage> {
     final theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
 
+    if (ResponsiveWidget.isTabletOrTv(context)) {
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: theme.cardColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          title: Text(
+            'Are you sure you want Logout?',
+            style: TextStyle(
+              color: theme.canvasColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          actions: [
+            OttTvFocus(
+              autofocus: true,
+              borderRadius: 8,
+              onTap: () => Navigator.of(dialogContext).pop(),
+              child: TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(
+                  lang.cancel,
+                  style: TextStyle(color: theme.canvasColor),
+                ),
+              ),
+            ),
+            OttTvFocus(
+              borderRadius: 8,
+              onTap: () async {
+                Navigator.of(dialogContext).pop();
+                await SessionManager.instance.performLogout(context);
+              },
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () async {
+                  Navigator.of(dialogContext).pop();
+                  await SessionManager.instance.performLogout(context);
+                },
+                child: Text(lang.logout),
+              ),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     showCupertinoDialog(
       context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: Text('Are you sure you want Logout?'),
+      builder: (dialogContext) => CupertinoAlertDialog(
+        title: const Text('Are you sure you want Logout?'),
         actions: [
           CupertinoDialogAction(
             textStyle: TextStyle(color: theme.canvasColor),
             child: Text(lang.cancel),
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.of(dialogContext).pop();
             },
           ),
           CupertinoDialogAction(
             textStyle: TextStyle(color: theme.primaryColor),
             child: Text(lang.logout),
             onPressed: () async {
-              Navigator.of(context).pop(); // Close the dialog
-
-              await SessionManager.instance.logoutFromServer();
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.remove('isLoggedIn');
-              LocalSharePreferences localSharePreferences =
-                  LocalSharePreferences();
-              await localSharePreferences.clearSession();
-              print(
-                  "check  SEtLogin ${await localSharePreferences.getBool(SharedPreferencesConstant.isUserLoggedIn)}");
-
-              // clear all the APIs used for the user
-              Provider.of<DashboardProvider>(context, listen: false).clear();
-              Provider.of<BookmarkProvider>(context, listen: false).clear();
-              Provider.of<UserProvider>(context, listen: false).clear();
-              Provider.of<UserProvider>(context, listen: false).disposeData();
-              pushPostLogoutReplacement(context);
+              Navigator.of(dialogContext).pop();
+              await SessionManager.instance.performLogout(context);
             },
           ),
         ],

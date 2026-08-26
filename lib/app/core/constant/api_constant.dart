@@ -20,7 +20,7 @@ class ApiConstant {
 
   static String antiPiracyDevices = "${baseUrl}anti-piracy/devices";
   static String antiPiracyDevice(String deviceId) =>
-      "${antiPiracyDevices}/${Uri.encodeComponent(deviceId)}";
+      "$antiPiracyDevices/${Uri.encodeComponent(deviceId)}";
   static String signedPlaybackUrl = "${baseUrl}anti-piracy/playback/signed-url";
   static String playbackAnalytics = "${baseUrl}anti-piracy/playback/analytics";
   static String currentWatermark = "${baseUrl}watermark/current";
@@ -129,7 +129,7 @@ class ApiConstant {
   static String getWalletBalanceByUserId(userId) =>
       "${baseUrl}wallet/balance/$userId";
   static String walletHistory(userId) =>
-      "${baseUrl}api/walletHistory/user/%7BuserId%7D?userId=$userId";
+      "${baseUrl}api/walletHistory/user/$userId";
 
   static String saveRatingAndReview = "${baseUrl}api/saveRatingAndRewiew";
   static String deleteRatingAndReview(id) =>

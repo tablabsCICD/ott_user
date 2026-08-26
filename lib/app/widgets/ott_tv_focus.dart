@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ott/app/flavor/app_flavor.dart';
 import 'package:ott/app/widgets/ott_tv_app_shell.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 class OttTvFocus extends StatefulWidget {
   const OttTvFocus({
@@ -18,6 +19,7 @@ class OttTvFocus extends StatefulWidget {
     this.onFocusChange,
     this.enabled = true,
     this.onKeyEvent,
+    this.alignment,
   });
 
   final Widget child;
@@ -32,6 +34,7 @@ class OttTvFocus extends StatefulWidget {
   final ValueChanged<bool>? onFocusChange;
   final bool enabled;
   final FocusOnKeyEventCallback? onKeyEvent;
+  final double? alignment;
 
   @override
   State<OttTvFocus> createState() => _OttTvFocusState();
@@ -80,7 +83,10 @@ class _OttTvFocusState extends State<OttTvFocus> {
         context,
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
-        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+        alignment: widget.alignment ?? 0.0,
+        alignmentPolicy: widget.alignment != null
+            ? ScrollPositionAlignmentPolicy.explicit
+            : ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
       );
     }
   }
@@ -107,7 +113,9 @@ class _OttTvFocusState extends State<OttTvFocus> {
     final theme = Theme.of(context);
     final focusColor = widget.focusColor ?? theme.primaryColor;
 
-    if (!FlavorConfig.current.isTv) {
+    final isMobile =
+        ResponsiveWidget.isMobile(context) && !FlavorConfig.current.isTv;
+    if (isMobile) {
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.enabled ? widget.onTap : null,
@@ -141,19 +149,15 @@ class _OttTvFocusState extends State<OttTvFocus> {
                 borderRadius: BorderRadius.circular(widget.borderRadius),
                 border: Border.all(
                   color: _focused ? focusColor : Colors.transparent,
-                  width: 2,
+                  width: 1,
                 ),
-                boxShadow: _focused
-                    ? [
-                        BoxShadow(
-                          color: focusColor.withValues(alpha: 0.36),
-                          blurRadius: 16,
-                          spreadRadius: 1,
-                        ),
-                      ]
-                    : null,
+                boxShadow: null,
               ),
-              child: widget.child,
+              child: Focus(
+                canRequestFocus: false,
+                descendantsAreFocusable: false,
+                child: widget.child,
+              ),
             ),
           ),
         ),

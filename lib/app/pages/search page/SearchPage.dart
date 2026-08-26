@@ -27,7 +27,7 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   bool isLoading = true;
   final FocusNode _searchFocusNode =
-      FocusNode(debugLabel: 'search-field', skipTraversal: true);
+      FocusNode(debugLabel: 'search-field');
 
   @override
   void initState() {
@@ -95,26 +95,15 @@ class _SearchPageState extends State<SearchPage> {
                   : ResponsiveWidget.isTablet(context)
                       ? 400
                       : double.infinity,
-              child: OttTvFocus(
-                borderRadius: 10,
-                scale: 1.03,
-                semanticLabel: lang.searchContent,
-                onTap: () {
-                  _searchFocusNode.requestFocus();
-                  provider.searchContentController.selection =
-                      TextSelection.collapsed(
-                    offset: provider.searchContentController.text.length,
-                  );
-                },
-                child: CustomTextField(
-                  controller: provider.searchContentController,
-                  focusNode: _searchFocusNode,
-                  hintText: lang.searchContent,
-                  prefixIcon: const Icon(Icons.search),
-                  textInputType: TextInputType.text,
-                  textInputAction: TextInputAction.search,
-                  onFieldSubmitted: (_) => provider.searchContent(),
-                ),
+              child: CustomTextField(
+                controller: provider.searchContentController,
+                focusNode: _searchFocusNode,
+                autofocus: ResponsiveWidget.isTv(context),
+                hintText: lang.searchContent,
+                prefixIcon: const Icon(Icons.search),
+                textInputType: TextInputType.text,
+                textInputAction: TextInputAction.search,
+                onFieldSubmitted: (_) => provider.searchContent(),
               ),
             ),
             actions: [
@@ -681,7 +670,6 @@ class SearchMovieCard extends StatefulWidget {
 }
 
 class _SearchMovieCardState extends State<SearchMovieCard> {
-  bool _isLoadingCast = false;
   List<CastMember> _apiCastAndCrew = [];
 
   Content get movie => widget.movie;
@@ -705,7 +693,6 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
     if (contentId == null) return;
 
     setState(() {
-      _isLoadingCast = true;
       _apiCastAndCrew = [];
     });
 
@@ -732,10 +719,6 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
       }
     } catch (error) {
       debugPrint('Search cast fetch error: $error');
-    } finally {
-      if (mounted) {
-        setState(() => _isLoadingCast = false);
-      }
     }
   }
 
@@ -994,92 +977,5 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
         .where((name) => name.isNotEmpty)
         .toList();
     return names.isEmpty ? 'N/A' : names.join(', ');
-  }
-
-  Widget _buildPeopleSection(BuildContext context) {
-    final cast = _castList;
-    final crew = _crewList;
-
-    if (_isLoadingCast && cast.isEmpty && crew.isEmpty) {
-      return const SizedBox(
-        height: 18,
-        width: 18,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      );
-    }
-
-    if (cast.isEmpty && crew.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (cast.isNotEmpty) _buildPeopleChips(context, 'Cast', cast),
-        if (cast.isNotEmpty && crew.isNotEmpty) const SizedBox(height: 4),
-        if (crew.isNotEmpty) _buildPeopleChips(context, 'Crew', crew),
-      ],
-    );
-  }
-
-  Widget _buildPeopleChips(
-    BuildContext context,
-    String label,
-    List<CastMember> members,
-  ) {
-    final theme = Theme.of(context);
-    final visibleMembers = members.take(4).toList();
-
-    return SizedBox(
-      height: 28,
-      child: Row(
-        children: [
-          Text(
-            '$label: ',
-            style: TextStyle(
-              color: theme.primaryColor,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          Expanded(
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: visibleMembers.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 6),
-              itemBuilder: (context, index) {
-                return _buildPersonChip(context, visibleMembers[index]);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPersonChip(BuildContext context, CastMember member) {
-    final theme = Theme.of(context);
-    final name = member.name?.trim() ?? 'N/A';
-    final role = member.role?.trim() ?? '';
-
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 140),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: theme.cardColor.withOpacity(0.75),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: theme.canvasColor.withOpacity(0.12)),
-      ),
-      child: Text(
-        role.isEmpty ? name : '$name ($role)',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: theme.canvasColor.withOpacity(0.78),
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
   }
 }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:ott/app/flavor/app_flavor.dart';
+
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 class OttTvRemoteKey {
   static final Set<LogicalKeyboardKey> up = {
@@ -97,7 +98,7 @@ class _OttTvAppShellState extends State<OttTvAppShell> {
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb || !FlavorConfig.current.isTv) {
+    if (ResponsiveWidget.isMobile(context) && !FlavorConfig.current.isTv) {
       return widget.child;
     }
 

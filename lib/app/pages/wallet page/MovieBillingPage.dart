@@ -11,6 +11,7 @@ import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
@@ -20,9 +21,9 @@ import '../../widgets/show_toast.dart';
 
 class MovieBillingPage extends StatefulWidget {
   final Content movie;
-  int giftCount;
+  final int giftCount;
 
-  MovieBillingPage({
+  const MovieBillingPage({
     super.key,
     required this.movie,
     this.giftCount = 0,
@@ -34,8 +35,6 @@ class MovieBillingPage extends StatefulWidget {
 
 class _MovieBillingPageState extends State<MovieBillingPage> {
   double moviePrice = 0.0;
-  DateTime? _startDate;
-  DateTime? _endDate;
   bool _purchaseLoaderVisible = false;
 
   static const double _minimumRechargeAmount = 100;
@@ -323,8 +322,10 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                   Expanded(
                     child: transactions.isEmpty
                         ? const Center(
-                            child: Text("No transactions yet",
-                                style: TextStyle(color: Colors.grey)),
+                            child: Text(
+                              "No transactions yet",
+                              style: TextStyle(color: Colors.grey),
+                            ),
                           )
                         : ListView.separated(
                             itemCount: transactions.length,
@@ -407,24 +408,31 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                       const SizedBox(height: 6),
                       CustomTextField(
                         backgroundColor: theme.scaffoldBackgroundColor,
-                        isDigits: true,
+                        isDigits: false,
                         controller: couponCodeController,
                         autofocus: ResponsiveWidget.isTabletOrTv(context),
                         textInputAction: TextInputAction.done,
                         hintText: "Enter 16 Digit Number",
                         textInputType: TextInputType.text,
+                        capitalization: TextCapitalization.characters,
+                        readOnly: false,
                       ),
                       const SizedBox(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text("Cancel"),
+                          OttTvFocus(
+                            borderRadius: 8,
+                            onTap: () => Navigator.pop(context),
+                            child: TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text("Cancel"),
+                            ),
                           ),
                           const SizedBox(width: 12),
-                          ElevatedButton(
-                            onPressed: () async {
+                          OttTvFocus(
+                            borderRadius: 12,
+                            onTap: () async {
                               final provider = Provider.of<GiftProvider>(
                                   context,
                                   listen: false);
@@ -457,7 +465,42 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                 );
                               }
                             },
-                            child: const Text("Redeem"),
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                final provider = Provider.of<GiftProvider>(
+                                    context,
+                                    listen: false);
+
+                                if (couponCodeController.text.trim().length !=
+                                    16) {
+                                  CustomToast.show(
+                                    context,
+                                    "Coupon code is invalid",
+                                    isSuccess: false,
+                                  );
+                                  return;
+                                }
+
+                                final result = await provider.useGiftByCoupon(
+                                    couponCodeController.text.trim());
+
+                                if (result["success"] == true) {
+                                  CustomToast.show(
+                                    context,
+                                    "Coupon applied successfully",
+                                    isSuccess: true,
+                                  );
+                                  Navigator.pop(context, true);
+                                } else {
+                                  CustomToast.show(
+                                    context,
+                                    "Failed to apply coupon",
+                                    isSuccess: false,
+                                  );
+                                }
+                              },
+                              child: const Text("Redeem"),
+                            ),
                           ),
                         ],
                       ),
@@ -577,6 +620,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   debugPrint(
                                     'Dashboard refresh failed after purchase: $error',
                                   );
+                                  return null;
                                 });
 
                                 if (!mounted) return;
@@ -586,11 +630,6 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   "Payment successful! Enjoy your content 🎬",
                                   isSuccess: true,
                                 );
-
-                                /*  await _handlePostPurchaseInvoice(
-                                  pageContext,
-                                  quantity: giftCount > 0 ? giftCount : 1,
-                                ); */
 
                                 if (giftCount > 0) {
                                   Navigator.pushReplacement(

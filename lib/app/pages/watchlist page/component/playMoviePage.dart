@@ -15,6 +15,7 @@ import 'package:ott/app/core/services/session_manager.dart';
 import 'package:ott/app/flavor/app_flavor.dart';
 import 'package:ott/app/provider/secure_playback_controller.dart';
 import 'package:ott/app/widgets/ott_tv_app_shell.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/data/models/anti_piracy_models.dart';
 import 'package:ott/data/models/seriesModel.dart';
 import 'package:provider/provider.dart';
@@ -99,6 +100,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   bool _handlingSecureAuthenticationFailure = false;
   bool _controlsVisible = true;
   bool _isSeeking = false;
+  bool _isMuted = false;
   Duration? _lastLoggedDuration;
 
   bool get _isSeries =>
@@ -1441,7 +1443,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   KeyEventResult _handleRemoteKey(FocusNode node, KeyEvent event) {
-    if (!ResponsiveWidget.isTv(context) || event is! KeyDownEvent) {
+    if ((ResponsiveWidget.isMobile(context) && !FlavorConfig.current.isTv) ||
+        event is! KeyDownEvent) {
       return KeyEventResult.ignored;
     }
 
@@ -1640,6 +1643,22 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
   }
 
+  void _toggleMute() {
+    _showControls();
+    final newMute = !_isMuted;
+    _isMuted = newMute;
+    if (_player != null) {
+      _player!.setVolume(newMute ? 0 : 100);
+    }
+    if (_androidSecurePlayer != null) {
+      unawaited(_androidSecurePlayer!.setVolume(newMute ? 0.0 : 1.0));
+    }
+    if (_youtubeController != null) {
+      newMute ? _youtubeController!.mute() : _youtubeController!.unMute();
+    }
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>().getTheme;
@@ -1689,21 +1708,38 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                 ),
               if (_controlsVisible)
                 Positioned(
-                  top: 8,
-                  left: 8,
-                  child: SafeArea(child: _backButton()),
+                  top: 10,
+                  left: 16,
+                  right: 16,
+                  child: SafeArea(
+                    child: Row(
+                      children: [
+                        _backButton(),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            widget.content?.title ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        _volumeButton(),
+                        const SizedBox(width: 8),
+                        _downloadButton(),
+                      ],
+                    ),
+                  ),
                 ),
               if (!showLoading && !_hasPlaybackError && _controlsVisible)
                 Positioned.fill(
                   child: Center(
                     child: _centerPlaybackControls(),
                   ),
-                ),
-              if (!showLoading && !_hasPlaybackError && _controlsVisible)
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: SafeArea(child: _downloadButton()),
                 ),
               if (!showLoading && !_hasPlaybackError && watermark != null)
                 Positioned.fill(
@@ -1722,6 +1758,33 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                   ),
                 ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _volumeButton() {
+    return OttTvFocus(
+      onTap: _toggleMute,
+      borderRadius: 24,
+      semanticLabel: _isMuted ? 'Unmute' : 'Mute',
+      child: Material(
+        color: Colors.black.withValues(alpha: 0.45),
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: _toggleMute,
+          child: SizedBox(
+            height: 40,
+            width: 40,
+            child: Icon(
+              _isMuted
+                  ? Icons.volume_off_rounded
+                  : Icons.volume_up_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
           ),
         ),
       ),
@@ -1778,6 +1841,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                   : Icons.play_arrow_rounded,
           semanticsLabel: _isPlaybackPlaying ? 'Pause' : 'Play',
           prominent: true,
+          autofocus: true,
           loading: _isPlaybackBuffering,
           onPressed: () {
             _togglePlayback();
@@ -1802,12 +1866,15 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     required String semanticsLabel,
     required VoidCallback onPressed,
     bool prominent = false,
+    bool autofocus = false,
     bool loading = false,
   }) {
     final size = prominent ? 66.0 : 54.0;
-    return Semantics(
-      button: true,
-      label: semanticsLabel,
+    return OttTvFocus(
+      onTap: loading ? () {} : onPressed,
+      autofocus: autofocus,
+      borderRadius: size / 2,
+      semanticLabel: semanticsLabel,
       child: Material(
         color: Colors.black.withValues(alpha: prominent ? 0.72 : 0.58),
         shape: CircleBorder(
@@ -1856,44 +1923,74 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       return const SizedBox.shrink();
     }
 
-    return Material(
-      color: Colors.black.withValues(alpha: 0.48),
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: () async {
-          final offlineProvider = context.read<OfflineDownloadProvider>();
-          if (offlineProvider.isDownloading(contentId)) return;
+    return OttTvFocus(
+      onTap: () async {
+        final offlineProvider = context.read<OfflineDownloadProvider>();
+        if (offlineProvider.isDownloading(contentId)) return;
 
-          final result = offlineProvider.isDownloaded(contentId)
-              ? <String, Object>{
-                  'success': true,
-                  'message': 'Movie is already downloaded.',
-                }
-              : await offlineProvider.downloadContent(
-                  content,
-                  sourceUrl: sourceUrl,
-                );
+        final result = offlineProvider.isDownloaded(contentId)
+            ? <String, Object>{
+                'success': true,
+                'message': 'Movie is already downloaded.',
+              }
+            : await offlineProvider.downloadContent(
+                content,
+                sourceUrl: sourceUrl,
+              );
 
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                result['message']?.toString() ?? 'Download updated',
-              ),
-              backgroundColor: result['success'] == true
-                  ? Colors.green.shade700
-                  : Colors.red.shade700,
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result['message']?.toString() ?? 'Download updated',
             ),
-          );
-        },
-        child: const SizedBox(
-          height: 40,
-          width: 40,
-          child: Icon(
-            Icons.download_rounded,
-            color: Colors.white,
-            size: 20,
+            backgroundColor: result['success'] == true
+                ? Colors.green.shade700
+                : Colors.red.shade700,
+          ),
+        );
+      },
+      borderRadius: 20,
+      semanticLabel: 'Download',
+      child: Material(
+        color: Colors.black.withValues(alpha: 0.48),
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () async {
+            final offlineProvider = context.read<OfflineDownloadProvider>();
+            if (offlineProvider.isDownloading(contentId)) return;
+
+            final result = offlineProvider.isDownloaded(contentId)
+                ? <String, Object>{
+                    'success': true,
+                    'message': 'Movie is already downloaded.',
+                  }
+                : await offlineProvider.downloadContent(
+                    content,
+                    sourceUrl: sourceUrl,
+                  );
+
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  result['message']?.toString() ?? 'Download updated',
+                ),
+                backgroundColor: result['success'] == true
+                    ? Colors.green.shade700
+                    : Colors.red.shade700,
+              ),
+            );
+          },
+          child: const SizedBox(
+            height: 40,
+            width: 40,
+            child: Icon(
+              Icons.download_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
         ),
       ),
@@ -2033,19 +2130,24 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   Widget _backButton() {
-    return Material(
-      color: Colors.black.withValues(alpha: 0.45),
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: _handleExit,
-        child: const SizedBox(
-          height: 36,
-          width: 36,
-          child: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Colors.white,
-            size: 18,
+    return OttTvFocus(
+      onTap: _handleExit,
+      borderRadius: 20,
+      semanticLabel: 'Back',
+      child: Material(
+        color: Colors.black.withValues(alpha: 0.45),
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: _handleExit,
+          child: const SizedBox(
+            height: 38,
+            width: 38,
+            child: Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
           ),
         ),
       ),
@@ -2093,10 +2195,14 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     if (androidPlayer != null && androidPlayer.value.isInitialized) {
       return SizedBox.expand(
         child: FittedBox(
-          fit: BoxFit.cover,
+          fit: BoxFit.contain,
           child: SizedBox(
-            width: androidPlayer.value.size.width,
-            height: androidPlayer.value.size.height,
+            width: androidPlayer.value.size.width > 0
+                ? androidPlayer.value.size.width
+                : 1920,
+            height: androidPlayer.value.size.height > 0
+                ? androidPlayer.value.size.height
+                : 1080,
             child: native_video.VideoPlayer(androidPlayer),
           ),
         ),
@@ -2120,25 +2226,13 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final height = constraints.maxHeight;
-        if (width <= 0 || height <= 0) return const SizedBox.expand();
-
-        return SizedBox(
-          width: width,
-          height: height,
-          child: Video(
-            controller: _videoController!,
-            width: width,
-            height: height,
-            fit: BoxFit.cover,
-            fill: Colors.black,
-            controls: NoVideoControls,
-          ),
-        );
-      },
+    return SizedBox.expand(
+      child: Video(
+        controller: _videoController!,
+        fit: BoxFit.contain,
+        fill: Colors.black,
+        controls: NoVideoControls,
+      ),
     );
   }
 
