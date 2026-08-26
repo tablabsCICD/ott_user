@@ -61,12 +61,18 @@ Future<void> _runFilmytellApp({
   FlavorConfig.current = await _resolveFlavor(fallbackFlavor);
   MediaKit.ensureInitialized();
   if (!kIsWeb) {
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    try {
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    } catch (_) {}
   }
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  await DeepLinkService.instance.init();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (_) {}
+  try {
+    await DeepLinkService.instance.init();
+  } catch (_) {}
 
   final prefs = await SharedPreferences.getInstance();
   final themeBool = prefs.getBool("isDark") ?? true;
@@ -258,6 +264,8 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> sendNotification() async {
     if (kIsWeb) return;
-    await FirebaseMessaging.instance.subscribeToTopic('all');
+    try {
+      await FirebaseMessaging.instance.subscribeToTopic('all');
+    } catch (_) {}
   }
 }

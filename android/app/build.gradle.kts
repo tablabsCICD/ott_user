@@ -69,6 +69,15 @@ android {
             resValue("string", "app_name", "Filmytell")
             manifestPlaceholders["appAuthRedirectScheme"] = "com.filmytell.ott"
         }
+
+        create("jio") {
+            dimension = "platform"
+            applicationId = "com.filmytell.ott"
+            versionCode = flutter.versionCode
+            versionName = flutter.versionName
+            resValue("string", "app_name", "Filmytell")
+            manifestPlaceholders["appAuthRedirectScheme"] = "com.filmytell.ott"
+        }
     }
 
     // 🔐 Release signing config
