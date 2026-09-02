@@ -1,4 +1,4 @@
-import org.gradle.api.JavaVersion
+﻿import org.gradle.api.JavaVersion
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -9,7 +9,7 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// 🔐 Load keystore properties
+// Load keystore properties
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 
@@ -30,7 +30,7 @@ android {
     namespace = "com.filmytell.ott"
     compileSdk = 36
 
-    // ✅ Required for desugaring + Java 17
+    // Required for desugaring + Java 17
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
@@ -70,6 +70,15 @@ android {
             manifestPlaceholders["appAuthRedirectScheme"] = "com.filmytell.ott"
         }
 
+        create("amazon") {
+            dimension = "platform"
+            applicationId = "com.filmytell.ott"
+            versionCode = flutter.versionCode
+            versionName = flutter.versionName
+            resValue("string", "app_name", "Filmytell")
+            manifestPlaceholders["appAuthRedirectScheme"] = "com.filmytell.ott"
+        }
+
         create("jio") {
             dimension = "platform"
             applicationId = "com.filmytell.ott"
@@ -80,7 +89,7 @@ android {
         }
     }
 
-    // 🔐 Release signing config
+    // Release signing config
     signingConfigs {
         if (hasReleaseKeystore) {
             create("release") {
@@ -100,7 +109,7 @@ android {
                 signingConfigs.getByName("debug")
             }
 
-            // ✅ Safe for first release (avoid crashes)
+            // Safe for first release (avoid crashes)
             isMinifyEnabled = false
             isShrinkResources = false
 

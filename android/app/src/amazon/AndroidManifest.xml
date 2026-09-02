@@ -11,7 +11,7 @@
         android:banner="@drawable/tv_banner"
         android:isGame="false">
 
-        <!-- Some Android/Google TV / Fire TV chipsets reject Impeller's Vulkan buffer
+        <!-- Some Amazon Fire TV chipsets reject Impeller's Vulkan buffer
              formats. Keep the proven Skia/OpenGL renderer isolated to TV. -->
         <meta-data
             android:name="io.flutter.embedding.android.EnableImpeller"

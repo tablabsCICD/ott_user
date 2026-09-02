@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -156,6 +156,8 @@ Future<FlavorConfig> _resolveFlavor(FilmytellFlavor fallbackFlavor) async {
   // entrypoints are therefore the authoritative platform signal; package-name
   // detection cannot distinguish them.
   if (fallbackFlavor == FilmytellFlavor.tv ||
+      fallbackFlavor == FilmytellFlavor.amazon ||
+      fallbackFlavor == FilmytellFlavor.jio ||
       fallbackFlavor == FilmytellFlavor.mobile) {
     return FlavorConfig.forFlavor(fallbackFlavor);
   }

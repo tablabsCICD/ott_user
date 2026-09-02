@@ -1,8 +1,9 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 
 enum FilmytellFlavor {
   mobile,
   tv,
+  amazon,
   jio,
   ios,
   web,
@@ -25,7 +26,11 @@ class FlavorConfig {
   static FlavorConfig current = FlavorConfig.fromEnvironment();
 
   bool get isMobile => flavor == FilmytellFlavor.mobile;
-  bool get isTv => flavor == FilmytellFlavor.tv || flavor == FilmytellFlavor.jio;
+  bool get isTv =>
+      flavor == FilmytellFlavor.tv ||
+      flavor == FilmytellFlavor.amazon ||
+      flavor == FilmytellFlavor.jio;
+  bool get isAmazon => flavor == FilmytellFlavor.amazon;
   bool get isJio => flavor == FilmytellFlavor.jio;
   bool get isIos => flavor == FilmytellFlavor.ios;
   bool get isWeb => flavor == FilmytellFlavor.web;
@@ -41,6 +46,11 @@ class FlavorConfig {
         return FilmytellFlavor.mobile;
       case 'tv':
         return FilmytellFlavor.tv;
+      case 'amazon':
+      case 'amazontv':
+      case 'firetv':
+      case 'fireos':
+        return FilmytellFlavor.amazon;
       case 'jio':
       case 'jiostb':
         return FilmytellFlavor.jio;
