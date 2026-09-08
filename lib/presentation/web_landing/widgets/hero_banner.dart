@@ -259,16 +259,10 @@ class _HeroCopy extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 18),
-            Text(
-              item.description ?? lang.premiumStoriesDefault,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.82),
-                fontSize: 17,
-                height: 1.55,
-                fontWeight: FontWeight.w500,
-              ),
+            _HeroDescription(
+              key: ValueKey(item.id ?? item.title ?? 'hero_desc'),
+              description: item.description ?? lang.premiumStoriesDefault,
+              primaryColor: theme.primaryColor,
             ),
             const SizedBox(height: 20),
             Wrap(
@@ -334,7 +328,89 @@ class _HeroCopy extends StatelessWidget {
       ),
     );
   }
+}
 
+class _HeroDescription extends StatefulWidget {
+  const _HeroDescription({
+    super.key,
+    required this.description,
+    required this.primaryColor,
+  });
+
+  final String description;
+  final Color primaryColor;
+
+  @override
+  State<_HeroDescription> createState() => _HeroDescriptionState();
+}
+
+class _HeroDescriptionState extends State<_HeroDescription> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = widget.description.trim();
+    final isLong = text.length > 110;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeInOut,
+          alignment: Alignment.topLeft,
+          child: Text(
+            text,
+            maxLines: _expanded ? null : 3,
+            overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.82),
+              fontSize: 17,
+              height: 1.55,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        if (isLong) ...[
+          const SizedBox(height: 6),
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _expanded = !_expanded;
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _expanded ? 'Read Less' : 'Read More',
+                      style: TextStyle(
+                        color: widget.primaryColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      _expanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      color: widget.primaryColor,
+                      size: 18,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 class _HeroMoviePrice extends StatelessWidget {

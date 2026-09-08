@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/l10n/app_localizations.dart';
-import 'package:url_launcher/link.dart';
 
 class FooterSection extends StatelessWidget {
   const FooterSection({
@@ -233,6 +232,8 @@ class _BrandBlock extends StatelessWidget {
             children: [
               _SocialButton(label: 'Facebook', onTap: onOpenLink),
               _SocialButton(label: 'Instagram', onTap: onOpenLink),
+              _SocialButton(label: 'LinkedIn', onTap: onOpenLink),
+              _SocialButton(label: 'YouTube', onTap: onOpenLink),
               _SocialButton(label: 'X (Twitter)', onTap: onOpenLink),
             ],
           ),
@@ -426,32 +427,12 @@ class _FooterLinkState extends State<_FooterLink> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final href = widget.href;
-    if (href != null) {
-      return Link(
-        uri: kIsWeb
-            ? Uri.base.resolve(href)
-            : Uri.https(
-                'filmytell.com',
-                href.startsWith('/') ? href : '/$href',
-              ),
-        target: LinkTarget.self,
-        builder: (context, followLink) => _buildInteractiveLink(
-          theme,
-          followLink ?? widget.onTap,
-        ),
-      );
-    }
-
-    return _buildInteractiveLink(theme, widget.onTap);
-  }
-
-  Widget _buildInteractiveLink(ThemeData theme, VoidCallback onTap) {
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => _setHovered(true),
       onExit: (_) => _setHovered(false),
       child: GestureDetector(
-        onTap: onTap,
+        onTap: widget.onTap,
         behavior: HitTestBehavior.opaque,
         child: AnimatedPadding(
           duration: const Duration(milliseconds: 160),
@@ -499,7 +480,6 @@ class _SocialButtonState extends State<_SocialButton> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final icon = _SocialIconData.forLabel(widget.label);
 
     return MouseRegion(
@@ -562,6 +542,16 @@ class _SocialIconData {
       case 'Instagram':
         return const _SocialIconData(
           color: Color(0xFFE4405F),
+          size: 27,
+        );
+      case 'LinkedIn':
+        return const _SocialIconData(
+          color: Color(0xFF0A66C2),
+          size: 27,
+        );
+      case 'YouTube':
+        return const _SocialIconData(
+          color: Color(0xFFFF0000),
           size: 27,
         );
       case 'X (Twitter)':
@@ -670,6 +660,40 @@ class _SocialIcon extends StatelessWidget {
               height: 1,
               fontWeight: FontWeight.w900,
             ),
+          ),
+        );
+      case 'LinkedIn':
+        return Container(
+          height: size,
+          width: size,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0A66C2),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          alignment: Alignment.center,
+          child: const Text(
+            'in',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              height: 1,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        );
+      case 'YouTube':
+        return Container(
+          height: size,
+          width: size,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF0000),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          alignment: Alignment.center,
+          child: const Icon(
+            Icons.play_arrow_rounded,
+            color: Colors.white,
+            size: 20,
           ),
         );
       default:

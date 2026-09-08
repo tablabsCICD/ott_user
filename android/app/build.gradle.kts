@@ -44,7 +44,7 @@ android {
     defaultConfig {
         applicationId = "com.filmytell.ott"
         minSdk = flutter.minSdkVersion
-        targetSdk = 35
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -69,9 +69,9 @@ android {
                 signingConfigs.getByName("debug")
             }
 
-            // ✅ Safe for first release (avoid crashes)
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // ✅ Enabled R8 obfuscation & resource shrinking (generates mapping.txt)
+            isMinifyEnabled = true
+            isShrinkResources = true
 
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

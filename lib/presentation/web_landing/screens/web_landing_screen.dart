@@ -287,9 +287,16 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
 
   Future<void> _openInternalStaticPage(String path) async {
     try {
+      final cleanPath = path.startsWith('/') ? path : '/$path';
+      final base = Uri.base;
       final uri = kIsWeb
-          ? Uri.base.resolve(path)
-          : Uri.https('filmytell.com', path.startsWith('/') ? path : '/$path');
+          ? Uri(
+              scheme: base.scheme.isNotEmpty ? base.scheme : 'https',
+              host: base.host.isNotEmpty ? base.host : 'filmytell.com',
+              port: base.hasPort ? base.port : null,
+              path: cleanPath,
+            )
+          : Uri.https('filmytell.com', cleanPath);
       final opened = await launchUrl(
         uri,
         mode: LaunchMode.platformDefault,
@@ -428,6 +435,12 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
         return;
       case 'Instagram':
         _openExternal(AppConstant.instagramUrl);
+        return;
+      case 'LinkedIn':
+        _openExternal(AppConstant.linkedinUrl);
+        return;
+      case 'YouTube':
+        _openExternal(AppConstant.youtubeUrl);
         return;
       case 'X (Twitter)':
         _openExternal(AppConstant.xUrl);

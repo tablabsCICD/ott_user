@@ -187,49 +187,21 @@ class _SplashScreenState extends State<SplashScreen> {
     return Scaffold(
       backgroundColor: theme.primaryColor,
       body: SafeArea(
-          child: Stack(fit: StackFit.expand, children: [
-        kIsWeb
-            ? Hero(
-                tag: 'logo',
-                child: Image.asset(
-                  ImageConstant.webFullScreenLogo,
-                  fit: BoxFit.cover,
-                ),
-              )
-            : Hero(
-                tag: 'logo',
-                child: Transform.scale(
-                  scale: ResponsiveWidget.isMobile(context) ? 1.2 : 1.0,
-                  child: Image.asset(
-                    ImageConstant.fullScreenLogo,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-        /* Align(
-          alignment: Alignment.bottomCenter,
+        child: Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-            child: Text(
-              'Watch First Day First Show',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: textSize,
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
-                shadows: const [
-                  Shadow(
-                    blurRadius: 8,
-                    color: Colors.black54,
-                    offset: Offset(0, 2),
-                  ),
-                ],
+            padding: const EdgeInsets.all(20),
+            child: Hero(
+              tag: 'logo',
+              child: Image.asset(
+                kIsWeb
+                    ? ImageConstant.webFullScreenLogo
+                    : ImageConstant.fullScreenLogo,
+                fit: BoxFit.contain,
               ),
             ),
           ),
-        ), */
-      ])),
+        ),
+      ),
     );
   }
 }

@@ -146,6 +146,18 @@ class UserPortalSection extends StatelessWidget {
                       appName: 'Filmytell',
                       playStoreUrl: AppConstant.playStoreLink,
                     ),
+                    const AppStoreButton(
+                      appName: 'Filmytell',
+                      appStoreUrl: AppConstant.appStoreLink,
+                    ),
+                    const AmazonFireTvButton(
+                      appName: 'Filmytell',
+                      amazonUrl: AppConstant.amazonFireTvLink,
+                    ),
+                    const JioStoreButton(
+                      appName: 'Filmytell',
+                      jioStoreUrl: AppConstant.jioStoreLink,
+                    ),
                   ],
                 ),
               ],
