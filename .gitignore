@@ -56,5 +56,9 @@ build/
 .gradle-tv/
 *.hprof
 artifacts/
+*.apk
+*.aab
+Filmytell-JioSTB-*.apk
+
 
 

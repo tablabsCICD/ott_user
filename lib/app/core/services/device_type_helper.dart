@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:ott/app/core/services/device_identity_service.dart';
+import 'package:ott/app/flavor/app_flavor.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 import 'device_runtime.dart';
@@ -109,7 +110,8 @@ class DeviceTypeHelper {
     final info = runtime ?? readDeviceRuntimeInfo();
     if (kIsWeb || info.isWeb) return SessionDeviceType.web;
 
-    if (context != null && ResponsiveWidget.isTv(context)) {
+    if (FlavorConfig.current.isTv ||
+        (context != null && ResponsiveWidget.isTv(context))) {
       return SessionDeviceType.tv;
     }
 
@@ -119,7 +121,9 @@ class DeviceTypeHelper {
         signature.contains('fire tv') ||
         signature.contains('aft') ||
         signature.contains('smart-tv') ||
-        signature.contains('smarttv')) {
+        signature.contains('smarttv') ||
+        signature.contains('jio') ||
+        signature.contains('jiostb')) {
       return SessionDeviceType.tv;
     }
 

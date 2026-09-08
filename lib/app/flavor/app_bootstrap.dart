@@ -152,11 +152,13 @@ Future<FlavorConfig> _resolveFlavor(FilmytellFlavor fallbackFlavor) async {
   final configured = FlavorConfig.fromEnvironment(fallback: fallbackFlavor);
   if (kIsWeb) return configured;
 
-  // Mobile and TV intentionally share the Play Store application ID. Their
-  // entrypoints are therefore the authoritative platform signal; package-name
-  // detection cannot distinguish them.
+  // Dedicated entrypoints (main_tv.dart, main_jio.dart, main_mobile.dart, etc.)
+  // provide the authoritative platform flavor signal since Android flavors
+  // intentionally share the application ID.
   if (fallbackFlavor == FilmytellFlavor.tv ||
-      fallbackFlavor == FilmytellFlavor.mobile) {
+      fallbackFlavor == FilmytellFlavor.jio ||
+      fallbackFlavor == FilmytellFlavor.mobile ||
+      fallbackFlavor == FilmytellFlavor.ios) {
     return FlavorConfig.forFlavor(fallbackFlavor);
   }
 

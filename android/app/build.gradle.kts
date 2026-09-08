@@ -44,7 +44,7 @@ android {
     defaultConfig {
         applicationId = "com.filmytell.ott"
         minSdk = flutter.minSdkVersion
-        targetSdk = 36
+        targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -68,6 +68,9 @@ android {
             versionName = flutter.versionName
             resValue("string", "app_name", "Filmytell")
             manifestPlaceholders["appAuthRedirectScheme"] = "com.filmytell.ott"
+            ndk {
+                abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86_64"))
+            }
         }
 
         create("jio") {
@@ -77,6 +80,9 @@ android {
             versionName = flutter.versionName
             resValue("string", "app_name", "Filmytell")
             manifestPlaceholders["appAuthRedirectScheme"] = "com.filmytell.ott"
+            ndk {
+                abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86_64"))
+            }
         }
     }
 
@@ -88,6 +94,8 @@ android {
                 keyPassword = keystoreValue("keyPassword")
                 storeFile = file(keystoreValue("storeFile"))
                 storePassword = keystoreValue("storePassword")
+                enableV1Signing = true
+                enableV2Signing = true
             }
         }
     }
