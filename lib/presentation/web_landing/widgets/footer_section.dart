@@ -205,6 +205,8 @@ class _BrandBlock extends StatelessWidget {
             children: [
               _SocialButton(label: 'Facebook', onTap: onOpenLink),
               _SocialButton(label: 'Instagram', onTap: onOpenLink),
+              _SocialButton(label: 'LinkedIn', onTap: onOpenLink),
+              _SocialButton(label: 'YouTube', onTap: onOpenLink),
               _SocialButton(label: 'X (Twitter)', onTap: onOpenLink),
             ],
           ),
@@ -395,6 +397,7 @@ class _FooterLinkState extends State<_FooterLink> {
     final theme = Theme.of(context);
 
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => _setHovered(true),
       onExit: (_) => _setHovered(false),
       child: GestureDetector(
@@ -446,7 +449,6 @@ class _SocialButtonState extends State<_SocialButton> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final icon = _SocialIconData.forLabel(widget.label);
 
     return MouseRegion(
@@ -522,6 +524,16 @@ class _SocialIconData {
           size: 27,
           useSourceColors: true,
         );
+      case 'LinkedIn':
+        return const _SocialIconData(
+          color: Color(0xFF0A66C2),
+          size: 27,
+        );
+      case 'YouTube':
+        return const _SocialIconData(
+          color: Color(0xFFFF0000),
+          size: 27,
+        );
       case 'X (Twitter)':
         return const _SocialIconData(
           svg: _xSvg,
@@ -562,15 +574,125 @@ const String _instagramSvg = '''
 </svg>
 ''';
 
-const String _xSvg = '''
-<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="12" cy="12" r="11" fill="#000000"/>
-  <path fill="#FFFFFF" d="M13.7 10.6 19 4.5h-1.3l-4.6 5.3-3.6-5.3H5.2l5.5 8.1-5.5 6.4h1.3l4.8-5.6 3.9 5.6h4.3l-5.8-8.4zm-1.7 2-.6-.9L7 5.5h1.9l3.6 5.1.6.9 4.6 6.6h-1.9L12 12.6z"/>
-</svg>
-''';
-
-const String _linkSvg = '''
-<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-  <path d="M10.6 13.4a1 1 0 0 1 0-1.4l3.4-3.4a3 3 0 0 1 4.2 4.2l-2 2a1 1 0 1 1-1.4-1.4l2-2a1 1 0 0 0-1.4-1.4L12 13.4a1 1 0 0 1-1.4 0zm2.8-2.8a1 1 0 0 1 0 1.4L10 15.4a3 3 0 1 1-4.2-4.2l2-2a1 1 0 1 1 1.4 1.4l-2 2a1 1 0 0 0 1.4 1.4l3.4-3.4a1 1 0 0 1 1.4 0z"/>
-</svg>
-''';
+  @override
+  Widget build(BuildContext context) {
+    switch (label) {
+      case 'Facebook':
+        return Container(
+          height: size,
+          width: size,
+          decoration: const BoxDecoration(
+            color: Color(0xFF1877F2),
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.bottomCenter,
+          child: const Text(
+            'f',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              height: 0.95,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        );
+      case 'Instagram':
+        return Container(
+          height: size,
+          width: size,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            gradient: const LinearGradient(
+              begin: Alignment.bottomLeft,
+              end: Alignment.topRight,
+              colors: [
+                Color(0xFFFEDA75),
+                Color(0xFFFA7E1E),
+                Color(0xFFD62976),
+                Color(0xFF962FBF),
+                Color(0xFF4F5BD5),
+              ],
+            ),
+          ),
+          child: Center(
+            child: Container(
+              height: 15,
+              width: 15,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(5),
+                border: Border.all(color: Colors.white, width: 1.8),
+              ),
+              child: Align(
+                alignment: Alignment.topRight,
+                child: Container(
+                  margin: const EdgeInsets.only(top: 2, right: 2),
+                  height: 3,
+                  width: 3,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      case 'X (Twitter)':
+        return Container(
+          height: size,
+          width: size,
+          decoration: BoxDecoration(
+            color: Colors.black,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withOpacity(0.16)),
+          ),
+          alignment: Alignment.center,
+          child: const Text(
+            'X',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              height: 1,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        );
+      case 'LinkedIn':
+        return Container(
+          height: size,
+          width: size,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0A66C2),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          alignment: Alignment.center,
+          child: const Text(
+            'in',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              height: 1,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        );
+      case 'YouTube':
+        return Container(
+          height: size,
+          width: size,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF0000),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          alignment: Alignment.center,
+          child: const Icon(
+            Icons.play_arrow_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
+        );
+      default:
+        return Icon(Icons.link_rounded, color: color, size: size);
+    }
+  }
+}

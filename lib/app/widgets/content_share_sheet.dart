@@ -109,7 +109,7 @@ Future<void> showContentShareSheet(
   );
 }
 
-class _ContentShareSheetBody extends StatelessWidget {
+class _ContentShareSheetBody extends StatefulWidget {
   const _ContentShareSheetBody({
     required this.data,
     required this.sheetContext,
@@ -119,9 +119,23 @@ class _ContentShareSheetBody extends StatelessWidget {
   final BuildContext sheetContext;
 
   @override
+  State<_ContentShareSheetBody> createState() => _ContentShareSheetBodyState();
+}
+
+class _ContentShareSheetBodyState extends State<_ContentShareSheetBody> {
+  int _selectedQrIndex = 0; // 0: Content QR, 1: Apple App Store QR
+
+  @override
   Widget build(BuildContext context) {
     final selectedThemeData =
         Provider.of<ThemeProvider>(context, listen: false).getTheme;
+    final data = widget.data;
+    final isContentQr = _selectedQrIndex == 0;
+    final currentQrLink =
+        isContentQr ? data.qrLink.toString() : data.appStoreQrLink.toString();
+    final currentCaption = isContentQr
+        ? "Scan to watch content on Android / Web"
+        : "Scan to download app on Apple App Store (iOS)";
 
     return SingleChildScrollView(
       child: Column(
@@ -141,14 +155,74 @@ class _ContentShareSheetBody extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: () => Navigator.of(sheetContext).pop(),
+                onPressed: () => Navigator.of(widget.sheetContext).pop(),
                 icon: const Icon(Icons.close),
               ),
             ],
           ),
           const SizedBox(height: 12),
 
-          /// QR CODE
+          /// TOGGLE TABS (Content QR / Apple Store QR)
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.all(4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedQrIndex = 0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isContentQr
+                            ? selectedThemeData.primaryColor
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        "Content QR",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isContentQr ? Colors.white : Colors.grey,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedQrIndex = 1),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: !isContentQr
+                            ? selectedThemeData.primaryColor
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        "Apple Store QR",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: !isContentQr ? Colors.white : Colors.grey,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          /// QR CODE DISPLAY
           Center(
             child: Container(
               padding: const EdgeInsets.all(16),
@@ -157,8 +231,8 @@ class _ContentShareSheetBody extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: QrImageView(
-                data: data.qrLink.toString(),
-                size: 220,
+                data: currentQrLink,
+                size: 200,
                 version: QrVersions.auto,
                 backgroundColor: const Color(0xFF111111),
                 eyeStyle: const QrEyeStyle(
@@ -175,17 +249,17 @@ class _ContentShareSheetBody extends StatelessWidget {
 
           const SizedBox(height: 10),
 
-          const Text(
-            "Scan to watch instantly",
+          Text(
+            currentCaption,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: Colors.grey),
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           /// LINK TEXT
           SelectableText(
-            data.qrLink.toString(),
+            currentQrLink,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
@@ -240,8 +314,8 @@ Watch now 👇
 ${data.qrLink}
 
 📲 Download App:
-iOS: $appStoreLink
-Android: $playStoreLink
+iOS App Store: $appStoreLink
+Android Play Store: $playStoreLink
 Web: $webAppLink
 ''';
 
@@ -255,11 +329,13 @@ Web: $webAppLink
         return;
       }
 
-      final path = await ShareService.instance.downloadQrImage(data);
+      final paths = await ShareService.instance.downloadAllQrImages(data);
 
-      await Share.shareXFiles(
-        [XFile(path)],
-        text: message,
+      await SharePlus.instance.share(
+        ShareParams(
+          text: message,
+          files: paths.map((path) => XFile(path)).toList(),
+        ),
       );
     } catch (e) {
       if (kIsWeb) {
@@ -273,6 +349,7 @@ Web: $webAppLink
         return;
       }
 
+      if (!context.mounted) return;
       CustomToast.show(
         context,
         "Failed to share content",

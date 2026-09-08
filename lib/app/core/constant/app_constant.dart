@@ -18,6 +18,8 @@ class AppConstant {
       "https://play.google.com/store/apps/details?id=com.filmytell.ott";
   static const appStoreLink =
       "https://apps.apple.com/fr/app/filmytell/id6783863260";
+  static const amazonFireTvLink = "https://www.amazon.com/dp/B0HGXBRRTR";
+  static const jioStoreLink = "";
   static const filmytellPartnerPlayStoreLink =
       "https://play.google.com/store/apps/details?id=com.filmytell.partner";
   static const filmytell_partner_playStoreLink = filmytellPartnerPlayStoreLink;
@@ -26,6 +28,13 @@ class AppConstant {
   //   defaultValue: '',
   // );
   static const webAppLink = "https://filmytell.com";
+  static const facebookUrl =
+      "https://www.facebook.com/profile.php?id=61591490073891";
+  static const instagramUrl = "https://www.instagram.com/filmytell/?hl=en";
+  static const linkedinUrl =
+      "https://www.linkedin.com/company/144495025/admin/page-posts/published/";
+  static const youtubeUrl = "https://www.youtube.com/@filmytell-l1o";
+  static const xUrl = "https://x.com/Filmytell";
   static const accountDeletionUrl = "https://filmytell.com/account-delete.html";
 
   static String get platformStoreLink {

@@ -284,6 +284,39 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     }
   }
 
+  Future<void> _openInternalStaticPage(String path) async {
+    try {
+      final cleanPath = path.startsWith('/') ? path : '/$path';
+      final base = Uri.base;
+      final uri = kIsWeb
+          ? Uri(
+              scheme: base.scheme.isNotEmpty ? base.scheme : 'https',
+              host: base.host.isNotEmpty ? base.host : 'filmytell.com',
+              port: base.hasPort ? base.port : null,
+              path: cleanPath,
+            )
+          : Uri.https('filmytell.com', cleanPath);
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.platformDefault,
+        webOnlyWindowName: '_self',
+      );
+      if (!mounted || opened) return;
+      CustomToast.show(
+        context,
+        AppLocalizations.of(context)!.unableOpenLink,
+        isSuccess: false,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      CustomToast.show(
+        context,
+        AppLocalizations.of(context)!.unableOpenLink,
+        isSuccess: false,
+      );
+    }
+  }
+
   Future<void> _openDocumentInNewTab(String url) async {
     final uri = legalDocumentViewUri(url);
     final opened = await launchUrl(
@@ -395,6 +428,21 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
         return;
       case 'Account Deletion':
         _openExternal(AppConstant.accountDeletionUrl);
+        return;
+      case 'Facebook':
+        _openExternal(AppConstant.facebookUrl);
+        return;
+      case 'Instagram':
+        _openExternal(AppConstant.instagramUrl);
+        return;
+      case 'LinkedIn':
+        _openExternal(AppConstant.linkedinUrl);
+        return;
+      case 'YouTube':
+        _openExternal(AppConstant.youtubeUrl);
+        return;
+      case 'X (Twitter)':
+        _openExternal(AppConstant.xUrl);
         return;
       case 'About Us':
         if (!mounted) return;

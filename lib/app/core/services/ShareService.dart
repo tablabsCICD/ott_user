@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:universal_html/html.dart' as html;
 
+import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/QRService.dart';
 import 'package:ott/data/models/content.dart';
@@ -17,6 +18,8 @@ class PreparedMovieShareData {
     required this.deepLink,
     required this.qrLink,
     required this.qrCode,
+    required this.appStoreQrLink,
+    required this.appStoreQrCode,
     required this.message,
   });
 
@@ -25,6 +28,8 @@ class PreparedMovieShareData {
   final Uri deepLink;
   final Uri qrLink;
   final GeneratedQrCode qrCode;
+  final Uri appStoreQrLink;
+  final GeneratedQrCode appStoreQrCode;
   final String message;
 }
 
@@ -50,7 +55,15 @@ class ShareService {
     final qrCode = await QRService.instance.generatePng(
       data: qrLink.toString(),
       fileName: '${contentType.name}_${contentId}_qr.png',
-      foregroundColor: Color(0xFFFFFFFF),
+      foregroundColor: const Color(0xFFFFFFFF),
+      backgroundColor: const Color(0xFF111111),
+    );
+
+    final appStoreQrLink = Uri.parse(AppConstant.appStoreLink);
+    final appStoreQrCode = await QRService.instance.generatePng(
+      data: AppConstant.appStoreLink,
+      fileName: '${contentType.name}_${contentId}_appstore_qr.png',
+      foregroundColor: const Color(0xFFFFFFFF),
       backgroundColor: const Color(0xFF111111),
     );
 
@@ -60,6 +73,8 @@ class ShareService {
       deepLink: shareLink,
       qrLink: qrLink,
       qrCode: qrCode,
+      appStoreQrLink: appStoreQrLink,
+      appStoreQrCode: appStoreQrCode,
       message: _buildShareMessage(
         movie: movie,
         contentType: contentType,
@@ -94,12 +109,7 @@ class ShareService {
 
   Future<String> downloadQrImage(PreparedMovieShareData data) async {
     if (kIsWeb) {
-      final blob = html.Blob(<Object>[data.qrCode.bytes], 'image/png');
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      html.AnchorElement(href: url)
-        ..download = '${data.contentType.name}_${data.movie.id}_qr.png'
-        ..click();
-      html.Url.revokeObjectUrl(url);
+      _triggerWebDownload(data.qrCode.bytes, '${data.contentType.name}_${data.movie.id}_qr.png');
       return 'browser download started';
     }
 
@@ -111,6 +121,36 @@ class ShareService {
     return file.path;
   }
 
+  Future<List<String>> downloadAllQrImages(PreparedMovieShareData data) async {
+    if (kIsWeb) {
+      _triggerWebDownload(data.qrCode.bytes, '${data.contentType.name}_${data.movie.id}_qr.png');
+      _triggerWebDownload(data.appStoreQrCode.bytes, '${data.contentType.name}_${data.movie.id}_appstore_qr.png');
+      return const <String>['browser download started'];
+    }
+
+    final directory = await getApplicationDocumentsDirectory();
+    final path1 =
+        '${directory.path}${Platform.pathSeparator}${data.contentType.name}_${data.movie.id}_qr.png';
+    final file1 = File(path1);
+    await file1.writeAsBytes(data.qrCode.bytes, flush: true);
+
+    final path2 =
+        '${directory.path}${Platform.pathSeparator}${data.contentType.name}_${data.movie.id}_appstore_qr.png';
+    final file2 = File(path2);
+    await file2.writeAsBytes(data.appStoreQrCode.bytes, flush: true);
+
+    return <String>[file1.path, file2.path];
+  }
+
+  void _triggerWebDownload(Uint8List bytes, String fileName) {
+    final blob = html.Blob(<Object>[bytes], 'image/png');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    html.AnchorElement(href: url)
+      ..download = fileName
+      ..click();
+    html.Url.revokeObjectUrl(url);
+  }
+
   String _buildShareMessage({
     required Content movie,
     required DeepLinkContentType contentType,
@@ -118,22 +158,19 @@ class ShareService {
   }) {
     final contentLabel = _contentLabel(contentType);
     final buffer = StringBuffer()
-      ..writeln(movie.title ?? contentLabel)
+      ..writeln('🎬 ${movie.title ?? contentLabel}')
       ..writeln()
       ..writeln(movie.description?.trim().isNotEmpty == true
           ? movie.description!.trim()
           : 'Open this $contentLabel in the Filmytell app.')
       ..writeln()
-      ..writeln('Watch now:')
-      ..writeln(deepLink.toString());
-
-    buffer
+      ..writeln('Watch now 👇')
+      ..writeln(deepLink.toString())
       ..writeln()
-      ..writeln('Play Store:')
-      ..writeln(DeepLinkService.playStoreUrl)
-      ..writeln()
-      ..writeln('App Store:')
-      ..writeln(DeepLinkService.appStoreUrl);
+      ..writeln('📲 Download App:')
+      ..writeln('iOS App Store: ${AppConstant.appStoreLink}')
+      ..writeln('Android Play Store: ${AppConstant.playStoreLink}')
+      ..writeln('Web: ${AppConstant.webAppLink}');
 
     return buffer.toString().trim();
   }

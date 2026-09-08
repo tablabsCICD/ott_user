@@ -1,7 +1,7 @@
 class ImageConstant {
   static String logo = 'assets/images/logo.jpeg';
-  //static String fullScreenLogo = 'assets/images/fullScreenLogo.png';
-  //static String webFullScreenLogo = 'assets/images/webFullScreenLogo.png';
+  static String fullScreenLogo = 'assets/images/fullScreenLogoNew.png';
+  static String webFullScreenLogo = 'assets/images/webFullScreenLogoNew.png';
   //static String inAppLogo = 'assets/images/inAppLogo.png';
   //static String logo2 = 'assets/images/logo2.png';
   static String madiooLogo = 'assets/images/madioo.jpeg';
@@ -9,6 +9,4 @@ class ImageConstant {
   static String ageParentalGuidance = 'assets/images/age_UA.png';
   static String ageAdultsOnly = 'assets/images/age_A.png';
   static String profile = "assets/images/profile.png";
-  static String fullScreenLogo = 'assets/images/fullScreenLogoNew.png';
-  static String webFullScreenLogo = 'assets/images/webFullScreenLogoNew.png';
 }
