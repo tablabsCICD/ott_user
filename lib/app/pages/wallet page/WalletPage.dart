@@ -21,7 +21,7 @@ class _WalletPageState extends State<WalletPage> {
   DateTime? _startDate;
   DateTime? _endDate;
 
-  static const double _minimumRechargeAmount = 1;
+  static const double _minimumRechargeAmount = 100;
   static const double _maximumRechargeAmount = 100000;
 
   @override

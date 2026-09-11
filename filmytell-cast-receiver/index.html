@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FilmyTell Cast Receiver</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Google Cast Web Receiver SDK -->
+  <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+</head>
+<body>
+  <div id="cast-receiver-container">
+    <cast-media-player id="player"></cast-media-player>
+    <div id="custom-watermark-container" class="watermark-overlay" style="display: none;">
+      <span id="watermark-text" class="watermark-text"></span>
+    </div>
+    <div id="custom-loader" class="receiver-loader" style="display: none;">
+      <div class="loader-brand">
+        <span class="brand-name">FilmyTell</span>
+      </div>
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <script src="player.js"></script>
+  <script src="receiver.js"></script>
+</body>
+</html>

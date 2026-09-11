@@ -1,19 +1,6 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
@@ -27,6 +14,11 @@
   <meta property="og:url" content="https://filmytell.com/">
   <meta property="og:type" content="website">
 
+  <!-- Resource Preconnects for Faster Asset & Font Discovery -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://checkout.razorpay.com" crossorigin>
+
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -38,35 +30,90 @@
 
   <title>Filmytell — Movies, Series and Mini-Series</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Instant 0ms FCP / LCP Shell -->
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #0d0d0d;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      overflow-x: hidden;
+    }
+    #app-shell-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #1a1a1a 0%, #0d0d0d 100%);
+      z-index: 9999;
+      transition: opacity 0.4s ease-out;
+      pointer-events: none;
+    }
+    .shell-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .shell-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 6px;
+      object-fit: contain;
+    }
+    .shell-title {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      text-transform: uppercase;
+      font-style: italic;
+      color: #ffffff;
+    }
+    .shell-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #e50914;
+      border-radius: 50%;
+      animation: shell-spin 0.8s linear infinite;
+    }
+    @keyframes shell-spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+
+  <!-- Preload bootstrap script -->
+  <link rel="preload" href="flutter_bootstrap.js" as="script">
 </head>
 <body>
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <!-- 0ms FCP Shell -->
+  <div id="app-shell-loader">
+    <div class="shell-brand">
+      <img src="favicon.png" alt="Filmytell" class="shell-logo" fetchpriority="high" />
+      <span class="shell-title">Filmytell</span>
+    </div>
+    <div class="shell-spinner"></div>
+  </div>
+
   <script>
     (function () {
-      // Keep disabled for the public website. Set to true only if automatic
-      // Android app launching is intentionally restored in the future.
       const ENABLE_AUTO_APP_REDIRECT = false;
+      if (!ENABLE_AUTO_APP_REDIRECT) return;
 
-      if (!ENABLE_AUTO_APP_REDIRECT) {
-        return;
-      }
-
-      var supportedPath = /^\/(gift|movie|series|short)(\/|$)/i.test(
-        window.location.pathname
-      );
+      var supportedPath = /^\/(gift|movie|series|short)(\/|$)/i.test(window.location.pathname);
       var isAndroid = /Android/i.test(window.navigator.userAgent || "");
-
-      if (!isAndroid || !supportedPath) {
-        return;
-      }
+      if (!isAndroid || !supportedPath) return;
 
       var packageName = "com.filmytell.ott";
-      var playStoreUrl = "https://play.google.com/store/apps/details?id=" +
-          packageName;
-      var intentPath = window.location.host +
-          window.location.pathname +
-          window.location.search +
-          window.location.hash;
+      var playStoreUrl = "https://play.google.com/store/apps/details?id=" + packageName;
+      var intentPath = window.location.host + window.location.pathname + window.location.search + window.location.hash;
 
       window.location.href = "intent://" + intentPath +
           "#Intent;scheme=https;package=" + packageName +
@@ -74,73 +121,312 @@
           ";end";
     })();
 
-    window.openRazorpayCheckout = function (options) {
+    // Lazy load Razorpay script on-demand to eliminate render-blocking latency
+    function ensureRazorpayLoaded() {
       return new Promise(function (resolve) {
-        if (typeof Razorpay === "undefined") {
-          resolve({
-            success: false,
-            message: "Razorpay checkout failed to load in the browser."
-          });
+        if (typeof Razorpay !== "undefined") {
+          resolve(true);
           return;
         }
+        var script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.async = true;
+        script.onload = function () { resolve(true); };
+        script.onerror = function () { resolve(false); };
+        document.head.appendChild(script);
+      });
+    }
 
-        var settled = false;
-        var existingModal = options.modal || {};
-
-        var razorpay = new Razorpay(Object.assign({}, options, {
-          handler: function (response) {
-            if (settled) return;
-            settled = true;
+    window.openRazorpayCheckout = function (options) {
+      return new Promise(function (resolve) {
+        ensureRazorpayLoaded().then(function (loaded) {
+          if (!loaded || typeof Razorpay === "undefined") {
             resolve({
-              success: true,
-              orderId: response.razorpay_order_id,
-              paymentId: response.razorpay_payment_id,
-              signature: response.razorpay_signature
+              success: false,
+              message: "Razorpay checkout failed to load in the browser."
             });
-          },
-          modal: Object.assign({}, existingModal, {
-            ondismiss: function () {
+            return;
+          }
+
+          var settled = false;
+          var existingModal = options.modal || {};
+
+          var razorpay = new Razorpay(Object.assign({}, options, {
+            handler: function (response) {
               if (settled) return;
               settled = true;
               resolve({
-                success: false,
-                message: "Payment cancelled or closed by user."
+                success: true,
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature
               });
-            }
-          })
-        }));
+            },
+            modal: Object.assign({}, existingModal, {
+              ondismiss: function () {
+                if (settled) return;
+                settled = true;
+                resolve({
+                  success: false,
+                  message: "Payment cancelled or closed by user."
+                });
+              }
+            })
+          }));
 
-        razorpay.on("payment.failed", function (response) {
-          if (settled) return;
-          settled = true;
+          razorpay.on("payment.failed", function (response) {
+            if (settled) return;
+            settled = true;
 
-          var error = (response && response.error) || {};
-          var metadata = error.metadata || {};
+            var error = (response && response.error) || {};
+            var metadata = error.metadata || {};
 
-          resolve({
-            success: false,
-            message: error.description || "Payment cancelled or failed.",
-            errorCode: error.code || null,
-            orderId: metadata.order_id || null,
-            paymentId: metadata.payment_id || null
+            resolve({
+              success: false,
+              message: error.description || "Payment cancelled or failed.",
+              errorCode: error.code || null,
+              orderId: metadata.order_id || null,
+              paymentId: metadata.payment_id || null
+            });
           });
+
+          try {
+            razorpay.open();
+          } catch (error) {
+            if (settled) return;
+            settled = true;
+            resolve({
+              success: false,
+              message: error && error.message ? error.message : "Unable to open Razorpay checkout."
+            });
+          }
         });
-
-        try {
-          razorpay.open();
-        } catch (error) {
-          if (settled) return;
-          settled = true;
-          resolve({
-            success: false,
-            message: error && error.message
-                ? error.message
-                : "Unable to open Razorpay checkout."
-          });
-        }
       });
     };
+
+    // Fade out shell loader once Flutter first frame renders
+    window.addEventListener("flutter-first-frame", function () {
+      var loader = document.getElementById("app-shell-loader");
+      if (loader) {
+        loader.style.opacity = "0";
+        setTimeout(function () { loader.remove(); }, 400);
+      }
+    });
   </script>
+
+  <!-- Google Cast Web Sender SDK -->
+  <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+  <script>
+    window.__filmytellCast = {
+      isAvailable: false,
+      context: null,
+      session: null,
+      player: null,
+      playerController: null,
+      appId: "0C452C93",
+      namespace: "urn:x-cast:com.filmytell.ott.cast",
+      stateListener: null,
+
+      init: function(appId, callback) {
+        if (appId) this.appId = appId;
+        if (callback) this.stateListener = callback;
+        if (window.cast && window.cast.framework) {
+          this._setupCastContext();
+        }
+      },
+
+      _setupCastContext: function() {
+        try {
+          if (this.context) return;
+          this.context = cast.framework.CastContext.getInstance();
+          this.context.setOptions({
+            receiverApplicationId: this.appId,
+            autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+          });
+
+          this.player = new cast.framework.RemotePlayer();
+          this.playerController = new cast.framework.RemotePlayerController(this.player);
+
+          var self = this;
+          this.context.addEventListener(
+            cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
+            function(event) {
+              self._onSessionStateChanged(event);
+            }
+          );
+
+          this.playerController.addEventListener(
+            cast.framework.RemotePlayerEventType.PLAYER_STATE_CHANGED,
+            function() {
+              self._notifyState();
+            }
+          );
+
+          this.playerController.addEventListener(
+            cast.framework.RemotePlayerEventType.CURRENT_TIME_CHANGED,
+            function() {
+              self._notifyState();
+            }
+          );
+
+          this.playerController.addEventListener(
+            cast.framework.RemotePlayerEventType.IS_CONNECTED_CHANGED,
+            function() {
+              self._notifyState();
+            }
+          );
+
+          this.isAvailable = true;
+          this._notifyState();
+        } catch (e) {
+          console.error("[FilmyTell Web Cast] Init error:", e);
+        }
+      },
+
+      _onSessionStateChanged: function(event) {
+        if (
+          event.sessionState === cast.framework.SessionState.SESSION_STARTED ||
+          event.sessionState === cast.framework.SessionState.SESSION_RESUMED
+        ) {
+          this.session = this.context.getCurrentSession();
+        } else if (
+          event.sessionState === cast.framework.SessionState.SESSION_ENDED ||
+          event.sessionState === cast.framework.SessionState.NO_SESSION
+        ) {
+          this.session = null;
+        }
+        this._notifyState();
+      },
+
+      _notifyState: function() {
+        var deviceName = "";
+        if (this.session && this.session.getCastDevice()) {
+          deviceName = this.session.getCastDevice().friendlyName || "Google Cast";
+        }
+        var state = {
+          isConnected: !!this.session,
+          deviceName: deviceName,
+          playerState: this.player ? this.player.playerState : "IDLE",
+          currentTime: this.player ? (this.player.currentTime || 0) : 0,
+          duration: this.player ? (this.player.duration || 0) : 0,
+          isMuted: this.player ? !!this.player.isMuted : false,
+          volumeLevel: this.player ? (this.player.volumeLevel || 1.0) : 1.0
+        };
+        var jsonState = JSON.stringify(state);
+        if (typeof this.stateListener === 'function') {
+          this.stateListener(jsonState);
+        }
+        window.dispatchEvent(new CustomEvent('filmytell-cast-state', { detail: jsonState }));
+      },
+
+      requestSession: function() {
+        if (!this.context) return Promise.reject("CastContext not ready");
+        return this.context.requestSession();
+      },
+
+      endCurrentSession: function(stopCasting) {
+        if (!this.context) return;
+        this.context.endCurrentSession(stopCasting !== false);
+      },
+
+      loadMedia: function(mediaData) {
+        if (!this.context) return Promise.reject("CastContext not ready");
+        var session = this.context.getCurrentSession();
+        if (!session) return Promise.reject("No active Cast session");
+
+        try {
+          var data = typeof mediaData === "string" ? JSON.parse(mediaData) : mediaData;
+          var mediaInfo = new chrome.cast.media.MediaInfo(data.mediaUrl, data.contentType || "application/x-mpegurl");
+          mediaInfo.streamType = chrome.cast.media.StreamType.BUFFERED;
+          mediaInfo.metadata = new chrome.cast.media.GenericMediaMetadata();
+          mediaInfo.metadata.title = data.title || "FilmyTell";
+          if (data.subtitle) mediaInfo.metadata.subtitle = data.subtitle;
+          if (data.posterUrl) {
+            mediaInfo.metadata.images = [new chrome.cast.Image(data.posterUrl)];
+          }
+          mediaInfo.customData = {
+            contentId: data.contentId,
+            watermarkText: data.watermarkText,
+            isSeries: data.isSeries,
+            seasonId: data.seasonId,
+            episodeId: data.episodeId
+          };
+
+          var request = new chrome.cast.media.LoadRequest(mediaInfo);
+          request.currentTime = data.initialPositionSeconds || 0;
+          request.autoplay = true;
+
+          return session.loadMedia(request);
+        } catch (e) {
+          console.error("[FilmyTell Web Cast] loadMedia error:", e);
+          return Promise.reject(e);
+        }
+      },
+
+      play: function() {
+        if (this.player && this.playerController && this.player.isPaused) {
+          this.playerController.playOrPause();
+        }
+      },
+
+      pause: function() {
+        if (this.player && this.playerController && !this.player.isPaused) {
+          this.playerController.playOrPause();
+        }
+      },
+
+      seek: function(seconds) {
+        if (this.player && this.playerController) {
+          this.player.currentTime = seconds;
+          this.playerController.seek();
+        }
+      },
+
+      setVolume: function(level) {
+        if (this.player && this.playerController) {
+          this.player.volumeLevel = level;
+          this.playerController.setVolumeLevel();
+        }
+      },
+
+      stop: function() {
+        if (this.playerController) {
+          this.playerController.stop();
+        }
+      }
+    };
+
+    window['__onGCastApiAvailable'] = function(isAvailable) {
+      if (isAvailable && window.__filmytellCast) {
+        window.__filmytellCast._setupCastContext();
+      }
+    };
+
+    window.addEventListener('filmytell-cast-cmd', function(e) {
+      var cmd = e.detail;
+      if (!cmd || !window.__filmytellCast) return;
+      if (cmd.action === 'init') {
+        window.__filmytellCast.init(cmd.appId);
+      } else if (cmd.action === 'requestSession') {
+        window.__filmytellCast.requestSession();
+      } else if (cmd.action === 'endCurrentSession') {
+        window.__filmytellCast.endCurrentSession(cmd.stopCasting);
+      } else if (cmd.action === 'loadMedia') {
+        window.__filmytellCast.loadMedia(cmd.mediaData);
+      } else if (cmd.action === 'play') {
+        window.__filmytellCast.play();
+      } else if (cmd.action === 'pause') {
+        window.__filmytellCast.pause();
+      } else if (cmd.action === 'seek') {
+        window.__filmytellCast.seek(cmd.seconds);
+      } else if (cmd.action === 'setVolume') {
+        window.__filmytellCast.setVolume(cmd.level);
+      } else if (cmd.action === 'stop') {
+        window.__filmytellCast.stop();
+      }
+    });
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

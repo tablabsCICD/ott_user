@@ -25,3 +25,13 @@
 
 # Don't strip out model/data classes (optional safety)
 -keep class **.model.** { *; }
+
+# =========================
+# Google Cast SDK Keep Rules
+# =========================
+-keep class com.google.android.gms.cast.** { *; }
+-keep class com.filmytell.ott.cast.** { *; }
+-keep class androidx.mediarouter.** { *; }
+-dontwarn com.google.android.gms.cast.**
+-dontwarn androidx.mediarouter.**
+

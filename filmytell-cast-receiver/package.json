@@ -1,0 +1,14 @@
+{
+  "name": "filmytell-cast-receiver",
+  "version": "1.0.0",
+  "description": "FilmyTell Google Cast Custom Web Receiver Application",
+  "main": "receiver.js",
+  "scripts": {
+    "start": "npx serve -l 8080",
+    "deploy:firebase": "firebase deploy --only hosting:cast-receiver"
+  },
+  "keywords": ["chromecast", "google-cast", "web-receiver", "filmytell", "ott"],
+  "author": "FilmyTell Engineering",
+  "license": "UNLICENSED",
+  "private": true
+}

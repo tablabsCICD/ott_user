@@ -58,3 +58,5 @@ FilmyTell-JMeter-LoadTesting/
 FilmyTell_LoadTesting/
 *.hprof
 artifacts/
+*.apk
+*.aab

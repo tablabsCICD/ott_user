@@ -2,6 +2,7 @@ package com.filmytell.ott
 
 import android.os.Bundle
 import android.view.WindowManager
+import com.filmytell.ott.cast.CastBridgeManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -9,6 +10,7 @@ import java.io.File
 
 class MainActivity : FlutterActivity() {
     private val antiPiracyChannel = "com.filmytell.ott/anti_piracy"
+    private var castBridgeManager: CastBridgeManager? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -19,6 +21,11 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        // Initialize Google Cast Bridge
+        castBridgeManager = CastBridgeManager(this).also {
+            it.register(flutterEngine)
+        }
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,

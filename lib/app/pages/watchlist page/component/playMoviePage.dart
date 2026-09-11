@@ -22,6 +22,11 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart' as youtube;
 
 import 'package:ott/app/provider/themeProvider.dart';
+import 'package:ott/app/core/cast/cast_button.dart';
+import 'package:ott/app/core/cast/cast_device_dialog.dart';
+import 'package:ott/app/core/cast/cast_manager.dart';
+import 'package:ott/app/core/cast/cast_models.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/widgets/playback_watermark_overlay.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/app/widgets/video_skip_controls.dart';
@@ -166,6 +171,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       'PlayMediaPage.initState reached from the Watch Movie route.',
     );
     WidgetsBinding.instance.addObserver(this);
+    CastManager.instance.addListener(_onCastManagerChanged);
     unawaited(AntiPiracyService.instance.enableScreenProtection());
     unawaited(_startFullscreenPlayback());
   }
@@ -1387,6 +1393,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     _setupToken++;
     _controlsHideTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
+    CastManager.instance.removeListener(_onCastManagerChanged);
     final secureController = _securePlaybackController;
     secureController?.removeListener(_onSecurePlaybackChanged);
     secureController?.dispose();
@@ -1779,18 +1786,35 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                 Positioned(
                   top: 12,
                   right: 12,
-                  child: SafeArea(child: _downloadButton()),
+                  child: SafeArea(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CastButton(
+                          onCustomTap: () async {
+                            final wasCasting = CastManager.instance.isCasting;
+                            await CastDeviceDialog.show(context);
+                            if (!wasCasting && CastManager.instance.connectedDevice != null) {
+                              await _startCastingToConnectedDevice();
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        _downloadButton(),
+                      ],
+                    ),
+                  ),
                 ),
-              if (!showLoading && !_hasPlaybackError && watermark != null)
+              if (!showLoading && !_hasPlaybackError && watermark != null && !CastManager.instance.isCasting)
                 Positioned.fill(
                   child: PlaybackWatermarkOverlay(
                     watermark: watermark,
                   ),
                 ),
-              if (!showLoading && !_hasPlaybackError) _buildSeekIndicators(),
-              if (!showLoading && !_hasPlaybackError && _showResumeBanner)
+              if (!showLoading && !_hasPlaybackError && !CastManager.instance.isCasting) _buildSeekIndicators(),
+              if (!showLoading && !_hasPlaybackError && _showResumeBanner && !CastManager.instance.isCasting)
                 _buildResumeBanner(theme),
-              if (!showLoading && !_hasPlaybackError && _controlsVisible)
+              if (!showLoading && !_hasPlaybackError && _controlsVisible && !CastManager.instance.isCasting)
                 Positioned(
                   left: 20,
                   right: 20,
@@ -1799,6 +1823,10 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                     top: false,
                     child: _videoProgressBar(theme),
                   ),
+                ),
+              if (!showLoading && !_hasPlaybackError && CastManager.instance.isCasting)
+                Positioned.fill(
+                  child: _buildCastRemoteOverlay(theme),
                 ),
             ],
           ),
@@ -2527,5 +2555,217 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     final uri = Uri.tryParse(pathOrUri);
     if (uri?.scheme == 'file') return pathOrUri;
     return File(pathOrUri).uri.toString();
+  }
+
+  void _onCastManagerChanged() {
+    if (!mounted || _isDisposed) return;
+    final castManager = CastManager.instance;
+    if (castManager.connectedDevice != null &&
+        castManager.currentMedia == null &&
+        !castManager.isCasting &&
+        (_currentAuthorizedPlaybackUrl != null ||
+            _currentRemotePlaybackUrl != null ||
+            widget.videoUrl.isNotEmpty)) {
+      _startCastingToConnectedDevice();
+    }
+    setState(() {});
+  }
+
+  Future<void> _startCastingToConnectedDevice() async {
+    final castManager = CastManager.instance;
+    final currentPos = _currentPlaybackPosition;
+    final mediaUrl = _currentAuthorizedPlaybackUrl ??
+        _currentRemotePlaybackUrl ??
+        widget.videoUrl;
+
+    unawaited(_pauseActivePlayer());
+
+    final poster = (widget.content?.posterUrlList?.isNotEmpty == true)
+        ? widget.content!.posterUrlList!.first
+        : null;
+
+    final metadata = CastMediaMetadata(
+      contentId: widget.content?.id ?? 0,
+      title: widget.content?.title ?? 'FilmyTell',
+      subtitle: _isSeries
+          ? 'Episode ${widget.episodeIndex ?? 1}'
+          : (widget.content?.description ?? ''),
+      posterUrl: poster,
+      mediaUrl: mediaUrl,
+      initialPosition: currentPos,
+      duration: _currentPlaybackDuration,
+      isSeries: _isSeries,
+      seasonId: widget.seasonIndex,
+      episodeId: widget.episodeIndex,
+      watermarkText: _securePlaybackController?.watermark?.displayText,
+    );
+
+    await castManager.loadMedia(metadata);
+  }
+
+  Widget _buildCastRemoteOverlay(ThemeData theme) {
+    final castManager = CastManager.instance;
+    final device = castManager.connectedDevice;
+    final media = castManager.currentMedia;
+    final position = castManager.position;
+    final duration = castManager.duration;
+    final isPlaying = castManager.state == CastPlayerState.playing;
+
+    return Container(
+      color: Colors.black.withValues(alpha: 0.94),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      child: SafeArea(
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _backButton(),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.cast_connected, color: Color(0xFFE50914), size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Casting to ${device?.name ?? "TV"}',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final returnPos = castManager.position;
+                    await castManager.disconnect();
+                    _seekTo(returnPos);
+                    unawaited(_resumeAndPlay(_setupToken));
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFE50914),
+                  ),
+                  child: const Text('Play on Phone'),
+                ),
+              ],
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.06),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.tv_rounded,
+                size: 64,
+                color: Color(0xFFE50914),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              media?.title ?? widget.content?.title ?? 'FilmyTell',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (media?.subtitle != null && media!.subtitle!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                media.subtitle!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white60,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Text(
+                    _formatPlaybackTime(position),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                  Expanded(
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        activeTrackColor: const Color(0xFFE50914),
+                        inactiveTrackColor: Colors.white24,
+                        thumbColor: const Color(0xFFE50914),
+                        trackHeight: 3,
+                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                      ),
+                      child: Slider(
+                        value: position.inSeconds.toDouble().clamp(
+                              0.0,
+                              duration.inSeconds > 0
+                                  ? duration.inSeconds.toDouble()
+                                  : position.inSeconds.toDouble() + 1.0,
+                            ),
+                        min: 0.0,
+                        max: duration.inSeconds > 0
+                            ? duration.inSeconds.toDouble()
+                            : position.inSeconds.toDouble() + 1.0,
+                        onChanged: (val) {
+                          castManager.seek(Duration(seconds: val.toInt()));
+                        },
+                      ),
+                    ),
+                  ),
+                  Text(
+                    _formatPlaybackTime(duration),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _roundPlaybackButton(
+                  icon: Icons.replay_10_rounded,
+                  semanticsLabel: 'Rewind 10 seconds',
+                  onPressed: () {
+                    final target = position - const Duration(seconds: 10);
+                    castManager.seek(target < Duration.zero ? Duration.zero : target);
+                  },
+                ),
+                const SizedBox(width: 28),
+                _roundPlaybackButton(
+                  icon: isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  semanticsLabel: isPlaying ? 'Pause' : 'Play',
+                  prominent: true,
+                  onPressed: () {
+                    if (isPlaying) {
+                      castManager.pause();
+                    } else {
+                      castManager.play();
+                    }
+                  },
+                ),
+                const SizedBox(width: 28),
+                _roundPlaybackButton(
+                  icon: Icons.forward_10_rounded,
+                  semanticsLabel: 'Forward 10 seconds',
+                  onPressed: () {
+                    final target = position + const Duration(seconds: 10);
+                    castManager.seek(target);
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
   }
 }
