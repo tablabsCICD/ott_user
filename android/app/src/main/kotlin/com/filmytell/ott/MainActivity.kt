@@ -1,5 +1,6 @@
 package com.filmytell.ott
 
+import android.os.StatFs
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -8,6 +9,7 @@ import java.io.File
 
 class MainActivity : FlutterActivity() {
     private val antiPiracyChannel = "com.filmytell.ott/anti_piracy"
+    private val storageChannel = "com.filmytell.ott/storage"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -42,6 +44,51 @@ class MainActivity : FlutterActivity() {
                             "osVersion" to "Android ${android.os.Build.VERSION.RELEASE}"
                         )
                     )
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            storageChannel
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "availableBytes" -> {
+                    try {
+                        val stat = StatFs(filesDir.absolutePath)
+                        result.success(stat.availableBytes)
+                    } catch (e: Exception) {
+                        result.error("STORAGE_ERROR", e.message, null)
+                    }
+                }
+                "totalBytes" -> {
+                    try {
+                        val stat = StatFs(filesDir.absolutePath)
+                        result.success(stat.totalBytes)
+                    } catch (e: Exception) {
+                        result.error("STORAGE_ERROR", e.message, null)
+                    }
+                }
+                "storageStats" -> {
+                    try {
+                        val stat = StatFs(filesDir.absolutePath)
+                        val available = stat.availableBytes
+                        val total = stat.totalBytes
+                        val freeRatio = if (total > 0L) (available.toDouble() / total.toDouble()) else 0.0
+                        val isLow = freeRatio < 0.20 // Jio guideline: free space below 20%
+                        result.success(
+                            mapOf(
+                                "availableBytes" to available,
+                                "totalBytes" to total,
+                                "freeRatio" to freeRatio,
+                                "freePercent" to (freeRatio * 100.0),
+                                "isStorageLow" to isLow
+                            )
+                        )
+                    } catch (e: Exception) {
+                        result.error("STORAGE_ERROR", e.message, null)
+                    }
                 }
                 else -> result.notImplemented()
             }

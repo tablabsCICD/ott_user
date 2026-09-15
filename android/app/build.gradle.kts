@@ -47,6 +47,15 @@ android {
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        ndk {
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
+        }
+    }
+
+    packaging {
+        jniLibs {
+            excludes.addAll(listOf("lib/x86/**", "lib/x86_64/**"))
+        }
     }
 
     flavorDimensions += "platform"
@@ -81,7 +90,7 @@ android {
             resValue("string", "app_name", "Filmytell")
             manifestPlaceholders["appAuthRedirectScheme"] = "com.filmytell.ott"
             ndk {
-                abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86_64"))
+                abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
             }
         }
     }

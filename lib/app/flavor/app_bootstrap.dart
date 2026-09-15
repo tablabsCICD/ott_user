@@ -60,16 +60,18 @@ Future<void> _runFilmytellApp({
   WidgetsFlutterBinding.ensureInitialized();
   FlavorConfig.current = await _resolveFlavor(fallbackFlavor);
   MediaKit.ensureInitialized();
-  if (!kIsWeb) {
+  if (!kIsWeb && !FlavorConfig.current.isJio) {
     try {
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
     } catch (_) {}
   }
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  } catch (_) {}
+  if (!FlavorConfig.current.isJio) {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } catch (_) {}
+  }
   try {
     await DeepLinkService.instance.init();
   } catch (_) {}
@@ -143,7 +145,7 @@ Future<void> _runFilmytellApp({
     ),
   );
 
-  if (!kIsWeb) {
+  if (!kIsWeb && !FlavorConfig.current.isJio) {
     unawaited(_initializeNotificationsSafely());
   }
 }
@@ -265,7 +267,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> sendNotification() async {
-    if (kIsWeb) return;
+    if (kIsWeb || FlavorConfig.current.isJio) return;
     try {
       await FirebaseMessaging.instance.subscribeToTopic('all');
     } catch (_) {}

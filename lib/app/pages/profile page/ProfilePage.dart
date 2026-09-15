@@ -28,11 +28,14 @@ import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/LanguageDropdown.dart';
 import 'package:ott/app/widgets/gift_claim_dialog.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
-import 'package:ott/app/widgets/shimmer%20loader/profile_shimmer.dart';
+import 'package:ott/app/widgets/shimmer loader/profile_shimmer.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:ott/app/flavor/app_flavor.dart';
+import 'package:ott/app/pages/profile page/component/in_app_privacy_policy_page.dart';
+import 'package:ott/app/pages/profile page/component/in_app_licenses_page.dart';
 import '../../core/utils/sharepreferences.dart';
 import '../../provider/userProvider.dart';
 import '../../widgets/show_toast.dart';
@@ -75,6 +78,13 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _openPrivacyPolicy() async {
+    if (FlavorConfig.current.isJio) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const InAppPrivacyPolicyPage()),
+      );
+      return;
+    }
     try {
       final documentUrls =
           await LegalDocumentService.instance.getDocumentUrls();
@@ -84,18 +94,16 @@ class _ProfilePageState extends State<ProfilePage> {
         webOnlyWindowName: '_blank',
       );
       if (!opened && mounted) {
-        CustomToast.show(
+        Navigator.push(
           context,
-          'Unable to open privacy policy page right now.',
-          isSuccess: false,
+          MaterialPageRoute(builder: (_) => const InAppPrivacyPolicyPage()),
         );
       }
     } catch (error) {
       if (!mounted) return;
-      CustomToast.show(
+      Navigator.push(
         context,
-        'Unable to open privacy policy page right now.',
-        isSuccess: false,
+        MaterialPageRoute(builder: (_) => const InAppPrivacyPolicyPage()),
       );
     }
   }
@@ -382,6 +390,19 @@ class _ProfilePageState extends State<ProfilePage> {
                                       MaterialPageRoute(
                                         builder: (context) =>
                                             const AboutFilmytellScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                ProfileOption(
+                                  icon: Icons.source_outlined,
+                                  title: "Open Source Licenses",
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const InAppLicensesPage(),
                                       ),
                                     );
                                   },
