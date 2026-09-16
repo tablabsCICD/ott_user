@@ -119,6 +119,15 @@ class ApiConstant {
   }
 
   static String verifyWalletPayment = "${baseUrl}api/razorpay/verify-payment";
+
+  static String createStripeCheckoutSession(double amount, int userId,
+      {String currency = 'USD'}) {
+    final normalizedAmount =
+        amount == amount.truncateToDouble() ? amount.toInt() : amount;
+    return "${baseUrl}api/stripe/create-checkout-session?amount=$normalizedAmount&customerId=$userId&currency=$currency";
+  }
+
+  static String verifyStripePayment = "${baseUrl}api/stripe/verify-payment";
   static String withdrawMoneyFromWallet(userId, amount, contentId) =>
       "${baseUrl}deduct?userId=$userId&amount=$amount&contentId=$contentId";
   static String getWalletBalanceByUserId(userId) =>

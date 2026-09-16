@@ -68,7 +68,7 @@ class _PaymentPageState extends State<PaymentPage> {
       final user = await LocalSharePreferences.localSharePreferences.getUser();
       if (user?.id == null) {
         _finish(
-          PaymentResult(
+          const PaymentResult(
             success: false,
             message: 'Please log in again to continue payment.',
           ),
@@ -76,22 +76,33 @@ class _PaymentPageState extends State<PaymentPage> {
         return;
       }
 
+      final userCountry = (user?.location?.country ?? '').trim();
+      final country = userCountry.isNotEmpty
+          ? userCountry
+          : WidgetsBinding.instance.platformDispatcher.locale.countryCode;
+
+      final isRazorpay = PaymentGatewaySelector.isIndia(country);
+
       setState(() {
-        _status = 'Creating Razorpay order...';
+        _status = isRazorpay
+            ? 'Creating Razorpay order...'
+            : 'Creating Stripe checkout session...';
       });
 
       final order = await _paymentService.createOrder(
         amount: widget.amount,
         userId: user!.id!,
+        country: country,
       );
-
 
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _status = 'Opening Razorpay checkout...';
+        _status = isRazorpay
+            ? 'Opening Razorpay checkout...'
+            : 'Opening Stripe checkout...';
       });
 
       final result = await _paymentService.openCheckout(
@@ -99,6 +110,7 @@ class _PaymentPageState extends State<PaymentPage> {
         amount: widget.amount,
         description: widget.description,
         plan: widget.plan,
+        country: country,
       );
 
       _finish(result);

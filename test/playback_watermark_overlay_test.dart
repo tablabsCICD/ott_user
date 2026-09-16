@@ -39,16 +39,16 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.textContaining('us***@example.com'), findsOneWidget);
+    expect(find.textContaining('user@example.com'), findsOneWidget);
     expect(find.textContaining('not-rendered'), findsNothing);
 
     await tester.pump(const Duration(seconds: 10));
-    expect(find.textContaining('us***@example.com'), findsNothing);
+    expect(find.textContaining('user@example.com'), findsNothing);
 
     await tester.pump(const Duration(minutes: 29, seconds: 50));
-    expect(find.textContaining('us***@example.com'), findsOneWidget);
+    expect(find.textContaining('user@example.com'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 10));
-    expect(find.textContaining('us***@example.com'), findsNothing);
+    expect(find.textContaining('user@example.com'), findsNothing);
   });
 }
