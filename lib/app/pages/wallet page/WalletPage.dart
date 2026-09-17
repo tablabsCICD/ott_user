@@ -11,7 +11,6 @@ import 'package:ott/data/models/response/addWalletResponse.dart';
 import 'package:ott/data/models/response/walletHistory.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
-
 import '../../widgets/show_toast.dart';
 
 class WalletPage extends StatefulWidget {
