@@ -3,15 +3,20 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:ott/app/core/constant/prefrense_constant.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/shorts%20page/component/ShortsPlayerPage.dart';
+import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/route/navigation_service.dart';
 import 'package:ott/app/route/routes/app_routes.dart';
 import 'package:ott/app/widgets/gift_claim_dialog.dart';
 import 'package:ott/app/core/services/wallet_platform.dart';
+import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:provider/provider.dart';
 import 'package:uni_links/uni_links.dart';
@@ -35,6 +40,7 @@ enum DeepLinkContentType {
   series,
   short,
   gift,
+  register,
 }
 
 class DeepLinkTarget {
@@ -42,11 +48,13 @@ class DeepLinkTarget {
     required this.type,
     this.id,
     this.couponCode,
+    this.referralCode,
   });
 
   final DeepLinkContentType type;
   final int? id;
   final String? couponCode;
+  final String? referralCode;
 
   String get typeName => type.name;
 }
@@ -56,12 +64,21 @@ class DeepLinkService {
 
   static final DeepLinkService instance = DeepLinkService._();
 
-  static const String scheme = 'myapp';
+  static const String primaryScheme = 'filmytell';
+  static const String legacyScheme = 'myapp';
+  static const String scheme = primaryScheme;
+
+  static bool isSupportedScheme(String? rawScheme) {
+    final s = (rawScheme ?? '').trim().toLowerCase();
+    return s == primaryScheme || s == legacyScheme;
+  }
+
   static const String movieHost = 'movie';
   static const String shortFilmHost = 'short-film';
   static const String seriesHost = 'series';
   static const String shortHost = 'short';
   static const String giftHost = 'gift';
+  static const String registerHost = 'register';
   static const String httpsHost = 'filmytell.com';
   static const String httpsWwwHost = 'www.filmytell.com';
   static const String ottPathPrefix = 'ott';
@@ -76,6 +93,7 @@ class DeepLinkService {
   bool _isInitialized = false;
 
   bool get hasPendingNavigation => _pendingTarget != null;
+  DeepLinkTarget? get pendingTarget => _pendingTarget;
 
   bool get supportsUniversalLinks => true;
 
@@ -183,10 +201,15 @@ class DeepLinkService {
   DeepLinkTarget? parseTarget(Uri uri) {
     if (_isExpiredLink(uri)) return null;
 
-    if (uri.scheme == scheme) {
-      final type = _typeFromString(uri.host);
-      final firstSegment =
+    if (isSupportedScheme(uri.scheme)) {
+      var type = _typeFromString(uri.host);
+      String? firstSegment =
           uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
+
+      if (type == null && uri.pathSegments.isNotEmpty) {
+        type = _typeFromString(uri.pathSegments.first);
+        firstSegment = uri.pathSegments.length > 1 ? uri.pathSegments[1] : null;
+      }
 
       if (type == DeepLinkContentType.gift) {
         final couponCode = _parseCouponCode(firstSegment);
@@ -196,6 +219,15 @@ class DeepLinkService {
             couponCode: couponCode,
           );
         }
+      } else if (type == DeepLinkContentType.register) {
+        final referralCode = ReferralService.extractCodeFromUri(uri) ??
+            (firstSegment != null && ReferralService.isValidCode(firstSegment)
+                ? firstSegment
+                : null);
+        return DeepLinkTarget(
+          type: DeepLinkContentType.register,
+          referralCode: referralCode,
+        );
       } else {
         final id = _parsePositiveInt(firstSegment);
         if (type != null && id != null) {
@@ -229,6 +261,16 @@ class DeepLinkService {
             couponCode: couponCode,
           );
         }
+      } else if (pathType == DeepLinkContentType.register) {
+        final referralCode = ReferralService.extractCodeFromUri(uri) ??
+            (normalizedPathSegments.length >= 2 &&
+                    ReferralService.isValidCode(normalizedPathSegments[1])
+                ? normalizedPathSegments[1]
+                : null);
+        return DeepLinkTarget(
+          type: DeepLinkContentType.register,
+          referralCode: referralCode,
+        );
       } else {
         final pathId = normalizedPathSegments.length >= 2
             ? _parsePositiveInt(normalizedPathSegments[1])
@@ -251,6 +293,12 @@ class DeepLinkService {
             couponCode: couponCode,
           );
         }
+      } else if (queryType == DeepLinkContentType.register) {
+        final referralCode = ReferralService.extractCodeFromUri(uri);
+        return DeepLinkTarget(
+          type: DeepLinkContentType.register,
+          referralCode: referralCode,
+        );
       } else if (queryType != null && queryId != null) {
         return DeepLinkTarget(type: queryType, id: queryId);
       }
@@ -329,9 +377,15 @@ class DeepLinkService {
 
     final capturedReferralCode =
         await ReferralService.instance.captureFromUri(uri);
-    final target = parseTarget(uri);
+    var target = parseTarget(uri);
+    if (target == null && capturedReferralCode != null) {
+      target = DeepLinkTarget(
+        type: DeepLinkContentType.register,
+        referralCode: capturedReferralCode,
+      );
+    }
     developer.log(
-      'Deep Link Received: $uri source=$source referralCode=${capturedReferralCode ?? 'none'}',
+      'Deep Link Received: $uri source=$source referralCode=${capturedReferralCode ?? target?.referralCode ?? 'none'}',
       name: 'DeepLinkService',
     );
     developer.log(
@@ -346,15 +400,12 @@ class DeepLinkService {
       'Gift Code Extracted: ${target?.couponCode ?? 'none'}',
       name: 'DeepLinkService',
     );
+    developer.log(
+      'Referral Code Extracted: ${target?.referralCode ?? capturedReferralCode ?? 'none'}',
+      name: 'DeepLinkService',
+    );
 
     if (target == null) {
-      if (capturedReferralCode != null) {
-        developer.log(
-          'Captured referral code $capturedReferralCode from non-target deep link',
-          name: 'DeepLinkService',
-        );
-        return true;
-      }
       developer.log(
         'Ignoring unsupported deep link',
         name: 'DeepLinkService',
@@ -391,9 +442,29 @@ class DeepLinkService {
     }
 
     developer.log(
-      'Navigation Triggered: ${target.typeName} id=${target.id} source=$source',
+      'Navigation Triggered: ${target.typeName} id=${target.id} referralCode=${target.referralCode} source=$source',
       name: 'DeepLinkService',
     );
+
+    final isLoggedIn = await LocalSharePreferences.localSharePreferences
+        .getBool(SharedPreferencesConstant.isUserLoggedIn);
+
+    // If user is not logged in and the target requires authentication (content links),
+    // retain the pending target and prompt for login so it automatically opens after login.
+    if (!isLoggedIn && target.type != DeepLinkContentType.register) {
+      developer.log(
+        'User not logged in. Retaining pending target ${target.typeName} for post-login',
+        name: 'DeepLinkService',
+      );
+      _pendingTarget = target;
+      navigator.push(
+        MaterialPageRoute<void>(
+          settings: const RouteSettings(name: AppRoutes.login),
+          builder: (_) => const LoginCard(),
+        ),
+      );
+      return;
+    }
 
     switch (target.type) {
       case DeepLinkContentType.movie:
@@ -428,7 +499,35 @@ class DeepLinkService {
         }
         await _openGiftClaimDialog(navigator, target.couponCode!);
         return;
+      case DeepLinkContentType.register:
+        await _openRegister(navigator, referralCode: target.referralCode);
+        return;
     }
+  }
+
+  Future<void> _openRegister(
+    NavigatorState navigator, {
+    String? referralCode,
+  }) async {
+    if (referralCode != null && referralCode.isNotEmpty) {
+      await ReferralService.instance.saveReferralCode(referralCode);
+    }
+    final isLoggedIn = await LocalSharePreferences.localSharePreferences
+        .getBool(SharedPreferencesConstant.isUserLoggedIn);
+    if (isLoggedIn) {
+      developer.log(
+        'User is already logged in, showing feedback',
+        name: 'DeepLinkService',
+      );
+      Fluttertoast.showToast(msg: 'You are already logged in');
+      return;
+    }
+    navigator.push(
+      MaterialPageRoute<void>(
+        settings: const RouteSettings(name: AppRoutes.login),
+        builder: (_) => const LoginCard(),
+      ),
+    );
   }
 
   Future<void> _openGiftClaimDialog(
@@ -451,19 +550,20 @@ class DeepLinkService {
     required String source,
     required String contentType,
   }) async {
-    final dashboardProvider =
-        Provider.of<DashboardProvider>(navigator.context, listen: false);
-    await dashboardProvider.getContentById(movieId);
-    final content = dashboardProvider.content;
-
-    if (content.id != movieId) {
-      developer.log(
-        'Movie content could not be loaded for id=$movieId',
-        name: 'DeepLinkService',
-        level: 900,
-      );
-      return;
-    }
+    developer.log(
+      'Navigation Triggered: opening movie details for id=$movieId',
+      name: 'DeepLinkService',
+    );
+    unawaited(() async {
+      try {
+        final dashboardProvider =
+            Provider.of<DashboardProvider>(navigator.context, listen: false);
+        await dashboardProvider.getContentById(movieId);
+      } catch (e) {
+        developer.log('Pre-fetch error for movie id=$movieId: $e',
+            name: 'DeepLinkService');
+      }
+    }());
 
     navigator.push(
       MaterialPageRoute<void>(
@@ -487,19 +587,25 @@ class DeepLinkService {
     NavigatorState navigator,
     int seriesId,
   ) async {
+    developer.log(
+      'Navigation Triggered: opening series details for id=$seriesId',
+      name: 'DeepLinkService',
+    );
     final dashboardProvider =
         Provider.of<DashboardProvider>(navigator.context, listen: false);
-    await dashboardProvider.getContentById(seriesId);
-    final content = dashboardProvider.content;
-
-    if (content.id == null || content.id! <= 0) {
+    Content? content;
+    try {
+      content = await dashboardProvider.getContentById(seriesId);
+    } catch (e) {
       developer.log(
-        'Series content could not be loaded for id=$seriesId',
+        'Series content pre-load error for id=$seriesId: $e',
         name: 'DeepLinkService',
-        level: 900,
       );
-      return;
     }
+
+    final resolvedContent = (content != null && content.id == seriesId)
+        ? content
+        : Content(id: seriesId, type: 'SERIES');
 
     navigator.push(
       MaterialPageRoute<void>(
@@ -509,7 +615,7 @@ class DeepLinkService {
         ),
         builder: (_) => SeriesDetailsPage(
           seriesId: seriesId,
-          content: content,
+          content: resolvedContent,
         ),
       ),
     );
@@ -519,9 +625,21 @@ class DeepLinkService {
     NavigatorState navigator,
     int shortId,
   ) async {
+    developer.log(
+      'Navigation Triggered: opening short details for id=$shortId',
+      name: 'DeepLinkService',
+    );
     final shortProvider =
         Provider.of<ShortProvider>(navigator.context, listen: false);
-    await shortProvider.fetchShortDetail(shortId, 1);
+    final user = await LocalSharePreferences.localSharePreferences.getUser();
+    final userId = user?.id ?? 1;
+
+    try {
+      await shortProvider.fetchShortDetail(shortId, userId);
+    } catch (e) {
+      developer.log('Short detail fetch error for id=$shortId: $e',
+          name: 'DeepLinkService');
+    }
     final ShortDetailModel? detail = shortProvider.shortDetail;
 
     if (detail == null || detail.id <= 0) {
@@ -530,6 +648,7 @@ class DeepLinkService {
         name: 'DeepLinkService',
         level: 900,
       );
+      Fluttertoast.showToast(msg: 'Unable to load short video');
       return;
     }
 
@@ -547,17 +666,25 @@ class DeepLinkService {
   DeepLinkContentType? _typeFromString(String? rawType) {
     switch ((rawType ?? '').trim().toLowerCase()) {
       case movieHost:
+      case 'movies':
         return DeepLinkContentType.movie;
       case shortFilmHost:
+      case 'short-films':
       case 'short_film':
       case 'shortfilm':
         return DeepLinkContentType.shortFilm;
       case seriesHost:
         return DeepLinkContentType.series;
       case shortHost:
+      case 'shorts':
         return DeepLinkContentType.short;
       case giftHost:
+      case 'gifts':
         return DeepLinkContentType.gift;
+      case registerHost:
+      case 'signup':
+      case 'login':
+        return DeepLinkContentType.register;
       default:
         return null;
     }
@@ -575,6 +702,8 @@ class DeepLinkService {
         return shortHost;
       case DeepLinkContentType.gift:
         return giftHost;
+      case DeepLinkContentType.register:
+        return registerHost;
     }
   }
 
@@ -608,7 +737,7 @@ class DeepLinkService {
     }
 
     final urlMatch = RegExp(
-      r"""(https?:\/\/[^\s<>"']+|myapp:\/\/[^\s<>"']+)""",
+      r"""(https?:\/\/[^\s<>"']+|filmytell:\/\/[^\s<>"']+|myapp:\/\/[^\s<>"']+)""",
       caseSensitive: false,
     ).firstMatch(value);
     if (urlMatch != null) {

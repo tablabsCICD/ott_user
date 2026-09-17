@@ -150,6 +150,8 @@ class ShareService {
         return 'short';
       case DeepLinkContentType.gift:
         return 'gift';
+      case DeepLinkContentType.register:
+        return 'register';
     }
   }
 }

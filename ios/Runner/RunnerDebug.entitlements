@@ -6,8 +6,8 @@
 	<string>development</string>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>applinks:filmytell.com</string>
-		<string>applinks:www.filmytell.com</string>
+		<string>applinks:filmytell.com?mode=developer</string>
+		<string>applinks:www.filmytell.com?mode=developer</string>
 	</array>
 </dict>
 </plist>

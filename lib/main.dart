@@ -157,6 +157,7 @@ class _MyAppState extends State<MyApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       NotificationService.instance.consumePendingNavigation();
+      DeepLinkService.instance.consumePendingNavigation();
     });
   }
 

@@ -21,6 +21,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Filmytell OTT platform.">
 
+  <!-- Apple Smart App Banner for iOS Safari -->
+  <meta name="apple-itunes-app" content="app-id=6783863260">
+
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -37,27 +40,30 @@
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script>
     (function () {
-      var supportedPath = /^\/(gift|movie|series|short)(\/|$)/i.test(
+      var supportedPath = /^\/(gift|movie|series|short|register|login|ott)(\/|$)/i.test(
         window.location.pathname
       );
-      var isAndroid = /Android/i.test(window.navigator.userAgent || "");
-
-      if (!isAndroid || !supportedPath) {
+      if (!supportedPath) {
         return;
       }
 
-      var packageName = "com.filmytell.ott";
-      var playStoreUrl = "https://play.google.com/store/apps/details?id=" +
-          packageName;
-      var intentPath = window.location.host +
-          window.location.pathname +
-          window.location.search +
-          window.location.hash;
+      var userAgent = window.navigator.userAgent || "";
+      var isAndroid = /Android/i.test(userAgent);
+      var isIOS = /iPhone|iPad|iPod/i.test(userAgent);
 
-      window.location.href = "intent://" + intentPath +
-          "#Intent;scheme=https;package=" + packageName +
-          ";S.browser_fallback_url=" + encodeURIComponent(playStoreUrl) +
-          ";end";
+      if (isAndroid) {
+        var packageName = "com.filmytell.ott";
+        var playStoreUrl = "https://play.google.com/store/apps/details?id=" + packageName;
+        var intentPath = window.location.host +
+            window.location.pathname +
+            window.location.search +
+            window.location.hash;
+
+        window.location.href = "intent://" + intentPath +
+            "#Intent;scheme=https;package=" + packageName +
+            ";S.browser_fallback_url=" + encodeURIComponent(playStoreUrl) +
+            ";end";
+      }
     })();
 
     window.openRazorpayCheckout = function (options) {

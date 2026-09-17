@@ -31,10 +31,13 @@
 			<string>com.filmytell.ott.deeplink</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
+				<string>filmytell</string>
 				<string>myapp</string>
 			</array>
 		</dict>
 	</array>
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

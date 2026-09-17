@@ -47,9 +47,14 @@ import '../../provider/userProvider.dart';
 import '../../widgets/show_toast.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key, this.onOpenDetail});
+  const ProfilePage({
+    super.key,
+    this.onOpenDetail,
+    this.showBackButton,
+  });
 
   final void Function(String title, Widget page)? onOpenDetail;
+  final bool? showBackButton;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -192,12 +197,22 @@ class _ProfilePageState extends State<ProfilePage> {
     var themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     var selectedThemeData = themeProvider.getTheme;
 
-    return Scaffold(
+    final canPop =
+        ModalRoute.of(context)?.canPop ?? Navigator.of(context).canPop();
+    final isEmbeddedInNav = widget.onOpenDetail != null;
+    final shouldShowBackButton =
+        widget.showBackButton ?? (canPop && !isEmbeddedInNav);
+
+    final scaffold = Scaffold(
       body: isLoading
           ? ProfileShimmer()
           : CustomScrollView(
               slivers: [
-                _buildSliverAppBar(context, selectedThemeData),
+                _buildSliverAppBar(
+                  context,
+                  selectedThemeData,
+                  shouldShowBackButton: shouldShowBackButton,
+                ),
                 SliverToBoxAdapter(
                   child: Consumer<UserProvider>(
                       builder: (context, userProvider, child) {
@@ -413,6 +428,27 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
     );
+
+    if (!isEmbeddedInNav && !canPop) {
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          } else {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => const NavigationPage(),
+              ),
+            );
+          }
+        },
+        child: scaffold,
+      );
+    }
+
+    return scaffold;
   }
 
   void _showCupertinoDialog(BuildContext context) {
@@ -490,7 +526,12 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  SliverAppBar _buildSliverAppBar(BuildContext context, ThemeData theme) {
+  Widget _buildSliverAppBar(
+    BuildContext context,
+    ThemeData selectedThemeData, {
+    required bool shouldShowBackButton,
+  }) {
+    final theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
     final userProvider = Provider.of<UserProvider>(context);
     bool isDark = theme.brightness == Brightness.dark;
@@ -500,6 +541,24 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return SliverAppBar(
       automaticallyImplyLeading: false,
+      leading: shouldShowBackButton
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              color: theme.canvasColor,
+              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+              onPressed: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (_) => const NavigationPage(),
+                    ),
+                  );
+                }
+              },
+            )
+          : null,
       expandedHeight: 280,
       backgroundColor: theme.scaffoldBackgroundColor,
       centerTitle: ResponsiveWidget.isDesktop(context) ? true : false,

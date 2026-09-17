@@ -9,6 +9,8 @@ import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/app_update_service.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/onboarding pages/selectLanguagePage.dart';
+import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
+import 'package:ott/app/route/routes/app_routes.dart';
 import 'package:ott/app/route/routes/web_navigation_routes.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/presentation/web_landing/screens/web_landing_screen.dart';
@@ -82,6 +84,24 @@ class _SplashScreenState extends State<SplashScreen> {
 
     final initialNavigationRoute = widget.initialNavigationRoute;
     final isLoggedIn = _isLoggedIn;
+    final pendingTarget = DeepLinkService.instance.pendingTarget;
+
+    // If there is a pending registration deep link and user is not logged in,
+    // open the login/register screen directly with the captured referral code.
+    if (!isLoggedIn && pendingTarget?.type == DeepLinkContentType.register) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute<void>(
+          settings: const RouteSettings(name: AppRoutes.login),
+          builder: (_) => const LoginCard(),
+        ),
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        DeepLinkService.instance.consumePendingNavigation();
+      });
+      return;
+    }
+
     final routeName = isLoggedIn
         ? initialNavigationRoute?.path
         : kIsWeb
@@ -114,9 +134,7 @@ class _SplashScreenState extends State<SplashScreen> {
       ),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        DeepLinkService.instance.consumePendingNavigation();
-      }
+      DeepLinkService.instance.consumePendingNavigation();
     });
   }
 

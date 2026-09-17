@@ -1356,8 +1356,7 @@ class _HomePageState extends State<HomePage>
               ), */
               child: Hero(
                 tag: "logo",
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(10),
+                child: GestureDetector(
                   onTap: () {
                     Navigator.pushReplacement(
                       context,
@@ -1466,7 +1465,8 @@ class _HomePageState extends State<HomePage>
                       color: useTransparentAppBar
                           ? selectedThemeData.canvasColor
                           : Colors.white),
-                  tooltip: "₹ ${walletProvider.walletBalance.toStringAsFixed(2)}",
+                  tooltip:
+                      "₹ ${walletProvider.walletBalance.toStringAsFixed(2)}",
                   style: IconButton.styleFrom(
                       backgroundColor: useTransparentAppBar
                           ? Colors.white.withOpacity(0.3)
@@ -1494,7 +1494,8 @@ class _HomePageState extends State<HomePage>
                       Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => ProfilePage()));
+                              builder: (context) =>
+                                  const ProfilePage(showBackButton: true)));
                     },
                     child: Hero(
                       tag: "profile",

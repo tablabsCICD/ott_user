@@ -512,7 +512,10 @@ class _SeriesListViewState extends State<_SeriesListView>
                   child: InkWell(
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => ProfilePage()),
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const ProfilePage(showBackButton: true),
+                      ),
                     ),
                     child: Hero(
                       tag: 'series_profile',

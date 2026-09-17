@@ -34,16 +34,43 @@ class ReferralService {
       final keyLower = entry.key.trim().toLowerCase();
       if (keyLower == 'referralcode' ||
           keyLower == 'referral_code' ||
-          keyLower == 'ref') {
+          keyLower == 'ref' ||
+          keyLower == 'code' ||
+          keyLower == 'invitation_code') {
         rawValue = entry.value;
         break;
       }
     }
 
-    if (rawValue == null &&
-        uri.pathSegments.isNotEmpty &&
-        uri.pathSegments.last.toLowerCase() == 'register') {
-      rawValue = queryParams['code'];
+    // Check fragment if query params had no referral code (e.g. on web #/register?referralCode=...)
+    if (rawValue == null && uri.fragment.isNotEmpty) {
+      final fragmentUri = Uri.tryParse(uri.fragment.startsWith('/')
+          ? 'https://filmytell.com${uri.fragment}'
+          : 'https://filmytell.com/${uri.fragment}');
+      if (fragmentUri != null) {
+        for (final entry in fragmentUri.queryParameters.entries) {
+          final keyLower = entry.key.trim().toLowerCase();
+          if (keyLower == 'referralcode' ||
+              keyLower == 'referral_code' ||
+              keyLower == 'ref' ||
+              keyLower == 'code' ||
+              keyLower == 'invitation_code') {
+            rawValue = entry.value;
+            break;
+          }
+        }
+      }
+    }
+
+    // Check path segments (e.g. /register/FILMY-XX-60E7 or /ott/register/FILMY-XX-60E7)
+    if (rawValue == null && uri.pathSegments.isNotEmpty) {
+      final segments = uri.pathSegments
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty && s.toLowerCase() != 'ott')
+          .toList();
+      if (segments.length >= 2 && segments.first.toLowerCase() == 'register') {
+        rawValue = segments[1];
+      }
     }
 
     if (rawValue == null || rawValue.trim().isEmpty) {

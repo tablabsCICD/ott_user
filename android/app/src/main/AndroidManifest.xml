@@ -73,8 +73,17 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
+                    android:scheme="filmytell"
+                    android:host="movie" />
+                <data
+                    android:scheme="filmytell"
+                    android:host="movies" />
+                <data
                     android:scheme="myapp"
                     android:host="movie" />
+                <data
+                    android:scheme="myapp"
+                    android:host="movies" />
             </intent-filter>
 
             <intent-filter>
@@ -84,8 +93,17 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
+                    android:scheme="filmytell"
+                    android:host="short-film" />
+                <data
+                    android:scheme="filmytell"
+                    android:host="short-films" />
+                <data
                     android:scheme="myapp"
                     android:host="short-film" />
+                <data
+                    android:scheme="myapp"
+                    android:host="short-films" />
             </intent-filter>
 
             <intent-filter>
@@ -94,6 +112,9 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
+                <data
+                    android:scheme="filmytell"
+                    android:host="series" />
                 <data
                     android:scheme="myapp"
                     android:host="series" />
@@ -106,8 +127,17 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
+                    android:scheme="filmytell"
+                    android:host="short" />
+                <data
+                    android:scheme="filmytell"
+                    android:host="shorts" />
+                <data
                     android:scheme="myapp"
                     android:host="short" />
+                <data
+                    android:scheme="myapp"
+                    android:host="shorts" />
             </intent-filter>
 
             <intent-filter>
@@ -117,8 +147,31 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
+                    android:scheme="filmytell"
+                    android:host="gift" />
+                <data
                     android:scheme="myapp"
                     android:host="gift" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="filmytell"
+                    android:host="register" />
+                <data
+                    android:scheme="filmytell"
+                    android:host="login" />
+                <data
+                    android:scheme="myapp"
+                    android:host="register" />
+                <data
+                    android:scheme="myapp"
+                    android:host="login" />
             </intent-filter>
 
             <intent-filter android:autoVerify="true">
@@ -133,6 +186,21 @@
 
                 <data
                     android:scheme="https"
+                    android:host="www.filmytell.com" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="http"
+                    android:host="filmytell.com" />
+
+                <data
+                    android:scheme="http"
                     android:host="www.filmytell.com" />
             </intent-filter>
         </activity>

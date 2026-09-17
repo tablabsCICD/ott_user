@@ -6,8 +6,10 @@ void main() {
   final webBuildDirectory = Directory('build/web');
   final webEntrypoint = File('${webBuildDirectory.path}/index.html');
   final source = File('web/apple-app-site-association');
-  final destination =
+  final wellKnownDestination =
       File('${webBuildDirectory.path}/.well-known/apple-app-site-association');
+  final rootDestination =
+      File('${webBuildDirectory.path}/apple-app-site-association');
 
   if (!webEntrypoint.existsSync()) {
     stderr.writeln(
@@ -23,7 +25,8 @@ void main() {
     return;
   }
 
-  destination.parent.createSync(recursive: true);
-  source.copySync(destination.path);
+  wellKnownDestination.parent.createSync(recursive: true);
+  source.copySync(wellKnownDestination.path);
+  source.copySync(rootDestination.path);
   stdout.writeln('Staged Apple App Site Association file.');
 }

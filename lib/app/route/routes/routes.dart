@@ -11,6 +11,8 @@ import 'package:ott/app/pages/news%20page/NewsScreen.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/presentation/web_landing/screens/web_landing_screen.dart';
 
+import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
+import 'package:ott/data/models/content.dart';
 import '../../pages/onboarding pages/SplashScreen.dart';
 import '../../pages/sign in page/LoginCard.dart';
 import 'package:ott/app/core/services/referral_service.dart';
@@ -41,8 +43,51 @@ class RouteGenerator {
       if (uri != null) {
         ReferralService.instance.captureFromUri(uri);
         final pathLower = uri.path.trim().toLowerCase();
-        if (pathLower == '/register' || pathLower == 'register' || pathLower == '/login' || pathLower == 'login') {
+        if (pathLower == '/register' ||
+            pathLower == 'register' ||
+            pathLower == '/login' ||
+            pathLower == 'login') {
           return buildRoute(const LoginCard(), settings: settings);
+        }
+
+        final normalizedUri = uri.hasScheme
+            ? uri
+            : Uri.parse(
+                'https://${DeepLinkService.httpsHost}${uri.path.startsWith('/') ? '' : '/'}${uri.path}${uri.hasQuery ? '?${uri.query}' : ''}');
+        final target = DeepLinkService.instance.parseTarget(normalizedUri);
+        if (target != null) {
+          switch (target.type) {
+            case DeepLinkContentType.movie:
+            case DeepLinkContentType.shortFilm:
+              if (target.id != null) {
+                return buildRoute(
+                  MovieDetailsPage(
+                    movieId: target.id!,
+                    contentType: target.type == DeepLinkContentType.shortFilm
+                        ? 'SHORT_FILM'
+                        : 'MOVIE',
+                  ),
+                  settings: settings,
+                );
+              }
+              break;
+            case DeepLinkContentType.series:
+              if (target.id != null) {
+                return buildRoute(
+                  SeriesDetailsPage(
+                    seriesId: target.id!,
+                    content: Content(id: target.id, type: 'SERIES'),
+                  ),
+                  settings: settings,
+                );
+              }
+              break;
+            case DeepLinkContentType.register:
+              return buildRoute(const LoginCard(), settings: settings);
+            case DeepLinkContentType.short:
+            case DeepLinkContentType.gift:
+              break;
+          }
         }
       }
     }
