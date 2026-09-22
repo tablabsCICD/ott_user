@@ -628,6 +628,13 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                         label: 'State',
                         hintText: 'Enter state',
                         options: provider.stateOptions,
+                        onChanged: (value) {
+                          if (value.trim().isEmpty) {
+                            provider.loadDistrictOptionsByState('');
+                          }
+                        },
+                        onFieldSubmitted: provider.loadDistrictOptionsByState,
+                        onOptionSelected: provider.loadDistrictOptionsByState,
                       ),
                       _buildEditableLocationDropdown(
                         context: context,
@@ -636,6 +643,13 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                         label: 'District',
                         hintText: 'Enter district',
                         options: provider.districtOptions,
+                        onChanged: (value) {
+                          if (value.trim().isEmpty) {
+                            provider.loadTalukaOptionsByDistrict('');
+                          }
+                        },
+                        onFieldSubmitted: provider.loadTalukaOptionsByDistrict,
+                        onOptionSelected: provider.loadTalukaOptionsByDistrict,
                       ),
                       _buildEditableLocationDropdown(
                         context: context,

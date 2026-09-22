@@ -43,35 +43,61 @@
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script>
     (function () {
-      // Keep disabled for the public website. Set to true only if automatic
-      // Android app launching is intentionally restored in the future.
-      const ENABLE_AUTO_APP_REDIRECT = false;
+      try {
+        var pathname = window.location.pathname || "";
+        var search = window.location.search || "";
+        var hash = window.location.hash || "";
+        var isRegisterPath = /^\/register(\/|$)/i.test(pathname) ||
+          /^\/#\/register(\/|$)/i.test(hash) ||
+          /[?&](referralCode|referral_code|ref|code)=/i.test(search) ||
+          /[?&](referralCode|referral_code|ref|code)=/i.test(hash);
 
-      if (!ENABLE_AUTO_APP_REDIRECT) {
-        return;
+        if (!isRegisterPath) {
+          return;
+        }
+
+        var searchParams = new URLSearchParams(search);
+        if (!searchParams.has("referralCode") && hash.indexOf("?") !== -1) {
+          searchParams = new URLSearchParams(hash.substring(hash.indexOf("?")));
+        }
+
+        var referralCode = searchParams.get("referralCode") ||
+          searchParams.get("referral_code") ||
+          searchParams.get("ref") ||
+          searchParams.get("code") ||
+          "";
+
+        referralCode = referralCode.trim();
+
+        var ua = window.navigator.userAgent || "";
+        var isAndroid = /Android/i.test(ua);
+        var isIOS = /iPhone|iPad|iPod/i.test(ua) ||
+          (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
+
+        var packageName = "com.filmytell.ott";
+        var playStoreBase = "https://play.google.com/store/apps/details?id=" + packageName;
+        var appStoreUrl = "https://apps.apple.com/fr/app/filmytell/id6783863260";
+
+        if (isAndroid) {
+          var targetPlayStoreUrl = playStoreBase;
+          if (referralCode.length >= 2) {
+            var referrerPayload = "referralCode=" + encodeURIComponent(referralCode);
+            targetPlayStoreUrl += "&referrer=" + encodeURIComponent(referrerPayload);
+          }
+          window.location.replace(targetPlayStoreUrl);
+          return;
+        }
+
+        if (isIOS) {
+          if (referralCode.length >= 2 && window.navigator.clipboard && window.navigator.clipboard.writeText) {
+            window.navigator.clipboard.writeText(referralCode).catch(function () {});
+          }
+          window.location.replace(appStoreUrl);
+          return;
+        }
+      } catch (e) {
+        // Fallback gracefully to normal web app execution
       }
-
-      var supportedPath = /^\/(gift|movie|series|short)(\/|$)/i.test(
-        window.location.pathname
-      );
-      var isAndroid = /Android/i.test(window.navigator.userAgent || "");
-
-      if (!isAndroid || !supportedPath) {
-        return;
-      }
-
-      var packageName = "com.filmytell.ott";
-      var playStoreUrl = "https://play.google.com/store/apps/details?id=" +
-          packageName;
-      var intentPath = window.location.host +
-          window.location.pathname +
-          window.location.search +
-          window.location.hash;
-
-      window.location.href = "intent://" + intentPath +
-          "#Intent;scheme=https;package=" + packageName +
-          ";S.browser_fallback_url=" + encodeURIComponent(playStoreUrl) +
-          ";end";
     })();
 
     window.openRazorpayCheckout = function (options) {

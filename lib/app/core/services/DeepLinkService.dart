@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/shorts%20page/component/ShortsPlayerPage.dart';
+import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/route/navigation_service.dart';
@@ -34,6 +35,7 @@ enum DeepLinkContentType {
   series,
   short,
   gift,
+  register,
 }
 
 class DeepLinkTarget {
@@ -41,11 +43,13 @@ class DeepLinkTarget {
     required this.type,
     this.id,
     this.couponCode,
+    this.referralCode,
   });
 
   final DeepLinkContentType type;
   final int? id;
   final String? couponCode;
+  final String? referralCode;
 
   String get typeName => type.name;
 }
@@ -61,6 +65,8 @@ class DeepLinkService {
   static const String seriesHost = 'series';
   static const String shortHost = 'short';
   static const String giftHost = 'gift';
+  static const String registerHost = 'register';
+  static const String loginHost = 'login';
   static const String httpsHost = 'filmytell.com';
   static const String httpsWwwHost = 'www.filmytell.com';
   static const String ottPathPrefix = 'ott';
@@ -187,7 +193,13 @@ class DeepLinkService {
       final firstSegment =
           uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
 
-      if (type == DeepLinkContentType.gift) {
+      if (type == DeepLinkContentType.register) {
+        final referralCode = ReferralService.extractCodeFromUri(uri);
+        return DeepLinkTarget(
+          type: DeepLinkContentType.register,
+          referralCode: referralCode,
+        );
+      } else if (type == DeepLinkContentType.gift) {
         final couponCode = _parseCouponCode(firstSegment);
         if (couponCode != null) {
           return DeepLinkTarget(
@@ -215,7 +227,13 @@ class DeepLinkService {
           ? _typeFromString(normalizedPathSegments.first)
           : null;
 
-      if (pathType == DeepLinkContentType.gift) {
+      if (pathType == DeepLinkContentType.register) {
+        final referralCode = ReferralService.extractCodeFromUri(uri);
+        return DeepLinkTarget(
+          type: DeepLinkContentType.register,
+          referralCode: referralCode,
+        );
+      } else if (pathType == DeepLinkContentType.gift) {
         final couponCode = normalizedPathSegments.length >= 2
             ? _parseCouponCode(normalizedPathSegments[1])
             : _parseCouponCode(
@@ -240,7 +258,13 @@ class DeepLinkService {
       final queryType = _typeFromString(uri.queryParameters['type']);
       final queryId = _parsePositiveInt(uri.queryParameters['id']);
 
-      if (queryType == DeepLinkContentType.gift) {
+      if (queryType == DeepLinkContentType.register) {
+        final referralCode = ReferralService.extractCodeFromUri(uri);
+        return DeepLinkTarget(
+          type: DeepLinkContentType.register,
+          referralCode: referralCode,
+        );
+      } else if (queryType == DeepLinkContentType.gift) {
         final couponCode = _parseCouponCode(
           uri.queryParameters['couponCode'] ?? uri.queryParameters['code'],
         );
@@ -420,7 +444,34 @@ class DeepLinkService {
       case DeepLinkContentType.gift:
         await _openGiftClaimDialog(navigator, target.couponCode!);
         return;
+      case DeepLinkContentType.register:
+        await _openRegistration(
+          navigator,
+          target.referralCode,
+          source: source,
+        );
+        return;
     }
+  }
+
+  Future<void> _openRegistration(
+    NavigatorState navigator,
+    String? referralCode, {
+    required String source,
+  }) async {
+    developer.log(
+      'Navigation Triggered: opening registration for referralCode=$referralCode source=$source',
+      name: 'DeepLinkService',
+    );
+    if (referralCode != null && ReferralService.isValidCode(referralCode)) {
+      await ReferralService.instance.saveReferralCode(referralCode);
+    }
+    navigator.push(
+      MaterialPageRoute<void>(
+        settings: const RouteSettings(name: AppRoutes.login),
+        builder: (_) => const LoginCard(),
+      ),
+    );
   }
 
   Future<void> _openGiftClaimDialog(
@@ -550,6 +601,13 @@ class DeepLinkService {
         return DeepLinkContentType.short;
       case giftHost:
         return DeepLinkContentType.gift;
+      case registerHost:
+      case loginHost:
+      case 'signup':
+      case 'sign-up':
+      case 'signin':
+      case 'sign-in':
+        return DeepLinkContentType.register;
       default:
         return null;
     }
@@ -567,6 +625,8 @@ class DeepLinkService {
         return shortHost;
       case DeepLinkContentType.gift:
         return giftHost;
+      case DeepLinkContentType.register:
+        return registerHost;
     }
   }
 

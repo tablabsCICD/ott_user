@@ -5,4 +5,5 @@ class SharedPreferencesConstant {
   static const String sessionDeviceId = "sessionDeviceId";
   static const String currentSessionRecordId = "currentSessionRecordId";
   static const String pendingReferralCode = "pendingReferralCode";
+  static const String hasCheckedDeferredInstallReferrer = "hasCheckedDeferredInstallReferrer";
 }

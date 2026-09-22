@@ -88,6 +88,9 @@ dependencies {
     // Firebase Analytics
     implementation("com.google.firebase:firebase-analytics")
 
+    // Google Play Install Referrer for deferred deep linking
+    implementation("com.android.installreferrer:installreferrer:2.2")
+
     // Desugaring support
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
