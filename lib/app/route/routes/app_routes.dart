@@ -21,4 +21,5 @@ class AppRoutes {
 
   static const releaseContent = '/releaseContent';
   static const pendingContent = '/pendingContent';
+  static const landingPreview = '/landing-preview';
 }

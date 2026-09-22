@@ -7,6 +7,7 @@ import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/app_update_service.dart';
+import 'package:ott/app/core/services/referral_service.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/onboarding pages/selectLanguagePage.dart';
 import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
@@ -46,6 +47,10 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _startFlow() async {
     final flowVersion = ++_flowVersion;
     final requestedPath = widget.initialNavigationRoute?.path ?? '/';
+
+    // Recover any deferred install referral code on cold start / first launch
+    unawaited(ReferralService.instance.checkDeferredInstallReferrer());
+
     final loggedIn =
         await _prefs.getBool(SharedPreferencesConstant.isUserLoggedIn);
     if (!_isActiveFlow(flowVersion)) return;

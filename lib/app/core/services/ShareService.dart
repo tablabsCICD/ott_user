@@ -109,7 +109,8 @@ class ShareService {
 
   Future<String> downloadQrImage(PreparedMovieShareData data) async {
     if (kIsWeb) {
-      _triggerWebDownload(data.qrCode.bytes, '${data.contentType.name}_${data.movie.id}_qr.png');
+      _triggerWebDownload(data.qrCode.bytes,
+          '${data.contentType.name}_${data.movie.id}_qr.png');
       return 'browser download started';
     }
 
@@ -123,8 +124,10 @@ class ShareService {
 
   Future<List<String>> downloadAllQrImages(PreparedMovieShareData data) async {
     if (kIsWeb) {
-      _triggerWebDownload(data.qrCode.bytes, '${data.contentType.name}_${data.movie.id}_qr.png');
-      _triggerWebDownload(data.appStoreQrCode.bytes, '${data.contentType.name}_${data.movie.id}_appstore_qr.png');
+      _triggerWebDownload(data.qrCode.bytes,
+          '${data.contentType.name}_${data.movie.id}_qr.png');
+      _triggerWebDownload(data.appStoreQrCode.bytes,
+          '${data.contentType.name}_${data.movie.id}_appstore_qr.png');
       return const <String>['browser download started'];
     }
 
@@ -188,7 +191,7 @@ class ShareService {
       case DeepLinkContentType.gift:
         return 'gift';
       case DeepLinkContentType.register:
-        return 'register';
+        return 'referral';
     }
   }
 }

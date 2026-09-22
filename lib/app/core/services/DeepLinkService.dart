@@ -79,6 +79,7 @@ class DeepLinkService {
   static const String shortHost = 'short';
   static const String giftHost = 'gift';
   static const String registerHost = 'register';
+  static const String loginHost = 'login';
   static const String httpsHost = 'filmytell.com';
   static const String httpsWwwHost = 'www.filmytell.com';
   static const String ottPathPrefix = 'ott';
@@ -206,12 +207,13 @@ class DeepLinkService {
       String? firstSegment =
           uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
 
-      if (type == null && uri.pathSegments.isNotEmpty) {
-        type = _typeFromString(uri.pathSegments.first);
-        firstSegment = uri.pathSegments.length > 1 ? uri.pathSegments[1] : null;
-      }
-
-      if (type == DeepLinkContentType.gift) {
+      if (type == DeepLinkContentType.register) {
+        final referralCode = ReferralService.extractCodeFromUri(uri);
+        return DeepLinkTarget(
+          type: DeepLinkContentType.register,
+          referralCode: referralCode,
+        );
+      } else if (type == DeepLinkContentType.gift) {
         final couponCode = _parseCouponCode(firstSegment);
         if (couponCode != null) {
           return DeepLinkTarget(
@@ -248,7 +250,13 @@ class DeepLinkService {
           ? _typeFromString(normalizedPathSegments.first)
           : null;
 
-      if (pathType == DeepLinkContentType.gift) {
+      if (pathType == DeepLinkContentType.register) {
+        final referralCode = ReferralService.extractCodeFromUri(uri);
+        return DeepLinkTarget(
+          type: DeepLinkContentType.register,
+          referralCode: referralCode,
+        );
+      } else if (pathType == DeepLinkContentType.gift) {
         final couponCode = normalizedPathSegments.length >= 2
             ? _parseCouponCode(normalizedPathSegments[1])
             : _parseCouponCode(
@@ -283,7 +291,13 @@ class DeepLinkService {
       final queryType = _typeFromString(uri.queryParameters['type']);
       final queryId = _parsePositiveInt(uri.queryParameters['id']);
 
-      if (queryType == DeepLinkContentType.gift) {
+      if (queryType == DeepLinkContentType.register) {
+        final referralCode = ReferralService.extractCodeFromUri(uri);
+        return DeepLinkTarget(
+          type: DeepLinkContentType.register,
+          referralCode: referralCode,
+        );
+      } else if (queryType == DeepLinkContentType.gift) {
         final couponCode = _parseCouponCode(
           uri.queryParameters['couponCode'] ?? uri.queryParameters['code'],
         );
@@ -500,27 +514,26 @@ class DeepLinkService {
         await _openGiftClaimDialog(navigator, target.couponCode!);
         return;
       case DeepLinkContentType.register:
-        await _openRegister(navigator, referralCode: target.referralCode);
+        await _openRegistration(
+          navigator,
+          target.referralCode,
+          source: source,
+        );
         return;
     }
   }
 
-  Future<void> _openRegister(
-    NavigatorState navigator, {
-    String? referralCode,
+  Future<void> _openRegistration(
+    NavigatorState navigator,
+    String? referralCode, {
+    required String source,
   }) async {
-    if (referralCode != null && referralCode.isNotEmpty) {
+    developer.log(
+      'Navigation Triggered: opening registration for referralCode=$referralCode source=$source',
+      name: 'DeepLinkService',
+    );
+    if (referralCode != null && ReferralService.isValidCode(referralCode)) {
       await ReferralService.instance.saveReferralCode(referralCode);
-    }
-    final isLoggedIn = await LocalSharePreferences.localSharePreferences
-        .getBool(SharedPreferencesConstant.isUserLoggedIn);
-    if (isLoggedIn) {
-      developer.log(
-        'User is already logged in, showing feedback',
-        name: 'DeepLinkService',
-      );
-      Fluttertoast.showToast(msg: 'You are already logged in');
-      return;
     }
     navigator.push(
       MaterialPageRoute<void>(
@@ -682,8 +695,11 @@ class DeepLinkService {
       case 'gifts':
         return DeepLinkContentType.gift;
       case registerHost:
+      case loginHost:
       case 'signup':
-      case 'login':
+      case 'sign-up':
+      case 'signin':
+      case 'sign-in':
         return DeepLinkContentType.register;
       default:
         return null;

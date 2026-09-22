@@ -2,6 +2,9 @@ package com.filmytell.ott
 
 import android.os.Bundle
 import android.view.WindowManager
+import com.android.installreferrer.api.InstallReferrerClient
+import com.android.installreferrer.api.InstallReferrerStateListener
+import com.android.installreferrer.api.ReferrerDetails
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -9,6 +12,7 @@ import java.io.File
 
 class MainActivity : FlutterActivity() {
     private val antiPiracyChannel = "com.filmytell.ott/anti_piracy"
+    private val installReferrerChannel = "com.filmytell.ott/install_referrer"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -19,6 +23,16 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            installReferrerChannel
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getInstallReferrer" -> fetchInstallReferrer(result)
+                else -> result.notImplemented()
+            }
+        }
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -64,5 +78,57 @@ class MainActivity : FlutterActivity() {
         )
 
         return rootPaths.any { File(it).exists() }
+    }
+
+    private fun isEmulator(): Boolean {
+        val fingerprint = android.os.Build.FINGERPRINT.lowercase()
+        val model = android.os.Build.MODEL.lowercase()
+        val product = android.os.Build.PRODUCT.lowercase()
+        return fingerprint.startsWith("generic") ||
+            fingerprint.contains("emulator") ||
+            model.contains("google_sdk") ||
+            model.contains("emulator") ||
+            model.contains("android sdk built for") ||
+            product.contains("sdk") ||
+            product.contains("emulator")
+    }
+
+    private fun fetchInstallReferrer(result: MethodChannel.Result) {
+        try {
+            val referrerClient = InstallReferrerClient.newBuilder(this).build()
+            referrerClient.startConnection(object : InstallReferrerStateListener {
+                override fun onInstallReferrerSetupFinished(responseCode: Int) {
+                    when (responseCode) {
+                        InstallReferrerClient.InstallReferrerResponse.OK -> {
+                            try {
+                                val response: ReferrerDetails = referrerClient.installReferrer
+                                val referrerUrl = response.installReferrer
+                                referrerClient.endConnection()
+                                runOnUiThread {
+                                    result.success(referrerUrl)
+                                }
+                            } catch (e: Exception) {
+                                try { referrerClient.endConnection() } catch (_: Exception) {}
+                                runOnUiThread {
+                                    result.success(null)
+                                }
+                            }
+                        }
+                        else -> {
+                            try { referrerClient.endConnection() } catch (_: Exception) {}
+                            runOnUiThread {
+                                result.success(null)
+                            }
+                        }
+                    }
+                }
+
+                override fun onInstallReferrerServiceDisconnected() {
+                    // Disconnected - no further action needed
+                }
+            })
+        } catch (e: Exception) {
+            result.success(null)
+        }
     }
 }

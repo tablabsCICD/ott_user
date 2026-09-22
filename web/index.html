@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -31,38 +32,70 @@
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" href="favicon.png" />
 
   <title>Filmytell</title>
   <link rel="manifest" href="manifest.json">
 </head>
+
 <body>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script>
     (function () {
-      var supportedPath = /^\/(gift|movie|series|short|register|login|ott)(\/|$)/i.test(
-        window.location.pathname
-      );
-      if (!supportedPath) {
-        return;
-      }
+      try {
+        var pathname = window.location.pathname || "";
+        var search = window.location.search || "";
+        var hash = window.location.hash || "";
+        var isRegisterPath = /^\/register(\/|$)/i.test(pathname) ||
+          /^\/#\/register(\/|$)/i.test(hash) ||
+          /[?&](referralCode|referral_code|ref|code)=/i.test(search) ||
+          /[?&](referralCode|referral_code|ref|code)=/i.test(hash);
 
-      var userAgent = window.navigator.userAgent || "";
-      var isAndroid = /Android/i.test(userAgent);
-      var isIOS = /iPhone|iPad|iPod/i.test(userAgent);
+        if (!isRegisterPath) {
+          return;
+        }
 
-      if (isAndroid) {
+        var searchParams = new URLSearchParams(search);
+        if (!searchParams.has("referralCode") && hash.indexOf("?") !== -1) {
+          searchParams = new URLSearchParams(hash.substring(hash.indexOf("?")));
+        }
+
+        var referralCode = searchParams.get("referralCode") ||
+          searchParams.get("referral_code") ||
+          searchParams.get("ref") ||
+          searchParams.get("code") ||
+          "";
+
+        referralCode = referralCode.trim();
+
+        var ua = window.navigator.userAgent || "";
+        var isAndroid = /Android/i.test(ua);
+        var isIOS = /iPhone|iPad|iPod/i.test(ua) ||
+          (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
+
         var packageName = "com.filmytell.ott";
-        var playStoreUrl = "https://play.google.com/store/apps/details?id=" + packageName;
-        var intentPath = window.location.host +
-            window.location.pathname +
-            window.location.search +
-            window.location.hash;
+        var playStoreBase = "https://play.google.com/store/apps/details?id=" + packageName;
+        var appStoreUrl = "https://apps.apple.com/fr/app/filmytell/id6783863260";
 
-        window.location.href = "intent://" + intentPath +
-            "#Intent;scheme=https;package=" + packageName +
-            ";S.browser_fallback_url=" + encodeURIComponent(playStoreUrl) +
-            ";end";
+        if (isAndroid) {
+          var targetPlayStoreUrl = playStoreBase;
+          if (referralCode.length >= 2) {
+            var referrerPayload = "referralCode=" + encodeURIComponent(referralCode);
+            targetPlayStoreUrl += "&referrer=" + encodeURIComponent(referrerPayload);
+          }
+          window.location.replace(targetPlayStoreUrl);
+          return;
+        }
+
+        if (isIOS) {
+          if (referralCode.length >= 2 && window.navigator.clipboard && window.navigator.clipboard.writeText) {
+            window.navigator.clipboard.writeText(referralCode).catch(function () { });
+          }
+          window.location.replace(appStoreUrl);
+          return;
+        }
+      } catch (e) {
+        // Fallback gracefully to normal web app execution
       }
     })();
 
@@ -126,8 +159,8 @@
           resolve({
             success: false,
             message: error && error.message
-                ? error.message
-                : "Unable to open Razorpay checkout."
+              ? error.message
+              : "Unable to open Razorpay checkout."
           });
         }
       });
@@ -135,4 +168,5 @@
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
+
 </html>

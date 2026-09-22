@@ -301,13 +301,25 @@ class UserProvider extends BaseProvider {
     ApiHelper apiHelper = ApiHelper();
     Map<String, dynamic> data = {
       "id": user!.id,
-      "emailId": emailController.text,
-      "firstName": firstNameController.text,
-      "lastName": lastNameController.text,
-      "dob": dobController.text,
+      "emailId": emailController.text.trim().isNotEmpty
+          ? emailController.text.trim()
+          : (user.emailId ?? ""),
+      "firstName": firstNameController.text.trim().isNotEmpty
+          ? firstNameController.text.trim()
+          : (user.firstName ?? ""),
+      "lastName": lastNameController.text.trim().isNotEmpty
+          ? lastNameController.text.trim()
+          : (user.lastName ?? ""),
+      "dob": dobController.text.trim().isNotEmpty
+          ? dobController.text.trim()
+          : (user.dob ?? ""),
       // "mobileNumber": mobileController.text.trim(),
-      "profilePhoto": profileController.text,
-      "refferedBy": refferedByController.text,
+      "profilePhoto": profileController.text.trim().isNotEmpty
+          ? profileController.text.trim()
+          : (user.profilePhoto ?? ""),
+      "refferedBy": refferedByController.text.trim().isNotEmpty
+          ? refferedByController.text.trim()
+          : (user.refferedBy ?? ""),
     };
     //log("data=====$data");
 
@@ -1286,6 +1298,58 @@ class UserProvider extends BaseProvider {
     } catch (error) {
       log('State list fetch error: $error');
       stateOptions = [];
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> loadDistrictOptionsByState(String state) async {
+    final selectedState = state.trim();
+
+    districtController.clear();
+    cityController.clear();
+    pinCodeDateController.clear();
+    districtOptions = [];
+    talukaOptions = [];
+    pincodeOptions = [];
+
+    if (selectedState.isEmpty) {
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final districts =
+          await _countryService.fetchDistrictsByState(selectedState);
+      districtOptions = districts;
+    } catch (error) {
+      log('District list fetch error: $error');
+      districtOptions = [];
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> loadTalukaOptionsByDistrict(String district) async {
+    final selectedDistrict = district.trim();
+
+    cityController.clear();
+    pinCodeDateController.clear();
+    talukaOptions = [];
+    pincodeOptions = [];
+
+    if (selectedDistrict.isEmpty) {
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final talukas =
+          await _countryService.fetchTalukasByDistrict(selectedDistrict);
+      talukaOptions = talukas;
+    } catch (error) {
+      log('Taluka list fetch error: $error');
+      talukaOptions = [];
     }
 
     notifyListeners();

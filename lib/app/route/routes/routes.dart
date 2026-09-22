@@ -9,6 +9,7 @@ import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/news%20page/NewsScreen.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
+import 'package:ott/presentation/web_landing/designs/preview/landing_page_design_preview.dart';
 import 'package:ott/presentation/web_landing/screens/web_landing_screen.dart';
 
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
@@ -22,6 +23,15 @@ import 'web_navigation_routes.dart';
 class RouteGenerator {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     _logRouteRequest(settings);
+
+    if (settings.name == AppRoutes.landingPreview ||
+        settings.name == '/preview' ||
+        settings.name == '/landing-preview') {
+      return buildRoute(
+        const LandingPageDesignPreview(),
+        settings: settings,
+      );
+    }
 
     if (settings.name == AppRoutes.news &&
         settings.arguments is NewsScreenArgs) {
