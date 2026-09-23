@@ -105,6 +105,9 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
   }
 
   Future<void> _checkPendingReferralCode() async {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      await ReferralService.instance.checkDeferredInstallReferrer();
+    }
     final code = await ReferralService.instance.getPendingReferralCode();
     if (mounted && code != _pendingReferralCode) {
       setState(() {

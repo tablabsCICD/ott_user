@@ -13,6 +13,67 @@ class ReferralService {
   static const MethodChannel _installReferrerChannel =
       MethodChannel('com.filmytell.ott/install_referrer');
 
+  Future<String?>? _iosRecovery;
+  static bool get _isIOS =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+  /// Transport only: the server remains responsible for referral validation.
+  static String? extractIOSReferral(Uri? uri) {
+    if (uri == null) return null;
+    final web = (uri.scheme == 'https' || uri.scheme == 'http') &&
+        (uri.host == 'filmytell.com' || uri.host == 'www.filmytell.com');
+    final custom = (uri.scheme == 'filmytell' || uri.scheme == 'myapp') &&
+        (uri.host == 'register' || uri.host == 'login');
+    if (!web && !custom) return null;
+    try {
+      // queryParameters already decodes percent escapes exactly once.
+      if (!uri.queryParameters.containsKey('referralCode')) {
+        return extractCodeFromUri(uri); // Preserve existing referral aliases.
+      }
+      final code = uri.queryParameters['referralCode']?.trim();
+      return code == null || code.isEmpty ? null : code;
+    } on FormatException {
+      return null;
+    }
+  }
+
+  static String? extractIOSClipboardReferral(String? text) {
+    final uri = Uri.tryParse(text?.trim() ?? '');
+    // Clipboard handoff is deliberately restricted to a canonical website URL.
+    if (uri?.scheme != 'https' || uri?.path != '/register') return null;
+    return extractIOSReferral(uri);
+  }
+
+  Future<String?> _recoverIOSReferral() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final existing = await getPendingReferralCode();
+      if (existing != null) {
+        await prefs.setBool(
+            SharedPreferencesConstant.hasCheckedDeferredInstallReferrer, true);
+        return existing;
+      }
+      if (prefs.getBool(
+              SharedPreferencesConstant.hasCheckedDeferredInstallReferrer) ==
+          true) {
+        return null;
+      }
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final code = extractIOSClipboardReferral(data?.text);
+      // A Universal Link received while paste permission was open wins.
+      if (code != null && await getPendingReferralCode() == null) {
+        await saveReferralCode(code);
+      }
+      await prefs.setBool(
+          SharedPreferencesConstant.hasCheckedDeferredInstallReferrer, true);
+    } catch (error) {
+      developer.log('iOS referral recovery unavailable: $error',
+          name: 'ReferralService');
+      // Do not mark a failed platform read as successfully checked.
+    }
+    return getPendingReferralCode();
+  }
+
   static bool isValidCode(String? rawCode) {
     if (rawCode == null) return false;
     final trimmed = rawCode.trim();
@@ -159,6 +220,10 @@ class ReferralService {
     if (kIsWeb) {
       return getPendingReferralCode();
     }
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      await (_iosRecovery ??= _recoverIOSReferral());
+      return getPendingReferralCode();
+    }
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -209,30 +274,6 @@ class ReferralService {
           );
         }
       }
-
-      // iOS: check clipboard for deferred referral code on first install launch
-      if (defaultTargetPlatform == TargetPlatform.iOS) {
-        try {
-          final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
-          final text = clipboardData?.text?.trim();
-          if (text != null && text.isNotEmpty) {
-            final code = extractCodeFromString(text);
-            if (code != null) {
-              await saveReferralCode(code);
-              developer.log(
-                'Recovered deferred referral code on iOS first launch: $code',
-                name: 'ReferralService',
-              );
-              return code;
-            }
-          }
-        } catch (e) {
-          developer.log(
-            'Failed to check iOS clipboard for referral code: $e',
-            name: 'ReferralService',
-          );
-        }
-      }
     } catch (error) {
       developer.log(
         'Error during deferred install referrer check: $error',
@@ -244,7 +285,7 @@ class ReferralService {
   }
 
   Future<void> saveReferralCode(String code) async {
-    if (!isValidCode(code)) return;
+    if (_isIOS ? code.trim().isEmpty : !isValidCode(code)) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       SharedPreferencesConstant.pendingReferralCode,
@@ -259,7 +300,7 @@ class ReferralService {
   Future<String?> getPendingReferralCode() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(SharedPreferencesConstant.pendingReferralCode);
-    if (isValidCode(raw)) {
+    if (_isIOS ? raw != null && raw.trim().isNotEmpty : isValidCode(raw)) {
       return raw!.trim();
     }
     return null;

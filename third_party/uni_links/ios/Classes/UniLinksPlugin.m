@@ -35,6 +35,9 @@ static id _instance;
   [chargingChannel setStreamHandler:instance];
 
   [registrar addApplicationDelegate:instance];
+#if __has_include(<Flutter/FlutterSceneLifeCycle.h>)
+  [registrar addSceneDelegate:instance];
+#endif
 }
 
 - (void)setLatestLink:(NSString *)latestLink {
@@ -74,6 +77,42 @@ static id _instance;
   }
   return NO;
 }
+
+#if __has_include(<Flutter/FlutterSceneLifeCycle.h>)
+- (BOOL)scene:(UIScene *)scene
+    willConnectToSession:(UISceneSession *)session
+                 options:(UISceneConnectionOptions *)connectionOptions {
+  for (NSUserActivity *activity in connectionOptions.userActivities) {
+    if ([activity.activityType isEqualToString:NSUserActivityTypeBrowsingWeb] &&
+        activity.webpageURL != nil) {
+      self.initialLink = activity.webpageURL.absoluteString;
+      self.latestLink = self.initialLink;
+      return YES;
+    }
+  }
+  NSURL *url = connectionOptions.URLContexts.anyObject.URL;
+  if (url == nil) return NO;
+  self.initialLink = url.absoluteString;
+  self.latestLink = self.initialLink;
+  return YES;
+}
+
+- (BOOL)scene:(UIScene *)scene continueUserActivity:(NSUserActivity *)userActivity {
+  if (![userActivity.activityType isEqualToString:NSUserActivityTypeBrowsingWeb] ||
+      userActivity.webpageURL == nil) return NO;
+  if (!_eventSink) self.initialLink = userActivity.webpageURL.absoluteString;
+  self.latestLink = userActivity.webpageURL.absoluteString;
+  return YES;
+}
+
+- (BOOL)scene:(UIScene *)scene openURLContexts:(NSSet<UIOpenURLContext *> *)URLContexts {
+  NSURL *url = URLContexts.anyObject.URL;
+  if (url == nil) return NO;
+  if (!_eventSink) self.initialLink = url.absoluteString;
+  self.latestLink = url.absoluteString;
+  return YES;
+}
+#endif
 
 - (void)handleMethodCall:(FlutterMethodCall *)call result:(FlutterResult)result {
   if ([@"getInitialLink" isEqualToString:call.method]) {

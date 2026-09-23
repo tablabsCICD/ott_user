@@ -199,6 +199,11 @@ class DeepLinkService {
     return buildAppLink(type: type, id: id);
   }
 
+  String? _extractReferral(Uri uri) =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+          ? ReferralService.extractIOSReferral(uri)
+          : ReferralService.extractCodeFromUri(uri);
+
   DeepLinkTarget? parseTarget(Uri uri) {
     if (_isExpiredLink(uri)) return null;
 
@@ -208,7 +213,7 @@ class DeepLinkService {
           uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
 
       if (type == DeepLinkContentType.register) {
-        final referralCode = ReferralService.extractCodeFromUri(uri);
+        final referralCode = _extractReferral(uri);
         return DeepLinkTarget(
           type: DeepLinkContentType.register,
           referralCode: referralCode,
@@ -222,7 +227,7 @@ class DeepLinkService {
           );
         }
       } else if (type == DeepLinkContentType.register) {
-        final referralCode = ReferralService.extractCodeFromUri(uri) ??
+        final referralCode = _extractReferral(uri) ??
             (firstSegment != null && ReferralService.isValidCode(firstSegment)
                 ? firstSegment
                 : null);
@@ -251,7 +256,7 @@ class DeepLinkService {
           : null;
 
       if (pathType == DeepLinkContentType.register) {
-        final referralCode = ReferralService.extractCodeFromUri(uri);
+        final referralCode = _extractReferral(uri);
         return DeepLinkTarget(
           type: DeepLinkContentType.register,
           referralCode: referralCode,
@@ -270,7 +275,7 @@ class DeepLinkService {
           );
         }
       } else if (pathType == DeepLinkContentType.register) {
-        final referralCode = ReferralService.extractCodeFromUri(uri) ??
+        final referralCode = _extractReferral(uri) ??
             (normalizedPathSegments.length >= 2 &&
                     ReferralService.isValidCode(normalizedPathSegments[1])
                 ? normalizedPathSegments[1]
@@ -292,7 +297,7 @@ class DeepLinkService {
       final queryId = _parsePositiveInt(uri.queryParameters['id']);
 
       if (queryType == DeepLinkContentType.register) {
-        final referralCode = ReferralService.extractCodeFromUri(uri);
+        final referralCode = _extractReferral(uri);
         return DeepLinkTarget(
           type: DeepLinkContentType.register,
           referralCode: referralCode,
@@ -308,7 +313,7 @@ class DeepLinkService {
           );
         }
       } else if (queryType == DeepLinkContentType.register) {
-        final referralCode = ReferralService.extractCodeFromUri(uri);
+        final referralCode = _extractReferral(uri);
         return DeepLinkTarget(
           type: DeepLinkContentType.register,
           referralCode: referralCode,
@@ -389,10 +394,17 @@ class DeepLinkService {
       return false;
     }
 
-    final capturedReferralCode =
-        await ReferralService.instance.captureFromUri(uri);
+    final isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
     var target = parseTarget(uri);
-    if (target == null && capturedReferralCode != null) {
+    final capturedReferralCode = isIOS
+        ? (target?.type == DeepLinkContentType.register
+            ? target?.referralCode
+            : null)
+        : await ReferralService.instance.captureFromUri(uri);
+    if (isIOS && capturedReferralCode != null) {
+      await ReferralService.instance.saveReferralCode(capturedReferralCode);
+    }
+    if (!isIOS && target == null && capturedReferralCode != null) {
       target = DeepLinkTarget(
         type: DeepLinkContentType.register,
         referralCode: capturedReferralCode,

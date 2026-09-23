@@ -140,6 +140,9 @@ class UserProvider extends BaseProvider {
         ? pinCodeDateController.text.trim()
         : "411017";
     userRequest.profilePhoto = profileController.text;
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      await ReferralService.instance.checkDeferredInstallReferrer();
+    }
     final pendingReferral =
         await ReferralService.instance.getPendingReferralCode();
     userRequest.refferedBy = refferedByController.text.trim().isNotEmpty
@@ -903,6 +906,9 @@ class UserProvider extends BaseProvider {
     String? referralCode,
   }) async {
     final totalWatch = Stopwatch()..start();
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      await ReferralService.instance.checkDeferredInstallReferrer();
+    }
     final effectiveReferralCode = referralCode?.trim().isNotEmpty == true
         ? referralCode!.trim()
         : await ReferralService.instance.getPendingReferralCode();

@@ -88,10 +88,40 @@
         }
 
         if (isIOS) {
-          if (referralCode.length >= 2 && window.navigator.clipboard && window.navigator.clipboard.writeText) {
-            window.navigator.clipboard.writeText(referralCode).catch(function () { });
+          if (!referralCode || !/^\/(ott\/)?register\/?$/i.test(pathname)) {
+            window.location.replace(appStoreUrl);
+            return;
           }
-          window.location.replace(appStoreUrl);
+          // Safari requires a user gesture. Never redirect before copying finishes.
+          var panel = document.createElement("section");
+          panel.style.cssText = "position:fixed;inset:0;z-index:2147483647;background:#101014;color:white;padding:48px 24px;overflow:auto;font:18px system-ui;display:flex;flex-direction:column;justify-content:center;gap:20px";
+          var heading = document.createElement("h1");
+          heading.textContent = "Install Filmytell with your referral";
+          var message = document.createElement("p");
+          message.textContent = "Copy your referral link, then install Filmytell. Allow Paste when you first open the app. Avoid copying anything else until then.";
+          var button = document.createElement("button");
+          button.textContent = "Copy referral & install";
+          button.style.cssText = "padding:16px;font:inherit;border-radius:12px;border:0;background:#e53741;color:white";
+          var status = document.createElement("p");
+          status.setAttribute("role", "status");
+          var link = "https://filmytell.com/register?referralCode=" + encodeURIComponent(referralCode);
+          button.onclick = async function () {
+            button.disabled = true;
+            try {
+              await window.navigator.clipboard.writeText(link);
+              window.location.assign(appStoreUrl);
+            } catch (_) {
+              status.textContent = "Could not copy. Please allow clipboard access and try again. You can also install, then reopen your original referral link.";
+            } finally {
+              button.disabled = false;
+            }
+          };
+          var install = document.createElement("a");
+          install.href = appStoreUrl;
+          install.textContent = "Install without copying referral";
+          install.style.color = "white";
+          panel.append(heading, message, button, status, install);
+          document.body.appendChild(panel);
           return;
         }
       } catch (e) {

@@ -239,8 +239,8 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                       ),
                     ),
                     SliverToBoxAdapter(
-                      child: FooterSection(onOpenLink: _handleFooterLink),
-                    ),
+                        //child: FooterSection(onOpenLink: _handleFooterLink),
+                        ),
                   ],
                 );
               },
