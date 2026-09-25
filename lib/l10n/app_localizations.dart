@@ -887,7 +887,7 @@ abstract class AppLocalizations {
   /// No description provided for @viewersEntertainmentDescription.
   ///
   /// In en, this message translates to:
-  /// **'Buy or gift the movies and series you choose. No subscription needed. Download content to watch offline.'**
+  /// **'Rent and Gift Movies, Series, Short Films. No subscription, No adds. Pure entertainment.'**
   String get viewersEntertainmentDescription;
 
   /// No description provided for @createAccountMobileOtp.
@@ -1121,7 +1121,7 @@ abstract class AppLocalizations {
   /// No description provided for @haveQuestionHelp.
   ///
   /// In en, this message translates to:
-  /// **'Have a question? We\'ll help you get started.'**
+  /// **'Connect with our team'**
   String get haveQuestionHelp;
 
   /// No description provided for @messageQueryOptional.
@@ -1193,7 +1193,7 @@ abstract class AppLocalizations {
   /// No description provided for @streamPremiumMoviesSeries.
   ///
   /// In en, this message translates to:
-  /// **'Watch premium movies, series and mini series.'**
+  /// **'Watch Premium Movies, Series, Mini Series and Short Film.'**
   String get streamPremiumMoviesSeries;
 
   /// No description provided for @userPortal.
@@ -1211,7 +1211,7 @@ abstract class AppLocalizations {
   /// No description provided for @publishContentDescription.
   ///
   /// In en, this message translates to:
-  /// **'Upload, manage and monetize your releases.'**
+  /// **'Upload, Manage and Monetize Your Content.'**
   String get publishContentDescription;
 
   /// No description provided for @productionHousePortal.
@@ -1369,6 +1369,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Every Day'**
   String get everyDay;
+
+  /// No description provided for @shortFilm.
+  ///
+  /// In en, this message translates to:
+  /// **'Short Film'**
+  String get shortFilm;
+
+  /// No description provided for @cookies.
+  ///
+  /// In en, this message translates to:
+  /// **'Cookies'**
+  String get cookies;
+
+  /// No description provided for @accountDeletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Deletion'**
+  String get accountDeletion;
+
+  /// No description provided for @oneOttEcosystem.
+  ///
+  /// In en, this message translates to:
+  /// **'One OTT ecosystem for viewers and creators'**
+  String get oneOttEcosystem;
+
+  /// No description provided for @oneOttEcosystemDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure streaming, pay-per-movie access, gifting, production house publishing, promoter growth tools, and multi-device entertainment.'**
+  String get oneOttEcosystemDescription;
+
+  /// No description provided for @readMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Read More'**
+  String get readMore;
+
+  /// No description provided for @readLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Read Less'**
+  String get readLess;
+
+  /// No description provided for @step.
+  ///
+  /// In en, this message translates to:
+  /// **'STEP'**
+  String get step;
+
+  /// No description provided for @enterEmailAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter email'**
+  String get enterEmailAddress;
+
+  /// No description provided for @enterValidEmailAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email'**
+  String get enterValidEmailAddress;
+
+  /// No description provided for @enterPhoneNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter phone number'**
+  String get enterPhoneNumber;
+
+  /// No description provided for @enterValidPhoneNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid phone number'**
+  String get enterValidPhoneNumber;
+
+  /// No description provided for @enterMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter message'**
+  String get enterMessage;
+
+  /// No description provided for @emailSentSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Email sent successfully.'**
+  String get emailSentSuccessfully;
+
+  /// No description provided for @failedToSendEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send email. Please try again.'**
+  String get failedToSendEmail;
+
+  /// No description provided for @message.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get message;
+
+  /// No description provided for @phoneNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone Number'**
+  String get phoneNumber;
 }
 
 class _AppLocalizationsDelegate

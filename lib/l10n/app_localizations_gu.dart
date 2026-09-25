@@ -395,7 +395,7 @@ class AppLocalizationsGu extends AppLocalizations {
 
   @override
   String get viewersEntertainmentDescription =>
-      'તમારી પસંદગીની ફિલ્મો અને સિરીઝ ખરીદો અથવા ભેટ આપો. કોઈ સબ્સ્ક્રિપ્શનની જરૂર નથી. ઑફલાઇન જોવા માટે ડાઉનલોડ કરો.';
+      'મૂવીઝ, સીરીઝ, શોર્ટ ફિલ્મો ભાડે લો અને ગિફ્ટ કરો. કોઈ સબ્સ્ક્રિપ્શન નહીં, કોઈ જાહેરાતો નહીં. શુદ્ધ મનોરંજન.';
 
   @override
   String get createAccountMobileOtp => 'મોબાઇલ OTP દ્વારા ખાતું બનાવો';
@@ -646,4 +646,57 @@ class AppLocalizationsGu extends AppLocalizations {
 
   @override
   String get everyDay => 'દરરોજ';
+
+  @override
+  String get shortFilm => 'શોર્ટ ફિલ્મ';
+
+  @override
+  String get cookies => 'કુકીઝ';
+
+  @override
+  String get accountDeletion => 'ખાતું કાઢી નાખવું';
+
+  @override
+  String get oneOttEcosystem => 'દર્શકો અને સર્જકો માટે એક ઓટીટી ઇકોસિસ્ટમ';
+
+  @override
+  String get oneOttEcosystemDescription =>
+      'સુરક્ષિત સ્ટ્રીમિંગ, પ્રતિ-મૂવી ઍક્સેસ, ભેટ, પ્રોડક્શન હાઉસ પબ્લિશિંગ, પ્રમોટર ગ્રોથ ટૂલ્સ અને મલ્ટિ-ડિવાઇસ મનોરંજન.';
+
+  @override
+  String get readMore => 'વધુ વાંચો';
+
+  @override
+  String get readLess => 'ઓછું વાંચો';
+
+  @override
+  String get step => 'પગલું';
+
+  @override
+  String get enterEmailAddress => 'કૃપા કરીને ઇમેઇલ દાખલ કરો';
+
+  @override
+  String get enterValidEmailAddress => 'કૃપા કરીને માન્ય ઇમેઇલ દાખલ કરો';
+
+  @override
+  String get enterPhoneNumber => 'કૃપા કરીને ફોન નંબર દાખલ કરો';
+
+  @override
+  String get enterValidPhoneNumber => 'કૃપા કરીને માન્ય ફોન નંબર દાખલ કરો';
+
+  @override
+  String get enterMessage => 'કૃપા કરીને સંદેશ દાખલ કરો';
+
+  @override
+  String get emailSentSuccessfully => 'ઇમેઇલ સફળતાપૂર્વક મોકલવામાં આવ્યો.';
+
+  @override
+  String get failedToSendEmail =>
+      'ઇમેઇલ મોકલવામાં નિષ્ફળ. કૃપા કરીને ફરી પ્રયાસ કરો.';
+
+  @override
+  String get message => 'સંદેશ';
+
+  @override
+  String get phoneNumber => 'ફોન નંબર';
 }

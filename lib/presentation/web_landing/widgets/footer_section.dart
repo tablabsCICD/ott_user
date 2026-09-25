@@ -70,7 +70,7 @@ class FooterSection extends StatelessWidget {
                             _FooterLinkData(lang.movie, 'Movies'),
                             _FooterLinkData(lang.series, 'Series'),
                             _FooterLinkData(lang.minSeries, 'Mini Series'),
-                            const _FooterLinkData('Short Film', 'Short Film'),
+                            _FooterLinkData(lang.shortFilm, 'Short Film'),
                           ],
                           onOpenLink: onOpenLink,
                         ),
@@ -119,13 +119,13 @@ class FooterSection extends StatelessWidget {
                               'Terms & Conditions',
                               href: '/terms-of-service.html',
                             ),
-                            const _FooterLinkData(
-                              'Cookies',
+                            _FooterLinkData(
+                              lang.cookies,
                               'Cookies',
                               href: '/cookies.html',
                             ),
                             _FooterLinkData(
-                              'Account Deletion',
+                              lang.accountDeletion,
                               'Account Deletion',
                             ),
                           ],
@@ -204,11 +204,16 @@ class _BrandBlock extends StatelessWidget {
         children: [
           Image.asset(
             ImageConstant.logo,
-            height: 100,
-            width: 250,
+            height: 48,
             alignment: Alignment.centerLeft,
             fit: BoxFit.contain,
             filterQuality: FilterQuality.high,
+            errorBuilder: (_, __, ___) => Image.asset(
+              ImageConstant.fullScreenLogo,
+              height: 48,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            ),
           ),
           const SizedBox(height: 22),
           Builder(
@@ -220,7 +225,6 @@ class _BrandBlock extends StatelessWidget {
                 children: [
                   _TrustBadge(label: lang.payPerMovie),
                   _TrustBadge(label: lang.giftAccess),
-                  _TrustBadge(label: lang.downloadOffline),
                 ],
               );
             },
@@ -300,9 +304,9 @@ class _EcosystemCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'One OTT ecosystem for viewers and creators',
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context)!.oneOttEcosystem,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
@@ -310,7 +314,7 @@ class _EcosystemCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Secure streaming, pay-per-movie access, gifting, production house publishing, promoter growth tools, and multi-device entertainment.',
+                  AppLocalizations.of(context)!.oneOttEcosystemDescription,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.62),
                     height: 1.45,

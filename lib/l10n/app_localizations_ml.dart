@@ -397,7 +397,7 @@ class AppLocalizationsMl extends AppLocalizations {
 
   @override
   String get viewersEntertainmentDescription =>
-      'നിങ്ങൾ തിരഞ്ഞെടുക്കുന്ന സിനിമകളും സീരീസുകളും വാങ്ങുകയോ സമ്മാനിക്കുകയോ ചെയ്യുക. സബ്സ്ക്രിപ്ഷൻ ആവശ്യമില്ല. ഓഫ്‌ലൈനായി കാണാൻ ഡൗൺലോഡ് ചെയ്യുക.';
+      'സിനിമകൾ, പരമ്പരകൾ, ഹ്രസ്വചിത്രങ്ങൾ വാടകയ്‌ക്കെടുക്കുകയും സമ്മാനിക്കുകയും ചെയ്യുക. സബ്‌സ്‌ക്രിപ്ഷനില്ല, പരസ്യങ്ങളില്ല. ശുദ്ധമായ വിനോദം.';
 
   @override
   String get createAccountMobileOtp =>
@@ -652,4 +652,58 @@ class AppLocalizationsMl extends AppLocalizations {
 
   @override
   String get everyDay => 'എല്ലാ ദിവസവും';
+
+  @override
+  String get shortFilm => 'ഷോർട്ട് ഫിലിം';
+
+  @override
+  String get cookies => 'കുക്കികൾ';
+
+  @override
+  String get accountDeletion => 'അക്കൗണ്ട് ഇല്ലാതാക്കൽ';
+
+  @override
+  String get oneOttEcosystem =>
+      'പ്രേക്ഷകർക്കും സ്രഷ്ടാക്കൾക്കുമുള്ള ഒരൊറ്റ OTT ഇക്കോസിസ്റ്റം';
+
+  @override
+  String get oneOttEcosystemDescription =>
+      'സുരക്ഷിതമായ സ്ട്രീമിംഗ്, ഓരോ സിനിമയ്ക്കുമുള്ള ആക്‌സസ്, സമ്മാനിക്കൽ, പ്രൊഡക്ഷൻ ഹൗസ് പബ്ലിഷിംഗ്, പ്രൊമോട്ടർ ഗ്രോത്ത് ടൂളുകൾ, മൾട്ടി-ഡിവൈസ് വിനോദം.';
+
+  @override
+  String get readMore => 'കൂടുതൽ വായിക്കുക';
+
+  @override
+  String get readLess => 'കുറച്ച് വായിക്കുക';
+
+  @override
+  String get step => 'ഘട്ടം';
+
+  @override
+  String get enterEmailAddress => 'ദയവായി ഇമെയിൽ നൽകുക';
+
+  @override
+  String get enterValidEmailAddress => 'ദയവായി സാധുവായ ഇമെയിൽ നൽകുക';
+
+  @override
+  String get enterPhoneNumber => 'ദയവായി ഫോൺ നമ്പർ നൽകുക';
+
+  @override
+  String get enterValidPhoneNumber => 'ദയവായി സാധുവായ ഫോൺ നമ്പർ നൽകുക';
+
+  @override
+  String get enterMessage => 'ദയവായി സന്ദേശം നൽകുക';
+
+  @override
+  String get emailSentSuccessfully => 'ഇമെയിൽ വിജയകരമായി അയച്ചു.';
+
+  @override
+  String get failedToSendEmail =>
+      'ഇമെയിൽ അയക്കുന്നതിൽ പരാജയപ്പെട്ടു. ദയവായി വീണ്ടും ശ്രമിക്കുക.';
+
+  @override
+  String get message => 'സന്ദേശം';
+
+  @override
+  String get phoneNumber => 'ഫോൺ നമ്പർ';
 }

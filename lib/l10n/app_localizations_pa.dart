@@ -393,7 +393,7 @@ class AppLocalizationsPa extends AppLocalizations {
 
   @override
   String get viewersEntertainmentDescription =>
-      'ਆਪਣੀ ਪਸੰਦ ਦੀਆਂ ਫਿਲਮਾਂ ਅਤੇ ਸੀਰੀਜ਼ ਖਰੀਦੋ ਜਾਂ ਤੋਹਫ਼ੇ ਵਜੋਂ ਦਿਓ। ਕਿਸੇ ਸਬਸਕ੍ਰਿਪਸ਼ਨ ਦੀ ਲੋੜ ਨਹੀਂ। ਆਫਲਾਈਨ ਦੇਖਣ ਲਈ ਸਮੱਗਰੀ ਡਾਊਨਲੋਡ ਕਰੋ।';
+      'ਫ਼ਿਲਮਾਂ, ਸੀਰੀਜ਼, ਲਘੂ ਫ਼ਿਲਮਾਂ ਕਿਰਾਏ \'ਤੇ ਲਓ ਅਤੇ ਤੋਹਫ਼ੇ ਦਿਓ। ਕੋਈ ਗਾਹਕੀ ਨਹੀਂ, ਕੋਈ ਇਸ਼ਤਿਹਾਰ ਨਹੀਂ। ਸ਼ੁੱਧ ਮਨੋਰੰਜਨ।';
 
   @override
   String get createAccountMobileOtp => 'ਮੋਬਾਈਲ OTP ਨਾਲ ਖਾਤਾ ਬਣਾਓ';
@@ -643,4 +643,57 @@ class AppLocalizationsPa extends AppLocalizations {
 
   @override
   String get everyDay => 'ਹਰ ਰੋਜ਼';
+
+  @override
+  String get shortFilm => 'ਲਘੂ ਫ਼ਿਲਮ';
+
+  @override
+  String get cookies => 'ਕੂਕੀਜ਼';
+
+  @override
+  String get accountDeletion => 'ਖਾਤਾ ਮਿਟਾਉਣਾ';
+
+  @override
+  String get oneOttEcosystem => 'ਦਰਸ਼ਕਾਂ ਅਤੇ ਸਿਰਜਣਹਾਰਾਂ ਲਈ ਇੱਕ OTT ਈਕੋਸਿਸਟਮ';
+
+  @override
+  String get oneOttEcosystemDescription =>
+      'ਸੁਰੱਖਿਅਤ ਸਟ੍ਰੀਮਿੰਗ, ਪ੍ਰਤੀ-ਫ਼ਿਲਮ ਪਹੁੰਚ, ਤੋਹਫ਼ੇ, ਪ੍ਰੋਡਕਸ਼ਨ ਹਾਊਸ ਪਬਲਿਸ਼ਿੰਗ, ਪ੍ਰਮੋਟਰ ਗ੍ਰੋਥ ਟੂਲਸ ਅਤੇ ਮਲਟੀ-ਡਿਵਾਈਸ ਮਨੋਰੰਜਨ।';
+
+  @override
+  String get readMore => 'ਹੋਰ ਪੜ੍ਹੋ';
+
+  @override
+  String get readLess => 'ਘੱਟ ਪੜ੍ਹੋ';
+
+  @override
+  String get step => 'ਕਦਮ';
+
+  @override
+  String get enterEmailAddress => 'ਕਿਰਪਾ ਕਰਕੇ ਈਮੇਲ ਦਾਖਲ ਕਰੋ';
+
+  @override
+  String get enterValidEmailAddress => 'ਕਿਰਪਾ ਕਰਕੇ ਇੱਕ ਵੈਧ ਈਮੇਲ ਦਾਖਲ ਕਰੋ';
+
+  @override
+  String get enterPhoneNumber => 'ਕਿਰਪਾ ਕਰਕੇ ਫ਼ੋਨ ਨੰਬਰ ਦਾਖਲ ਕਰੋ';
+
+  @override
+  String get enterValidPhoneNumber => 'ਕਿਰਪਾ ਕਰਕੇ ਇੱਕ ਵੈਧ ਫ਼ੋਨ ਨੰਬਰ ਦਾਖਲ ਕਰੋ';
+
+  @override
+  String get enterMessage => 'ਕਿਰਪਾ ਕਰਕੇ ਸੁਨੇਹਾ ਦਾਖਲ ਕਰੋ';
+
+  @override
+  String get emailSentSuccessfully => 'ਈਮੇਲ ਸਫਲਤਾਪੂਰਵਕ ਭੇਜੀ ਗਈ।';
+
+  @override
+  String get failedToSendEmail =>
+      'ਈਮੇਲ ਭੇਜਣ ਵਿੱਚ ਅਸਫਲ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।';
+
+  @override
+  String get message => 'ਸੁਨੇਹਾ';
+
+  @override
+  String get phoneNumber => 'ਫ਼ੋਨ ਨੰਬਰ';
 }

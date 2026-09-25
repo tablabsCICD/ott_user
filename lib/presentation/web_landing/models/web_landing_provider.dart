@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
@@ -32,9 +31,7 @@ class WebLandingProvider extends ChangeNotifier {
   static int _cachedLatestPage = 0;
   static bool _cachedHasMoreLatest = true;
 
-  WebLandingProvider() {
-    _logPerformance('WebLandingProvider created');
-  }
+  WebLandingProvider();
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -91,10 +88,7 @@ class WebLandingProvider extends ChangeNotifier {
   }
 
   Future<void> loadLandingContent() async {
-    if (_disposed) {
-      _logPerformance('loadLandingContent skipped: provider disposed');
-      return;
-    }
+    if (_disposed) return;
     if (_isLoading || _topTen.isNotEmpty) return;
     final existingLandingLoad = _landingLoadFuture;
     if (existingLandingLoad != null) {
@@ -103,7 +97,6 @@ class WebLandingProvider extends ChangeNotifier {
     }
 
     if (_restoreFreshCache()) {
-      _logPerformance('Landing restored from cache');
       _notifyIfAlive();
       return;
     }
@@ -112,8 +105,7 @@ class WebLandingProvider extends ChangeNotifier {
     _errorMessage = null;
     _notifyIfAlive();
 
-    final loadWatch = Stopwatch()..start();
-    _landingLoadFuture = _loadLandingContentInternal(loadWatch);
+    _landingLoadFuture = _loadLandingContentInternal();
     try {
       await _landingLoadFuture;
     } finally {
@@ -121,37 +113,26 @@ class WebLandingProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _loadLandingContentInternal(Stopwatch loadWatch) async {
+  Future<void> _loadLandingContentInternal() async {
     try {
-      final topTenFuture = _fetchTopTenContent();
       final landingLatestType = _latestType;
-      final latestFuture = _fetchLatestContentPage(
-        0,
-        type: landingLatestType,
-      ).then<_LatestContentPageResult?>(
-        (result) => result,
-        onError: (error) {
 
-          return null;
-        },
-      );
+      final results = await Future.wait([
+        _fetchTopTenContent().catchError((_) => <Content>[]),
+        _fetchLatestContentPage(
+          0,
+          type: landingLatestType,
+        ).catchError(
+          (_) => const _LatestContentPageResult(items: [], hasMore: false),
+        ),
+      ]);
 
-      final topTen = await topTenFuture;
-      if (_disposed) {
-        _logPerformance('Landing top-ten completed after dispose; ignoring');
-        return;
-      }
-      _topTen = topTen;
-      _logPerformance(
-        'Hero section data ready in ${loadWatch.elapsedMilliseconds}ms',
-      );
+      if (_disposed) return;
 
-      final latestResult = await latestFuture;
-      if (_disposed) {
-        _logPerformance('Landing latest completed after dispose; ignoring');
-        return;
-      }
-      if (latestResult != null && _latestType == landingLatestType) {
+      var topTen = results[0] as List<Content>;
+      final latestResult = results[1] as _LatestContentPageResult;
+
+      if (latestResult.items.isNotEmpty && _latestType == landingLatestType) {
         _latestContent = latestResult.items;
         _latestPage = 1;
         _hasMoreLatest = latestResult.hasMore;
@@ -159,28 +140,43 @@ class WebLandingProvider extends ChangeNotifier {
         _hasMoreLatest = false;
       }
 
-      if (_latestType == null) _storeCache();
-    } catch (error) {
-      _errorMessage = 'Unable to load featured content right now.';
-
-    } finally {
-      if (_disposed) {
-        _logPerformance('Landing load finalization skipped after dispose');
-        return;
+      // Mutual fallback if one source is empty
+      if (topTen.isEmpty && _latestContent.isNotEmpty) {
+        topTen = List<Content>.from(_latestContent);
+      } else if (_latestContent.isEmpty &&
+          topTen.isNotEmpty &&
+          _latestType == null) {
+        _latestContent = List<Content>.from(topTen);
+        _latestPage = 1;
+        _hasMoreLatest = false;
       }
-      _isLoading = false;
-      _logPerformance(
-        'Landing page load completed in ${loadWatch.elapsedMilliseconds}ms',
-      );
-      _notifyIfAlive();
+
+      _topTen = topTen;
+
+      if (_topTen.isEmpty && _latestContent.isEmpty) {
+        _errorMessage = 'Unable to load featured content right now.';
+      } else {
+        _errorMessage = null;
+      }
+
+      if (_latestType == null &&
+          (_topTen.isNotEmpty || _latestContent.isNotEmpty)) {
+        _storeCache();
+      }
+    } catch (error) {
+      if (_topTen.isEmpty && _latestContent.isEmpty) {
+        _errorMessage = 'Unable to load featured content right now.';
+      }
+    } finally {
+      if (!_disposed) {
+        _isLoading = false;
+        _notifyIfAlive();
+      }
     }
   }
 
   Future<void> loadMoreLatestContent({bool notify = true}) async {
-    if (_disposed) {
-      _logPerformance('loadMoreLatestContent skipped: provider disposed');
-      return;
-    }
+    if (_disposed) return;
     if (_isLoadingLatest || !_hasMoreLatest) return;
     final existingLatestLoad = _latestLoadFuture;
     if (existingLatestLoad != null) {
@@ -207,10 +203,7 @@ class WebLandingProvider extends ChangeNotifier {
         _latestPage,
         type: requestType,
       );
-      if (_disposed) {
-        _logPerformance('Latest page completed after dispose; ignoring');
-        return;
-      }
+      if (_disposed) return;
       if (requestToken != _latestRequestToken || requestType != _latestType) {
         return;
       }
@@ -229,24 +222,18 @@ class WebLandingProvider extends ChangeNotifier {
         return;
       }
       _hasMoreLatest = false;
-
     } finally {
-      if (_disposed ||
-          requestToken != _latestRequestToken ||
-          requestType != _latestType) {
-        _logPerformance('Latest load finalization skipped');
-        return;
+      if (!_disposed &&
+          requestToken == _latestRequestToken &&
+          requestType == _latestType) {
+        _isLoadingLatest = false;
+        if (notify) _notifyIfAlive();
       }
-      _isLoadingLatest = false;
-      if (notify) _notifyIfAlive();
     }
   }
 
   Future<void> loadLatestContentByType(String? type) async {
-    if (_disposed) {
-      _logPerformance('loadLatestContentByType skipped: provider disposed');
-      return;
-    }
+    if (_disposed) return;
 
     final nextType = _normalizeLatestType(type);
     final requestToken = ++_latestRequestToken;
@@ -268,11 +255,11 @@ class WebLandingProvider extends ChangeNotifier {
       if (_disposed || requestToken != _latestRequestToken) return;
       _latestContent = [];
       _hasMoreLatest = false;
-
     } finally {
-      if (_disposed || requestToken != _latestRequestToken) return;
-      _isLoadingLatest = false;
-      _notifyIfAlive();
+      if (!_disposed && requestToken == _latestRequestToken) {
+        _isLoadingLatest = false;
+        _notifyIfAlive();
+      }
     }
   }
 
@@ -283,18 +270,11 @@ class WebLandingProvider extends ChangeNotifier {
     }
 
     try {
-      final watch = Stopwatch()..start();
       final response = await _apiHelper.getApi(ApiConstant.getVideoById(
         content.id,
         1,
       ));
-      if (_disposed) {
-        _logPerformance('Trailer detail completed after dispose; ignoring');
-        return content;
-      }
-      _logPerformance(
-        'Trailer detail API completed in ${watch.elapsedMilliseconds}ms',
-      );
+      if (_disposed) return content;
       if (response.statusCode != 200) return content;
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
@@ -308,75 +288,179 @@ class WebLandingProvider extends ChangeNotifier {
       }
       return detail;
     } catch (error) {
-
       return content;
     }
   }
 
   Future<List<Content>> _fetchTopTenContent() async {
-    final watch = Stopwatch()..start();
-    final response = await _apiHelper.getApi(ApiConstant.publicTopTenContent);
-    _logPerformance(
-      'Banner/top-ten API completed in ${watch.elapsedMilliseconds}ms',
-    );
-    if (response.statusCode != 200) {
-      throw Exception('Landing API failed with ${response.statusCode}');
+    List<Content> items = [];
+
+    // 1. Primary: Public TopTen Content API
+    try {
+      final response =
+          await _apiHelper.getApi(ApiConstant.publicTopTenContent);
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          items = _parseContentListFromDecoded(decoded);
+        } else if (decoded is List) {
+          items = decoded
+              .whereType<Map>()
+              .map((item) =>
+                  _contentFromTopTenItem(Map<String, dynamic>.from(item)))
+              .where((item) => _posterFor(item) != null)
+              .toList();
+        }
+      }
+    } catch (_) {}
+
+    if (items.isNotEmpty) return items;
+
+    // 2. Secondary fallback: Public Latest Content API
+    try {
+      final response = await _apiHelper.getApi(
+        ApiConstant.publicLatestContent(page: 0, size: 10),
+      );
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          items = _parseContentListFromDecoded(decoded);
+        }
+      }
+    } catch (_) {}
+
+    if (items.isNotEmpty) return items;
+
+    // 3. Tertiary fallback: User Dashboard trending/latest endpoints
+    final fallbackEndpoints = [
+      '${ApiConstant.getNewDashboardData}trending?type=MOVIE&lang=Hindi&userId=1&page=0&size=10',
+      '${ApiConstant.getNewDashboardData}latest?type=MOVIE&lang=Hindi&userId=1&page=0&size=10',
+      ApiConstant.getUpcomingVideo,
+      ApiConstant.getTopTrendingContentLast7Days(1),
+    ];
+
+    for (final endpoint in fallbackEndpoints) {
+      try {
+        final response = await _apiHelper.getApi(endpoint);
+        if (response.statusCode == 200) {
+          final decoded = jsonDecode(response.body);
+          if (decoded is Map<String, dynamic>) {
+            items = _parseContentListFromDecoded(decoded);
+          } else if (decoded is List) {
+            items = decoded
+                .whereType<Map>()
+                .map((item) =>
+                    _contentFromTopTenItem(Map<String, dynamic>.from(item)))
+                .where((item) => _posterFor(item) != null)
+                .toList();
+          }
+          if (items.isNotEmpty) return items;
+        }
+      } catch (_) {}
     }
 
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    final rawList = decoded['data']?['TopTenContent'] as List? ?? const [];
-    return rawList
-        .whereType<Map>()
-        .map((item) => _contentFromTopTenItem(
-              Map<String, dynamic>.from(item),
-            ))
-        .where((item) => _posterFor(item) != null)
-        .toList();
+    return items;
   }
 
   Future<_LatestContentPageResult> _fetchLatestContentPage(
     int page, {
     String? type,
   }) async {
-    final watch = Stopwatch()..start();
-    final response = await _apiHelper.getApi(
-      ApiConstant.publicLatestContent(
-        page: page,
-        size: _latestPageSize,
-        type: type,
-      ),
-    );
-    _logPerformance(
-      'Latest content API page=$page type=${type ?? 'all'} completed in ${watch.elapsedMilliseconds}ms',
-    );
-    if (response.statusCode != 200) {
-      throw Exception('Latest API failed with ${response.statusCode}');
+    // 1. Primary: Public Latest Content API
+    try {
+      final response = await _apiHelper.getApi(
+        ApiConstant.publicLatestContent(
+          page: page,
+          size: _latestPageSize,
+          type: type,
+        ),
+      );
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          final rawList = _extractContentList(
+            decoded,
+            const [
+              'LatestContent',
+              'latestContent',
+              'TopTenContent',
+              'topTenContent',
+              'content',
+              'contentList',
+              'contents',
+              'items',
+              'movies',
+              'data',
+            ],
+          );
+
+          final items = rawList
+              .whereType<Map>()
+              .map((item) => _contentFromTopTenItem(
+                    Map<String, dynamic>.from(item),
+                  ))
+              .where((item) => _posterFor(item) != null)
+              .toList();
+
+          if (items.isNotEmpty || page > 0) {
+            return _LatestContentPageResult(
+              items: items,
+              hasMore: _hasNextPage(decoded) ?? rawList.length >= _latestPageSize,
+            );
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 2. Secondary fallback on initial page
+    if (page == 0) {
+      final fallbackEndpoint =
+          '${ApiConstant.getNewDashboardData}latest?type=${type ?? 'MOVIE'}&lang=Hindi&userId=1&page=0&size=$_latestPageSize';
+      try {
+        final response = await _apiHelper.getApi(fallbackEndpoint);
+        if (response.statusCode == 200) {
+          final decoded = jsonDecode(response.body);
+          if (decoded is Map<String, dynamic>) {
+            final items = _parseContentListFromDecoded(decoded);
+            if (items.isNotEmpty) {
+              return _LatestContentPageResult(items: items, hasMore: false);
+            }
+          }
+        }
+      } catch (_) {}
     }
 
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return const _LatestContentPageResult(items: [], hasMore: false);
+  }
+
+  List<Content> _parseContentListFromDecoded(Map<String, dynamic> decoded) {
     final rawList = _extractContentList(
       decoded,
       const [
+        'TopTenContent',
+        'topTenContent',
+        'TopTen',
+        'topTen',
         'LatestContent',
         'latestContent',
         'content',
         'contentList',
         'contents',
         'items',
+        'movies',
+        'data',
       ],
     );
 
-    final items = rawList
+    final mapped = rawList
         .whereType<Map>()
         .map((item) => _contentFromTopTenItem(
               Map<String, dynamic>.from(item),
             ))
-        .where((item) => _posterFor(item) != null)
         .toList();
-    return _LatestContentPageResult(
-      items: items,
-      hasMore: _hasNextPage(decoded) ?? rawList.length >= _latestPageSize,
-    );
+
+    final withPosters = mapped.where((item) => _posterFor(item) != null).toList();
+    return withPosters.isNotEmpty ? withPosters : mapped;
   }
 
   List<dynamic> _extractContentList(
@@ -384,6 +468,8 @@ class WebLandingProvider extends ChangeNotifier {
     List<String> preferredKeys,
   ) {
     final data = decoded['data'];
+    if (data is List) return data;
+
     if (data is Map) {
       for (final key in preferredKeys) {
         final value = data[key];
@@ -393,8 +479,11 @@ class WebLandingProvider extends ChangeNotifier {
         final value = entry.value;
         if (value is List) return value;
         if (value is Map) {
-          final nestedContent = value['content'];
-          if (nestedContent is List) return nestedContent;
+          final nested = value['content'] ??
+              value['contentList'] ??
+              value['items'] ??
+              value['movies'];
+          if (nested is List) return nested;
         }
       }
     }
@@ -455,10 +544,10 @@ class WebLandingProvider extends ChangeNotifier {
             'content_type',
             'mediaType',
             'media_type',
+            'type',
           ]) ??
           (json.containsKey('totalParts') ? 'MINI SERIES' : null);
     }
-
     final topTenTrailerUrl = _topTenTrailerUrl(json);
     if ((content.trailerUrl?.trim().isEmpty ?? true) &&
         topTenTrailerUrl != null) {
@@ -467,15 +556,50 @@ class WebLandingProvider extends ChangeNotifier {
     return content;
   }
 
+  String? _firstStringValue(Map<String, dynamic> json, List<String> keys) {
+    for (final key in keys) {
+      final value = json[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return null;
+  }
+
+  String? _topTenTrailerUrl(Map<String, dynamic> json) {
+    final direct = _firstStringValue(json, const [
+      'trailerUrl',
+      'trailer_url',
+      'trailer',
+      'videoUrl',
+      'video_url',
+    ]);
+    if (direct != null) return _sanitizeUrl(direct);
+
+    for (final subKey in const ['movie', 'series', 'video', 'media', 'details']) {
+      final sub = json[subKey];
+      if (sub is Map<String, dynamic>) {
+        final nested = _topTenTrailerUrl(sub);
+        if (nested != null) return nested;
+      }
+    }
+    return null;
+  }
+
   List<String> _posterUrlsFromJson(Map<String, dynamic> json) {
     final posters = <String>[];
-    final posterList = json['posterUrlList'];
+    final posterList = json['posterUrlList'] ??
+        json['poster_url_list'] ??
+        json['posters'] ??
+        json['posterList'] ??
+        json['images'] ??
+        json['thumbnails'];
+
     if (posterList is List) {
-      posters.addAll(
-        posterList.map((item) => item.toString().trim()).where(
-              (url) => url.isNotEmpty,
-            ),
-      );
+      for (final item in posterList) {
+        final s = _sanitizeUrl(_stringFromField(item));
+        if (s != null && s.isNotEmpty && !posters.contains(s)) {
+          posters.add(s);
+        }
+      }
     }
 
     for (final key in const [
@@ -491,60 +615,93 @@ class WebLandingProvider extends ChangeNotifier {
       'image_url',
       'banner_url',
       'cover_url',
+      'landscapePoster',
+      'landscape_poster',
+      'verticalPoster',
+      'vertical_poster',
+      'horizontalPoster',
+      'horizontal_poster',
+      'backdropUrl',
+      'backdrop_url',
+      'backdrop',
+      'mobileBanner',
+      'webBanner',
+      'posterPath',
+      'poster_path',
+      'filePath',
+      'file_path',
+      'mediaUrl',
+      'media_url',
+      'url',
     ]) {
-      final value = json[key]?.toString().trim();
-      if (value != null && value.isNotEmpty && !posters.contains(value)) {
-        posters.add(value);
+      final s = _sanitizeUrl(json[key]?.toString());
+      if (s != null && s.isNotEmpty && !posters.contains(s)) {
+        posters.add(s);
+      }
+    }
+
+    for (final subKey in const ['movie', 'series', 'video', 'media', 'details']) {
+      final sub = json[subKey];
+      if (sub is Map<String, dynamic>) {
+        final subPosters = _posterUrlsFromJson(sub);
+        for (final s in subPosters) {
+          if (!posters.contains(s)) {
+            posters.add(s);
+          }
+        }
       }
     }
 
     return posters;
   }
 
-  String? _topTenTrailerUrl(Map<String, dynamic> json) {
-    for (final key in const [
-      'trailerUrl',
-      'trailerFileUrl',
-      'trailer_file_url',
-      'trailer_url',
-    ]) {
-      final value = json[key]?.toString().trim();
-      if (value != null && value.isNotEmpty) return value;
+  String? _sanitizeUrl(String? raw) {
+    if (raw == null) return null;
+    var url = raw.trim();
+    if (url.isEmpty) return null;
+    if (url.startsWith('//')) {
+      url = 'https:$url';
+    } else if (url.startsWith('http://')) {
+      url = 'https://${url.substring(7)}';
     }
-
-    final trailerAudioUrlList = json['trailerAudioUrlList'];
-    if (trailerAudioUrlList is List) {
-      for (final item in trailerAudioUrlList) {
-        final value = item?.toString().trim();
-        if (value != null && value.isNotEmpty) return value;
-      }
-    }
-
-    return null;
+    return url;
   }
 
-  String? _firstStringValue(Map<String, dynamic> json, List<String> keys) {
-    for (final key in keys) {
-      final value = json[key]?.toString().trim();
-      if (value != null && value.isNotEmpty) return value;
+  String? _stringFromField(dynamic field) {
+    if (field == null) return null;
+    if (field is Map) {
+      for (final key in const ['url', 'fileUrl', 'file_url', 'path']) {
+        final value = field[key]?.toString().trim();
+        if (value != null && value.isNotEmpty) return value;
+      }
+      return null;
     }
-    return null;
+    final value = field.toString().trim();
+    return value.isEmpty ? null : value;
   }
 
   String? _posterFor(Content content) {
-    for (final url in content.posterUrlList ?? const <String>[]) {
-      final trimmed = url.trim();
-      if (trimmed.isNotEmpty) return trimmed;
+    final list = content.posterUrlList ?? const <String>[];
+    final sanitizedList = list
+        .map((u) => _sanitizeUrl(u))
+        .whereType<String>()
+        .where((u) => u.isNotEmpty)
+        .toList();
+    if (sanitizedList.isNotEmpty) {
+      sanitizedList.sort((a, b) {
+        final aIsS3 = a.contains('amazonaws.com') || a.contains('filmytell.com');
+        final bIsS3 = b.contains('amazonaws.com') || b.contains('filmytell.com');
+        if (aIsS3 && !bIsS3) return -1;
+        if (!aIsS3 && bIsS3) return 1;
+        return 0;
+      });
+      return sanitizedList.first;
     }
     return null;
   }
 
   void _notifyIfAlive() {
-    if (_disposed) {
-      _logPerformance('notifyListeners skipped: provider disposed');
-      return;
-    }
-    _logPerformance('notifyListeners called');
+    if (_disposed) return;
     notifyListeners();
   }
 
@@ -575,14 +732,8 @@ class WebLandingProvider extends ChangeNotifier {
     _cachedHasMoreLatest = _hasMoreLatest;
   }
 
-  void _logPerformance(String message) {
-    if (!kDebugMode) return;
-    developer.log(message, name: 'WebLandingPerformance');
-  }
-
   @override
   void dispose() {
-    _logPerformance('WebLandingProvider dispose called');
     _disposed = true;
     super.dispose();
   }

@@ -10,6 +10,7 @@ import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/news%20page/NewsScreen.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/presentation/web_landing/designs/preview/landing_page_design_preview.dart';
+import 'package:ott/presentation/web_landing/screens/producer_learn_more_screen.dart';
 import 'package:ott/presentation/web_landing/screens/web_landing_screen.dart';
 
 import '../../pages/onboarding pages/SplashScreen.dart';
@@ -21,6 +22,15 @@ import 'web_navigation_routes.dart';
 class RouteGenerator {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     _logRouteRequest(settings);
+
+    if (settings.name == AppRoutes.producerLearnMore ||
+        settings.name == '/producer-learn-more' ||
+        settings.name == '/learn-more') {
+      return buildRoute(
+        const ProducerLearnMoreScreen(),
+        settings: settings,
+      );
+    }
 
     if (settings.name == AppRoutes.landingPreview ||
         settings.name == '/preview' ||

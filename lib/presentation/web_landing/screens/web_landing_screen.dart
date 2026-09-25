@@ -1,5 +1,3 @@
-import 'dart:developer' as developer;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/utils/text_capitalization_formatter.dart';
@@ -12,19 +10,15 @@ import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/l10n/app_localizations.dart';
-import 'package:ott/presentation/web_landing/screens/about_filmytell_screen.dart';
-import 'package:ott/presentation/web_landing/screens/faq_screen.dart';
 import 'package:ott/presentation/web_landing/models/web_landing_provider.dart';
-import 'package:ott/presentation/web_landing/widgets/admin_platform_section.dart';
-import 'package:ott/presentation/web_landing/widgets/available_devices_section.dart';
+import 'package:ott/presentation/web_landing/utils/filmytell_theme.dart';
+import 'package:ott/presentation/web_landing/screens/producer_learn_more_screen.dart';
 import 'package:ott/presentation/web_landing/widgets/final_cta_section.dart';
 import 'package:ott/presentation/web_landing/widgets/footer_section.dart';
 import 'package:ott/presentation/web_landing/widgets/hero_banner.dart';
 import 'package:ott/presentation/web_landing/widgets/landing_header.dart';
 import 'package:ott/presentation/web_landing/widgets/latest_content_section.dart';
 import 'package:ott/presentation/web_landing/widgets/production_house_section.dart';
-import 'package:ott/presentation/web_landing/widgets/promoter_section.dart';
-import 'package:ott/presentation/web_landing/widgets/statistics_section.dart';
 import 'package:ott/presentation/web_landing/widgets/trending_section.dart';
 import 'package:ott/presentation/web_landing/widgets/user_portal_section.dart';
 import 'package:intl/intl.dart';
@@ -46,7 +40,6 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
   final GlobalKey _liveTvKey = GlobalKey();
   late final WebLandingProvider _provider;
   bool _scrolled = false;
-  final Stopwatch _screenLoadWatch = Stopwatch();
   String _privacyPolicyUrl = AppConstant.privacyPolicy;
   String _termsAndConditionUrl = AppConstant.termsAndCondition;
 
@@ -56,14 +49,7 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     _provider = WebLandingProvider();
     _provider.loadLandingContent();
     _loadLegalDocumentUrls();
-    _screenLoadWatch.start();
     _scrollController.addListener(_handleScroll);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _logPerformance(
-        'Landing first frame rendered in ${_screenLoadWatch.elapsedMilliseconds}ms',
-      );
-    });
   }
 
   Future<void> _loadLegalDocumentUrls() async {
@@ -99,14 +85,24 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     );
   }
 
-  bool _scrollTo(GlobalKey key) {
-    final context = key.currentContext;
-    if (context == null) return false;
-    Scrollable.ensureVisible(
-      context,
+  bool _scrollTo(GlobalKey key, {double extraTopPadding = 20.0}) {
+    final targetContext = key.currentContext;
+    if (targetContext == null || !_scrollController.hasClients) return false;
+    final renderBox = targetContext.findRenderObject() as RenderBox?;
+    if (renderBox == null) return false;
+
+    final headerHeight = LandingHeader.getHeaderHeight(context);
+    final totalOffset = headerHeight + extraTopPadding;
+
+    final position = renderBox.localToGlobal(Offset.zero);
+    final currentScroll = _scrollController.offset;
+    final targetOffset = (currentScroll + position.dy - totalOffset)
+        .clamp(0.0, _scrollController.position.maxScrollExtent);
+
+    _scrollController.animateTo(
+      targetOffset,
       duration: const Duration(milliseconds: 560),
       curve: Curves.easeOutCubic,
-      alignment: 0.05,
     );
     return true;
   }
@@ -142,7 +138,10 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     });
     await loadFuture;
     if (!mounted) return;
-    _scrollTo(_latestKey);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _scrollTo(_latestKey);
+    });
   }
 
   @override
@@ -150,7 +149,7 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     return ChangeNotifierProvider.value(
       value: _provider,
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: FilmytellTheme.background,
         body: Stack(
           children: [
             Consumer<WebLandingProvider>(
@@ -190,19 +189,22 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                       SliverToBoxAdapter(
                         child: KeyedSubtree(
                           key: _latestKey,
-                          child: provider.latestContent.isEmpty
-                              ? _LatestContentStatus(
-                                  isLoading: provider.isLoadingLatest,
-                                )
-                              : LatestContentSection(
-                                  items: provider.latestContent,
-                                  onContentTap: _openContent,
-                                  onLoadMore: () {
-                                    provider.loadMoreLatestContent();
-                                  },
-                                  isLoadingMore: provider.isLoadingLatest,
-                                  hasMore: provider.hasMoreLatest,
-                                ),
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 16),
+                            child: provider.latestContent.isEmpty
+                                ? _LatestContentStatus(
+                                    isLoading: provider.isLoadingLatest,
+                                  )
+                                : LatestContentSection(
+                                    items: provider.latestContent,
+                                    onContentTap: _openContent,
+                                    onLoadMore: () {
+                                      provider.loadMoreLatestContent();
+                                    },
+                                    isLoadingMore: provider.isLoadingLatest,
+                                    hasMore: provider.hasMoreLatest,
+                                  ),
+                          ),
                         ),
                       ),
                     SliverToBoxAdapter(
@@ -212,20 +214,12 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                       ),
                     ),
                     SliverToBoxAdapter(
-                      child: AvailableDevicesSection(
-                        onStartWatching: _openLogin,
-                        onExplorePlans: _openLogin,
-                      ),
-                    ),
-                    SliverToBoxAdapter(
                       child: ProductionHouseSection(
                         key: _liveTvKey,
                         onRegister: () => _openExternal(
                           AppConstant.productionHouseUrl,
                         ),
-                        onLearnMore: () => _openExternal(
-                          AppConstant.productionHouseUrl,
-                        ),
+                        onLearnMore: _openProducerLearnMore,
                       ),
                     ),
                     SliverToBoxAdapter(
@@ -386,6 +380,15 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     );
   }
 
+  void _openProducerLearnMore() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        settings: const RouteSettings(name: '/producer-learn-more'),
+        builder: (_) => const ProducerLearnMoreScreen(),
+      ),
+    );
+  }
+
   void _handleFooterLink(String label) {
     switch (label) {
       case 'Home':
@@ -498,11 +501,6 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
         ),
       ),
     );
-  }
-
-  void _logPerformance(String message) {
-    if (!kDebugMode) return;
-    developer.log(message, name: 'WebLandingPerformance');
   }
 }
 
@@ -904,7 +902,7 @@ class _LatestContentStatus extends StatelessWidget {
               child: isLoading
                   ? CircularProgressIndicator(color: theme.primaryColor)
                   : Text(
-                      'No content found',
+                      lang.noContentFound,
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.70),
                         fontWeight: FontWeight.w800,

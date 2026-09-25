@@ -123,8 +123,7 @@ class Content {
         views: _asInt(json['views']),
         ageRating: json['ageRating'],
 
-        posterUrlList:
-            (json['posterUrlList'] as List?)?.map((e) => e.toString()).toList(),
+        posterUrlList: _posterUrlsFromJson(json),
 
         teaserUrl: _firstStringValue(json, const [
               'teaserUrl',
@@ -342,6 +341,72 @@ String? _stringFromField(dynamic field) {
 
   final value = field.toString().trim();
   return value.isEmpty ? null : value;
+}
+
+List<String> _posterUrlsFromJson(Map<String, dynamic> json) {
+  final posters = <String>[];
+  final posterList = json['posterUrlList'] ??
+      json['poster_url_list'] ??
+      json['posters'] ??
+      json['posterList'] ??
+      json['images'] ??
+      json['thumbnails'];
+
+  if (posterList is List) {
+    for (final item in posterList) {
+      final s = _sanitizeUrl(_stringFromField(item));
+      if (s != null && s.isNotEmpty && !posters.contains(s)) {
+        posters.add(s);
+      }
+    }
+  }
+
+  for (final key in const [
+    'posterUrl',
+    'poster',
+    'thumbnail',
+    'thumbnailUrl',
+    'imageUrl',
+    'bannerUrl',
+    'coverUrl',
+    'poster_url',
+    'thumbnail_url',
+    'image_url',
+    'banner_url',
+    'cover_url',
+  ]) {
+    final s = _sanitizeUrl(json[key]?.toString());
+    if (s != null && s.isNotEmpty && !posters.contains(s)) {
+      posters.add(s);
+    }
+  }
+
+  // Also check nested media/movie/series objects if present
+  for (final subKey in const ['movie', 'series', 'video', 'media', 'details']) {
+    final sub = json[subKey];
+    if (sub is Map<String, dynamic>) {
+      final subPosters = _posterUrlsFromJson(sub);
+      for (final s in subPosters) {
+        if (!posters.contains(s)) {
+          posters.add(s);
+        }
+      }
+    }
+  }
+
+  return posters;
+}
+
+String? _sanitizeUrl(String? raw) {
+  if (raw == null) return null;
+  var url = raw.trim();
+  if (url.isEmpty) return null;
+  if (url.startsWith('//')) {
+    url = 'https:$url';
+  } else if (url.startsWith('http://')) {
+    url = 'https://${url.substring(7)}';
+  }
+  return url;
 }
 
 class Availability {

@@ -1,12 +1,12 @@
 import 'dart:async';
-import 'dart:developer' as developer;
 
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/l10n/app_localizations.dart';
+import 'package:ott/presentation/web_landing/utils/filmytell_theme.dart';
+import 'package:ott/presentation/web_landing/widgets/filmytell_network_image.dart';
+import 'package:ott/presentation/web_landing/widgets/landing_header.dart';
 
 class HeroBanner extends StatefulWidget {
   const HeroBanner({
@@ -60,7 +60,7 @@ class _HeroBannerState extends State<HeroBanner> {
   void _startRotation() {
     _timer?.cancel();
     if (widget.items.length < 2) return;
-    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+    _timer = Timer.periodic(FilmytellTheme.heroRotation, (_) {
       if (!mounted) return;
       setState(() => _index = (_index + 1) % widget.items.length);
     });
@@ -68,133 +68,137 @@ class _HeroBannerState extends State<HeroBanner> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final width = MediaQuery.sizeOf(context).width;
-    final isMobile = width < 600;
-    final isTablet = width >= 600 && width < 1024;
+    final isMobile = width < 768;
+    final isTablet = width >= 768 && width < 1100;
+    final horizontalPadding = isMobile ? 18.0 : (isTablet ? 32.0 : 56.0);
+    final headerHeight = LandingHeader.getHeaderHeight(context);
+    final topBreathingSpace = isMobile ? 32.0 : (isTablet ? 48.0 : 64.0);
+    final heroTopPadding = headerHeight + topBreathingSpace;
+    final heroBottomPadding = isMobile ? 36.0 : (isTablet ? 44.0 : 54.0);
 
     final item = widget.items.isEmpty ? null : widget.items[_index];
     final poster = item == null ? null : _posterFor(item);
-    final collageItems = widget.items.take(6).toList();
 
-    return ConstrainedBox(
-      constraints: BoxConstraints(minHeight: isMobile ? 620 : 680),
-      child: SizedBox(
-        height: isMobile
-            ? 680
-            : (MediaQuery.of(context).size.height * 0.88)
-                .clamp(680, 920)
-                .toDouble(),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (poster != null)
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 620),
-                child: CachedNetworkImage(
-                  key: ValueKey(poster),
-                  imageUrl: poster,
-                  fit: BoxFit.cover,
-                  memCacheWidth: 1800,
-                  fadeInDuration: const Duration(milliseconds: 250),
-                  placeholder: (_, __) => _HeroFallback(theme: theme),
-                  errorWidget: (_, __, ___) => _HeroFallback(theme: theme),
-                ),
-              )
-            else
-              _HeroFallback(theme: theme),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    Colors.black,
-                    Colors.black.withOpacity(0.82),
-                    Colors.black.withOpacity(0.42),
-                    Colors.black.withOpacity(0.78),
-                  ],
-                ),
-              ),
-            ),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.12),
-                    Colors.transparent,
-                    Colors.black,
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                isMobile ? 20 : (isTablet ? 36 : 72),
-                isMobile ? 92 : 118,
-                isMobile ? 20 : (isTablet ? 36 : 72),
-                isMobile ? 36 : 70,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 11,
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 520),
-                      switchInCurve: Curves.easeOutCubic,
-                      child: item == null
-                          ? const _HeroCopySkeleton()
-                          : _HeroCopy(
-                              key: ValueKey(item.id ?? item.title),
-                              item: item,
-                              compact: isMobile,
-                              onWatchNow: () => widget.onWatchNow(item),
-                              onPlayTrailer: () => widget.onPlayTrailer(item),
-                            ),
-                    ),
-                  ),
-                  if (!isMobile) ...[
-                    SizedBox(width: isTablet ? 24 : 42),
-                    Expanded(
-                      flex: isTablet ? 7 : 9,
-                      child: _PosterCollage(items: collageItems),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
+    return Container(
+      decoration: const BoxDecoration(
+        color: FilmytellTheme.background,
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          horizontalPadding,
+          heroTopPadding,
+          horizontalPadding,
+          heroBottomPadding,
         ),
+        child: isMobile
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                      if (poster != null) ...[
+                        Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 460),
+                            child: _HeroPosterCard(
+                              key: ValueKey(
+                                  'hero_poster_${item?.id ?? item?.title}'),
+                              posterUrl: poster,
+                              posterUrls: item?.posterUrlList,
+                              aspectRatio: 1.38,
+                              onTap: item == null
+                                  ? null
+                                  : () => widget.onWatchNow(item),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                      ],
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 400),
+                        switchInCurve: Curves.easeOutCubic,
+                        child: item == null
+                            ? const _HeroCopySkeleton()
+                            : _HeroContentBlock(
+                                key: ValueKey(item.id ?? item.title),
+                                item: item,
+                                compact: true,
+                                onWatchNow: () => widget.onWatchNow(item),
+                                onPlayTrailer: () => widget.onPlayTrailer(item),
+                              ),
+                      ),
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        flex: 50,
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 400),
+                          switchInCurve: Curves.easeOutCubic,
+                          child: item == null
+                              ? const _HeroCopySkeleton()
+                              : _HeroContentBlock(
+                                  key: ValueKey(item.id ?? item.title),
+                                  item: item,
+                                  compact: false,
+                                  onWatchNow: () => widget.onWatchNow(item),
+                                  onPlayTrailer: () =>
+                                      widget.onPlayTrailer(item),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 36),
+                      Expanded(
+                        flex: 50,
+                        child: Center(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 500),
+                            child: poster == null
+                                ? const _HeroPosterFallback()
+                                : ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      maxWidth: isTablet
+                                          ? 420
+                                          : (width >= 1400 ? 580 : 500),
+                                    ),
+                                    child: _HeroPosterCard(
+                                      key: ValueKey(
+                                        'hero_poster_${item?.id ?? item?.title}',
+                                      ),
+                                      posterUrl: poster,
+                                      posterUrls: item?.posterUrlList,
+                                      aspectRatio: 1.38,
+                                      onTap: item == null
+                                          ? null
+                                          : () => widget.onWatchNow(item),
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
       ),
     );
   }
 
   String? _posterFor(Content content) {
-    for (final url in content.posterUrlList ?? const <String>[]) {
-      final trimmed = url.trim();
-      if (trimmed.isNotEmpty) return trimmed;
-    }
+    final candidates = FilmytellNetworkImage.sanitizeAndPrioritizeUrls(
+      content.posterUrlList ?? const <String>[],
+    );
+    if (candidates.isNotEmpty) return candidates.first;
     return null;
   }
 
   void _logFirstContentRender() {
     if (_loggedFirstContentRender || widget.items.isEmpty) return;
     _loggedFirstContentRender = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (!kDebugMode) return;
-      developer.log(
-        'Hero section rendered with ${widget.items.length} items',
-        name: 'WebLandingPerformance',
-      );
-    });
   }
 }
 
-class _HeroCopy extends StatelessWidget {
-  const _HeroCopy({
+class _HeroContentBlock extends StatelessWidget {
+  const _HeroContentBlock({
     super.key,
     required this.item,
     required this.onWatchNow,
@@ -209,198 +213,209 @@ class _HeroCopy extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final genres = (item.genreList ?? const <String>[]).take(4).toList();
     final releaseDate = formatReleaseDate(item.releaseDate);
     final lang = AppLocalizations.of(context)!;
 
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 24, end: 0),
-      duration: const Duration(milliseconds: 620),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, child) {
-        return Transform.translate(
-          offset: Offset(0, value),
-          child: AnimatedOpacity(
-            opacity: value == 0 ? 1 : 0.78,
-            duration: const Duration(milliseconds: 420),
-            child: child,
-          ),
-        );
-      },
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 680),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              item.title ?? lang.filmytellOriginals,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: compact ? 36 : 58,
-                height: 1.02,
-                fontWeight: FontWeight.w900,
-              ),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 680),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Movie Title (Netflix-inspired bold, high-contrast, compact hierarchy)
+          Text(
+            item.title ?? lang.filmytellOriginals,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: FilmytellTheme.heroHeading(
+              isMobile: compact,
             ),
-            const SizedBox(height: 18),
+          ),
+          const SizedBox(height: 14),
+          // Metadata Badges (Rating, Age, Runtime, Release, Type)
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _RatingBadge(rating: item.ratings ?? 0),
+              _HeroMetaBadge(label: item.ageRating ?? 'U/A'),
+              if ((item.runtime ?? 0) > 0)
+                _HeroMetaBadge(label: '${item.runtime} min'),
+              if (releaseDate.isNotEmpty) _HeroMetaBadge(label: releaseDate),
+              _HeroMetaBadge(label: item.type ?? 'Movie'),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Synopsis / Description with Expandable "Read More"
+          _HeroSynopsis(
+            key: ValueKey(item.id ?? item.title ?? 'hero_synopsis'),
+            description: item.description ?? lang.premiumStoriesDefault,
+            compact: compact,
+          ),
+          // Genre Chips
+          if (genres.isNotEmpty) ...[
+            const SizedBox(height: 14),
             Wrap(
-              spacing: 0,
+              spacing: 8,
               runSpacing: 8,
               children: [
-                _MetaBadge(label: '${(item.ratings ?? 0).toStringAsFixed(1)} '),
-                _MetaBadge(label: item.ageRating ?? 'U/A'),
-                if ((item.runtime ?? 0) > 0)
-                  _MetaBadge(label: '${item.runtime} min'),
-                if (releaseDate.isNotEmpty) _MetaBadge(label: releaseDate),
-                _MetaBadge(label: item.type ?? 'Movie'),
-              ],
-            ),
-            const SizedBox(height: 18),
-            _HeroDescription(
-              key: ValueKey(item.id ?? item.title ?? 'hero_desc'),
-              description: item.description ?? lang.premiumStoriesDefault,
-              primaryColor: theme.primaryColor,
-            ),
-            const SizedBox(height: 20),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                for (final genre in genres) _GenreChip(label: genre),
-              ],
-            ),
-            const SizedBox(height: 22),
-            if (item.price != null) ...[
-              _HeroMoviePrice(
-                price: item.price!,
-                color: theme.primaryColor,
-              ),
-              const SizedBox(height: 28),
-            ] else
-              const SizedBox(height: 12),
-            Wrap(
-              spacing: 14,
-              runSpacing: 12,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: onWatchNow,
-                  icon: const Icon(Icons.play_arrow_rounded, size: 28),
-                  label: Text(lang.watchNow),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primaryColor,
-                    foregroundColor: Colors.white,
-                    minimumSize: Size(0, compact ? 54 : 62),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: compact ? 20 : 28,
-                      vertical: compact ? 15 : 19,
-                    ),
-                    textStyle: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w800),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: onPlayTrailer,
-                  icon: const Icon(Icons.play_circle_outline_rounded, size: 24),
-                  label: Text(lang.playTrailer),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primaryColor,
-                    foregroundColor: Colors.white,
-                    minimumSize: Size(0, compact ? 54 : 62),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: compact ? 20 : 28,
-                      vertical: compact ? 15 : 19,
-                    ),
-                    textStyle: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w800),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
+                for (final genre in genres) _HeroGenreChip(label: genre),
               ],
             ),
           ],
+          // Rental price tag if available
+          if (item.price != null) ...[
+            const SizedBox(height: 14),
+            _HeroPriceBadge(price: item.price!),
+          ],
+          const SizedBox(height: 24),
+          // Hero CTA Action Buttons
+          Wrap(
+            spacing: 14,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _HeroPrimaryButton(
+                label: lang.watchNow,
+                onPressed: onWatchNow,
+              ),
+              _HeroSecondaryButton(
+                label: lang.playTrailer,
+                onPressed: onPlayTrailer,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RatingBadge extends StatelessWidget {
+  const _RatingBadge({required this.rating});
+  final double rating;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF241A08),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: FilmytellTheme.gold.withValues(alpha: 0.45)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.star_rounded, color: FilmytellTheme.gold, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            rating.toStringAsFixed(1),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroMetaBadge extends StatelessWidget {
+  const _HeroMetaBadge({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: FilmytellTheme.textBody,
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
   }
 }
 
-class _HeroDescription extends StatefulWidget {
-  const _HeroDescription({
+class _HeroSynopsis extends StatefulWidget {
+  const _HeroSynopsis({
     super.key,
     required this.description,
-    required this.primaryColor,
+    this.compact = false,
   });
 
   final String description;
-  final Color primaryColor;
+  final bool compact;
 
   @override
-  State<_HeroDescription> createState() => _HeroDescriptionState();
+  State<_HeroSynopsis> createState() => _HeroSynopsisState();
 }
 
-class _HeroDescriptionState extends State<_HeroDescription> {
+class _HeroSynopsisState extends State<_HeroSynopsis> {
   bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
     final text = widget.description.trim();
-    final isLong = text.length > 110;
+    final isLong = text.length > 130;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AnimatedSize(
-          duration: const Duration(milliseconds: 220),
+          duration: const Duration(milliseconds: 240),
           curve: Curves.easeInOut,
           alignment: Alignment.topLeft,
           child: Text(
             text,
             maxLines: _expanded ? null : 3,
             overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.82),
-              fontSize: 17,
-              height: 1.55,
-              fontWeight: FontWeight.w500,
+            style: FilmytellTheme.bodyLarge(
+              isMobile: widget.compact,
             ),
           ),
         ),
         if (isLong) ...[
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _expanded = !_expanded;
-                });
-              },
+              onTap: () => setState(() => _expanded = !_expanded),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      _expanded ? 'Read Less' : 'Read More',
-                      style: TextStyle(
-                        color: widget.primaryColor,
-                        fontSize: 14,
+                      _expanded
+                          ? AppLocalizations.of(context)!.readLess
+                          : AppLocalizations.of(context)!.readMore,
+                      style: FilmytellTheme.font(
+                        color: FilmytellTheme.primary,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 3),
                     Icon(
                       _expanded
                           ? Icons.keyboard_arrow_up_rounded
                           : Icons.keyboard_arrow_down_rounded,
-                      color: widget.primaryColor,
-                      size: 18,
+                      color: FilmytellTheme.primary,
+                      size: 16,
                     ),
                   ],
                 ),
@@ -413,204 +428,24 @@ class _HeroDescriptionState extends State<_HeroDescription> {
   }
 }
 
-class _HeroMoviePrice extends StatelessWidget {
-  const _HeroMoviePrice({
-    required this.price,
-    required this.color,
-  });
-
-  final double price;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.36),
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: color.withOpacity(0.42)),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.13),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.local_offer_rounded, color: color, size: 20),
-          const SizedBox(width: 9),
-          Text(
-            AppLocalizations.of(context)!.rent,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'Rs ${price.toStringAsFixed(0)}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PosterCollage extends StatelessWidget {
-  const _PosterCollage({required this.items});
-
-  final List<Content> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          mainAxisSpacing: 20,
-          crossAxisSpacing: 20,
-          childAspectRatio: 0.9,
-        ),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          return TweenAnimationBuilder<double>(
-            tween: Tween(begin: 22, end: 0),
-            duration: Duration(milliseconds: 380 + index * 70),
-            curve: Curves.easeOutCubic,
-            builder: (context, value, child) {
-              return Transform.translate(
-                offset: Offset(0, value),
-                child: Opacity(opacity: value == 0 ? 1 : 0.65, child: child),
-              );
-            },
-            child: _FloatingPoster(content: items[index]),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _FloatingPoster extends StatefulWidget {
-  const _FloatingPoster({required this.content});
-
-  final Content content;
-
-  @override
-  State<_FloatingPoster> createState() => _FloatingPosterState();
-}
-
-class _FloatingPosterState extends State<_FloatingPoster> {
-  bool _hovered = false;
-
-  void _setHovered(bool value) {
-    if (!mounted) return;
-    setState(() => _hovered = value);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final poster = _posterFor(widget.content);
-    return MouseRegion(
-      onEnter: (_) => _setHovered(true),
-      onExit: (_) => _setHovered(false),
-      child: AnimatedScale(
-        scale: _hovered ? 1.06 : 1,
-        duration: const Duration(milliseconds: 190),
-        curve: Curves.easeOutCubic,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.42),
-                blurRadius: 22,
-                offset: const Offset(0, 14),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: poster == null
-                ? const _PosterFallback()
-                : CachedNetworkImage(
-                    imageUrl: poster,
-                    fit: BoxFit.cover,
-                    memCacheWidth: 420,
-                    placeholder: (_, __) => const _PosterFallback(),
-                    errorWidget: (_, __, ___) => const _PosterFallback(),
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  String? _posterFor(Content content) {
-    for (final url in content.posterUrlList ?? const <String>[]) {
-      final trimmed = url.trim();
-      if (trimmed.isNotEmpty) return trimmed;
-    }
-    return null;
-  }
-}
-
-class _MetaBadge extends StatelessWidget {
-  const _MetaBadge({required this.label});
-
+class _HeroGenreChip extends StatelessWidget {
+  const _HeroGenreChip({required this.label});
   final String label;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(right: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
-  }
-}
-
-class _GenreChip extends StatelessWidget {
-  const _GenreChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.10),
+        color: const Color(0xFF18181D),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withOpacity(0.14)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
       ),
       child: Text(
         label,
-        style: TextStyle(
-          color: Colors.white.withOpacity(0.88),
+        style: FilmytellTheme.font(
+          color: Colors.white.withValues(alpha: 0.88),
+          fontSize: 12,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -618,21 +453,221 @@ class _GenreChip extends StatelessWidget {
   }
 }
 
-class _HeroFallback extends StatelessWidget {
-  const _HeroFallback({required this.theme});
-
-  final ThemeData theme;
+class _HeroPriceBadge extends StatelessWidget {
+  const _HeroPriceBadge({required this.price});
+  final double price;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.black,
-            theme.primaryColor.withOpacity(0.30),
-            Colors.black,
+        color: const Color(0xFF1C1416),
+        borderRadius: BorderRadius.circular(8),
+        border:
+            Border.all(color: FilmytellTheme.primary.withValues(alpha: 0.55)),
+        boxShadow: [
+          BoxShadow(
+            color: FilmytellTheme.primary.withValues(alpha: 0.20),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.local_offer_rounded,
+            color: FilmytellTheme.primary,
+            size: 16,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            AppLocalizations.of(context)!.rent,
+            style: FilmytellTheme.font(
+              color: Colors.white,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'Rs ${price.toStringAsFixed(0)}',
+            style: FilmytellTheme.font(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroPrimaryButton extends StatefulWidget {
+  const _HeroPrimaryButton({
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  State<_HeroPrimaryButton> createState() => _HeroPrimaryButtonState();
+}
+
+class _HeroPrimaryButtonState extends State<_HeroPrimaryButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedScale(
+        scale: _hovered ? 1.03 : 1.0,
+        duration: const Duration(milliseconds: 180),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            gradient: _hovered
+                ? const LinearGradient(
+                    colors: [Color(0xFFFF2432), Color(0xFFE50914)],
+                  )
+                : const LinearGradient(
+                    colors: [Color(0xFFE50914), Color(0xFFB8050F)],
+                  ),
+            boxShadow: [
+              BoxShadow(
+                color: FilmytellTheme.primary
+                    .withValues(alpha: _hovered ? 0.50 : 0.25),
+                blurRadius: _hovered ? 20 : 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: ElevatedButton.icon(
+            onPressed: widget.onPressed,
+            icon: const Icon(Icons.play_arrow_rounded, size: 22),
+            label: Text(widget.label),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              textStyle: FilmytellTheme.buttonText(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.2,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroSecondaryButton extends StatefulWidget {
+  const _HeroSecondaryButton({
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  State<_HeroSecondaryButton> createState() => _HeroSecondaryButtonState();
+}
+
+class _HeroSecondaryButtonState extends State<_HeroSecondaryButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedScale(
+        scale: _hovered ? 1.02 : 1.0,
+        duration: const Duration(milliseconds: 180),
+        child: OutlinedButton.icon(
+          onPressed: widget.onPressed,
+          icon: const Icon(Icons.play_circle_outline_rounded, size: 20),
+          label: Text(widget.label),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: _hovered
+                ? Colors.white.withValues(alpha: 0.12)
+                : Colors.white.withValues(alpha: 0.06),
+            foregroundColor: Colors.white,
+            side: BorderSide(
+              color: _hovered
+                  ? Colors.white.withValues(alpha: 0.55)
+                  : Colors.white.withValues(alpha: 0.25),
+              width: 1.2,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+            textStyle: FilmytellTheme.buttonText(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroPosterCard extends StatelessWidget {
+  const _HeroPosterCard({
+    super.key,
+    required this.posterUrl,
+    this.posterUrls,
+    this.aspectRatio = 1.38,
+    this.onTap,
+  });
+
+  final String posterUrl;
+  final List<String>? posterUrls;
+  final double aspectRatio;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.70),
+              blurRadius: 28,
+              offset: const Offset(0, 14),
+            ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(15),
+          child: AspectRatio(
+            aspectRatio: aspectRatio,
+            child: FilmytellNetworkImage(
+              imageUrl: posterUrl,
+              imageUrls: posterUrls,
+              fit: BoxFit.fill,
+            ),
+          ),
         ),
       ),
     );
@@ -644,19 +679,27 @@ class _HeroCopySkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(height: 260);
+    return const SizedBox(height: 240);
   }
 }
 
-class _PosterFallback extends StatelessWidget {
-  const _PosterFallback();
+class _HeroPosterFallback extends StatelessWidget {
+  const _HeroPosterFallback();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.grey.shade900,
-      child: const Center(
-        child: Icon(Icons.local_movies_outlined, color: Colors.white54),
+      decoration: BoxDecoration(
+        color: FilmytellTheme.surfaceDark,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: FilmytellTheme.borderSubtle),
+      ),
+      child: const AspectRatio(
+        aspectRatio: 1.38,
+        child: Center(
+          child: Icon(Icons.movie_filter_outlined,
+              color: Colors.white38, size: 38),
+        ),
       ),
     );
   }
