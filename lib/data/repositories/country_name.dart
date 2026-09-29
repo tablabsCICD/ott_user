@@ -5,70 +5,188 @@ class CountryService {
   static const String apiUrl = 'https://restcountries.com/v3.1/all';
   static const String countryStateApiUrl =
       'https://countriesnow.space/api/v0.1/countries/states';
+  static const String stateCitiesApiUrl =
+      'https://countriesnow.space/api/v0.1/countries/state/cities';
 
-  Future<List<String>> fetchCountryNames() async {
-    try {
-      final response = await http.get(Uri.parse(apiUrl));
+  static const List<String> _fallbackCountries = [
+    'Afghanistan',
+    'Albania',
+    'Algeria',
+    'Andorra',
+    'Angola',
+    'Argentina',
+    'Armenia',
+    'Australia',
+    'Austria',
+    'Azerbaijan',
+    'Bahamas',
+    'Bahrain',
+    'Bangladesh',
+    'Barbados',
+    'Belarus',
+    'Belgium',
+    'Belize',
+    'Benin',
+    'Bhutan',
+    'Bolivia',
+    'Brazil',
+    'Brunei',
+    'Bulgaria',
+    'Cambodia',
+    'Cameroon',
+    'Canada',
+    'Chile',
+    'China',
+    'Colombia',
+    'Costa Rica',
+    'Croatia',
+    'Cuba',
+    'Cyprus',
+    'Czech Republic',
+    'Denmark',
+    'Dominican Republic',
+    'Ecuador',
+    'Egypt',
+    'Estonia',
+    'Ethiopia',
+    'Fiji',
+    'Finland',
+    'France',
+    'Georgia',
+    'Germany',
+    'Ghana',
+    'Greece',
+    'Guatemala',
+    'Guyana',
+    'Honduras',
+    'Hong Kong',
+    'Hungary',
+    'Iceland',
+    'India',
+    'Indonesia',
+    'Iran',
+    'Iraq',
+    'Ireland',
+    'Israel',
+    'Italy',
+    'Jamaica',
+    'Japan',
+    'Jordan',
+    'Kazakhstan',
+    'Kenya',
+    'Kuwait',
+    'Kyrgyzstan',
+    'Laos',
+    'Latvia',
+    'Lebanon',
+    'Libya',
+    'Lithuania',
+    'Luxembourg',
+    'Madagascar',
+    'Malaysia',
+    'Maldives',
+    'Mauritius',
+    'Mexico',
+    'Moldova',
+    'Monaco',
+    'Mongolia',
+    'Morocco',
+    'Myanmar',
+    'Nepal',
+    'Netherlands',
+    'New Zealand',
+    'Nigeria',
+    'Norway',
+    'Oman',
+    'Pakistan',
+    'Panama',
+    'Papua New Guinea',
+    'Paraguay',
+    'Peru',
+    'Philippines',
+    'Poland',
+    'Portugal',
+    'Qatar',
+    'Romania',
+    'Russia',
+    'Saudi Arabia',
+    'Senegal',
+    'Serbia',
+    'Singapore',
+    'Slovakia',
+    'Slovenia',
+    'South Africa',
+    'South Korea',
+    'Spain',
+    'Sri Lanka',
+    'Sudan',
+    'Sweden',
+    'Switzerland',
+    'Taiwan',
+    'Tajikistan',
+    'Tanzania',
+    'Thailand',
+    'Tunisia',
+    'Turkey',
+    'Uganda',
+    'Ukraine',
+    'United Arab Emirates',
+    'United Kingdom',
+    'United States',
+    'Uruguay',
+    'Uzbekistan',
+    'Venezuela',
+    'Vietnam',
+    'Yemen',
+    'Zambia',
+    'Zimbabwe',
+  ];
 
-      if (response.statusCode == 200) {
-        List<dynamic> data = json.decode(response.body);
-
-        // Extract only country names
-        List<String> countryNames = data.map((country) {
-          return country['name']['common'] as String;
-        }).toList();
-
-        // Sort alphabetically
-        countryNames.sort();
-        return countryNames;
-      } else {
-        throw Exception('Failed to fetch countries');
-      }
-    } catch (error) {
-      throw Exception('Error fetching countries: $error');
-    }
-  }
-
-  Future<List<String>> fetchStatesByCountry(String country) async {
-    final countryName = country.trim();
-    if (countryName.isEmpty) return [];
-
-    try {
-      final response = await http.post(
-        Uri.parse(countryStateApiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'country': countryName}),
-      );
-
-      if (response.statusCode != 200) return [];
-
-      final body = jsonDecode(response.body) as Map<String, dynamic>;
-      final isError = body['error'] == true;
-      if (isError) return [];
-
-      final data = body['data'] as Map<String, dynamic>?;
-      final states = data?['states'] as List? ?? [];
-      final stateNames = states
-          .map((state) => (state as Map<String, dynamic>)['name']?.toString())
-          .whereType<String>()
-          .map((name) => name.trim())
-          .where((name) => name.isNotEmpty)
-          .toSet()
-          .toList();
-
-      stateNames.sort();
-      return stateNames;
-    } catch (_) {
-      return [];
-    }
-  }
+  static const List<String> _indianStates = [
+    'Andhra Pradesh',
+    'Arunachal Pradesh',
+    'Assam',
+    'Bihar',
+    'Chhattisgarh',
+    'Goa',
+    'Gujarat',
+    'Haryana',
+    'Himachal Pradesh',
+    'Jharkhand',
+    'Karnataka',
+    'Kerala',
+    'Madhya Pradesh',
+    'Maharashtra',
+    'Manipur',
+    'Meghalaya',
+    'Mizoram',
+    'Nagaland',
+    'Odisha',
+    'Punjab',
+    'Rajasthan',
+    'Sikkim',
+    'Tamil Nadu',
+    'Telangana',
+    'Tripura',
+    'Uttar Pradesh',
+    'Uttarakhand',
+    'West Bengal',
+    'Andaman and Nicobar Islands',
+    'Chandigarh',
+    'Dadra and Nagar Haveli and Daman and Diu',
+    'Delhi',
+    'Jammu and Kashmir',
+    'Ladakh',
+    'Lakshadweep',
+    'Puducherry',
+  ];
 
   static const Map<String, List<String>> _stateDistricts = {
     'Maharashtra': [
       'Ahmednagar',
       'Akola',
       'Amravati',
-      'Aurangabad',
+      'Aurangabad (Chhatrapati Sambhajinagar)',
       'Beed',
       'Bhandara',
       'Buldhana',
@@ -87,7 +205,7 @@ class CountryService {
       'Nanded',
       'Nandurbar',
       'Nashik',
-      'Osmanabad',
+      'Osmanabad (Dharashiv)',
       'Palghar',
       'Parbhani',
       'Pune',
@@ -169,6 +287,421 @@ class CountryService {
       'Vijayapura',
       'Yadgir',
     ],
+    'Delhi': [
+      'Central Delhi',
+      'East Delhi',
+      'New Delhi',
+      'North Delhi',
+      'North East Delhi',
+      'North West Delhi',
+      'Shahdara',
+      'South Delhi',
+      'South East Delhi',
+      'South West Delhi',
+      'West Delhi',
+    ],
+    'Madhya Pradesh': [
+      'Bhopal',
+      'Indore',
+      'Gwalior',
+      'Jabalpur',
+      'Ujjain',
+      'Sagar',
+      'Dewas',
+      'Satna',
+      'Ratlam',
+      'Rewa',
+      'Katni',
+      'Singrauli',
+      'Burhanpur',
+      'Khandwa',
+      'Bhind',
+      'Chhindwara',
+      'Guna',
+      'Shivpuri',
+      'Vidisha',
+      'Chhatarpur',
+      'Damoh',
+      'Mandsaur',
+      'Khargone',
+      'Neemuch',
+      'Panna',
+      'Sehore',
+      'Hoshangabad',
+      'Betul',
+      'Seoni',
+      'Datia',
+      'Dhar',
+    ],
+    'Rajasthan': [
+      'Ajmer',
+      'Alwar',
+      'Banswara',
+      'Baran',
+      'Barmer',
+      'Bharatpur',
+      'Bhilwara',
+      'Bikaner',
+      'Bundi',
+      'Chittorgarh',
+      'Churu',
+      'Dausa',
+      'Dholpur',
+      'Dungarpur',
+      'Hanumangarh',
+      'Jaipur',
+      'Jaisalmer',
+      'Jalore',
+      'Jhalawar',
+      'Jhunjhunu',
+      'Jodhpur',
+      'Karauli',
+      'Kota',
+      'Nagaur',
+      'Pali',
+      'Pratapgarh',
+      'Rajsamand',
+      'Sawai Madhopur',
+      'Sikar',
+      'Sirohi',
+      'Sri Ganganagar',
+      'Tonk',
+      'Udaipur',
+    ],
+    'Tamil Nadu': [
+      'Ariyalur',
+      'Chengalpattu',
+      'Chennai',
+      'Coimbatore',
+      'Cuddalore',
+      'Dharmapuri',
+      'Dindigul',
+      'Erode',
+      'Kallakurichi',
+      'Kanchipuram',
+      'Kanyakumari',
+      'Karur',
+      'Krishnagiri',
+      'Madurai',
+      'Nagapattinam',
+      'Namakkal',
+      'Nilgiris',
+      'Perambalur',
+      'Pudukkottai',
+      'Ramanathapuram',
+      'Ranipet',
+      'Salem',
+      'Sivaganga',
+      'Tenkasi',
+      'Thanjavur',
+      'Theni',
+      'Thoothukudi',
+      'Tiruchirappalli',
+      'Tirunelveli',
+      'Tirupathur',
+      'Tiruppur',
+      'Tiruvallur',
+      'Tiruvannamalai',
+      'Tiruvarur',
+      'Vellore',
+      'Viluppuram',
+      'Virudhunagar',
+    ],
+    'Telangana': [
+      'Adilabad',
+      'Bhadradri Kothagudem',
+      'Hyderabad',
+      'Jagtial',
+      'Jangaon',
+      'Jayashankar Bhupalpally',
+      'Jogulamba Gadwal',
+      'Kamareddy',
+      'Karimnagar',
+      'Khammam',
+      'Kumuram Bheem Asifabad',
+      'Mahabubabad',
+      'Mahabubnagar',
+      'Mancherial',
+      'Medak',
+      'Medchal-Malkajgiri',
+      'Mulugu',
+      'Nagarkurnool',
+      'Nalgonda',
+      'Narayanpet',
+      'Nirmal',
+      'Nizamabad',
+      'Peddapalli',
+      'Rajanna Sircilla',
+      'Ranga Reddy',
+      'Sangareddy',
+      'Siddipet',
+      'Suryapet',
+      'Vikarabad',
+      'Wanaparthy',
+      'Warangal',
+      'Yadadri Bhuvanagiri',
+    ],
+    'Uttar Pradesh': [
+      'Agra',
+      'Aligarh',
+      'Ambedkar Nagar',
+      'Amethi',
+      'Amroha',
+      'Auraiya',
+      'Ayodhya',
+      'Azamgarh',
+      'Baghpat',
+      'Bahraich',
+      'Ballia',
+      'Balrampur',
+      'Banda',
+      'Barabanki',
+      'Bareilly',
+      'Basti',
+      'Bhadohi',
+      'Bijnor',
+      'Budaun',
+      'Bulandshahr',
+      'Chandauli',
+      'Chitrakoot',
+      'Deoria',
+      'Etah',
+      'Etawah',
+      'Farrukhabad',
+      'Fatehpur',
+      'Firozabad',
+      'Gautam Buddha Nagar',
+      'Ghaziabad',
+      'Ghazipur',
+      'Gonda',
+      'Gorakhpur',
+      'Hamirpur',
+      'Hapur',
+      'Hardoi',
+      'Hathras',
+      'Jalaun',
+      'Jaunpur',
+      'Jhansi',
+      'Kannauj',
+      'Kanpur Dehat',
+      'Kanpur Nagar',
+      'Kasganj',
+      'Kaushambi',
+      'Kheri',
+      'Kushinagar',
+      'Lalitpur',
+      'Lucknow',
+      'Maharajganj',
+      'Mahoba',
+      'Mainpuri',
+      'Mathura',
+      'Mau',
+      'Meerut',
+      'Mirzapur',
+      'Moradabad',
+      'Muzaffarnagar',
+      'Pilibhit',
+      'Pratapgarh',
+      'Prayagraj',
+      'Raebareli',
+      'Rampur',
+      'Saharanpur',
+      'Sambhal',
+      'Sant Kabir Nagar',
+      'Shahjahanpur',
+      'Shamli',
+      'Shravasti',
+      'Siddharthnagar',
+      'Sitapur',
+      'Sonbhadra',
+      'Sultanpur',
+      'Unnao',
+      'Varanasi',
+    ],
+    'West Bengal': [
+      'Alipurduar',
+      'Bankura',
+      'Birbhum',
+      'Cooch Behar',
+      'Dakshin Dinajpur',
+      'Darjeeling',
+      'Hooghly',
+      'Howrah',
+      'Jalpaiguri',
+      'Jhargram',
+      'Kalimpong',
+      'Kolkata',
+      'Malda',
+      'Murshidabad',
+      'Nadia',
+      'North 24 Parganas',
+      'Paschim Bardhaman',
+      'Paschim Medinipur',
+      'Purba Bardhaman',
+      'Purba Medinipur',
+      'Purulia',
+      'South 24 Parganas',
+      'Uttar Dinajpur',
+    ],
+    'Punjab': [
+      'Amritsar',
+      'Barnala',
+      'Bathinda',
+      'Faridkot',
+      'Fatehgarh Sahib',
+      'Fazilka',
+      'Ferozepur',
+      'Gurdaspur',
+      'Hoshiarpur',
+      'Jalandhar',
+      'Kapurthala',
+      'Ludhiana',
+      'Malerkotla',
+      'Mansa',
+      'Moga',
+      'Muktsar',
+      'Pathankot',
+      'Patiala',
+      'Rupnagar',
+      'Sahibzada Ajit Singh Nagar (Mohali)',
+      'Sangrur',
+      'Shahid Bhagat Singh Nagar',
+      'Tarn Taran',
+    ],
+    'Haryana': [
+      'Ambala',
+      'Bhiwani',
+      'Charkhi Dadri',
+      'Faridabad',
+      'Fatehabad',
+      'Gurugram',
+      'Hisar',
+      'Jhajjar',
+      'Jind',
+      'Kaithal',
+      'Karnal',
+      'Kurukshetra',
+      'Mahendragarh',
+      'Nuh',
+      'Palwal',
+      'Panchkula',
+      'Panipat',
+      'Rewari',
+      'Rohtak',
+      'Sirsa',
+      'Sonipat',
+      'Yamunanagar',
+    ],
+    'Kerala': [
+      'Alappuzha',
+      'Ernakulam',
+      'Idukki',
+      'Kannur',
+      'Kasaragod',
+      'Kollam',
+      'Kottayam',
+      'Kozhikode',
+      'Malappuram',
+      'Palakkad',
+      'Pathanamthitta',
+      'Thiruvananthapuram',
+      'Thrissur',
+      'Wayanad',
+    ],
+    'Andhra Pradesh': [
+      'Alluri Sitharama Raju',
+      'Anakapalli',
+      'Ananthapuramu',
+      'Annamayya',
+      'Bapatla',
+      'Chittoor',
+      'East Godavari',
+      'Eluru',
+      'Guntur',
+      'Kakinada',
+      'Konaseema',
+      'Krishna',
+      'Kurnool',
+      'Nandyal',
+      'NTR',
+      'Palnadu',
+      'Parvathipuram Manyam',
+      'Prakasam',
+      'Sri Potti Sriramulu Nellore',
+      'Sri Sathya Sai',
+      'Srikakulam',
+      'Tirupati',
+      'Visakhapatnam',
+      'Vizianagaram',
+      'West Godavari',
+      'YSR Kadapa',
+    ],
+    'Bihar': [
+      'Araria',
+      'Arwal',
+      'Aurangabad',
+      'Banka',
+      'Begusarai',
+      'Bhagalpur',
+      'Bhojpur',
+      'Buxar',
+      'Darbhanga',
+      'East Champaran',
+      'Gaya',
+      'Gopalganj',
+      'Jamui',
+      'Jehanabad',
+      'Kaimur',
+      'Katihar',
+      'Khagaria',
+      'Kishanganj',
+      'Lakhisarai',
+      'Madhepura',
+      'Madhubani',
+      'Munger',
+      'Muzaffarpur',
+      'Nalanda',
+      'Nawada',
+      'Patna',
+      'Purnia',
+      'Rohtas',
+      'Saharsa',
+      'Samastipur',
+      'Saran',
+      'Sheikhpura',
+      'Sheohar',
+      'Sitamarhi',
+      'Siwan',
+      'Supaul',
+      'Vaishali',
+      'West Champaran',
+    ],
+    'Goa': [
+      'North Goa',
+      'South Goa',
+    ],
+    'Jammu and Kashmir': [
+      'Anantnag',
+      'Bandipora',
+      'Baramulla',
+      'Budgam',
+      'Doda',
+      'Ganderbal',
+      'Jammu',
+      'Kathua',
+      'Kishtwar',
+      'Kulgam',
+      'Kupwara',
+      'Poonch',
+      'Pulwama',
+      'Rajouri',
+      'Ramban',
+      'Reasi',
+      'Samba',
+      'Shopian',
+      'Srinagar',
+      'Udhampur',
+    ],
   };
 
   static const Map<String, List<String>> _districtTalukas = {
@@ -221,6 +754,140 @@ class CountryService {
       'Savner',
       'Umred',
     ],
+    'Thane': [
+      'Ambarnath',
+      'Bhiwandi',
+      'Kalyan',
+      'Murbad',
+      'Shahapur',
+      'Thane',
+      'Ulhasnagar',
+    ],
+    'Mumbai Suburban': [
+      'Andheri',
+      'Borivali',
+      'Kurla',
+    ],
+    'Mumbai City': [
+      'Colaba',
+      'Fort',
+      'Byculla',
+      'Dadar',
+      'Mahim',
+      'Malabar Hill',
+    ],
+    'Kolhapur': [
+      'Ajra',
+      'Bavda',
+      'Bhudargad',
+      'Chandgad',
+      'Gadhinglaj',
+      'Hatkanangle',
+      'Kagal',
+      'Karvir',
+      'Panhala',
+      'Radhanagari',
+      'Shahuwadi',
+      'Shirol',
+    ],
+    'Satara': [
+      'Jaoli',
+      'Karad',
+      'Khandala',
+      'Khatav',
+      'Koregaon',
+      'Mahabaleshwar',
+      'Man',
+      'Patan',
+      'Phaltan',
+      'Satara',
+      'Wai',
+    ],
+    'Sangli': [
+      'Atpadi',
+      'Jat',
+      'Kadegaon',
+      'Kavathe Mahankal',
+      'Khanapur',
+      'Miraj',
+      'Palus',
+      'Shirala',
+      'Tasgaon',
+      'Walwa',
+    ],
+    'Solapur': [
+      'Akkalkot',
+      'Barshi',
+      'Karmala',
+      'Madha',
+      'Malshiras',
+      'Mangalwedha',
+      'Mohol',
+      'Pandharpur',
+      'Sangole',
+      'Solapur North',
+      'Solapur South',
+    ],
+    'Ahmednagar': [
+      'Akole',
+      'Jamkhed',
+      'Karjat',
+      'Kopargaon',
+      'Nagar',
+      'Nevasa',
+      'Parner',
+      'Pathardi',
+      'Rahata',
+      'Rahuri',
+      'Sangamner',
+      'Shevgaon',
+      'Shrigonda',
+      'Shrirampur',
+    ],
+    'Aurangabad (Chhatrapati Sambhajinagar)': [
+      'Aurangabad',
+      'Gangapur',
+      'Kannad',
+      'Khuldabad',
+      'Paithan',
+      'Phulambri',
+      'Sillod',
+      'Soegaon',
+      'Vaijapur',
+    ],
+    'Jalgaon': [
+      'Amalner',
+      'Bhadgaon',
+      'Bhusawal',
+      'Bodwad',
+      'Chalisgaon',
+      'Chopda',
+      'Dharangaon',
+      'Erandol',
+      'Jalgaon',
+      'Jamner',
+      'Muktainagar',
+      'Pachora',
+      'Parola',
+      'Raver',
+      'Yawal',
+    ],
+    'Amravati': [
+      'Achalpur',
+      'Amravati',
+      'Anjangaon Surji',
+      'Bhatkuli',
+      'Chandur Railway',
+      'Chandurbazar',
+      'Chikhaldara',
+      'Daryapur',
+      'Dhamangaon Railway',
+      'Dharni',
+      'Morshi',
+      'Nandgaon Khandeshwar',
+      'Teosa',
+      'Warud',
+    ],
     'Ahmedabad': [
       'Ahmedabad City',
       'Bavla',
@@ -233,6 +900,29 @@ class CountryService {
       'Sanand',
       'Viramgam',
     ],
+    'Surat': [
+      'Bardoli',
+      'Choryasi',
+      'Kamrej',
+      'Mahuva',
+      'Mandvi',
+      'Mangrol',
+      'Olpad',
+      'Palsana',
+      'Surat City',
+      'Umarpada',
+    ],
+    'Vadodara': [
+      'Dabhoi',
+      'Desar',
+      'Karjan',
+      'Padra',
+      'Savli',
+      'Sinor',
+      'Vadodara Rural',
+      'Vadodara Urban',
+      'Vaghodia',
+    ],
     'Bengaluru Urban': [
       'Anekal',
       'Bengaluru East',
@@ -240,19 +930,189 @@ class CountryService {
       'Bengaluru South',
       'Yelahanka',
     ],
+    'Bengaluru Rural': [
+      'Devanahalli',
+      'Doddaballapura',
+      'Hosakote',
+      'Nelamangala',
+    ],
+    'Jaipur': [
+      'Amber',
+      'Bassi',
+      'Chaksu',
+      'Chomu',
+      'Jaipur',
+      'Jamwa Ramgarh',
+      'Kotputli',
+      'Phagi',
+      'Phulera',
+      'Sanganer',
+      'Shahpura',
+      'Viratnagar',
+    ],
+    'Lucknow': [
+      'Bakshi Ka Talab',
+      'Lucknow',
+      'Malihabad',
+      'Mohanlalganj',
+      'Sarojini Nagar',
+    ],
+    'Hyderabad': [
+      'Amberpet',
+      'Asifnagar',
+      'Bahadurpura',
+      'Bandlaguda',
+      'Charminar',
+      'Golconda',
+      'Himayathnagar',
+      'Khairatabad',
+      'Marredpally',
+      'Musheerabad',
+      'Secunderabad',
+      'Shaikpet',
+    ],
+    'Patna': [
+      'Bakhtiarpur',
+      'Barh',
+      'Danapur',
+      'Fatwah',
+      'Masaurhi',
+      'Mokama',
+      'Paliganj',
+      'Patna Sadar',
+      'Phulwari Sharif',
+      'Punpun',
+    ],
   };
 
-  Future<List<String>> fetchDistrictsByState(String state) async {
+  Future<List<String>> fetchCountryNames() async {
+    try {
+      final response = await http
+          .get(Uri.parse(apiUrl))
+          .timeout(const Duration(seconds: 6));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+
+        final countryNames = data
+            .map((country) {
+              final name = country['name']?['common']?.toString();
+              return name?.trim();
+            })
+            .whereType<String>()
+            .where((name) => name.isNotEmpty)
+            .toSet()
+            .toList();
+
+        countryNames.sort();
+        if (countryNames.isNotEmpty) return countryNames;
+      }
+    } catch (_) {}
+
+    try {
+      final response = await http
+          .get(Uri.parse('https://countriesnow.space/api/v0.1/countries'))
+          .timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final list = body['data'] as List? ?? [];
+        final names = list
+            .map((e) => (e as Map<String, dynamic>)['country']?.toString())
+            .whereType<String>()
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toSet()
+            .toList();
+        names.sort();
+        if (names.isNotEmpty) return names;
+      }
+    } catch (_) {}
+
+    return List<String>.from(_fallbackCountries)..sort();
+  }
+
+  Future<List<String>> fetchStatesByCountry(String country) async {
+    final countryName = country.trim();
+    if (countryName.isEmpty) return [];
+
+    try {
+      final response = await http
+          .post(
+            Uri.parse(countryStateApiUrl),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'country': countryName}),
+          )
+          .timeout(const Duration(seconds: 6));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        if (body['error'] != true) {
+          final data = body['data'] as Map<String, dynamic>?;
+          final states = data?['states'] as List? ?? [];
+          final stateNames = states
+              .map(
+                (state) =>
+                    (state as Map<String, dynamic>)['name']?.toString(),
+              )
+              .whereType<String>()
+              .map((name) => name.trim())
+              .where((name) => name.isNotEmpty)
+              .toSet()
+              .toList();
+
+          stateNames.sort();
+          if (stateNames.isNotEmpty) return stateNames;
+        }
+      }
+    } catch (_) {}
+
+    if (countryName.toLowerCase() == 'india') {
+      return List<String>.from(_indianStates)..sort();
+    }
+    return [];
+  }
+
+  Future<List<String>> fetchDistrictsByState(
+    String state, {
+    String country = 'India',
+  }) async {
     final stateTrimmed = state.trim();
     if (stateTrimmed.isEmpty) return [];
-    
-    // Check predefined districts for state
-    final districts = _stateDistricts[stateTrimmed];
-    if (districts != null) {
-      final list = List<String>.from(districts);
-      list.sort();
-      return list;
+
+    // Check pre-cached Indian state district hierarchy
+    for (final entry in _stateDistricts.entries) {
+      if (entry.key.toLowerCase() == stateTrimmed.toLowerCase()) {
+        final list = List<String>.from(entry.value)..sort();
+        return list;
+      }
     }
+
+    // Try live public API for cities/districts
+    try {
+      final response = await http
+          .post(
+            Uri.parse(stateCitiesApiUrl),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'country': country, 'state': stateTrimmed}),
+          )
+          .timeout(const Duration(seconds: 6));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        if (body['error'] != true) {
+          final list = body['data'] as List? ?? [];
+          final cities = list
+              .map((e) => e?.toString().trim())
+              .whereType<String>()
+              .where((e) => e.isNotEmpty)
+              .toSet()
+              .toList();
+          cities.sort();
+          if (cities.isNotEmpty) return cities;
+        }
+      }
+    } catch (_) {}
+
     return [];
   }
 
@@ -260,12 +1120,14 @@ class CountryService {
     final districtTrimmed = district.trim();
     if (districtTrimmed.isEmpty) return [];
 
-    final talukas = _districtTalukas[districtTrimmed];
-    if (talukas != null) {
-      final list = List<String>.from(talukas);
-      list.sort();
-      return list;
+    for (final entry in _districtTalukas.entries) {
+      if (entry.key.toLowerCase() == districtTrimmed.toLowerCase() ||
+          districtTrimmed.toLowerCase().contains(entry.key.toLowerCase())) {
+        final list = List<String>.from(entry.value)..sort();
+        return list;
+      }
     }
+
     return [];
   }
 }

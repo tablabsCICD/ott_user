@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/ShareService.dart';
 import 'package:ott/app/pages/movie%20details%20page/component/actionButtonWidget.dart';
@@ -109,7 +108,7 @@ Future<void> showContentShareSheet(
   );
 }
 
-class _ContentShareSheetBody extends StatefulWidget {
+class _ContentShareSheetBody extends StatelessWidget {
   const _ContentShareSheetBody({
     required this.data,
     required this.sheetContext,
@@ -119,23 +118,10 @@ class _ContentShareSheetBody extends StatefulWidget {
   final BuildContext sheetContext;
 
   @override
-  State<_ContentShareSheetBody> createState() => _ContentShareSheetBodyState();
-}
-
-class _ContentShareSheetBodyState extends State<_ContentShareSheetBody> {
-  int _selectedQrIndex = 0; // 0: Content QR, 1: Apple App Store QR
-
-  @override
   Widget build(BuildContext context) {
     final selectedThemeData =
         Provider.of<ThemeProvider>(context, listen: false).getTheme;
-    final data = widget.data;
-    final isContentQr = _selectedQrIndex == 0;
-    final currentQrLink =
-        isContentQr ? data.qrLink.toString() : data.appStoreQrLink.toString();
-    final currentCaption = isContentQr
-        ? "Scan to watch content on Android / Web"
-        : "Scan to download app on Apple App Store (iOS)";
+    final universalLinkStr = data.qrLink.toString();
 
     return SingleChildScrollView(
       child: Column(
@@ -155,84 +141,31 @@ class _ContentShareSheetBodyState extends State<_ContentShareSheetBody> {
                 ),
               ),
               IconButton(
-                onPressed: () => Navigator.of(widget.sheetContext).pop(),
+                onPressed: () => Navigator.of(sheetContext).pop(),
                 icon: const Icon(Icons.close),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-
-          /// TOGGLE TABS (Content QR / Apple Store QR)
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: const EdgeInsets.all(4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _selectedQrIndex = 0),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: isContentQr
-                            ? selectedThemeData.primaryColor
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        "Content QR",
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: isContentQr ? Colors.white : Colors.grey,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _selectedQrIndex = 1),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: !isContentQr
-                            ? selectedThemeData.primaryColor
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        "Apple Store QR",
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: !isContentQr ? Colors.white : Colors.grey,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
           const SizedBox(height: 16),
 
-          /// QR CODE DISPLAY
+          /// ONE UNIVERSAL QR CODE DISPLAY
           Center(
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: const Color(0xFF111111),
                 borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: QrImageView(
-                data: currentQrLink,
-                size: 200,
+                data: universalLinkStr,
+                size: 210,
                 version: QrVersions.auto,
                 backgroundColor: const Color(0xFF111111),
                 eyeStyle: const QrEyeStyle(
@@ -247,83 +180,127 @@ class _ContentShareSheetBodyState extends State<_ContentShareSheetBody> {
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
 
-          Text(
-            currentCaption,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-
-          const SizedBox(height: 12),
-
-          /// LINK TEXT
-          SelectableText(
-            currentQrLink,
+          const Text(
+            "Scan to watch on Filmytell",
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
-              color: selectedThemeData.canvasColor,
+              fontWeight: FontWeight.w500,
+              color: Colors.white70,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          /// CLEAN UNIVERSAL LINK TEXT
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: SelectableText(
+              universalLinkStr,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: selectedThemeData.canvasColor,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
 
           const SizedBox(height: 20),
 
-          /// 🔥 SINGLE SHARE BUTTON
-          SizedBox(
-            height: 50,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: selectedThemeData.primaryColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+          /// ACTION BUTTONS: [ COPY LINK ] and [ SHARE ]
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: selectedThemeData.primaryColor,
+                      side: BorderSide(
+                        color: selectedThemeData.primaryColor.withValues(alpha: 0.8),
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: universalLinkStr),
+                      );
+                      if (!context.mounted) return;
+                      CustomToast.show(
+                        context,
+                        "Universal link copied to clipboard",
+                        isSuccess: true,
+                      );
+                    },
+                    icon: const Icon(Icons.copy_rounded, size: 18),
+                    label: const Text(
+                      "Copy Link",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ),
-                elevation: 4,
               ),
-              onPressed: () async {
-                await _shareFullContent(context, data);
-              },
-              icon: const Icon(Icons.share, color: Colors.white),
-              label: const Text(
-                "Share",
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: selectedThemeData.primaryColor,
+                      foregroundColor: Colors.white,
+                      elevation: 3,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () async {
+                      await _shareUniversalContent(context, data);
+                    },
+                    icon: const Icon(Icons.share_rounded, size: 18),
+                    label: const Text(
+                      "Share",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
+          const SizedBox(height: 10),
         ],
       ),
     );
   }
 
-  /// 🔥 FULL SHARE FUNCTION
-  Future<void> _shareFullContent(
-      BuildContext context, PreparedMovieShareData data) async {
+  /// SHARE UNIVERSAL CONTENT
+  Future<void> _shareUniversalContent(
+    BuildContext context,
+    PreparedMovieShareData data,
+  ) async {
     try {
-      final playStoreLink = AppConstant.playStoreLink;
-      final appStoreLink = AppConstant.appStoreLink;
-      final webAppLink = AppConstant.webAppLink;
-
-      final message = '''
-🎬 ${data.movie.title}
-
-Watch now 👇
-${data.qrLink}
-
-📲 Download App:
-iOS App Store: $appStoreLink
-Android Play Store: $playStoreLink
-Web: $webAppLink
-''';
+      final message = data.message;
 
       if (kIsWeb) {
         await SharePlus.instance.share(
           ShareParams(
             text: message,
-            subject: data.movie.title ?? 'FilmyTell',
+            subject: data.movie.title ?? 'Filmytell',
           ),
         );
         return;
@@ -334,6 +311,7 @@ Web: $webAppLink
       await SharePlus.instance.share(
         ShareParams(
           text: message,
+          subject: data.movie.title ?? 'Filmytell',
           files: paths.map((path) => XFile(path)).toList(),
         ),
       );

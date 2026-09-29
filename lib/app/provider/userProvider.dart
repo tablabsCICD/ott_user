@@ -41,6 +41,7 @@ class UserProvider extends BaseProvider {
   TextEditingController countryController = TextEditingController();
   TextEditingController stateController = TextEditingController();
   TextEditingController districtController = TextEditingController();
+  TextEditingController talukaController = TextEditingController();
   TextEditingController dobController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   TextEditingController confirmPasswordController = TextEditingController();
@@ -394,14 +395,18 @@ class UserProvider extends BaseProvider {
       "id": user!.id,
       "emailId": user.emailId,
       //  "mobileNumber": user.mobileNumber,
-      "country": countryController.text,
-      "state": stateController.text,
-      "district": districtController.text,
-      "city": cityController.text.trim(),
-      "taluka": cityController.text.trim(),
-      "officeBuilding": officeBuildingController.text,
-      "area": officeBuildingController.text,
-      "pincode": pinCodeDateController.text,
+      "country": countryController.text.trim(),
+      "state": stateController.text.trim(),
+      "district": districtController.text.trim(),
+      "city": cityController.text.trim().isNotEmpty
+          ? cityController.text.trim()
+          : talukaController.text.trim(),
+      "taluka": talukaController.text.trim().isNotEmpty
+          ? talukaController.text.trim()
+          : cityController.text.trim(),
+      "officeBuilding": officeBuildingController.text.trim(),
+      "area": officeBuildingController.text.trim(),
+      "pincode": pinCodeDateController.text.trim(),
     };
     log("data=====$data");
 
@@ -744,7 +749,10 @@ class UserProvider extends BaseProvider {
     if (country.isNotEmpty) countryController.text = country;
     if (state.isNotEmpty) stateController.text = state;
     if (district.isNotEmpty) districtController.text = district;
-    if (city.isNotEmpty) cityController.text = city;
+    if (city.isNotEmpty) {
+      cityController.text = city;
+      talukaController.text = city;
+    }
     if (pincode.isNotEmpty) pinCodeDateController.text = pincode;
 
     countryOptions = country.isEmpty ? [] : [country];
@@ -1336,6 +1344,7 @@ class UserProvider extends BaseProvider {
     final selectedDistrict = district.trim();
 
     cityController.clear();
+    talukaController.clear();
     pinCodeDateController.clear();
     talukaOptions = [];
     pincodeOptions = [];
@@ -1361,6 +1370,7 @@ class UserProvider extends BaseProvider {
     firstNameController.clear();
     lastNameController.clear();
     cityController.clear();
+    talukaController.clear();
     countryController.clear();
     addressSuggestions = [];
     countryOptions = [];

@@ -1337,10 +1337,16 @@ class _MovieCardState extends State<MovieCard> {
 DeepLinkContentType _shareContentTypeFor(Content movie) {
   switch ((movie.type ?? '').trim().toLowerCase()) {
     case 'short_film':
+    case 'shortfilm':
       return DeepLinkContentType.shortFilm;
     case 'series':
       return DeepLinkContentType.series;
+    case 'mini series':
+    case 'mini_series':
+    case 'miniseries':
+      return DeepLinkContentType.miniSeries;
     case 'short':
+    case 'shorts':
       return DeepLinkContentType.short;
     default:
       return DeepLinkContentType.movie;

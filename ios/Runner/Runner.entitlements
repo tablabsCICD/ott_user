@@ -6,6 +6,8 @@
 	<array>
 		<string>applinks:filmytell.com</string>
 		<string>applinks:www.filmytell.com</string>
+		<string>applinks:filmytell.in</string>
+		<string>applinks:www.filmytell.in</string>
 	</array>
 </dict>
 </plist>

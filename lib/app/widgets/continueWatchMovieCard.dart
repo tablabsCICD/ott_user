@@ -23,6 +23,7 @@ import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -1031,44 +1032,29 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   }
 
   void _shareMovie(BuildContext context, Content movie) async {
-    final shareLink = movie.id == null
-        ? (movie.trailerUrl ?? '')
-        : DeepLinkService.instance
-            .buildAppLink(
-              type: ContentType.normalize(movie.type) == ContentType.shortFilm
-                  ? DeepLinkContentType.shortFilm
-                  : DeepLinkContentType.movie,
-              id: movie.id!,
-            )
-            .toString();
-    final String shareText = '''
-🎬 ${movie.title ?? ''}
-
-${movie.description ?? ''}
-
-▶️ Watch here:
-$shareLink
-
-📲 Download Filmytell App now!
-'''
-        .trim();
-
-    if (kIsWeb) {
-      // Flutter Web fallback → Copy to Clipboard
-      await Clipboard.setData(ClipboardData(text: shareText));
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Share text copied to clipboard"),
-        ),
+    if (movie.id == null || movie.id! <= 0) {
+      CustomToast.show(
+        context,
+        "Content details are not available yet",
+        isSuccess: false,
       );
-    } else {
-      // Android / iOS / Desktop
-      await Share.share(
-        shareText,
-        subject: movie.title ?? "Movie",
-      );
+      return;
     }
+
+    final normalized = ContentType.normalize(movie.type);
+    final contentType = normalized == ContentType.shortFilm
+        ? DeepLinkContentType.shortFilm
+        : normalized == ContentType.series
+            ? DeepLinkContentType.series
+            : normalized == ContentType.miniSeries
+                ? DeepLinkContentType.miniSeries
+                : DeepLinkContentType.movie;
+
+    showContentShareSheet(
+      context,
+      movie,
+      contentType: contentType,
+    );
   }
 
   void _showGiftDialog(

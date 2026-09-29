@@ -10,6 +10,7 @@ import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/news%20page/NewsScreen.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/presentation/web_landing/designs/preview/landing_page_design_preview.dart';
+import 'package:ott/presentation/web_landing/screens/content_web_fallback_screen.dart';
 import 'package:ott/presentation/web_landing/screens/producer_learn_more_screen.dart';
 import 'package:ott/presentation/web_landing/screens/web_landing_screen.dart';
 
@@ -61,8 +62,30 @@ class RouteGenerator {
       if (uri != null) {
         ReferralService.instance.captureFromUri(uri);
         final pathLower = uri.path.trim().toLowerCase();
-        if (pathLower == '/register' || pathLower == 'register' || pathLower == '/login' || pathLower == 'login') {
+        if (pathLower == '/register' ||
+            pathLower == 'register' ||
+            pathLower == '/login' ||
+            pathLower == 'login') {
           return buildRoute(const LoginCard(), settings: settings);
+        }
+
+        // Check if universal content URL (e.g. /movie/123, /series/456, /miniseries/789, /short-film/101)
+        final targetUri = uri.hasScheme
+            ? uri
+            : Uri.tryParse('https://${DeepLinkService.httpsHost}${uri.path.startsWith('/') ? '' : '/'}${uri.path}');
+        if (targetUri != null) {
+          final target = DeepLinkService.instance.parseTarget(targetUri);
+          if (target != null && target.id != null && target.id! > 0) {
+            if (kIsWeb) {
+              return buildRoute(
+                ContentWebFallbackScreen(
+                  contentId: target.id!,
+                  contentType: target.type,
+                ),
+                settings: settings,
+              );
+            }
+          }
         }
       }
     }

@@ -268,12 +268,10 @@ class _HomePageState extends State<HomePage>
       return;
     }
 
-    // Stage 2: Personal Profile (First Name & Last Name)
+    // Stage 2: Personal Profile (Single Name field)
     final hasFirstName = userProvider.firstName != null &&
         userProvider.firstName!.trim().isNotEmpty;
-    final hasLastName = userProvider.lastName != null &&
-        userProvider.lastName!.trim().isNotEmpty;
-    if (!hasFirstName || !hasLastName) {
+    if (!hasFirstName) {
       stage2ProfilePopUp(context);
       return;
     }
@@ -2087,8 +2085,18 @@ class _HomePageState extends State<HomePage>
                     cursorColor: selectedThemeData.primaryColor,
                     controller: provider.dobController,
                     readOnly: true,
-                    onTap: () {
-                      _selectDate(provider);
+                    onTap: () async {
+                      DateTime? pickedDate = await showDatePicker(
+                        context: ctx,
+                        initialDate:
+                            DateTime.tryParse(provider.dobController.text) ??
+                                DateTime(2000, 1, 1),
+                        firstDate: DateTime(1900),
+                        lastDate: DateTime.now(),
+                      );
+                      if (pickedDate != null) {
+                        provider.setDate(pickedDate);
+                      }
                     },
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
@@ -2151,6 +2159,10 @@ class _HomePageState extends State<HomePage>
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setBool('isLoggedIn', true);
 
+                  if (provider.userObject.id != null) {
+                    await provider.getUserById(provider.userObject.id!);
+                  }
+
                   CustomToast.show(
                     context,
                     lang.profileUpdatedSuccessfully,
@@ -2187,20 +2199,18 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  // STAGE 2: Second App Open / Remaining Profile Information Popup (Name)
+  // STAGE 2: Second App Open / Remaining Profile Information Popup (Single Name Field)
   Future<void> stage2ProfilePopUp(BuildContext context) async {
     final formKey = GlobalKey<FormState>();
     final lang = AppLocalizations.of(context)!;
     final userProvider = Provider.of<UserProvider>(context, listen: false);
 
-    if (userProvider.firstNameController.text.trim().isEmpty) {
-      userProvider.firstNameController.text =
-          userProvider.userObject.firstName ?? "";
-    }
-    if (userProvider.lastNameController.text.trim().isEmpty) {
-      userProvider.lastNameController.text =
-          userProvider.userObject.lastName ?? "";
-    }
+    final initialFirst = userProvider.userObject.firstName ??
+        userProvider.firstNameController.text;
+    final initialLast =
+        userProvider.userObject.lastName ?? userProvider.lastNameController.text;
+    final initialFullName = '$initialFirst $initialLast'.trim();
+    final nameController = TextEditingController(text: initialFullName);
 
     await showDialog(
       context: context,
@@ -2226,25 +2236,22 @@ class _HomePageState extends State<HomePage>
               key: formKey,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   CustomTextField(
-                    controller: provider.firstNameController,
+                    controller: nameController,
                     isName: true,
-                    label: lang.firstName,
-                    hintText: lang.enterFirstName,
+                    label: 'Name',
+                    hintText: 'Enter your name',
                     isValidator: true,
                     textInputType: TextInputType.name,
                     capitalization: TextCapitalization.words,
-                  ),
-                  const SizedBox(height: 10),
-                  CustomTextField(
-                    controller: provider.lastNameController,
-                    isName: true,
-                    label: lang.lastName,
-                    hintText: lang.enterLastName,
-                    isValidator: true,
-                    textInputType: TextInputType.name,
-                    capitalization: TextCapitalization.words,
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return 'Name cannot be empty';
+                      }
+                      return null;
+                    },
                   ),
                 ],
               ),
@@ -2261,11 +2268,24 @@ class _HomePageState extends State<HomePage>
               ),
               onPressed: () async {
                 if (!formKey.currentState!.validate()) return;
+                final fullName = nameController.text.trim();
+                final parts = fullName.split(RegExp(r'\s+'));
+                final firstName = parts.first;
+                final lastName =
+                    parts.length > 1 ? parts.sublist(1).join(' ') : '';
+
+                provider.firstNameController.text = firstName;
+                provider.lastNameController.text = lastName;
+
                 var result = await provider.updateUserDetails();
                 if (!ctx.mounted) return;
                 if (result['success'] == true) {
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setBool('isLoggedIn', true);
+
+                  if (provider.userObject.id != null) {
+                    await provider.getUserById(provider.userObject.id!);
+                  }
 
                   CustomToast.show(
                     context,
@@ -2351,14 +2371,14 @@ class _HomePageState extends State<HomePage>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Use your current location?',
+                          'How would you like to add your address?',
                           style: TextStyle(
                             color: selectedThemeData.canvasColor,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         Row(
                           children: [
                             Expanded(
@@ -2366,18 +2386,13 @@ class _HomePageState extends State<HomePage>
                                 onPressed: provider.isFetchingCurrentLocation
                                     ? null
                                     : () async {
-                                        final confirmed =
-                                            await _showLocationConfirmationPrompt(ctx);
-                                        if (!ctx.mounted) return;
-                                        if (confirmed != true) return;
-
                                         final filled = await provider
                                             .useCurrentLocationFromGoogle();
                                         if (!ctx.mounted) return;
                                         if (filled) {
                                           CustomToast.show(
                                             ctx,
-                                            'Location filled successfully',
+                                            'Current address detected & filled',
                                             isSuccess: true,
                                           );
                                         } else {
@@ -2392,7 +2407,8 @@ class _HomePageState extends State<HomePage>
                                   backgroundColor:
                                       selectedThemeData.primaryColor,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 10, horizontal: 8),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(6),
                                   ),
@@ -2410,31 +2426,11 @@ class _HomePageState extends State<HomePage>
                                 label: Text(
                                   provider.isFetchingCurrentLocation
                                       ? 'Detecting...'
-                                      : 'YES',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () {
-                                  // Manual entry selected
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: selectedThemeData.canvasColor,
-                                  side: BorderSide(
-                                    color: selectedThemeData.canvasColor
-                                        .withValues(alpha: 0.3),
+                                      : 'Use Current Address',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'NO',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ),
@@ -2457,7 +2453,7 @@ class _HomePageState extends State<HomePage>
                       filled: true,
                       fillColor: selectedThemeData.cardColor,
                       labelText: 'Address',
-                      hintText: 'Search your address',
+                      hintText: 'Search or enter your address',
                       labelStyle:
                           TextStyle(color: selectedThemeData.canvasColor),
                       hintStyle: TextStyle(
@@ -2601,7 +2597,9 @@ class _HomePageState extends State<HomePage>
                   _buildEditableLocationDropdown(
                     context: context,
                     selectedThemeData: selectedThemeData,
-                    controller: provider.cityController,
+                    controller: provider.talukaController.text.isNotEmpty
+                        ? provider.talukaController
+                        : provider.cityController,
                     label: lang.taluka,
                     hintText: lang.enterTaluka,
                     options: provider.talukaOptions,
@@ -2637,6 +2635,10 @@ class _HomePageState extends State<HomePage>
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setBool('isLoggedIn', true);
 
+                  if (provider.userObject.id != null) {
+                    await provider.getUserById(provider.userObject.id!);
+                  }
+
                   CustomToast.show(
                     context,
                     lang.profileUpdatedSuccessfully,
@@ -2662,61 +2664,6 @@ class _HomePageState extends State<HomePage>
                   ),
                 ),
               ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<bool?> _showLocationConfirmationPrompt(BuildContext dialogContext) {
-    final selectedThemeData = Theme.of(dialogContext);
-
-    return showDialog<bool>(
-      context: dialogContext,
-      builder: (promptContext) {
-        return AlertDialog(
-          backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          title: Row(
-            children: [
-              Icon(
-                Icons.my_location,
-                color: selectedThemeData.primaryColor,
-              ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text('Confirm Location Detection'),
-              ),
-            ],
-          ),
-          content: Text(
-            'We detected your current location.\n\nWould you like to use your current location as your address?',
-            style: TextStyle(color: selectedThemeData.canvasColor),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(promptContext).pop(false),
-              child: Text(
-                'NO',
-                style: TextStyle(
-                  color: selectedThemeData.canvasColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: selectedThemeData.primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              onPressed: () => Navigator.of(promptContext).pop(true),
-              child: const Text('YES'),
             ),
           ],
         );
@@ -2852,17 +2799,5 @@ class _HomePageState extends State<HomePage>
         ],
       ),
     );
-  }
-
-  Future<void> _selectDate(UserProvider userProvider) async {
-    DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
-    );
-    if (pickedDate != null) {
-      userProvider.setDate(pickedDate);
-    }
   }
 }

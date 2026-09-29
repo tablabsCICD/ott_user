@@ -33,6 +33,7 @@ enum DeepLinkContentType {
   movie,
   shortFilm,
   series,
+  miniSeries,
   short,
   gift,
   register,
@@ -63,12 +64,15 @@ class DeepLinkService {
   static const String movieHost = 'movie';
   static const String shortFilmHost = 'short-film';
   static const String seriesHost = 'series';
+  static const String miniseriesHost = 'miniseries';
   static const String shortHost = 'short';
   static const String giftHost = 'gift';
   static const String registerHost = 'register';
   static const String loginHost = 'login';
   static const String httpsHost = 'filmytell.com';
   static const String httpsWwwHost = 'www.filmytell.com';
+  static const String httpsInHost = 'filmytell.in';
+  static const String httpsWwwInHost = 'www.filmytell.in';
   static const String ottPathPrefix = 'ott';
   static const String androidPackageName = 'com.filmytell.ott';
   static const String playStoreUrl =
@@ -171,11 +175,21 @@ class DeepLinkService {
     );
   }
 
+  /// Builds a clean universal URL without '/share/'.
+  /// Examples:
+  /// - https://filmytell.com/movie/123
+  /// - https://filmytell.com/series/456
+  /// - https://filmytell.com/miniseries/789
+  /// - https://filmytell.com/short-film/101
   Uri buildAppLink({
     required DeepLinkContentType type,
     required int id,
+    String? customHost,
   }) {
-    return Uri.https(httpsHost, '${_hostForType(type)}/$id');
+    return Uri.https(
+      customHost ?? httpsHost,
+      '${_hostForType(type)}/$id',
+    );
   }
 
   Uri buildPreferredQrLink({
@@ -300,15 +314,26 @@ class DeepLinkService {
 
   bool _isSupportedHttpHost(String rawHost) {
     final host = rawHost.trim().toLowerCase();
-    return host == httpsHost || host == httpsWwwHost;
+    return host == httpsHost ||
+        host == httpsWwwHost ||
+        host == httpsInHost ||
+        host == httpsWwwInHost ||
+        host.endsWith('.filmytell.com') ||
+        host.endsWith('.filmytell.in');
   }
 
   List<String> _normalizePathSegments(List<String> pathSegments) {
-    if (pathSegments.isNotEmpty &&
-        pathSegments.first.toLowerCase() == ottPathPrefix) {
-      return pathSegments.sublist(1);
+    var segments = pathSegments;
+    if (segments.isNotEmpty &&
+        segments.first.toLowerCase() == ottPathPrefix) {
+      segments = segments.sublist(1);
     }
-    return pathSegments;
+    // Backward compatibility: strip 'share' prefix if present (e.g. /share/movie/123 -> /movie/123)
+    if (segments.isNotEmpty &&
+        segments.first.toLowerCase() == 'share') {
+      segments = segments.sublist(1);
+    }
+    return segments;
   }
 
   List<String> _httpPathSegments(Uri uri) {
@@ -438,6 +463,7 @@ class DeepLinkService {
       case DeepLinkContentType.series:
         await _openSeriesDetails(navigator, target.id!);
         return;
+      case DeepLinkContentType.miniSeries:
       case DeepLinkContentType.short:
         await _openShortDetails(navigator, target.id!);
         return;
@@ -590,16 +616,25 @@ class DeepLinkService {
   DeepLinkContentType? _typeFromString(String? rawType) {
     switch ((rawType ?? '').trim().toLowerCase()) {
       case movieHost:
+      case 'movies':
         return DeepLinkContentType.movie;
       case shortFilmHost:
       case 'short_film':
       case 'shortfilm':
+      case 'shortfilms':
+      case 'short-films':
         return DeepLinkContentType.shortFilm;
       case seriesHost:
         return DeepLinkContentType.series;
+      case miniseriesHost:
+      case 'mini-series':
+      case 'mini_series':
+        return DeepLinkContentType.miniSeries;
       case shortHost:
+      case 'shorts':
         return DeepLinkContentType.short;
       case giftHost:
+      case 'gifts':
         return DeepLinkContentType.gift;
       case registerHost:
       case loginHost:
@@ -621,6 +656,8 @@ class DeepLinkService {
         return shortFilmHost;
       case DeepLinkContentType.series:
         return seriesHost;
+      case DeepLinkContentType.miniSeries:
+        return miniseriesHost;
       case DeepLinkContentType.short:
         return shortHost;
       case DeepLinkContentType.gift:

@@ -18,10 +18,11 @@ class PreparedMovieShareData {
     required this.deepLink,
     required this.qrLink,
     required this.qrCode,
-    required this.appStoreQrLink,
-    required this.appStoreQrCode,
     required this.message,
-  });
+    Uri? appStoreQrLink,
+    GeneratedQrCode? appStoreQrCode,
+  })  : appStoreQrLink = appStoreQrLink ?? qrLink,
+        appStoreQrCode = appStoreQrCode ?? qrCode;
 
   final Content movie;
   final DeepLinkContentType contentType;
@@ -59,22 +60,12 @@ class ShareService {
       backgroundColor: const Color(0xFF111111),
     );
 
-    final appStoreQrLink = Uri.parse(AppConstant.appStoreLink);
-    final appStoreQrCode = await QRService.instance.generatePng(
-      data: AppConstant.appStoreLink,
-      fileName: '${contentType.name}_${contentId}_appstore_qr.png',
-      foregroundColor: const Color(0xFFFFFFFF),
-      backgroundColor: const Color(0xFF111111),
-    );
-
     return PreparedMovieShareData(
       movie: movie,
       contentType: contentType,
       deepLink: shareLink,
       qrLink: qrLink,
       qrCode: qrCode,
-      appStoreQrLink: appStoreQrLink,
-      appStoreQrCode: appStoreQrCode,
       message: _buildShareMessage(
         movie: movie,
         contentType: contentType,
@@ -87,7 +78,7 @@ class ShareService {
     return SharePlus.instance.share(
       ShareParams(
         text: data.message,
-        subject: data.movie.title ?? 'Movie',
+        subject: data.movie.title ?? 'Filmytell',
       ),
     );
   }
@@ -101,7 +92,7 @@ class ShareService {
     return SharePlus.instance.share(
       ShareParams(
         text: data.message,
-        subject: '${data.movie.title ?? 'Movie'} QR',
+        subject: '${data.movie.title ?? 'Filmytell'} QR',
         files: <XFile>[qrFile],
       ),
     );
@@ -122,24 +113,8 @@ class ShareService {
   }
 
   Future<List<String>> downloadAllQrImages(PreparedMovieShareData data) async {
-    if (kIsWeb) {
-      _triggerWebDownload(data.qrCode.bytes, '${data.contentType.name}_${data.movie.id}_qr.png');
-      _triggerWebDownload(data.appStoreQrCode.bytes, '${data.contentType.name}_${data.movie.id}_appstore_qr.png');
-      return const <String>['browser download started'];
-    }
-
-    final directory = await getApplicationDocumentsDirectory();
-    final path1 =
-        '${directory.path}${Platform.pathSeparator}${data.contentType.name}_${data.movie.id}_qr.png';
-    final file1 = File(path1);
-    await file1.writeAsBytes(data.qrCode.bytes, flush: true);
-
-    final path2 =
-        '${directory.path}${Platform.pathSeparator}${data.contentType.name}_${data.movie.id}_appstore_qr.png';
-    final file2 = File(path2);
-    await file2.writeAsBytes(data.appStoreQrCode.bytes, flush: true);
-
-    return <String>[file1.path, file2.path];
+    final path = await downloadQrImage(data);
+    return <String>[path];
   }
 
   void _triggerWebDownload(Uint8List bytes, String fileName) {
@@ -183,6 +158,8 @@ class ShareService {
         return 'short film';
       case DeepLinkContentType.series:
         return 'series';
+      case DeepLinkContentType.miniSeries:
+        return 'mini series';
       case DeepLinkContentType.short:
         return 'short';
       case DeepLinkContentType.gift:
