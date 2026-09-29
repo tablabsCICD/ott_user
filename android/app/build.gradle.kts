@@ -138,8 +138,9 @@ dependencies {
     // Firebase BoM
     implementation(platform("com.google.firebase:firebase-bom:34.11.0"))
 
-    // Firebase Analytics
-    implementation("com.google.firebase:firebase-analytics")
+    // Firebase Analytics (Scoped to Mobile and Google TV)
+    add("mobileImplementation", "com.google.firebase:firebase-analytics")
+    add("tvImplementation", "com.google.firebase:firebase-analytics")
 
     // Desugaring support
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")

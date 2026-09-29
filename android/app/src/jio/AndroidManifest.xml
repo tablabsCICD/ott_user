@@ -14,6 +14,9 @@
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />
     <uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID" tools:node="remove" />
     <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ID" tools:node="remove" />
+    <uses-permission android:name="com.google.android.gms.permission.AD_SERVICES_ID" tools:node="remove" />
+    <uses-permission android:name="com.google.android.gms.permission.AD_SERVICES_ATTRIBUTION" tools:node="remove" />
 
     <!-- Leanback TV declarations -->
     <uses-feature
@@ -51,6 +54,19 @@
         android:banner="@drawable/tv_banner"
         android:isGame="false"
         tools:replace="android:banner">
+
+        <!-- Remove Firebase auto-init provider and messaging services from non-GMS STB build -->
+        <provider
+            android:name="com.google.firebase.provider.FirebaseInitProvider"
+            tools:node="remove" />
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            tools:node="remove" />
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            tools:node="remove" />
 
         <!-- Some Android/Google TV / Jio STB chipsets reject Impeller's Vulkan buffer
              formats. Keep the proven Skia/OpenGL renderer isolated to TV/STB. -->
