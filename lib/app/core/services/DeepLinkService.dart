@@ -12,6 +12,7 @@ import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/route/navigation_service.dart';
 import 'package:ott/app/route/routes/app_routes.dart';
 import 'package:ott/app/widgets/gift_claim_dialog.dart';
+import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:provider/provider.dart';
 import 'package:uni_links/uni_links.dart';
@@ -69,9 +70,10 @@ class DeepLinkService {
   static const String giftHost = 'gift';
   static const String registerHost = 'register';
   static const String loginHost = 'login';
-  static const String httpsHost = 'filmytell.com';
-  static const String httpsWwwHost = 'www.filmytell.com';
   static const String httpsInHost = 'filmytell.in';
+  static const String httpsHost = 'filmytell.in';
+  static const String httpsLegacyHost = 'filmytell.com';
+  static const String httpsWwwHost = 'www.filmytell.com';
   static const String httpsWwwInHost = 'www.filmytell.in';
   static const String ottPathPrefix = 'ott';
   static const String androidPackageName = 'com.filmytell.ott';
@@ -314,12 +316,12 @@ class DeepLinkService {
 
   bool _isSupportedHttpHost(String rawHost) {
     final host = rawHost.trim().toLowerCase();
-    return host == httpsHost ||
-        host == httpsWwwHost ||
-        host == httpsInHost ||
-        host == httpsWwwInHost ||
-        host.endsWith('.filmytell.com') ||
-        host.endsWith('.filmytell.in');
+    return host == 'filmytell.in' ||
+        host == 'www.filmytell.in' ||
+        host == 'filmytell.com' ||
+        host == 'www.filmytell.com' ||
+        host.endsWith('.filmytell.in') ||
+        host.endsWith('.filmytell.com');
   }
 
   List<String> _normalizePathSegments(List<String> pathSegments) {
@@ -531,6 +533,13 @@ class DeepLinkService {
         name: 'DeepLinkService',
         level: 900,
       );
+      if (navigator.mounted) {
+        CustomToast.show(
+          navigator.context,
+          'Movie details are not available or have been removed',
+          isSuccess: false,
+        );
+      }
       return;
     }
 
@@ -567,6 +576,13 @@ class DeepLinkService {
         name: 'DeepLinkService',
         level: 900,
       );
+      if (navigator.mounted) {
+        CustomToast.show(
+          navigator.context,
+          'Series details are not available or have been removed',
+          isSuccess: false,
+        );
+      }
       return;
     }
 
@@ -599,6 +615,13 @@ class DeepLinkService {
         name: 'DeepLinkService',
         level: 900,
       );
+      if (navigator.mounted) {
+        CustomToast.show(
+          navigator.context,
+          'Content details are not available or have been removed',
+          isSuccess: false,
+        );
+      }
       return;
     }
 

@@ -135,10 +135,6 @@ class ShareService {
     final buffer = StringBuffer()
       ..writeln('🎬 ${movie.title ?? contentLabel}')
       ..writeln()
-      ..writeln(movie.description?.trim().isNotEmpty == true
-          ? movie.description!.trim()
-          : 'Open this $contentLabel in the Filmytell app.')
-      ..writeln()
       ..writeln('Watch now 👇')
       ..writeln(deepLink.toString())
       ..writeln()

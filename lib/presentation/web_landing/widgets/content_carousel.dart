@@ -81,12 +81,27 @@ class _ContentCarouselState extends State<ContentCarousel> {
     final isMobile = width < 600;
     final isTablet = width >= 600 && width < 1024;
     final horizontalPadding = isMobile ? 18.0 : (isTablet ? 32.0 : 56.0);
-    final cardWidth = isMobile
-        ? (width < 380 ? 132.0 : 144.0)
-        : (isTablet
-            ? 164.0
-            : (width >= 1360 ? 204.0 : 184.0));
-    final cardHeight = cardWidth * 1.5; // Precise 2:3 cinematic poster ratio
+
+    // Responsive card dimensions: wide landscape cards matching Hero Banner aspect ratio (1.38)
+    final double cardWidth;
+    if (width >= 1600) {
+      cardWidth = 340.0; // Ultra-wide / 4K monitors (Height: 246px)
+    } else if (width >= 1280) {
+      cardWidth = 300.0; // Standard Full HD desktop (Height: 217px)
+    } else if (width >= 1024) {
+      cardWidth = 260.0; // Laptops / compact desktop (Height: 188px)
+    } else if (width >= 768) {
+      cardWidth = 225.0; // Tablets landscape / iPads (Height: 163px)
+    } else if (width >= 480) {
+      cardWidth = 195.0; // Large phones / small tablets (Height: 141px)
+    } else if (width >= 360) {
+      cardWidth = 170.0; // Standard mobile (Height: 123px)
+    } else {
+      cardWidth = 150.0; // Compact mobile (Height: 108px)
+    }
+
+    final cardHeight = cardWidth / 1.38; // Wide 1.38 aspect ratio matching Hero Banner
+    final containerHeight = cardHeight + 36.0; // Clearance for 1.04x hover scale & shadows
 
     return RepaintBoundary(
       child: Padding(
@@ -114,10 +129,13 @@ class _ContentCarouselState extends State<ContentCarousel> {
                 }
               },
               child: SizedBox(
-                height: cardHeight + 24,
+                height: containerHeight,
                 child: ListView.separated(
                   controller: _controller,
-                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: 8.0,
+                  ),
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
                   itemCount: widget.items.length +
@@ -137,10 +155,11 @@ class _ContentCarouselState extends State<ContentCarousel> {
                     }
 
                     final rank = widget.numbered ? index + 1 : null;
+                    final isSmallMobile = cardWidth < 120;
                     final rankOffset = rank != null
                         ? (rank >= 10
-                            ? (isMobile ? 32.0 : 48.0)
-                            : (isMobile ? 22.0 : 34.0))
+                            ? (isSmallMobile ? 24.0 : (isMobile ? 28.0 : (cardWidth >= 170 ? 44.0 : 36.0)))
+                            : (isSmallMobile ? 16.0 : (isMobile ? 20.0 : (cardWidth >= 170 ? 30.0 : 24.0))))
                         : 0.0;
 
                     return SizedBox(

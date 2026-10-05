@@ -119,7 +119,7 @@ class _SplashScreenState extends State<SplashScreen> {
       ),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
+      if (mounted && isLoggedIn) {
         DeepLinkService.instance.consumePendingNavigation();
       }
     });

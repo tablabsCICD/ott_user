@@ -95,7 +95,7 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
                 if (poster != null)
                   CachedNetworkImage(
                     imageUrl: poster,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.fill,
                     placeholder: (context, url) => Shimmer.fromColors(
                       baseColor: isDark ? const Color(0xFF1E2230) : const Color(0xFFE2E8F0),
                       highlightColor: isDark ? const Color(0xFF2A3045) : const Color(0xFFF1F5F9),

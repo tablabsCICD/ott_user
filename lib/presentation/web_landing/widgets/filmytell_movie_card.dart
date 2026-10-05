@@ -34,11 +34,12 @@ class _FilmytellMovieCardState extends State<FilmytellMovieCard> {
     final lang = AppLocalizations.of(context)!;
     final poster = _posterFor(widget.content);
     final hasRank = widget.rank != null;
-    final isMobile = widget.width < 150;
+    final isMobile = widget.width < 200;
+    final isSmallMobile = widget.width < 165;
     final rankOffset = hasRank
         ? (widget.rank! >= 10
-            ? (isMobile ? 32.0 : 48.0)
-            : (isMobile ? 22.0 : 34.0))
+            ? (isSmallMobile ? 26.0 : (isMobile ? 32.0 : (widget.width >= 260 ? 46.0 : 38.0)))
+            : (isSmallMobile ? 18.0 : (isMobile ? 22.0 : (widget.width >= 260 ? 32.0 : 26.0))))
         : 0.0;
     final price = widget.content.price;
 
@@ -68,7 +69,7 @@ class _FilmytellMovieCardState extends State<FilmytellMovieCard> {
                     width: widget.width,
                     height: widget.height,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: _hovered
                             ? Colors.white.withValues(alpha: 0.45)
@@ -84,7 +85,7 @@ class _FilmytellMovieCardState extends State<FilmytellMovieCard> {
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(7),
+                      borderRadius: BorderRadius.circular(11),
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
@@ -117,12 +118,13 @@ class _FilmytellMovieCardState extends State<FilmytellMovieCard> {
                           // Rental Price Pill if present
                           if (price != null)
                             Positioned(
-                              right: 6,
-                              bottom: 6,
+                              right: isMobile ? 4 : 6,
+                              bottom: isMobile ? 4 : 6,
                               child: _RentCardButton(
                                 label:
                                     '${lang.rent} Rs ${price.toStringAsFixed(0)}',
                                 onTap: widget.onTap,
+                                isCompact: isMobile,
                               ),
                             ),
                         ],
@@ -164,10 +166,12 @@ class _RentCardButton extends StatelessWidget {
   const _RentCardButton({
     required this.label,
     required this.onTap,
+    this.isCompact = false,
   });
 
   final String label;
   final VoidCallback onTap;
+  final bool isCompact;
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +181,10 @@ class _RentCardButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 7.0 : 9.0,
+            vertical: isCompact ? 3.0 : 4.5,
+          ),
           decoration: BoxDecoration(
             color: FilmytellTheme.primary.withValues(alpha: 0.95),
             borderRadius: BorderRadius.circular(999),
@@ -193,20 +200,20 @@ class _RentCardButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.local_offer_rounded,
                 color: Colors.white,
-                size: 11,
+                size: isCompact ? 9.5 : 11.0,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 3.5),
               Flexible(
                 child: Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 11.5,
+                    fontSize: isCompact ? 10.0 : 11.5,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -232,8 +239,8 @@ class _NetflixRankNumeral extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDoubleDigit = rank >= 10;
-    // Scaled to compact ~40% of poster card height for clean readability
-    final fontSize = height * 0.40;
+    // Scaled for wide landscape card height
+    final fontSize = height * 0.48;
     final strokeWidth = (fontSize * 0.052).clamp(2.5, 3.8);
     final text = '$rank';
 

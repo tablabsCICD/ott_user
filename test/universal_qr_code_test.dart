@@ -26,7 +26,7 @@ void main() {
         type: DeepLinkContentType.movie,
         id: 123,
       );
-      expect(url.toString(), 'https://filmytell.com/movie/123');
+      expect(url.toString(), 'https://filmytell.in/movie/123');
       expect(url.toString().contains('/share/'), isFalse);
     });
 
@@ -35,7 +35,7 @@ void main() {
         type: DeepLinkContentType.series,
         id: 456,
       );
-      expect(url.toString(), 'https://filmytell.com/series/456');
+      expect(url.toString(), 'https://filmytell.in/series/456');
       expect(url.toString().contains('/share/'), isFalse);
     });
 
@@ -44,7 +44,7 @@ void main() {
         type: DeepLinkContentType.miniSeries,
         id: 789,
       );
-      expect(url.toString(), 'https://filmytell.com/miniseries/789');
+      expect(url.toString(), 'https://filmytell.in/miniseries/789');
       expect(url.toString().contains('/share/'), isFalse);
     });
 
@@ -53,7 +53,7 @@ void main() {
         type: DeepLinkContentType.shortFilm,
         id: 101,
       );
-      expect(url.toString(), 'https://filmytell.com/short-film/101');
+      expect(url.toString(), 'https://filmytell.in/short-film/101');
       expect(url.toString().contains('/share/'), isFalse);
     });
 
@@ -192,7 +192,7 @@ void main() {
       );
 
       // Verify QR link matches clean universal URL
-      expect(shareData.qrLink.toString(), 'https://filmytell.com/movie/123');
+      expect(shareData.qrLink.toString(), 'https://filmytell.in/movie/123');
       expect(shareData.qrLink.toString().contains('/share/'), isFalse);
 
       // Verify QR Code image is generated
@@ -200,7 +200,7 @@ void main() {
 
       // Verify share message contains title, universal link, and official store links
       expect(shareData.message.contains('Universal Cinema'), isTrue);
-      expect(shareData.message.contains('https://filmytell.com/movie/123'), isTrue);
+      expect(shareData.message.contains('https://filmytell.in/movie/123'), isTrue);
       expect(shareData.message.contains(AppConstant.playStoreLink), isTrue);
       expect(shareData.message.contains(AppConstant.appStoreLink), isTrue);
     });

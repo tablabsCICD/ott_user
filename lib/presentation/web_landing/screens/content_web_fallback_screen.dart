@@ -133,9 +133,21 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
   }
 
   bool get _isIOS {
-    if (!kIsWeb) return defaultTargetPlatform == TargetPlatform.iOS;
-    final ua = (Uri.base.queryParameters['platform'] ?? '').toLowerCase();
-    return ua == 'ios';
+    if (defaultTargetPlatform == TargetPlatform.iOS) return true;
+    if (kIsWeb) {
+      final ua = (Uri.base.queryParameters['platform'] ?? '').toLowerCase();
+      if (ua == 'ios' || ua == 'iphone' || ua == 'ipad') return true;
+    }
+    return false;
+  }
+
+  bool get _isAndroid {
+    if (defaultTargetPlatform == TargetPlatform.android) return true;
+    if (kIsWeb) {
+      final ua = (Uri.base.queryParameters['platform'] ?? '').toLowerCase();
+      if (ua == 'android') return true;
+    }
+    return false;
   }
 
   Uri get _universalUrl {
@@ -152,14 +164,14 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
     );
   }
 
-  void _openStoreLink(String url) async {
+  Future<void> _openStoreLink(String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 
-  void _openAppDirectly() async {
+  Future<void> _openAppDirectly() async {
     final schemeUri = _appSchemeUri;
     try {
       if (await canLaunchUrl(schemeUri)) {
@@ -170,9 +182,9 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
 
     // Fallback to platform store if native app open fails
     if (_isIOS) {
-      _openStoreLink(AppConstant.appStoreLink);
+      await _openStoreLink(AppConstant.appStoreLink);
     } else {
-      _openStoreLink(AppConstant.playStoreLink);
+      await _openStoreLink(AppConstant.playStoreLink);
     }
   }
 
