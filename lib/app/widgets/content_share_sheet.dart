@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/ShareService.dart';
 import 'package:ott/app/pages/movie%20details%20page/component/actionButtonWidget.dart';
@@ -122,6 +121,7 @@ class _ContentShareSheetBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final selectedThemeData =
         Provider.of<ThemeProvider>(context, listen: false).getTheme;
+    final universalLinkStr = data.qrLink.toString();
 
     return SingleChildScrollView(
       child: Column(
@@ -146,19 +146,26 @@ class _ContentShareSheetBody extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
-          /// QR CODE
+          /// ONE UNIVERSAL QR CODE DISPLAY
           Center(
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: const Color(0xFF111111),
                 borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: QrImageView(
-                data: data.qrLink.toString(),
-                size: 220,
+                data: universalLinkStr,
+                size: 210,
                 version: QrVersions.auto,
                 backgroundColor: const Color(0xFF111111),
                 eyeStyle: const QrEyeStyle(
@@ -173,91 +180,140 @@ class _ContentShareSheetBody extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
 
           const Text(
-            "Scan to watch instantly",
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-
-          const SizedBox(height: 16),
-
-          /// LINK TEXT
-          SelectableText(
-            data.qrLink.toString(),
+            "Scan to watch on Filmytell",
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
-              color: selectedThemeData.canvasColor,
+              fontWeight: FontWeight.w500,
+              color: Colors.white70,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          /// CLEAN UNIVERSAL LINK TEXT
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: SelectableText(
+              universalLinkStr,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: selectedThemeData.canvasColor,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
 
           const SizedBox(height: 20),
 
-          /// 🔥 SINGLE SHARE BUTTON
-          SizedBox(
-            height: 50,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: selectedThemeData.primaryColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+          /// ACTION BUTTONS: [ COPY LINK ] and [ SHARE ]
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: selectedThemeData.primaryColor,
+                      side: BorderSide(
+                        color: selectedThemeData.primaryColor.withValues(alpha: 0.8),
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: universalLinkStr),
+                      );
+                      if (!context.mounted) return;
+                      CustomToast.show(
+                        context,
+                        "Universal link copied to clipboard",
+                        isSuccess: true,
+                      );
+                    },
+                    icon: const Icon(Icons.copy_rounded, size: 18),
+                    label: const Text(
+                      "Copy Link",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ),
-                elevation: 4,
               ),
-              onPressed: () async {
-                await _shareFullContent(context, data);
-              },
-              icon: const Icon(Icons.share, color: Colors.white),
-              label: const Text(
-                "Share",
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: selectedThemeData.primaryColor,
+                      foregroundColor: Colors.white,
+                      elevation: 3,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () async {
+                      await _shareUniversalContent(context, data);
+                    },
+                    icon: const Icon(Icons.share_rounded, size: 18),
+                    label: const Text(
+                      "Share",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
+          const SizedBox(height: 10),
         ],
       ),
     );
   }
 
-  /// 🔥 FULL SHARE FUNCTION
-  Future<void> _shareFullContent(
-      BuildContext context, PreparedMovieShareData data) async {
+  /// SHARE UNIVERSAL CONTENT
+  Future<void> _shareUniversalContent(
+    BuildContext context,
+    PreparedMovieShareData data,
+  ) async {
     try {
-      final playStoreLink = AppConstant.playStoreLink;
-      final webAppLink = AppConstant.webAppLink;
-
-      final message = '''
-🎬 ${data.movie.title}
-
-Watch now 👇
-${data.qrLink}
-
-📲 Download App:
-Android: $playStoreLink
-Web: $webAppLink
-''';
+      final message = data.message;
 
       if (kIsWeb) {
         await SharePlus.instance.share(
           ShareParams(
             text: message,
-            subject: data.movie.title ?? 'FilmyTell',
+            subject: data.movie.title ?? 'Filmytell',
           ),
         );
         return;
       }
 
-      final path = await ShareService.instance.downloadQrImage(data);
+      final paths = await ShareService.instance.downloadAllQrImages(data);
 
-      await Share.shareXFiles(
-        [XFile(path)],
-        text: message,
+      await SharePlus.instance.share(
+        ShareParams(
+          text: message,
+          subject: data.movie.title ?? 'Filmytell',
+          files: paths.map((path) => XFile(path)).toList(),
+        ),
       );
     } catch (e) {
       if (kIsWeb) {
@@ -271,6 +327,7 @@ Web: $webAppLink
         return;
       }
 
+      if (!context.mounted) return;
       CustomToast.show(
         context,
         "Failed to share content",

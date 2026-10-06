@@ -394,7 +394,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get viewersEntertainmentDescription =>
-      'अपनी पसंद की फिल्में और सीरीज़ खरीदें या उपहार दें। किसी सदस्यता की आवश्यकता नहीं है। ऑफलाइन देखने के लिए सामग्री डाउनलोड करें।';
+      'फिल्में, सीरीज़, शॉर्ट फिल्में रेंट पर लें और गिफ्ट करें। कोई सब्सक्रिप्शन नहीं, कोई विज्ञापन नहीं। केवल शुद्ध मनोरंजन।';
 
   @override
   String get createAccountMobileOtp => 'मोबाइल OTP के साथ खाता बनाएं';
@@ -645,4 +645,58 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get everyDay => 'हर दिन';
+
+  @override
+  String get shortFilm => 'शॉर्ट फिल्म';
+
+  @override
+  String get cookies => 'कुकीज़';
+
+  @override
+  String get accountDeletion => 'खाता हटाना';
+
+  @override
+  String get oneOttEcosystem =>
+      'दर्शकों और रचनाकारों के लिए एक ओटीटी इकोसिस्टम';
+
+  @override
+  String get oneOttEcosystemDescription =>
+      'सुरक्षित स्ट्रीमिंग, प्रति-फिल्म एक्सेस, उपहार, प्रोडक्शन हाउस पब्लिशिंग, प्रमोटर ग्रोथ टूल्स और मल्टी-डिवाइस मनोरंजन।';
+
+  @override
+  String get readMore => 'और पढ़ें';
+
+  @override
+  String get readLess => 'कम पढ़ें';
+
+  @override
+  String get step => 'चरण';
+
+  @override
+  String get enterEmailAddress => 'कृपया ईमेल दर्ज करें';
+
+  @override
+  String get enterValidEmailAddress => 'कृपया मान्य ईमेल दर्ज करें';
+
+  @override
+  String get enterPhoneNumber => 'कृपया फ़ोन नंबर दर्ज करें';
+
+  @override
+  String get enterValidPhoneNumber => 'कृपया मान्य फ़ोन नंबर दर्ज करें';
+
+  @override
+  String get enterMessage => 'कृपया संदेश दर्ज करें';
+
+  @override
+  String get emailSentSuccessfully => 'ईमेल सफलतापूर्वक भेजा गया।';
+
+  @override
+  String get failedToSendEmail =>
+      'ईमेल भेजने में विफल। कृपया पुनः प्रयास करें।';
+
+  @override
+  String get message => 'संदेश';
+
+  @override
+  String get phoneNumber => 'फ़ोन नंबर';
 }

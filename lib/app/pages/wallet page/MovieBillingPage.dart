@@ -106,7 +106,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                       return Column(
                         children: [
                           const Spacer(),
-                          Icon(
+                          const Icon(
                             Icons.account_balance_wallet,
                             size: 80,
                             color: Colors.white38,
@@ -185,8 +185,6 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                               padding: const EdgeInsets.all(12),
                               child: Row(
                                 children: [
-                                  // Image.asset(ImageConstant.coin, width: 22),
-                                  //const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
                                       "Wallet: ₹ ${provider.walletBalance.toStringAsFixed(0)}",
@@ -339,8 +337,6 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   tx.date ?? 0);
 
                               return ListTile(
-                                // leading:
-                                //     Image.asset(ImageConstant.coin, width: 22),
                                 title: Text(tx.status ?? "NA",
                                     style: const TextStyle(
                                         fontWeight: FontWeight.w600)),

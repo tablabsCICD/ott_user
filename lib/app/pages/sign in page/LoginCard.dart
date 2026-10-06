@@ -18,6 +18,8 @@ import 'package:ott/l10n/app_localizations.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:provider/provider.dart';
 import 'package:sms_autofill/sms_autofill.dart';
+import 'package:ott/app/core/services/referral_service.dart';
+import 'package:ott/app/provider/language_provider.dart';
 
 class LoginCard extends StatefulWidget {
   const LoginCard({super.key});
@@ -57,6 +59,7 @@ class _LoginCardState extends State<LoginCard>
   Timer? _resendTimer;
   Timer? _otpAutoFillTimeoutTimer;
   final Stopwatch _screenLoadWatch = Stopwatch();
+  String? _pendingReferralCode;
 
   String selectedCode = '+91';
 
@@ -69,7 +72,6 @@ class _LoginCardState extends State<LoginCard>
     _screenLoadWatch.start();
     _mobileFocusNode.addListener(_handleInputFocusChanged);
     _otpFocusNode.addListener(_handleInputFocusChanged);
-
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -77,7 +79,7 @@ class _LoginCardState extends State<LoginCard>
     _pulseAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
-
+    _checkPendingReferralCode();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (kDebugMode) {
         log(
@@ -116,6 +118,15 @@ class _LoginCardState extends State<LoginCard>
     _mobileController.dispose();
     _otpController.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkPendingReferralCode() async {
+    final code = await ReferralService.instance.getPendingReferralCode();
+    if (mounted && code != _pendingReferralCode) {
+      setState(() {
+        _pendingReferralCode = code;
+      });
+    }
   }
 
   @override
@@ -1266,6 +1277,7 @@ class _LoginCardState extends State<LoginCard>
           mobile,
           otp,
           context: context,
+          referralCode: _pendingReferralCode,
         );
         _logOtpPerformance(
           'Verify OTP action completed in ${actionWatch.elapsedMilliseconds}ms',
@@ -1284,6 +1296,13 @@ class _LoginCardState extends State<LoginCard>
           );
 
           if (!mounted) return;
+          final user = userProvider.userObj;
+          final langProvider =
+              Provider.of<LanguageProvider>(context, listen: false);
+          langProvider.setUserLanguages(user.selectedLanguages ?? []);
+          log(user.selectedLanguages.toString());
+
+          CustomToast.show(context, lang.loginSuccessfully, isSuccess: true);
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
@@ -1358,8 +1377,7 @@ class _LoginCardState extends State<LoginCard>
       if (mounted) {
         setState(() => _otpHelperText = 'Waiting for OTP SMS...');
       }
-    } catch (error, stackTrace) {
-      debugPrintStack(label: 'Resend OTP Error', stackTrace: stackTrace);
+    } catch (_) {
       if (!mounted) return;
       CustomToast.show(
         context,
@@ -1401,9 +1419,7 @@ class _LoginCardState extends State<LoginCard>
         });
       }
     } catch (error) {
-      if (kDebugMode) {
-        debugPrint('OTP auto-fill listener failed: $error');
-      }
+      if (kDebugMode) {}
       if (mounted) {
         setState(() {
           _isListeningForOtp = false;

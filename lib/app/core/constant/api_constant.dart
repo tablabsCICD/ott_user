@@ -1,14 +1,11 @@
 class ApiConstant {
   static const String baseUrl = "https://filmytell.com/ott/";
 
-  /*  static const String baseUrl =
-      "http://ec2-13-201-27-141.ap-south-1.compute.amazonaws.com:8080/ott/";
- */
-
   static String twoStepLogin = "${baseUrl}auth/two-step/login";
   static String twoStepVerifyOtp = "${baseUrl}auth/two-step/verify-otp";
 
   static String login = "${baseUrl}auth/session/login";
+  static String legacyLogin = "${baseUrl}user/email/login2";
   static String sessionLogout = "${baseUrl}auth/session/logout";
   static String activeDevices = "${baseUrl}auth/session/devices";
   static String forceLogoutDevice(sessionRecordId) =>
@@ -21,7 +18,8 @@ class ApiConstant {
   static String antiPiracyDevices = "${baseUrl}anti-piracy/devices";
   static String antiPiracyDevice(String deviceId) =>
       "$antiPiracyDevices/${Uri.encodeComponent(deviceId)}";
-  static String signedPlaybackUrl = "${baseUrl}anti-piracy/playback/signed-url";
+  static const String signedPlaybackUrl =
+      "${baseUrl}anti-piracy/playback/signed-url";
   static String playbackAnalytics = "${baseUrl}anti-piracy/playback/analytics";
   static String currentWatermark = "${baseUrl}watermark/current";
   static String registration = '${baseUrl}user/RegisterUser';
@@ -38,7 +36,7 @@ class ApiConstant {
     required appVersion,
     deviceMetadata,
     deviceToken,
-    referralCode,
+    String? referralCode,
   }) {
     final query = <String, String>{
       'username': mobileNum.toString(),
@@ -52,8 +50,8 @@ class ApiConstant {
         'deviceMetadata': deviceMetadata.toString(),
       if (deviceToken != null && deviceToken.toString().trim().isNotEmpty)
         'deviceToken': deviceToken.toString(),
-      if (referralCode != null && referralCode.toString().trim().isNotEmpty)
-        'referralCode': referralCode.toString().trim(),
+      if (referralCode != null && referralCode.trim().isNotEmpty)
+        'referralCode': referralCode.trim(),
     };
 
     return Uri.parse("${baseUrl}userNew/VerifyOtpJWT")
@@ -124,6 +122,15 @@ class ApiConstant {
   }
 
   static String verifyWalletPayment = "${baseUrl}api/razorpay/verify-payment";
+
+  static String createStripeCheckoutSession(double amount, int userId,
+      {String currency = 'USD'}) {
+    final normalizedAmount =
+        amount == amount.truncateToDouble() ? amount.toInt() : amount;
+    return "${baseUrl}api/stripe/create-checkout-session?amount=$normalizedAmount&customerId=$userId&currency=$currency";
+  }
+
+  static String verifyStripePayment = "${baseUrl}api/stripe/verify-payment";
   static String withdrawMoneyFromWallet(userId, amount, contentId) =>
       "${baseUrl}deduct?userId=$userId&amount=$amount&contentId=$contentId";
   static String getWalletBalanceByUserId(userId) =>

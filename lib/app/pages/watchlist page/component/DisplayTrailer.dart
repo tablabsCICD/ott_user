@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:media_kit/media_kit.dart';
+import 'package:media_kit/media_kit.dart' hide PlayerState;
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ott/app/core/utils/direct_trailer_source.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
@@ -27,6 +27,23 @@ String? _extractYoutubeId(String urlOrId) {
 
   final converted = YoutubePlayer.convertUrlToId(value);
   if (converted != null && converted.isNotEmpty) return converted;
+
+  final uri = Uri.tryParse(value);
+  if (uri != null) {
+    final segments = uri.pathSegments.where((part) => part.isNotEmpty).toList();
+    if ((uri.host.contains('youtube.com') || uri.host == 'youtu.be') &&
+        segments.isNotEmpty) {
+      final candidate = uri.host == 'youtu.be'
+          ? segments.first
+          : segments.first == 'shorts' && segments.length > 1
+              ? segments[1]
+              : null;
+      if (candidate != null &&
+          RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(candidate)) {
+        return candidate;
+      }
+    }
+  }
 
   final looksLikeVideoId = RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(value);
   return looksLikeVideoId ? value : null;
@@ -113,6 +130,11 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     if (_hasUrl) _initPlayer();
   }
 
@@ -128,6 +150,11 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
   }
 
   Future<void> _initPlayer() async {
+    if (kDebugMode) {
+      debugPrint(_youtubeId == null
+          ? 'TRAILER_FLOW: Opening direct trailer player'
+          : 'TRAILER_FLOW: Opening YouTube trailer player');
+    }
     SecurityDebugLog.event(
       'TRAILER',
       'Initializing trailer from the direct backend URL; signed playback API is intentionally bypassed.',
@@ -140,6 +167,7 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
           autoPlay: true,
           mute: false,
           loop: false,
+          hideControls: true,
         ),
       )..addListener(() {
           if (!mounted) return;
@@ -167,25 +195,19 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
       try {
         await controller.initialize();
         await controller.setVolume(_isMuted ? 0 : 1);
-        controller.addListener(() {
-          if (!mounted) return;
-          controller.value.isPlaying
-              ? WakelockPlus.enable()
-              : WakelockPlus.disable();
-          setState(() {});
-        });
         if (!mounted) {
           await controller.dispose();
           return;
         }
         _androidController = controller;
+        controller.addListener(_onAndroidValueChanged);
         await controller.play();
         WakelockPlus.enable();
         setState(() => _initialized = true);
         _scheduleHideControls();
         return;
-      } catch (error, stackTrace) {
-        debugPrint('Android trailer ExoPlayer error: $error\n$stackTrace');
+      } catch (error) {
+
         await controller.dispose();
         if (mounted) setState(() => _hasError = true);
         return;
@@ -221,7 +243,7 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
           if (mounted) setState(() {});
         }))
         ..add(player.stream.error.listen((error) {
-          debugPrint('Trailer media_kit error: $error');
+
           if (mounted) setState(() => _hasError = true);
         }));
 
@@ -244,7 +266,7 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
       });
       _scheduleHideControls();
     } catch (error) {
-      debugPrint('Trailer init error: $error');
+
       await player.dispose();
       if (mounted) setState(() => _hasError = true);
     }
@@ -339,14 +361,26 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
       await player.dispose();
     }
     if (androidController != null) {
+      androidController.removeListener(_onAndroidValueChanged);
       await androidController.pause();
       await androidController.dispose();
     }
   }
 
+  void _onAndroidValueChanged() {
+    if (!mounted) return;
+    if (_androidController?.value.isPlaying ?? false) {
+      WakelockPlus.enable();
+    } else {
+      WakelockPlus.disable();
+    }
+    setState(() {});
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _hideControlsTimer?.cancel();
     unawaited(_disposePlayer());
     _youtubeController?.dispose();
     WakelockPlus.disable();
@@ -960,8 +994,8 @@ class _TrailerPreviewState extends State<TrailerPreview>
             _androidController = controller;
           });
         }
-      } catch (error, stackTrace) {
-        debugPrint('Android trailer preview error: $error\n$stackTrace');
+      } catch (error) {
+
         await controller.dispose();
         if (mounted && !_isDisposed) setState(() => _hasError = true);
       }
@@ -997,7 +1031,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
           }
         }))
         ..add(player.stream.error.listen((error) {
-          debugPrint('Trailer preview media_kit error: $error');
+
           if (mounted && !_isDisposed) {
             setState(() => _hasError = true);
           }
@@ -1026,7 +1060,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
         });
       }
     } catch (error) {
-      debugPrint('Trailer preview init error: $error');
+
       await player.dispose();
       if (mounted && !_isDisposed) {
         setState(() => _hasError = true);
@@ -1250,16 +1284,74 @@ class _TrailerPreviewState extends State<TrailerPreview>
     }
   }
 
+  Widget _volumeButton({double rightOffset = 56, double bottomOffset = 8}) {
+    return Positioned(
+      right: rightOffset,
+      bottom: bottomOffset,
+      child: Semantics(
+        button: true,
+        label: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+        child: Material(
+          color: Colors.black54,
+          shape: const CircleBorder(),
+          child: IconButton(
+            padding: const EdgeInsets.all(4),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            iconSize: 16,
+            tooltip: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+            onPressed: _toggleMute,
+            icon: Icon(
+              _isMuted ? Icons.volume_off : Icons.volume_up,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _fullscreenButton() {
+    return Positioned(
+      right: 8,
+      bottom: 8,
+      child: Semantics(
+        button: true,
+        label: 'Play trailer fullscreen',
+        child: Material(
+          color: Colors.black54,
+          shape: const CircleBorder(),
+          child: IconButton(
+            padding: const EdgeInsets.all(4),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            iconSize: 16,
+            tooltip: 'Play trailer fullscreen',
+            onPressed: _openFullScreen,
+            icon: const Icon(
+              Icons.fullscreen,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_hasError) {
       return AspectRatio(
         aspectRatio: 16 / 9,
-        child: Center(
-          child: Text(
-            "Trailer unavailable",
-            style: TextStyle(color: Colors.white.withOpacity(0.7)),
-          ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Center(
+              child: Text(
+                "Trailer unavailable",
+                style: TextStyle(color: Colors.white.withOpacity(0.7)),
+              ),
+            ),
+            if (_trailerUrl.isNotEmpty) _fullscreenButton(),
+          ],
         ),
       );
     }
@@ -1271,10 +1363,19 @@ class _TrailerPreviewState extends State<TrailerPreview>
     if (!isInitialized) {
       return AspectRatio(
         aspectRatio: 16 / 9,
-        child: Center(
-          child: CircularProgressIndicator(
-            color: Theme.of(context).primaryColor,
-          ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Center(
+              child: CircularProgressIndicator(
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+            if (_trailerUrl.isNotEmpty) ...[
+              _volumeButton(),
+              _fullscreenButton(),
+            ],
+          ],
         ),
       );
     }
@@ -1364,7 +1465,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
                 ),
                 Positioned(
                   left: 12,
-                  right: 12,
+                  right: 104,
                   bottom: 8,
                   child: Row(
                     children: [

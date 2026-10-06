@@ -1,0 +1,1937 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Filmytell — India's Premier Digital OTT & Pocket Theater</title>
+  <meta name="description" content="Stream original movies, high-octane web series, and indie masterpieces in 4K HDR. No monthly subscriptions. Pay only for what you watch.">
+  <link rel="icon" type="image/png" href="../favicon.png">
+  
+  <!-- Google Fonts: Outfit & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* RESET & CORE VARIABLES */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --primary: #E50914;
+      --primary-hover: #FF1A27;
+      --primary-glow: rgba(229, 9, 20, 0.25);
+      --gold: #FFB800;
+      --neon-cyan: #00D2FF;
+      --cinema-red: #D80D18;
+      
+      /* Dark Theme (Default) */
+      --bg: #07080C;
+      --bg-surface: #0E1017;
+      --bg-surface-hover: #141722;
+      --bg-card: #12141F;
+      --bg-elevated: #181B28;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-hover: rgba(229, 9, 20, 0.7);
+      --border-focus: rgba(255, 255, 255, 0.25);
+      --text-primary: #FFFFFF;
+      --text-secondary: #CBD5E1;
+      --text-muted: #8E9BAE;
+      --header-bg: rgba(7, 8, 12, 0.92);
+      --rail-arrow-bg: rgba(14, 16, 23, 0.85);
+    }
+
+    [data-theme="light"] {
+      --bg: #F8FAFC;
+      --bg-surface: #FFFFFF;
+      --bg-surface-hover: #F1F5F9;
+      --bg-card: #FFFFFF;
+      --bg-elevated: #F8FAFC;
+      --border: #E2E8F0;
+      --border-hover: rgba(229, 9, 20, 0.6);
+      --border-focus: rgba(0, 0, 0, 0.25);
+      --text-primary: #0F172A;
+      --text-secondary: #334155;
+      --text-muted: #64748B;
+      --header-bg: rgba(255, 255, 255, 0.95);
+      --rail-arrow-bg: rgba(255, 255, 255, 0.9);
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      line-height: 1.6;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      position: relative;
+    }
+
+    h1, h2, h3, h4, h5, .font-heading {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      font-family: inherit;
+      border: none;
+      outline: none;
+    }
+
+    /* SCROLL PROGRESS BAR */
+    #scroll-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      width: 0%;
+      background: linear-gradient(90deg, #E50914, #FFB800, #00D2FF);
+      z-index: 1000;
+      transition: width 0.1s ease-out;
+    }
+
+    /* AMBIENT BACKGROUND PARTICLES */
+    #particle-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .ambient-glow-1 {
+      position: fixed;
+      top: 8%;
+      left: 4%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, rgba(229, 9, 20, 0) 70%);
+      opacity: 0.22;
+      filter: blur(90px);
+      pointer-events: none;
+      z-index: 0;
+      animation: floatGlow 18s ease-in-out infinite alternate;
+    }
+
+    .ambient-glow-2 {
+      position: fixed;
+      bottom: 15%;
+      right: 5%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(0, 210, 255, 0.12) 0%, rgba(0, 210, 255, 0) 70%);
+      opacity: 0.18;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+      animation: floatGlow 22s ease-in-out infinite alternate-reverse;
+    }
+
+    @keyframes floatGlow {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(40px, -30px) scale(1.08); }
+      100% { transform: translate(-30px, 40px) scale(0.95); }
+    }
+
+    /* SCROLL REVEAL WRAPPER */
+    .reveal-on-scroll {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+      will-change: opacity, transform;
+    }
+
+    .reveal-on-scroll.is-revealed {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+
+    .main-container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 1680px;
+      margin: 0 auto;
+      padding: 0 clamp(20px, 4vw, 64px);
+    }
+
+    /* PROFESSIONAL OTT HEADER */
+    .site-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      height: 76px;
+      background: transparent;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+    }
+
+    .site-header.scrolled {
+      background: var(--header-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-inner {
+      width: 100%;
+      max-width: 1680px;
+      margin: 0 auto;
+      padding: 0 clamp(20px, 4vw, 64px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo img {
+      height: 38px;
+      object-fit: contain;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 26px;
+    }
+
+    .nav-link {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      transition: color 0.2s ease;
+      position: relative;
+      padding: 6px 0;
+    }
+
+    .nav-link:hover, .nav-link.active {
+      color: var(--text-primary);
+    }
+
+    .nav-link.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: var(--primary);
+      border-radius: 2px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* SEARCH BAR */
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+      transition: border-color 0.2s ease;
+    }
+
+    .search-box:focus-within {
+      border-color: var(--border-focus);
+    }
+
+    .search-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 13px;
+      width: 110px;
+      transition: width 0.25s ease;
+    }
+
+    .search-input:focus {
+      width: 170px;
+    }
+
+    .search-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* THEME SWITCHER */
+    .theme-toggle-btn {
+      width: 64px;
+      height: 32px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 6px;
+      position: relative;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+
+    .theme-toggle-btn:hover {
+      border-color: var(--primary);
+    }
+
+    .theme-thumb {
+      position: absolute;
+      top: 3px;
+      left: 4px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #FBBF24, #F59E0B);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s;
+    }
+
+    [data-theme="dark"] .theme-thumb {
+      transform: translateX(30px);
+      background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+    }
+
+    .btn {
+      padding: 11px 24px;
+      border-radius: 9px;
+      font-size: 14px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--border-focus);
+      background: var(--bg-surface-hover);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #FFFFFF;
+      border: 1px solid var(--primary);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+      transform: translateY(-2px);
+    }
+
+    /* DESIGN 2 HERO SECTION (RETAINED & EXPANDED) */
+    .hero-section {
+      padding: clamp(120px, 16vh, 175px) 0 clamp(60px, 8vh, 100px) 0;
+      min-height: 88vh;
+      display: flex;
+      align-items: center;
+      position: relative;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: clamp(48px, 6vw, 100px);
+      align-items: center;
+      width: 100%;
+    }
+
+    .pill-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 18px;
+      border-radius: 30px;
+      background: rgba(229, 9, 20, 0.10);
+      border: 1px solid rgba(229, 9, 20, 0.35);
+      font-size: 11.5px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      color: var(--primary);
+      margin-bottom: clamp(20px, 3vh, 30px);
+    }
+
+    .pill-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      animation: pulseDot 2s infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .hero-headline {
+      font-size: clamp(40px, 4.4vw, 66px);
+      line-height: 1.12;
+      margin-bottom: clamp(18px, 2.5vh, 26px);
+      color: var(--text-primary);
+      letter-spacing: -0.025em;
+    }
+
+    .hero-headline .gradient-text {
+      background: linear-gradient(135deg, #E50914 0%, #FF334B 50%, #FF8A00 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: inline-block;
+    }
+
+    .hero-subhead {
+      font-size: clamp(15px, 1.25vw, 18px);
+      color: var(--text-secondary);
+      line-height: 1.75;
+      margin-bottom: clamp(30px, 4vh, 44px);
+      max-width: 640px;
+    }
+
+    .hero-cta-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: clamp(14px, 2vw, 20px);
+      align-items: center;
+    }
+
+    /* 3D FLOATING POSTER STACK */
+    .hero-visual {
+      position: relative;
+      height: clamp(420px, 45vw, 540px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      perspective: 1200px;
+    }
+
+    .poster-deck {
+      position: relative;
+      width: clamp(260px, 22vw, 320px);
+      height: clamp(380px, 32vw, 470px);
+      transform-style: preserve-3d;
+      transition: transform 0.3s ease-out;
+    }
+
+    .poster-card {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 20px;
+      overflow: hidden;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: pointer;
+    }
+
+    .poster-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .poster-card.card-left {
+      transform: translateX(clamp(-75px, -6vw, -100px)) translateY(14px) rotate(-11deg) scale(0.91);
+      opacity: 0.85;
+      z-index: 1;
+    }
+
+    .poster-card.card-right {
+      transform: translateX(clamp(75px, 6vw, 100px)) translateY(14px) rotate(11deg) scale(0.91);
+      opacity: 0.85;
+      z-index: 1;
+    }
+
+    .poster-card.card-center {
+      transform: translateY(-10px) scale(1.03);
+      z-index: 3;
+      border: 1.5px solid var(--primary);
+    }
+
+    .poster-card.card-center:hover {
+      transform: translateY(-18px) scale(1.07);
+      border-color: var(--primary-hover);
+    }
+
+    .poster-meta-badge {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      right: 14px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: white;
+      font-size: 13.5px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* TOP 10 TRENDING RAIL */
+    .section-rail {
+      padding: 40px 0;
+      position: relative;
+    }
+
+    .rail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 20px;
+    }
+
+    .rail-title-group h2 {
+      font-size: 26px;
+      margin-bottom: 4px;
+    }
+
+    .rail-title-group p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+    }
+
+    .rail-nav-arrows {
+      display: flex;
+      gap: 8px;
+    }
+
+    .rail-arrow-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--rail-arrow-bg);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .rail-arrow-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .rail-track-container {
+      position: relative;
+      overflow-x: auto;
+      scroll-behavior: smooth;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      padding: 10px 0 20px 0;
+    }
+
+    .rail-track-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    .top-ten-track {
+      display: flex;
+      gap: 32px;
+    }
+
+    .top-ten-card {
+      display: flex;
+      align-items: flex-end;
+      flex-shrink: 0;
+      width: 250px;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .top-ten-card:hover {
+      transform: scale(1.05);
+    }
+
+    .top-ten-rank-num {
+      font-family: 'Outfit', sans-serif;
+      font-size: 110px;
+      font-weight: 900;
+      line-height: 0.8;
+      color: transparent;
+      -webkit-text-stroke: 3px rgba(255, 255, 255, 0.25);
+      position: absolute;
+      left: -18px;
+      bottom: 0;
+      z-index: 1;
+      user-select: none;
+      transition: -webkit-text-stroke 0.3s ease;
+    }
+
+    .top-ten-card:hover .top-ten-rank-num {
+      -webkit-text-stroke: 3px var(--primary);
+    }
+
+    .top-ten-poster-box {
+      width: 160px;
+      aspect-ratio: 2/3;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-left: auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      position: relative;
+      z-index: 2;
+      transition: border-color 0.3s ease;
+    }
+
+    .top-ten-card:hover .top-ten-poster-box {
+      border-color: var(--primary);
+    }
+
+    .top-ten-poster-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .poster-overlay-gradient {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 60%);
+    }
+
+    .poster-ppv-tag {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(229, 9, 20, 0.9);
+      color: white;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+    }
+
+    /* SPOTLIGHT BANNER */
+    .spotlight-section {
+      padding: 40px 0;
+    }
+
+    .spotlight-card {
+      position: relative;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      aspect-ratio: 21/9;
+      min-height: 380px;
+      display: flex;
+      align-items: center;
+      background: #000;
+    }
+
+    .spotlight-backdrop {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.55;
+    }
+
+    .spotlight-gradient-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(7,8,12,0.95) 0%, rgba(7,8,12,0.65) 50%, rgba(7,8,12,0.2) 100%);
+    }
+
+    .spotlight-content {
+      position: relative;
+      z-index: 2;
+      max-width: 580px;
+      padding: 48px;
+    }
+
+    .spotlight-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    .meta-tag {
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.12);
+      color: white;
+    }
+
+    .spotlight-title {
+      font-size: 40px;
+      line-height: 1.12;
+      margin-bottom: 12px;
+      color: white;
+    }
+
+    .spotlight-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .spotlight-actions {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    /* POCKET THEATER MATRIX */
+    .pocket-theater-stage {
+      padding: 50px 0;
+    }
+
+    .theater-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 44px 36px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .theater-header {
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto 36px auto;
+    }
+
+    .theater-header h2 {
+      font-size: 34px;
+      margin-bottom: 10px;
+    }
+
+    .theater-header p {
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    .how-it-works-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .step-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .step-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-4px);
+    }
+
+    .step-icon-bubble {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(229, 9, 20, 0.12);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-bottom: 16px;
+    }
+
+    .step-card-title {
+      font-size: 16px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .step-card-desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .passes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .pass-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .pass-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-3px);
+    }
+
+    .pass-card.featured {
+      border-color: var(--primary);
+      background: linear-gradient(135deg, rgba(229, 9, 20, 0.08) 0%, var(--bg-card) 100%);
+    }
+
+    .pass-badge {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 6px;
+    }
+
+    .pass-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .pass-features-list {
+      list-style: none;
+      margin: 16px 0;
+    }
+
+    .pass-features-list li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .pass-features-list svg {
+      color: #10B981;
+      flex-shrink: 0;
+    }
+
+    /* CATALOG */
+    .catalog-section {
+      padding: 40px 0;
+    }
+
+    .category-tabs {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 12px;
+      margin-bottom: 28px;
+    }
+
+    .category-pill {
+      padding: 8px 20px;
+      border-radius: 24px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.25s ease;
+    }
+
+    .category-pill:hover {
+      color: var(--text-primary);
+      border-color: var(--primary);
+    }
+
+    .category-pill.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 22px;
+      margin-bottom: 48px;
+    }
+
+    .content-card {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      aspect-ratio: 2/3;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+
+    .content-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--primary);
+    }
+
+    .content-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+
+    .content-card:hover img {
+      transform: scale(1.06);
+    }
+
+    .card-gradient-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.2) 50%, transparent 100%);
+    }
+
+    .card-top-badges {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      right: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 2;
+    }
+
+    .badge-tag {
+      padding: 3px 7px;
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      background: rgba(0,0,0,0.75);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: white;
+    }
+
+    .badge-ppv {
+      background: rgba(229, 9, 20, 0.9);
+      border-color: var(--primary);
+      color: white;
+      font-weight: 900;
+    }
+
+    .card-play-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.8);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: all 0.25s ease;
+      z-index: 3;
+    }
+
+    .content-card:hover .card-play-btn {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .card-info {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      right: 12px;
+      z-index: 2;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* DEVICES */
+    .devices-section {
+      padding: 50px 0;
+    }
+
+    .devices-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+      margin-top: 32px;
+    }
+
+    .device-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 24px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .device-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-4px);
+    }
+
+    .device-icon-box {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: rgba(229, 9, 20, 0.12);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 18px auto;
+    }
+
+    .device-title {
+      font-size: 17px;
+      margin-bottom: 6px;
+    }
+
+    .device-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* PARTNERS */
+    .partner-section {
+      padding: 50px 0;
+    }
+
+    .partner-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+    }
+
+    .partner-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.3s ease;
+    }
+
+    .partner-card:hover {
+      border-color: var(--primary);
+    }
+
+    /* CTA */
+    .cta-banner {
+      margin: 50px 0;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #E50914 0%, #88000C 100%);
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 50px 36px;
+      text-align: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-banner h2 {
+      font-size: 34px;
+      margin-bottom: 10px;
+    }
+
+    .cta-banner p {
+      font-size: 14.5px;
+      opacity: 0.9;
+      max-width: 580px;
+      margin: 0 auto 24px auto;
+    }
+
+    /* FOOTER */
+    .site-footer {
+      background: #050608;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding: 60px 0 30px 0;
+      color: #94A3B8;
+      font-size: 13px;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1.5fr;
+      gap: 40px;
+      margin-bottom: 40px;
+    }
+
+    .footer-col h4 {
+      color: white;
+      font-size: 14px;
+      margin-bottom: 16px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+    }
+
+    .footer-links {
+      list-style: none;
+    }
+
+    .footer-links li {
+      margin-bottom: 9px;
+    }
+
+    .footer-links a:hover {
+      color: var(--primary);
+    }
+
+    .footer-bottom {
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .social-links {
+      display: flex;
+      gap: 10px;
+    }
+
+    .social-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      transition: all 0.2s;
+    }
+
+    .social-btn:hover {
+      background: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    /* RESPONSIVE FULL-WIDTH & SCALING */
+    @media (max-width: 1200px) {
+      .hero-grid {
+        gap: 40px;
+      }
+      .partner-grid {
+        gap: 20px;
+      }
+    }
+
+    @media (max-width: 992px) {
+      .hero-section {
+        padding: 110px 0 50px 0;
+        min-height: auto;
+      }
+      .hero-grid {
+        grid-template-columns: 1fr;
+        text-align: center;
+        gap: 48px;
+      }
+      .hero-subhead {
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .hero-cta-group {
+        justify-content: center;
+      }
+      .hero-visual {
+        margin: 0 auto;
+        width: 100%;
+        max-width: 440px;
+      }
+      .spotlight-card {
+        aspect-ratio: auto;
+        min-height: 480px;
+      }
+      .partner-grid {
+        grid-template-columns: 1fr;
+      }
+      .footer-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .nav-links {
+        display: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .hero-section {
+        padding: 100px 0 40px 0;
+      }
+      .hero-headline {
+        font-size: clamp(32px, 8.5vw, 42px);
+      }
+      .hero-subhead {
+        font-size: 14.5px;
+      }
+      .hero-cta-group {
+        flex-direction: column;
+        width: 100%;
+      }
+      .hero-cta-group .btn {
+        width: 100%;
+      }
+      .poster-deck {
+        width: 220px;
+        height: 320px;
+      }
+      .poster-card.card-left {
+        transform: translateX(-50px) translateY(10px) rotate(-9deg) scale(0.88);
+      }
+      .poster-card.card-right {
+        transform: translateX(50px) translateY(10px) rotate(9deg) scale(0.88);
+      }
+      .theater-container {
+        padding: 28px 18px;
+        border-radius: 18px;
+      }
+      .theater-header h2 {
+        font-size: 26px;
+      }
+      .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 28px;
+      }
+      .header-inner {
+        padding: 0 16px;
+      }
+      .main-container {
+        padding: 0 16px;
+      }
+      .search-box {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SCROLL PROGRESS -->
+  <div id="scroll-progress"></div>
+
+  <!-- AMBIENT PARTICLES -->
+  <canvas id="particle-canvas"></canvas>
+  <div class="ambient-glow-1" id="glow1"></div>
+  <div class="ambient-glow-2" id="glow2"></div>
+
+  <!-- SITE HEADER -->
+  <header class="site-header" id="header">
+    <div class="header-inner">
+      <div class="header-left">
+        <a href="#" class="brand-logo">
+          <img src="../../assets/images/webFullScreenLogoNew.png" alt="Filmytell Logo" onerror="this.src='../assets/images/webFullScreenLogoNew.png'; this.onerror=function(){this.src='https://filmytell.com/assets/assets/images/webFullScreenLogoNew.png';}">
+        </a>
+
+        <nav class="nav-links">
+          <a href="#home" class="nav-link active">Home</a>
+          <a href="#top-ten" class="nav-link">Trending</a>
+          <a href="#pocket-theater" class="nav-link">Pocket Theater</a>
+          <a href="#catalog" class="nav-link">Movies</a>
+          <a href="#catalog" class="nav-link">Series</a>
+          <a href="#devices" class="nav-link">Devices</a>
+          <a href="#partners" class="nav-link">Studios</a>
+        </nav>
+      </div>
+
+      <div class="header-right">
+        <!-- Search Input -->
+        <div class="search-box">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" class="search-input" id="searchInput" placeholder="Search titles..." oninput="handleSearch(this.value)">
+        </div>
+
+        <!-- Theme Toggle Switcher -->
+        <div class="theme-toggle-btn" id="themeToggle" title="Toggle Light/Dark Theme">
+          <span style="font-size:11px;">☀️</span>
+          <span style="font-size:11px;">🌙</span>
+          <div class="theme-thumb">🌙</div>
+        </div>
+
+        <button class="btn btn-outline" onclick="openLogin()">Sign In</button>
+        <button class="btn btn-primary" onclick="openLogin()">Watch Now</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="main-container">
+
+    <!-- DESIGN 2 HERO BANNER (RETAINED & EXPANDED) -->
+    <section class="hero-section" id="home">
+      <div class="hero-grid">
+        <div class="hero-content reveal-on-scroll">
+          <div class="pill-badge">
+            <span class="pill-dot"></span>
+            PAY-PER-VIEW POCKET THEATER • ZERO SUBSCRIPTIONS
+          </div>
+          
+          <h1 class="hero-headline">
+            Stream Without Limits.<br>
+            <span class="gradient-text">Stories That Move You.</span>
+          </h1>
+
+          <p class="hero-subhead">
+            Your personal cinema in your pocket. Discover original movies, high-octane series, and regional gems streaming in 4K HDR with Dolby Atmos. Pay only for what you watch.
+          </p>
+
+          <div class="hero-cta-group">
+            <button class="btn btn-primary" onclick="openLogin()" style="padding: 15px 36px; font-size: 15px;">
+              <span>Start Streaming Free</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+            <button class="btn btn-outline" onclick="scrollToSection('pocket-theater')" style="padding: 15px 30px; font-size: 15px;">
+              Explore Pocket Theater
+            </button>
+          </div>
+        </div>
+
+        <!-- 3D FLOATING POSTER STACK -->
+        <div class="hero-visual reveal-on-scroll reveal-delay-2" id="heroVisualArea">
+          <div class="poster-deck" id="heroPosterDeck">
+            <div class="poster-card card-left">
+              <img src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=800&q=80" alt="Poster 1">
+            </div>
+            <div class="poster-card card-right">
+              <img src="https://images.unsplash.com/photo-1518676590629-3dcbd9c5a5c9?auto=format&fit=crop&w=800&q=80" alt="Poster 2">
+            </div>
+            <div class="poster-card card-center" onclick="openLogin()">
+              <img src="https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=800&q=80" alt="Featured Poster">
+              <div class="poster-meta-badge">
+                <span>★ 9.4 IMDb</span>
+                <span style="color:var(--gold);">PAY PER VIEW</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TOP 10 TRENDING RAIL -->
+    <section class="section-rail reveal-on-scroll" id="top-ten">
+      <div class="rail-header">
+        <div class="rail-title-group">
+          <h2>Top 10 Trending Today</h2>
+          <p>Most watched titles across India on Filmytell Pocket Theater</p>
+        </div>
+        <div class="rail-nav-arrows">
+          <button class="rail-arrow-btn" onclick="scrollRail('topTenTrack', -400)">‹</button>
+          <button class="rail-arrow-btn" onclick="scrollRail('topTenTrack', 400)">›</button>
+        </div>
+      </div>
+
+      <div class="rail-track-container" id="topTenTrack">
+        <div class="top-ten-track" id="topTenList"></div>
+      </div>
+    </section>
+
+    <!-- SPOTLIGHT BANNER -->
+    <section class="spotlight-section reveal-on-scroll">
+      <div class="spotlight-card" onclick="openLogin()">
+        <img class="spotlight-backdrop" src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=1600&q=80" alt="Maharaja Premiere">
+        <div class="spotlight-gradient-overlay"></div>
+        <div class="spotlight-content">
+          <div class="spotlight-meta-row">
+            <span class="meta-tag" style="background:var(--primary); color:white;">NEW PREMIERE</span>
+            <span class="meta-tag">4K ULTRA HD</span>
+            <span class="meta-tag">DOLBY ATMOS</span>
+            <span>2026 • 2h 24m • U/A 16+</span>
+          </div>
+          <h2 class="spotlight-title">Maharaja: The Warrior King</h2>
+          <p class="spotlight-desc">
+            An epic historical saga chronicling courage, political betrayal, and the rise of an empire. Experience unmatched cinematography in 4K HDR.
+          </p>
+          <div class="spotlight-actions">
+            <button class="btn btn-primary" onclick="event.stopPropagation(); openLogin();">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span>Watch Premiere</span>
+            </button>
+            <button class="btn btn-outline" onclick="event.stopPropagation(); openLogin();">
+              <span>+ Add to Watchlist</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- POCKET THEATER & PAY-PER-VIEW MATRIX -->
+    <section class="pocket-theater-stage reveal-on-scroll" id="pocket-theater">
+      <div class="theater-container">
+        <div class="theater-header">
+          <div class="pill-badge">CINEMA KA NAYA GHAR</div>
+          <h2>Your Personal Pocket Theater</h2>
+          <p>No monthly lock-in. No recurring subscriptions. Rent and pay only for the movies and series you choose.</p>
+        </div>
+
+        <div class="how-it-works-grid">
+          <div class="step-card reveal-on-scroll reveal-delay-1">
+            <div class="step-icon-bubble">1</div>
+            <div class="step-card-title">Mobile OTP Login</div>
+            <div class="step-card-desc">Sign up in seconds using simple mobile OTP verification with zero passwords.</div>
+          </div>
+          <div class="step-card reveal-on-scroll reveal-delay-2">
+            <div class="step-icon-bubble">2</div>
+            <div class="step-card-title">Browse 1000+ Titles</div>
+            <div class="step-card-desc">Explore exclusive blockbusters, original web series, and regional cinema.</div>
+          </div>
+          <div class="step-card reveal-on-scroll reveal-delay-3">
+            <div class="step-icon-bubble">3</div>
+            <div class="step-card-title">Direct Pay-Per-View</div>
+            <div class="step-card-desc">Rent individual titles with 48-hour unlimited playback and gift movies to friends.</div>
+          </div>
+          <div class="step-card reveal-on-scroll reveal-delay-1">
+            <div class="step-icon-bubble">4</div>
+            <div class="step-card-title">Multi-Screen 4K Playback</div>
+            <div class="step-card-desc">Stream seamlessly across Smart TVs, Smartphones, Tablets, and Web Browsers.</div>
+          </div>
+        </div>
+
+        <div class="passes-grid">
+          <div class="pass-card reveal-on-scroll reveal-delay-1" onclick="openLogin()">
+            <div>
+              <div class="pass-badge">SHORT FILM ACCESS</div>
+              <div class="pass-title">Indie Premiere Pass</div>
+              <p style="font-size:12.5px; color:var(--text-muted);">Instant 48-Hour access for short movies and experimental cinema.</p>
+              <ul class="pass-features-list">
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 1080p Full HD Streaming</li>
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Single screen access</li>
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Zero Ads & Commercials</li>
+              </ul>
+            </div>
+            <button class="btn btn-outline" style="width:100%; margin-top:12px;">Rent Short Title</button>
+          </div>
+
+          <div class="pass-card featured reveal-on-scroll reveal-delay-2" onclick="openLogin()">
+            <div>
+              <div class="pass-badge" style="color:var(--gold);">★ FEATURE ACCESS</div>
+              <div class="pass-title">Blockbuster Movie Rental</div>
+              <p style="font-size:12.5px; color:var(--text-muted);">48-Hour full playback window for major feature releases.</p>
+              <ul class="pass-features-list">
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 4K Ultra HD + Dolby Atmos Sound</li>
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Multi-Device Simultaneous Playback</li>
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Smart Offline Downloads</li>
+              </ul>
+            </div>
+            <button class="btn btn-primary" style="width:100%; margin-top:12px;">Rent Movie</button>
+          </div>
+
+          <div class="pass-card reveal-on-scroll reveal-delay-3" onclick="openLogin()">
+            <div>
+              <div class="pass-badge">SERIES PASS</div>
+              <div class="pass-title">Web Series All-Access</div>
+              <p style="font-size:12.5px; color:var(--text-muted);">Unlock all episodes of a complete season for 7 days.</p>
+              <ul class="pass-features-list">
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Complete Season Unlocked</li>
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 7 Days Extended Playback Window</li>
+                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Watch Across TV, Phone & Web</li>
+              </ul>
+            </div>
+            <button class="btn btn-outline" style="width:100%; margin-top:12px;">Unlock Full Series</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- CURATED CATALOG -->
+    <section class="catalog-section reveal-on-scroll" id="catalog">
+      <div class="rail-header">
+        <div class="rail-title-group">
+          <h2>Explore Cinema Catalog</h2>
+          <p>Curated blockbuster movies, binge-worthy series, and regional originals</p>
+        </div>
+      </div>
+
+      <div class="category-tabs">
+        <button class="category-pill active" onclick="filterCategory('All', this)">All Titles</button>
+        <button class="category-pill" onclick="filterCategory('MOVIE', this)">Blockbuster Movies</button>
+        <button class="category-pill" onclick="filterCategory('SERIES', this)">Web Series</button>
+        <button class="category-pill" onclick="filterCategory('SHORT_FILM', this)">Short Films</button>
+        <button class="category-pill" onclick="filterCategory('MINI_SERIES', this)">Mini Series</button>
+      </div>
+
+      <div class="content-grid" id="contentGrid"></div>
+    </section>
+
+    <!-- AVAILABLE DEVICES -->
+    <section class="devices-section reveal-on-scroll" id="devices">
+      <div class="theater-header">
+        <h2>Watch Across All Your Devices</h2>
+        <p>Enjoy smooth 4K streaming on Smart TVs, mobiles, tablets, and web browsers</p>
+      </div>
+
+      <div class="devices-grid">
+        <div class="device-card reveal-on-scroll reveal-delay-1">
+          <div class="device-icon-box">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>
+          </div>
+          <h3 class="device-title">Smart TVs & STB</h3>
+          <p class="device-desc">Android TV, Amazon Fire TV Stick, Apple TV, Jio STB, Samsung Tizen & LG webOS.</p>
+        </div>
+
+        <div class="device-card reveal-on-scroll reveal-delay-2">
+          <div class="device-icon-box">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          </div>
+          <h3 class="device-title">Pocket Mobiles & Tablets</h3>
+          <p class="device-desc">Native Android app on Google Play and iOS app on Apple App Store with offline downloads.</p>
+        </div>
+
+        <div class="device-card reveal-on-scroll reveal-delay-3">
+          <div class="device-icon-box">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <h3 class="device-title">Web Browsers</h3>
+          <p class="device-desc">Instant 4K playback directly in Chrome, Safari, Edge, and Firefox without plugins.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRODUCTION HOUSE & PROMOTER PORTALS -->
+    <section class="partner-section reveal-on-scroll" id="partners">
+      <div class="partner-grid">
+        <div class="partner-card reveal-on-scroll reveal-delay-1">
+          <div>
+            <div class="pill-badge">FOR CREATORS & STUDIOS</div>
+            <h3 style="font-size:22px; margin-bottom:10px;">Production House Hub</h3>
+            <p style="color:var(--text-muted); font-size:13.5px; margin-bottom:20px; line-height:1.6;">
+              Monetize and distribute your independent movies, regional series, and short films directly to millions with automated payouts and transparent analytics.
+            </p>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px;">
+              <span class="badge-tag">Content Management</span>
+              <span class="badge-tag">Revenue Tracking</span>
+              <span class="badge-tag">Analytics Dashboard</span>
+              <span class="badge-tag">Approval Workflow</span>
+            </div>
+          </div>
+          <a href="https://filmytell.com/productionHouse/#/login/" target="_blank" class="btn btn-outline" style="align-self: flex-start;">
+            <span>Access Studio Portal</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+          </a>
+        </div>
+
+        <div class="partner-card reveal-on-scroll reveal-delay-2">
+          <div>
+            <div class="pill-badge" style="color:var(--gold); background:rgba(255,184,0,0.12); border-color:rgba(255,184,0,0.3);">AFFILIATE NETWORK</div>
+            <h3 style="font-size:22px; margin-bottom:10px;">Filmytell Promoter Program</h3>
+            <p style="color:var(--text-muted); font-size:13.5px; margin-bottom:20px; line-height:1.6;">
+              Partner with Filmytell as an influencer or promoter. Earn attractive recurring commission on subscriber referrals with instant tracking and automated settlements.
+            </p>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px;">
+              <span class="badge-tag">Referral Tracking</span>
+              <span class="badge-tag">Performance Dashboard</span>
+              <span class="badge-tag">Earnings Reports</span>
+              <span class="badge-tag">Campaign Analytics</span>
+            </div>
+          </div>
+          <a href="https://filmytell.com/promoter/#/login/" target="_blank" class="btn btn-outline" style="align-self: flex-start;">
+            <span>Join Promoter Portal</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- FINAL CTA -->
+    <section class="cta-banner reveal-on-scroll">
+      <h2>Experience Next-Generation OTT Cinema</h2>
+      <p>Join thousands of cinema lovers enjoying premium regional movies and series in 4K HDR. Rent and start watching in seconds.</p>
+      <button class="btn" onclick="openLogin()" style="background:white; color:#E50914; font-size:15px; padding:15px 34px; font-weight:800;">
+        Start Watching Now
+      </button>
+    </section>
+
+  </main>
+
+  <!-- OTT FOOTER -->
+  <footer class="site-footer">
+    <div class="main-container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <img src="../../assets/images/webFullScreenLogoNew.png" alt="Filmytell" style="height:36px; margin-bottom:16px;" onerror="this.src='../assets/images/webFullScreenLogoNew.png'; this.onerror=function(){this.src='https://filmytell.com/assets/assets/images/webFullScreenLogoNew.png';}">
+          <p style="color:var(--text-muted); font-size:13px; line-height:1.6; margin-bottom:20px;">
+            India’s premier digital Pay-Per-View OTT destination for original movies, web series, indie masterpieces, and regional digital entertainment.
+          </p>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <a href="https://play.google.com/store/apps/details?id=com.filmytell.ott" target="_blank" class="btn btn-outline" style="font-size:11px; padding:6px 12px;">Google Play</a>
+            <a href="https://apps.apple.com/fr/app/filmytell/id6783863260" target="_blank" class="btn btn-outline" style="font-size:11px; padding:6px 12px;">App Store</a>
+            <a href="https://www.amazon.com/dp/B0HGXBRRTR" target="_blank" class="btn btn-outline" style="font-size:11px; padding:6px 12px;">Amazon Fire TV</a>
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <h4>Explore Catalog</h4>
+          <ul class="footer-links">
+            <li><a href="#top-ten">Top 10 Trending</a></li>
+            <li><a href="#catalog">Blockbuster Movies</a></li>
+            <li><a href="#catalog">Web Series</a></li>
+            <li><a href="#catalog">Short Films</a></li>
+            <li><a href="#catalog">Mini Series</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Portals & Studio</h4>
+          <ul class="footer-links">
+            <li><a href="https://filmytell.com/productionHouse/#/login/" target="_blank">Production House Hub</a></li>
+            <li><a href="https://filmytell.com/promoter/#/login/" target="_blank">Promoter Portal</a></li>
+            <li><a href="#" onclick="openLogin()">User Sign In</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Company & Legal</h4>
+          <ul class="footer-links">
+            <li><a href="../about-us.html">About Us</a></li>
+            <li><a href="../contact.html">Contact Us</a></li>
+            <li><a href="../privacy-policy.html">Privacy Policy</a></li>
+            <li><a href="../terms-of-service.html">Terms of Service</a></li>
+            <li><a href="../help-center.html">Help Center / FAQ</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>© <span id="currentYear"></span> Filmytell. All rights reserved. Pay-Per-View Cinema Platform.</div>
+        <div class="social-links">
+          <a href="https://www.facebook.com/profile.php?id=61591490073891" target="_blank" class="social-btn" title="Facebook">f</a>
+          <a href="https://www.instagram.com/filmytell/?hl=en" target="_blank" class="social-btn" title="Instagram">📸</a>
+          <a href="https://www.youtube.com/@filmytell-l1o" target="_blank" class="social-btn" title="YouTube">▶</a>
+          <a href="https://x.com/Filmytell" target="_blank" class="social-btn" title="X">𝕏</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+    const scrollProgress = document.getElementById('scroll-progress');
+    const header = document.getElementById('header');
+    const glow1 = document.getElementById('glow1');
+    const glow2 = document.getElementById('glow2');
+
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolledPct = (scrollTop / height) * 100;
+      scrollProgress.style.width = scrolledPct + '%';
+
+      if (scrollTop > 20) {
+        header.classList.add('scrolled');
+      } else {
+        header.classList.remove('scrolled');
+      }
+
+      glow1.style.transform = `translateY(${scrollTop * 0.12}px)`;
+      glow2.style.transform = `translateY(${-scrollTop * 0.10}px)`;
+    });
+
+    const revealObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-revealed');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, {
+      threshold: 0.1,
+      rootMargin: '0px 0px -30px 0px'
+    });
+
+    document.querySelectorAll('.reveal-on-scroll').forEach(el => revealObserver.observe(el));
+
+    const heroVisual = document.getElementById('heroVisualArea');
+    const heroDeck = document.getElementById('heroPosterDeck');
+
+    if (heroVisual && heroDeck) {
+      heroVisual.addEventListener('mousemove', (e) => {
+        const rect = heroVisual.getBoundingClientRect();
+        const x = e.clientX - rect.left - rect.width / 2;
+        const y = e.clientY - rect.top - rect.height / 2;
+        const rotateX = -(y / rect.height) * 14;
+        const rotateY = (x / rect.width) * 14;
+        heroDeck.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+      });
+
+      heroVisual.addEventListener('mouseleave', () => {
+        heroDeck.style.transform = 'rotateX(0deg) rotateY(0deg)';
+      });
+    }
+
+    const themeToggle = document.getElementById('themeToggle');
+    const htmlEl = document.documentElement;
+    const savedTheme = localStorage.getItem('filmytell_theme') || 'dark';
+    htmlEl.setAttribute('data-theme', savedTheme);
+
+    themeToggle.addEventListener('click', () => {
+      const current = htmlEl.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      htmlEl.setAttribute('data-theme', next);
+      localStorage.setItem('filmytell_theme', next);
+    });
+
+    const defaultCatalog = [
+      { id: 1, title: 'Maharaja: The Warrior King', type: 'MOVIE', year: '2026', poster: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=600&q=80' },
+      { id: 2, title: 'Mumbai Underground', type: 'SERIES', year: '2026', poster: 'https://images.unsplash.com/photo-1518676590629-3dcbd9c5a5c9?auto=format&fit=crop&w=600&q=80' },
+      { id: 3, title: 'The Last Highway', type: 'MOVIE', year: '2025', poster: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80' },
+      { id: 4, title: 'Night Shift Echoes', type: 'SHORT_FILM', year: '2026', poster: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=600&q=80' },
+      { id: 5, title: 'Deccan Chronicles', type: 'SERIES', year: '2025', poster: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=600&q=80' },
+      { id: 6, title: 'Silent Monsoon', type: 'MINI_SERIES', year: '2026', poster: 'https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?auto=format&fit=crop&w=600&q=80' },
+      { id: 7, title: 'Shadows of Varanasi', type: 'MOVIE', year: '2026', poster: 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?auto=format&fit=crop&w=600&q=80' },
+      { id: 8, title: 'Retrograde Protocol', type: 'SHORT_FILM', year: '2025', poster: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80' }
+    ];
+
+    let currentCatalog = [...defaultCatalog];
+
+    function renderTopTen(items) {
+      const track = document.getElementById('topTenList');
+      track.innerHTML = items.slice(0, 10).map((item, idx) => `
+        <div class="top-ten-card" onclick="openLogin()">
+          <div class="top-ten-rank-num">${idx + 1}</div>
+          <div class="top-ten-poster-box">
+            <img src="${item.poster}" alt="${item.title}" loading="lazy">
+            <div class="poster-overlay-gradient"></div>
+            <div class="poster-ppv-tag">PPV</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderGrid(items) {
+      const grid = document.getElementById('contentGrid');
+      grid.innerHTML = items.map(item => `
+        <div class="content-card" onclick="openLogin()">
+          <img src="${item.poster}" alt="${item.title}" loading="lazy">
+          <div class="card-gradient-overlay"></div>
+          <div class="card-top-badges">
+            <span class="badge-tag badge-ppv">PAY PER VIEW</span>
+            <span class="badge-tag" style="color:var(--gold); border-color:rgba(255,184,0,0.4);">4K HDR</span>
+          </div>
+          <div class="card-play-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </div>
+          <div class="card-info">
+            <div class="card-title">${item.title}</div>
+            <div class="card-meta">
+              <span>${item.year}</span>
+              <span>•</span>
+              <span>${item.type.replace('_', ' ')}</span>
+              <span>•</span>
+              <span style="color:var(--gold);">48h Pass</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function scrollRail(id, offset) {
+      const el = document.getElementById(id);
+      if (el) el.scrollBy({ left: offset, behavior: 'smooth' });
+    }
+
+    function filterCategory(type, btn) {
+      document.querySelectorAll('.category-pill').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active');
+
+      if (type === 'All') {
+        renderGrid(currentCatalog);
+      } else {
+        const filtered = currentCatalog.filter(i => i.type === type);
+        renderGrid(filtered.length ? filtered : currentCatalog);
+      }
+    }
+
+    function handleSearch(query) {
+      const q = query.trim().toLowerCase();
+      if (!q) {
+        renderGrid(currentCatalog);
+      } else {
+        const results = currentCatalog.filter(item => item.title.toLowerCase().includes(q));
+        renderGrid(results);
+      }
+    }
+
+    async function fetchLiveContent() {
+      try {
+        const res = await fetch('https://api.filmytell.com/api/v1/public/top-ten-content');
+        if (res.ok) {
+          const json = await res.json();
+          const list = json?.data?.TopTenContent || [];
+          if (list.length) {
+            currentCatalog = list.map((item, idx) => ({
+              id: item.id || idx,
+              title: item.title || 'Featured Film',
+              type: (item.contentType || item.type || 'MOVIE').toUpperCase(),
+              year: item.releaseDate ? String(item.releaseDate).substring(0, 4) : '2026',
+              poster: (item.posterUrlList && item.posterUrlList[0]) || defaultCatalog[idx % defaultCatalog.length].poster
+            }));
+            renderTopTen(currentCatalog);
+            renderGrid(currentCatalog);
+          }
+        }
+      } catch (_) {
+        renderTopTen(defaultCatalog);
+        renderGrid(defaultCatalog);
+      }
+    }
+
+    function openLogin() {
+      window.location.href = '../#/login';
+    }
+
+    function scrollToSection(id) {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    const canvas = document.getElementById('particle-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    class Particle {
+      constructor() {
+        this.reset();
+      }
+      reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.radius = Math.random() * 2 + 0.8;
+        this.speedX = (Math.random() - 0.5) * 0.35;
+        this.speedY = -Math.random() * 0.35 - 0.1;
+        this.opacity = Math.random() * 0.35 + 0.1;
+      }
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        if (this.y < 0 || this.x < 0 || this.x > canvas.width) {
+          this.reset();
+          this.y = canvas.height;
+        }
+      }
+      draw() {
+        ctx.fillStyle = `rgba(229, 9, 20, ${this.opacity})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    for (let i = 0; i < 28; i++) {
+      particles.push(new Particle());
+    }
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => {
+        p.update();
+        p.draw();
+      });
+      requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+
+    renderTopTen(defaultCatalog);
+    renderGrid(defaultCatalog);
+    fetchLiveContent();
+  </script>
+</body>
+</html>

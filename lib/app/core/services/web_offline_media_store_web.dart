@@ -1,75 +1,67 @@
 import 'dart:js_interop';
-
+import 'package:http/http.dart' as http;
+import 'package:universal_html/html.dart' as html;
 import 'package:web/web.dart' as web;
 
-const String _cacheName = 'filmytell-offline-media-v1';
+const String _cacheName = 'ott_offline_media_cache_v1';
 
-String _cacheKey(int contentId) =>
-    Uri.base.resolve('/__filmytell_offline_media__/$contentId').toString();
+String _cacheKey(int contentId) => '/offline_media/$contentId';
 
-Future<web.Cache> _openCache() => web.window.caches.open(_cacheName).toDart;
-
-Future<void> storeWebOfflineMedia(int contentId, String sourceUrl) async {
-  late final web.Response response;
+Future<bool> hasWebOfflineMediaImpl(int contentId) async {
   try {
-    response = await web.window
-        .fetch(
-          sourceUrl.toJS,
-          web.RequestInit(
-            mode: 'cors',
-            credentials: 'include',
-            cache: 'no-store',
-          ),
-        )
-        .toDart;
+    final caches = html.window.caches;
+    if (caches == null) return false;
+    final cache = await caches.open(_cacheName);
+    final response = await cache.match(_cacheKey(contentId));
+    return response != null;
   } catch (_) {
-    throw StateError(
-      'The media server blocked the offline download. Allow this site origin '
-      'in the CDN CORS policy for GET, HEAD, and Range requests.',
-    );
+    return false;
   }
-  if (!response.ok) {
-    throw StateError('Media download failed with HTTP ${response.status}.');
+}
+
+Future<String?> openWebOfflineMediaImpl(int contentId) async {
+  try {
+    final caches = html.window.caches;
+    if (caches == null) return null;
+    final cache = await caches.open(_cacheName);
+    final response = await cache.match(_cacheKey(contentId));
+    if (response == null) return null;
+    final blob = await response.blob();
+    return html.Url.createObjectUrlFromBlob(blob);
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<void> storeWebOfflineMediaImpl(int contentId, String videoUrl) async {
+  final caches = html.window.caches;
+  if (caches == null) {
+    throw UnsupportedError('Cache API is not supported in this environment.');
   }
 
-  final contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
-  final sourcePath = Uri.tryParse(sourceUrl)?.path.toLowerCase() ?? '';
-  final isHls = sourcePath.endsWith('.m3u8') ||
-      contentType.contains('mpegurl') ||
-      contentType.contains('vnd.apple.mpegurl');
-  if (isHls) {
-    throw StateError(
-      'Protected HLS cannot be saved as one browser file. A backend offline '
-      'package or DRM offline-license endpoint is required.',
-    );
+  final response = await http.get(Uri.parse(videoUrl));
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw Exception('Failed to download media: HTTP ${response.statusCode}');
   }
 
-  final cache = await _openCache();
-  await cache.put(_cacheKey(contentId).toJS, response).toDart;
+  final webResponse = web.Response(response.bodyBytes.toJS);
+  final cache = await caches.open(_cacheName);
+  await cache.put(_cacheKey(contentId), webResponse);
 }
 
-Future<bool> hasWebOfflineMedia(int contentId) async {
-  final cache = await _openCache();
-  final response = await cache.match(_cacheKey(contentId).toJS).toDart;
-  return response != null;
+Future<void> deleteWebOfflineMediaImpl(int contentId) async {
+  try {
+    final caches = html.window.caches;
+    if (caches == null) return;
+    final cache = await caches.open(_cacheName);
+    await cache.delete(_cacheKey(contentId));
+  } catch (_) {}
 }
 
-Future<String?> openWebOfflineMedia(int contentId) async {
-  final cache = await _openCache();
-  final response = await cache.match(_cacheKey(contentId).toJS).toDart;
-  if (response == null) return null;
-
-  final blob = await response.blob().toDart;
-  return web.URL.createObjectURL(blob);
-}
-
-Future<void> deleteWebOfflineMedia(int contentId) async {
-  final cache = await _openCache();
-  await cache.delete(_cacheKey(contentId).toJS).toDart;
-}
-
-void revokeWebOfflineMediaUrl(String? url) {
+void revokeWebOfflineMediaUrlImpl(String? url) {
   if (url != null && url.startsWith('blob:')) {
-    web.URL.revokeObjectURL(url);
+    try {
+      html.Url.revokeObjectUrl(url);
+    } catch (_) {}
   }
 }

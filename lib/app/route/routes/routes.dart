@@ -9,15 +9,38 @@ import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/news%20page/NewsScreen.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
+import 'package:ott/presentation/web_landing/designs/preview/landing_page_design_preview.dart';
+import 'package:ott/presentation/web_landing/screens/content_web_fallback_screen.dart';
+import 'package:ott/presentation/web_landing/screens/producer_learn_more_screen.dart';
 import 'package:ott/presentation/web_landing/screens/web_landing_screen.dart';
 
 import '../../pages/onboarding pages/SplashScreen.dart';
+import '../../pages/sign in page/LoginCard.dart';
+import 'package:ott/app/core/services/referral_service.dart';
 import 'app_routes.dart';
 import 'web_navigation_routes.dart';
 
 class RouteGenerator {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     _logRouteRequest(settings);
+
+    if (settings.name == AppRoutes.producerLearnMore ||
+        settings.name == '/producer-learn-more' ||
+        settings.name == '/learn-more') {
+      return buildRoute(
+        const ProducerLearnMoreScreen(),
+        settings: settings,
+      );
+    }
+
+    if (settings.name == AppRoutes.landingPreview ||
+        settings.name == '/preview' ||
+        settings.name == '/landing-preview') {
+      return buildRoute(
+        const LandingPageDesignPreview(),
+        settings: settings,
+      );
+    }
 
     if (settings.name == AppRoutes.news &&
         settings.arguments is NewsScreenArgs) {
@@ -34,9 +57,43 @@ class RouteGenerator {
       );
     }
 
+    if (settings.name != null) {
+      final uri = Uri.tryParse(settings.name!);
+      if (uri != null) {
+        ReferralService.instance.captureFromUri(uri);
+        final pathLower = uri.path.trim().toLowerCase();
+        if (pathLower == '/register' ||
+            pathLower == 'register' ||
+            pathLower == '/login' ||
+            pathLower == 'login') {
+          return buildRoute(const LoginCard(), settings: settings);
+        }
+
+        // Check if universal content URL (e.g. /movie/123, /series/456, /miniseries/789, /short-film/101)
+        final targetUri = uri.hasScheme
+            ? uri
+            : Uri.tryParse('https://${DeepLinkService.httpsHost}${uri.path.startsWith('/') ? '' : '/'}${uri.path}');
+        if (targetUri != null) {
+          final target = DeepLinkService.instance.parseTarget(targetUri);
+          if (target != null && target.id != null && target.id! > 0) {
+            if (kIsWeb) {
+              return buildRoute(
+                ContentWebFallbackScreen(
+                  contentId: target.id!,
+                  contentType: target.type,
+                ),
+                settings: settings,
+              );
+            }
+          }
+        }
+      }
+    }
+
     switch (settings.name) {
-      // case AppRoutes.login:
-      //   return buildRoute(SignInPage(), settings: settings);
+      case AppRoutes.login:
+      case '/register':
+        return buildRoute(const LoginCard(), settings: settings);
 
       case AppRoutes.entry:
         return buildRoute(SplashScreen(), settings: settings);
@@ -53,11 +110,14 @@ class RouteGenerator {
 
       case AppRoutes.movieDetails:
         final movieId = _parseMovieId(settings.arguments);
+        final contentType = settings.arguments is MovieDetailsRouteArgs
+            ? (settings.arguments as MovieDetailsRouteArgs).contentType
+            : 'MOVIE';
         if (movieId == null || movieId <= 0) {
           return _invalidMovieRoute(settings);
         }
         return buildRoute(
-          MovieDetailsPage(movieId: movieId),
+          MovieDetailsPage(movieId: movieId, contentType: contentType),
           settings: settings,
         );
 

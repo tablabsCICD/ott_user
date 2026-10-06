@@ -10,6 +10,8 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:video_player/video_player.dart' as native_video;
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/utils/direct_trailer_source.dart';
+import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
@@ -42,6 +44,7 @@ class MovieCard extends StatefulWidget {
   final double? cardWidth;
   final double? cardMargin;
   final ValueChanged<Content>? onContentUpdated;
+  final bool isShortFilmTab;
 
   const MovieCard({
     super.key,
@@ -51,6 +54,7 @@ class MovieCard extends StatefulWidget {
     this.cardWidth,
     this.cardMargin,
     this.onContentUpdated,
+    this.isShortFilmTab = false,
   });
 
   @override
@@ -164,9 +168,7 @@ class _MovieCardState extends State<MovieCard> {
         setState(() => _isVideoInitialized = true);
         _logPreview('Android ExoPlayer trailer initialized');
         return true;
-      } catch (error, stackTrace) {
-        debugPrint(
-            'Android trailer initialization failed: $error\n$stackTrace');
+      } catch (error) {
         await controller.dispose();
         return false;
       }
@@ -189,7 +191,6 @@ class _MovieCardState extends State<MovieCard> {
           if (mounted) setState(() {});
         }))
         ..add(player.stream.error.listen((error) {
-          debugPrint("Trailer playback error: $error");
           _stopAndDisposePreview('stream error');
           if (_activePreviewState == this) {
             _activePreviewState = null;
@@ -226,7 +227,6 @@ class _MovieCardState extends State<MovieCard> {
       _logPreview('Video Initialized');
       return true;
     } catch (e) {
-      debugPrint("Video init failed: $e");
       await player.dispose();
       _disposeVideoController();
       return false;
@@ -444,7 +444,6 @@ class _MovieCardState extends State<MovieCard> {
       _logPreview('Video Started');
       _logPreview('Current Active Video ID ${widget.movie.id ?? widget.index}');
     } catch (e) {
-      debugPrint("Trailer play failed: $e");
       _stopAndDisposePreview('play failed');
       if (_activePreviewState == this) {
         _activePreviewState = null;
@@ -484,9 +483,7 @@ class _MovieCardState extends State<MovieCard> {
       player?.seek(Duration.zero);
       androidController?.pause();
       androidController?.seekTo(Duration.zero);
-    } catch (e) {
-      debugPrint("Trailer stop failed: $e");
-    }
+    } catch (e) {}
 
     if (!mounted) return;
     setState(() {
@@ -503,12 +500,7 @@ class _MovieCardState extends State<MovieCard> {
   }
 
   void _logPreview(String message) {
-    if (kDebugMode) {
-      debugPrint(
-        'HOME_AUTOPLAY_CARD: $message '
-        'id=${widget.movie.id ?? 'unknown'} index=${widget.index}',
-      );
-    }
+    if (kDebugMode) {}
   }
 
   @override
@@ -535,15 +527,6 @@ class _MovieCardState extends State<MovieCard> {
           onFocusChange: (hasFocus) {
             if (ResponsiveWidget.isTabletOrTv(context)) {
               _handleHover(hasFocus);
-              if (hasFocus) {
-                Scrollable.ensureVisible(
-                  context,
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
-                  alignmentPolicy:
-                      ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-                );
-              }
             }
           },
           onKeyEvent: (node, event) {
@@ -571,7 +554,7 @@ class _MovieCardState extends State<MovieCard> {
                   left: cardMargin,
                   right: cardMargin,
                   bottom: cardMargin,
-                  top: isHighlighted
+                  top: showPreview
                       ? 4
                       : 12, // 👈 selected card moves slightly up
                 ),
@@ -580,21 +563,21 @@ class _MovieCardState extends State<MovieCard> {
                   color: theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isHighlighted
+                    color: showPreview
                         ? highlightColor
                         : theme.canvasColor.withValues(alpha: 0.2),
-                    width: isHighlighted ? 2.5 : 1,
+                    width: showPreview ? 2.5 : 1,
                   ),
-                  boxShadow: (isHighlighted && ResponsiveWidget.isTabletOrTv(context))
-                      ? [
-                          BoxShadow(
-                            color: highlightColor.withValues(alpha: 0.35),
-                            blurRadius: 12,
-                            spreadRadius: 1,
-                            offset: const Offset(0, 4),
-                          ),
-                        ]
-                      : null,
+                  /*  boxShadow: showPreview
+                    ? [
+                        BoxShadow(
+                          color: highlightColor.withValues(alpha: 0.12),
+                          blurRadius: 3,
+                          spreadRadius: 0.5,
+                          offset: const Offset(0, 3),
+                        ),
+                      ]
+                    : null, */
                 ),
                 child: Column(
                   children: [
@@ -649,7 +632,43 @@ class _MovieCardState extends State<MovieCard> {
         _isVideoInitialized &&
         androidController != null &&
         androidController.value.isInitialized) {
-      return native_video.VideoPlayer(androidController);
+      return Stack(
+        children: [
+          Positioned.fill(
+            child: native_video.VideoPlayer(androidController),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: _previewProgress(),
+          ),
+          Positioned(
+            right: 5,
+            bottom: 5,
+            child: Semantics(
+              button: true,
+              label: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+              child: Material(
+                color: Colors.black54,
+                shape: const CircleBorder(),
+                child: IconButton(
+                  padding: const EdgeInsets.all(2),
+                  constraints:
+                      const BoxConstraints(minWidth: 20, minHeight: 20),
+                  iconSize: 12,
+                  tooltip: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                  icon: Icon(
+                    _isMuted ? Icons.volume_off : Icons.volume_up,
+                    color: Colors.white,
+                  ),
+                  onPressed: _toggleMute,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
     }
     if (showPreview && _isVideoInitialized && _videoController != null) {
       return Stack(
@@ -670,12 +689,26 @@ class _MovieCardState extends State<MovieCard> {
           Positioned(
             right: 5,
             bottom: 5,
-            child: IconButton(
-              icon: Icon(
-                _isMuted ? Icons.volume_off : Icons.volume_up,
-                color: Colors.white.withOpacity(0.7),
+            child: Semantics(
+              button: true,
+              label: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+              child: Material(
+                color: Colors.black54,
+                shape: const CircleBorder(),
+                child: IconButton(
+                  padding: const EdgeInsets.all(2),
+                  constraints:
+                      const BoxConstraints(minWidth: 25, minHeight: 25),
+                  iconSize: 20,
+                  tooltip: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                  icon: Icon(
+                    _isMuted ? Icons.volume_off : Icons.volume_up,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  onPressed: _toggleMute,
+                ),
               ),
-              onPressed: _toggleMute,
             ),
           ),
         ],
@@ -762,7 +795,7 @@ class _MovieCardState extends State<MovieCard> {
                       fontSize: 12,
                     ),
                     children: [
-                      TextSpan(text: movie.releaseDate ?? ''),
+                      TextSpan(text: formatReleaseDate(movie.releaseDate)),
                       const TextSpan(text: ' | '),
                       TextSpan(
                         text: movie.genreList?.join(', ') ?? 'N/A',
@@ -814,6 +847,8 @@ class _MovieCardState extends State<MovieCard> {
       ThemeData theme, AppLocalizations lang, double price) {
     final movie = widget.movie;
     final isRental = movie.isRental ?? false;
+    final isShortFilm = widget.isShortFilmTab ||
+        ContentType.normalize(movie.type) == ContentType.shortFilm;
 
     return GestureDetector(
       onTap: () => movie.type!.toLowerCase() == 'series'
@@ -830,12 +865,14 @@ class _MovieCardState extends State<MovieCard> {
         child: Text(
           movie.type!.toLowerCase() == 'series'
               ? isRental
-                  ? "Watch Series"
+                  ? (isShortFilm ? 'Watch Now' : 'Watch Series')
                   : '₹ $price'
               : isRental
-                  ? movie.type?.toLowerCase() == "movie"
-                      ? lang.watchMovie
-                      : lang.watchSeries
+                  ? isShortFilm
+                      ? 'Watch Now'
+                      : movie.type?.toLowerCase() == "movie"
+                          ? lang.watchMovie
+                          : lang.watchSeries
                   : "₹ $price",
           style: const TextStyle(
             fontSize: 12,
@@ -868,15 +905,12 @@ class _MovieCardState extends State<MovieCard> {
       context,
       MaterialPageRoute(
         builder:
-            (_) => /* movie.isFeatured == true
-            ? TrailerPage(
-                trailerUrl: movie.teaserOrTrailerUrl ?? "",
-                isTrailerUrl: true,
-                content: movie)
-            :  */
-                movie.type!.toLowerCase() == 'movie'
-                    ? MovieDetailsPage(movieId: movie.id!)
-                    : SeriesDetailsPage(seriesId: movie.id!, content: movie),
+            (_) => ContentType.isMovieLike(movie.type)
+                ? MovieDetailsPage(
+                    movieId: movie.id!,
+                    contentType: movie.type,
+                  )
+                : SeriesDetailsPage(seriesId: movie.id!, content: movie),
       ),
     ).then((_) => _refreshSingleContent());
   }
@@ -1295,15 +1329,23 @@ class _MovieCardState extends State<MovieCard> {
       },
     );
   }
-}
 
-DeepLinkContentType _shareContentTypeFor(Content movie) {
-  switch ((movie.type ?? '').trim().toLowerCase()) {
-    case 'series':
-      return DeepLinkContentType.series;
-    case 'short':
-      return DeepLinkContentType.short;
-    default:
-      return DeepLinkContentType.movie;
+  DeepLinkContentType _shareContentTypeFor(Content movie) {
+    switch ((movie.type ?? '').trim().toLowerCase()) {
+      case 'short_film':
+      case 'shortfilm':
+        return DeepLinkContentType.shortFilm;
+      case 'series':
+        return DeepLinkContentType.series;
+      case 'mini series':
+      case 'mini_series':
+      case 'miniseries':
+        return DeepLinkContentType.miniSeries;
+      case 'short':
+      case 'shorts':
+        return DeepLinkContentType.short;
+      default:
+        return DeepLinkContentType.movie;
+    }
   }
 }

@@ -50,11 +50,13 @@ app.*.map.json
 .dart_tool/
 build/
 
-# Temporary SDKs, dumps & local artifacts
+# Local SDKs, dumps & test artifacts
 .android-avd/
 .android-tv-sdk/
 .gradle-tv/
+FilmyTell-JMeter-LoadTesting/
+FilmyTell_LoadTesting/
 *.hprof
 artifacts/
-
-
+*.apk
+*.aab

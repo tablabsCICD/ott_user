@@ -155,7 +155,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       await InvoiceService.instance.showShareOptions(context, invoice);
     } catch (error) {
       if (!mounted) return;
-      debugPrint('Short invoice generation error: $error');
+
     }
   }
 
@@ -239,7 +239,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         contentId: updated.partId,
         originalPlaybackUrl: updated.videoUrl,
         country: _resolveShortPlaybackCountryCode(),
-        type: 'SHORT_PART', // 🔒 added type parameter
+        type: 'SHORT_PART',
         mediaLoader: _loadSecureMedia,
         pausePlayer: () async => _controller?.pause(),
       );
@@ -330,7 +330,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         if (mounted) setState(() {});
       }))
       ..add(player.stream.error.listen((error) {
-        debugPrint('Short media_kit error: $error');
+
         if (mounted) {
           setState(() {
             _hasVideoError = true;

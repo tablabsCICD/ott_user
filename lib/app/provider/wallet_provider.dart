@@ -179,7 +179,6 @@ class WalletProvider extends BaseProvider {
         'message': walletResponse.message ?? 'Wallet recharged successfully.',
       };
     } catch (error) {
-      debugPrint('Wallet credit fallback error: $error');
       return {
         'success': false,
         'message':
@@ -222,14 +221,12 @@ class WalletProvider extends BaseProvider {
             notifyListeners();
             return {'success': true, 'message': addUserResponse.message!};
           } else {
-            debugPrint("Empty data: ${addUserResponse.message}");
             return {
               'success': false,
               'message': addUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-          debugPrint("Error: ${addUserResponse.message}");
           return {
             'success': false,
             'message': addUserResponse.message ?? 'Error in response'
@@ -237,12 +234,6 @@ class WalletProvider extends BaseProvider {
         }
       } else {
         return {'failure': true, 'message': 'Something went wrong!'};
-      }
-    } catch (error) {
-      debugPrint("Error: $error");
-      return {
-        'success': false,
-        'message': 'An error occurred while adding balance: $error'
       };
     } finally {
       _isAddingBalance = false;
@@ -277,7 +268,6 @@ class WalletProvider extends BaseProvider {
         'message': withdrawAmountresponse.message ?? 'Payment successful'
       };
     } catch (error) {
-      debugPrint("Error: $error");
       return {
         'success': false,
         'message': _cleanWalletError(error),
@@ -318,21 +308,18 @@ class WalletProvider extends BaseProvider {
           notifyListeners();
           return {'success': true, 'message': walletHistory.message!};
         } else {
-          debugPrint("Empty data: ${walletHistory.message}");
           return {
             'success': false,
             'message': walletHistory.message ?? 'No data returned'
           };
         }
       } else {
-        debugPrint("Error: ${walletHistory.message}");
         return {
           'success': false,
           'message': walletHistory.message ?? 'Error in response'
         };
       }
     } catch (error) {
-      debugPrint("Wallet history error: $error");
       return {
         'success': false,
         'message': 'Failed to load transaction history: $error'
@@ -343,29 +330,22 @@ class WalletProvider extends BaseProvider {
   Future<Map<String, Object>> getBalance() async {
     try {
       final balanceResponse = await _walletService.getBalance();
-      if (balanceResponse.success == true) {
-        if (balanceResponse.data != null) {
-          _wallet = balanceResponse.data!;
-          _walletBalance = balanceResponse.data!.balance!;
-          notifyListeners();
-          return {'success': true, 'message': balanceResponse.message!};
-        } else {
-          debugPrint("Empty data: ${balanceResponse.message}");
-          return {
-            'success': false,
-            'message': balanceResponse.message ?? 'No data returned'
-          };
-        }
+      if (balanceResponse.success == true && balanceResponse.data != null) {
+        _wallet = balanceResponse.data!;
+        _walletBalance = (_wallet.balance ?? 0).toDouble();
+        notifyListeners();
+        return {
+          'success': true,
+          'message': balanceResponse.message ?? 'Balance fetched successfully'
+        };
       } else {
-        debugPrint("Error: ${balanceResponse.message}");
         return {
           'success': false,
-          'message': balanceResponse.message ?? 'Error in response'
+          'message': balanceResponse.message ?? 'Failed to load wallet balance'
         };
       }
     } catch (error) {
       _walletBalance = 0.0;
-      debugPrint("Wallet balance error: $error");
       return {
         'success': false,
         'message': 'Failed to load wallet balance: $error'

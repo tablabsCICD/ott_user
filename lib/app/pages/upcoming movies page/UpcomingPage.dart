@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/provider/videoProvider.dart';
@@ -41,20 +43,19 @@ class _UpcomingPageState extends State<UpcomingPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         centerTitle: true,
         backgroundColor: theme.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
         title: Text(
           lang.upcoming,
-          style: TextStyle(
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
           ),
         ),
       ),
       body: isLoading
-          ? ComingSoonShimmer()
+          ? const ComingSoonShimmer()
           : Consumer<VideoProvider>(
               builder: (_, provider, __) {
                 if (provider.upcomingContentList.isEmpty) {
@@ -68,7 +69,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
                     crossAxisCount: ResponsiveWidget.isMobile(context) ? 1 : 3,
                     mainAxisSpacing: 16,
                     crossAxisSpacing: 16,
-                    childAspectRatio: 16 / 9, // 🔒 fixed
+                    childAspectRatio: 16 / 9,
                   ),
                   itemBuilder: (_, index) {
                     Content item = provider.upcomingContentList[index];
@@ -86,16 +87,12 @@ class _UpcomingPageState extends State<UpcomingPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder:
-            (_) => /* movie.isFeatured == true
-            ? TrailerPage(
-                trailerUrl: movie.trailerUrl ?? "",
-                isTrailerUrl: true,
-                content: movie)
-            :  */
-                movie.type!.toLowerCase() == 'movie'
-                    ? MovieDetailsPage(movieId: movie.id!)
-                    : SeriesDetailsPage(seriesId: movie.id!, content: movie),
+        builder: (_) => ContentType.isMovieLike(movie.type)
+            ? MovieDetailsPage(
+                movieId: movie.id!,
+                contentType: movie.type,
+              )
+            : SeriesDetailsPage(seriesId: movie.id!, content: movie),
       ),
     );
   }
@@ -165,7 +162,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
                         size: 12, color: Colors.white70),
                     const SizedBox(width: 4),
                     Text(
-                      item.releaseDate ?? '',
+                      formatReleaseDate(item.releaseDate),
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 12,
@@ -233,7 +230,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.upcoming_outlined,
-              size: 80, color: theme.canvasColor.withValues(alpha: 0.6)),
+              size: 80, color: theme.canvasColor.withOpacity(0.6)),
           const SizedBox(height: 12),
           Text(
             "No upcoming content",

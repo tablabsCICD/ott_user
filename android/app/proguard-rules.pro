@@ -25,3 +25,9 @@
 
 # Don't strip out model/data classes (optional safety)
 -keep class **.model.** { *; }
+
+# =========================
+# Google Play Install Referrer
+# =========================
+-keep class com.android.installreferrer.** { *; }
+-dontwarn com.android.installreferrer.**

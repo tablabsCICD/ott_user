@@ -27,6 +27,7 @@ import '../core/services/device_type_helper.dart';
 import '../core/services/notification_service.dart';
 import '../core/services/referral_service.dart';
 import '../core/services/session_manager.dart';
+import '../core/services/referral_service.dart';
 import '../core/utils/sharepreferences.dart';
 import 'baseProvider.dart';
 
@@ -41,6 +42,7 @@ class UserProvider extends BaseProvider {
   TextEditingController countryController = TextEditingController();
   TextEditingController stateController = TextEditingController();
   TextEditingController districtController = TextEditingController();
+  TextEditingController talukaController = TextEditingController();
   TextEditingController dobController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   TextEditingController confirmPasswordController = TextEditingController();
@@ -67,13 +69,14 @@ class UserProvider extends BaseProvider {
 
   setValue() async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
-    print("SEtData${user!.firstName}");
-    firstNameController.text = user.firstName ?? "";
-    lastNameController.text = user.lastName ?? "";
-    mobileController.text = user.mobileNumber ?? "";
-    emailController.text = user.emailId ?? "";
-    dobController.text = user.dob ?? "";
-    profileController.text = user.profilePhoto ?? "";
+    final currentUser = user!;
+
+    firstNameController.text = currentUser.firstName ?? "";
+    lastNameController.text = currentUser.lastName ?? "";
+    mobileController.text = currentUser.mobileNumber ?? "";
+    emailController.text = currentUser.emailId ?? "";
+    dobController.text = currentUser.dob ?? "";
+    profileController.text = currentUser.profilePhoto ?? "";
     notifyListeners();
   }
 
@@ -139,10 +142,11 @@ class UserProvider extends BaseProvider {
         ? pinCodeDateController.text.trim()
         : "411017";
     userRequest.profilePhoto = profileController.text;
-    final pendingReferral = await ReferralService.instance.getReferralCode();
+    final pendingReferral =
+        await ReferralService.instance.getPendingReferralCode();
     userRequest.refferedBy = refferedByController.text.trim().isNotEmpty
         ? refferedByController.text.trim()
-        : pendingReferral;
+        : (pendingReferral ?? '');
     userRequest.taluka = cityController.text;
     userRequest.state = stateController.text;
     userRequest.languages = selectedLanguages;
@@ -176,14 +180,12 @@ class UserProvider extends BaseProvider {
 
             return {'success': true, 'message': 'User created successfully'};
           } else {
-            debugPrint("Empty data: ${addUserResponse.message}");
             return {
               'success': false,
               'message': addUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-          debugPrint("Error: ${addUserResponse.message}");
           return {
             'success': false,
             'message': addUserResponse.message ?? 'Error in response'
@@ -198,7 +200,6 @@ class UserProvider extends BaseProvider {
         return {'success': false, 'message': 'Something went wrong!'};
       }
     } catch (error) {
-      debugPrint("Error: $error");
       return {
         'success': false,
         'message': 'An error occurred while adding user: $error'
@@ -237,7 +238,6 @@ class UserProvider extends BaseProvider {
             UpdateUserResponse.fromJson(responseBody);
         //log('Update User response === ${updateUserResponse}');
 
-        debugPrint("data: ${updateUserResponse.message}");
         if (updateUserResponse.success == true) {
           if (updateUserResponse.data != null) {
             userObject = updateUserResponse.data!.user!;
@@ -247,28 +247,25 @@ class UserProvider extends BaseProvider {
             mobileController.text = userObject.mobileNumber ?? "";
             dobController.text = userObject.dob ?? "";
             profileController.text = userObject.profilePhoto ?? "";
-            print("before SEtData ${user.firstName}");
+
             LocalSharePreferences localSharePreferences =
                 LocalSharePreferences();
             localSharePreferences.setString(
                 SharedPreferencesConstant.currentUser,
                 jsonEncode(updateUserResponse.data!.user));
-            print(
-                "after SEtData ${await localSharePreferences.getString(SharedPreferencesConstant.currentUser)}");
+
             notifyListeners();
             return {
               'success': true,
               'message': updateUserResponse.message ?? ""
             };
           } else {
-            debugPrint("Empty data: ${updateUserResponse.message}");
             return {
               'success': false,
               'message': updateUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-          debugPrint("Error: ${updateUserResponse.message}");
           return {
             'success': false,
             'message': updateUserResponse.message ?? 'Error in response'
@@ -278,7 +275,7 @@ class UserProvider extends BaseProvider {
         Map<String, dynamic> responseBody = json.decode(response.body);
         AddUserResponse addUserResponse =
             AddUserResponse.fromJson(responseBody);
-        debugPrint("Error: ${addUserResponse.message}");
+
         return {
           'success': false,
           'message': addUserResponse.message ?? 'Error in response'
@@ -288,7 +285,6 @@ class UserProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
       return {
         'success': false,
         'message': 'An error occurred while update user: $error'
@@ -306,14 +302,26 @@ class UserProvider extends BaseProvider {
     //log("API=====$apiUrl");
     ApiHelper apiHelper = ApiHelper();
     Map<String, dynamic> data = {
-      "id": user.id,
-      "emailId": emailController.text,
-      "firstName": firstNameController.text,
-      "lastName": lastNameController.text,
-      "dob": dobController.text,
+      "id": user?.id,
+      "emailId": emailController.text.trim().isNotEmpty
+          ? emailController.text.trim()
+          : (user?.emailId ?? ""),
+      "firstName": firstNameController.text.trim().isNotEmpty
+          ? firstNameController.text.trim()
+          : (user?.firstName ?? ""),
+      "lastName": lastNameController.text.trim().isNotEmpty
+          ? lastNameController.text.trim()
+          : (user?.lastName ?? ""),
+      "dob": dobController.text.trim().isNotEmpty
+          ? dobController.text.trim()
+          : (user?.dob ?? ""),
       // "mobileNumber": mobileController.text.trim(),
-      "profilePhoto": profileController.text,
-      "refferedBy": refferedByController.text,
+      "profilePhoto": profileController.text.trim().isNotEmpty
+          ? profileController.text.trim()
+          : (user.profilePhoto ?? ""),
+      "refferedBy": refferedByController.text.trim().isNotEmpty
+          ? refferedByController.text.trim()
+          : (user.refferedBy ?? ""),
     };
     //log("data=====$data");
 
@@ -327,32 +335,28 @@ class UserProvider extends BaseProvider {
             UpdateUserResponse.fromJson(responseBody);
         //log('Update User response === ${updateUserResponse}');
 
-        debugPrint("data: ${updateUserResponse.message}");
         if (updateUserResponse.success == true) {
           if (updateUserResponse.data != null) {
             userObject = updateUserResponse.data!.user!;
-            print("before SEtData ${user.firstName}");
+
             LocalSharePreferences localSharePreferences =
                 LocalSharePreferences();
             localSharePreferences.setString(
                 SharedPreferencesConstant.currentUser,
                 jsonEncode(updateUserResponse.data!.user));
-            print(
-                "after SEtData ${await localSharePreferences.getString(SharedPreferencesConstant.currentUser)}");
+
             notifyListeners();
             return {
               'success': true,
               'message': updateUserResponse.message ?? ""
             };
           } else {
-            debugPrint("Empty data: ${updateUserResponse.message}");
             return {
               'success': false,
               'message': updateUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-          debugPrint("Error: ${updateUserResponse.message}");
           return {
             'success': false,
             'message': updateUserResponse.message ?? 'Error in response'
@@ -362,7 +366,7 @@ class UserProvider extends BaseProvider {
         Map<String, dynamic> responseBody = json.decode(response.body);
         AddUserResponse addUserResponse =
             AddUserResponse.fromJson(responseBody);
-        debugPrint("Error: ${addUserResponse.message}");
+
         return {
           'success': false,
           'message': addUserResponse.message ?? 'Error in response'
@@ -372,7 +376,6 @@ class UserProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
       return {
         'success': false,
         'message': 'An error occurred while update user: $error'
@@ -393,14 +396,18 @@ class UserProvider extends BaseProvider {
       "id": user.id,
       "emailId": user.emailId,
       //  "mobileNumber": user.mobileNumber,
-      "country": countryController.text,
-      "state": stateController.text,
-      "district": districtController.text,
-      "city": cityController.text.trim(),
-      "taluka": cityController.text.trim(),
-      "officeBuilding": officeBuildingController.text,
-      "area": officeBuildingController.text,
-      "pincode": pinCodeDateController.text,
+      "country": countryController.text.trim(),
+      "state": stateController.text.trim(),
+      "district": districtController.text.trim(),
+      "city": cityController.text.trim().isNotEmpty
+          ? cityController.text.trim()
+          : talukaController.text.trim(),
+      "taluka": talukaController.text.trim().isNotEmpty
+          ? talukaController.text.trim()
+          : cityController.text.trim(),
+      "officeBuilding": officeBuildingController.text.trim(),
+      "area": officeBuildingController.text.trim(),
+      "pincode": pinCodeDateController.text.trim(),
     };
     log("data=====$data");
 
@@ -414,32 +421,28 @@ class UserProvider extends BaseProvider {
             UpdateUserResponse.fromJson(responseBody);
         log('Update User response === $updateUserResponse');
 
-        debugPrint("data: ${updateUserResponse.message}");
         if (updateUserResponse.success == true) {
           if (updateUserResponse.data != null) {
             userObject = updateUserResponse.data!.user!;
-            print("before SEtData ${user.firstName}");
+
             LocalSharePreferences localSharePreferences =
                 LocalSharePreferences();
             localSharePreferences.setString(
                 SharedPreferencesConstant.currentUser,
                 jsonEncode(updateUserResponse.data!.user));
-            print(
-                "after SEtData ${await localSharePreferences.getString(SharedPreferencesConstant.currentUser)}");
+
             notifyListeners();
             return {
               'success': true,
               'message': updateUserResponse.message ?? ""
             };
           } else {
-            debugPrint("Empty data: ${updateUserResponse.message}");
             return {
               'success': false,
               'message': updateUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-          debugPrint("Error: ${updateUserResponse.message}");
           return {
             'success': false,
             'message': updateUserResponse.message ?? 'Error in response'
@@ -449,7 +452,7 @@ class UserProvider extends BaseProvider {
         Map<String, dynamic> responseBody = json.decode(response.body);
         AddUserResponse addUserResponse =
             AddUserResponse.fromJson(responseBody);
-        debugPrint("Error: ${addUserResponse.message}");
+
         return {
           'success': false,
           'message': addUserResponse.message ?? 'Error in response'
@@ -459,7 +462,6 @@ class UserProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
       return {
         'success': false,
         'message': 'An error occurred while update user: $error'
@@ -748,7 +750,10 @@ class UserProvider extends BaseProvider {
     if (country.isNotEmpty) countryController.text = country;
     if (state.isNotEmpty) stateController.text = state;
     if (district.isNotEmpty) districtController.text = district;
-    if (city.isNotEmpty) cityController.text = city;
+    if (city.isNotEmpty) {
+      cityController.text = city;
+      talukaController.text = city;
+    }
     if (pincode.isNotEmpty) pinCodeDateController.text = pincode;
 
     countryOptions = country.isEmpty ? [] : [country];
@@ -782,35 +787,31 @@ class UserProvider extends BaseProvider {
         UpdateUserResponse updateUserResponse =
             UpdateUserResponse.fromJson(responseBody);
 
-        debugPrint("data: ${updateUserResponse.message}");
         if (updateUserResponse.success == true) {
           if (updateUserResponse.data != null) {
             user = updateUserResponse.data!.user!;
             // Keep the provider synchronized with the persisted/backend user so
             // dashboards created after this update see the new preferences.
             userObject = user;
-            print("before SEtData ${user.firstName}");
+
             LocalSharePreferences localSharePreferences =
                 LocalSharePreferences();
             localSharePreferences.setString(
                 SharedPreferencesConstant.currentUser,
                 jsonEncode(updateUserResponse.data!.user));
-            print(
-                "after SEtData ${await localSharePreferences.getString(SharedPreferencesConstant.currentUser)}");
+
             notifyListeners();
             return {
               'success': true,
               'message': updateUserResponse.message ?? ""
             };
           } else {
-            debugPrint("Empty data: ${updateUserResponse.message}");
             return {
               'success': false,
               'message': updateUserResponse.message ?? 'No data returned'
             };
           }
         } else {
-          debugPrint("Error: ${updateUserResponse.message}");
           return {
             'success': false,
             'message': updateUserResponse.message ?? 'Error in response'
@@ -820,7 +821,7 @@ class UserProvider extends BaseProvider {
         Map<String, dynamic> responseBody = json.decode(response.body);
         AddUserResponse addUserResponse =
             AddUserResponse.fromJson(responseBody);
-        debugPrint("Error: ${addUserResponse.message}");
+
         return {
           'success': false,
           'message': addUserResponse.message ?? 'Error in response'
@@ -830,7 +831,6 @@ class UserProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
       return {
         'success': false,
         'message': 'An error occurred while update user: $error'
@@ -911,8 +911,12 @@ class UserProvider extends BaseProvider {
     String mobile,
     String otp, {
     BuildContext? context,
+    String? referralCode,
   }) async {
     final totalWatch = Stopwatch()..start();
+    final effectiveReferralCode = referralCode?.trim().isNotEmpty == true
+        ? referralCode!.trim()
+        : await ReferralService.instance.getPendingReferralCode();
     final deviceInfoFuture = DeviceTypeHelper.buildSessionInfo(
       context: context,
     );
@@ -922,7 +926,6 @@ class UserProvider extends BaseProvider {
     _logOtpPerformance(
       'OTP device/session prep completed in ${totalWatch.elapsedMilliseconds}ms',
     );
-    final referralCode = await ReferralService.instance.getReferralCode();
     final apiUrl = ApiConstant.verifyOTP(
       mobileNum: mobile,
       otp: otp,
@@ -932,10 +935,9 @@ class UserProvider extends BaseProvider {
       appVersion: deviceInfo.appVersion,
       deviceMetadata: deviceInfo.deviceMetadata,
       deviceToken: deviceToken,
-      referralCode: referralCode,
+      referralCode: effectiveReferralCode,
     );
     final apiHelper = ApiHelper();
-    debugPrint("✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓$apiUrl");
     try {
       final apiWatch = Stopwatch()..start();
       var response = await apiHelper.postApiWithoutAuthToken(apiUrl);
@@ -961,6 +963,7 @@ class UserProvider extends BaseProvider {
                 SharedPreferencesConstant.isUserLoggedIn, true);
             localSharePreferences.setString(
                 SharedPreferencesConstant.currentUser, jsonEncode(sessionUser));
+            await ReferralService.instance.clearReferralCode();
             notifyListeners();
             _logOtpPerformance(
               'Verify OTP flow completed in ${totalWatch.elapsedMilliseconds}ms',
@@ -1023,15 +1026,12 @@ class UserProvider extends BaseProvider {
             AddUserResponse.fromJson(responseBody);
         if (deleteUserResponse.success == true) {
           notifyListeners();
-        } else {
-          debugPrint("Error: ${deleteUserResponse.message}");
-        }
+        } else {}
       } else {
         throw Exception(
             'Failed to delete user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
       throw Exception('An error occurred while delete user.');
     }
   }
@@ -1061,18 +1061,15 @@ class UserProvider extends BaseProvider {
             );
             notifyListeners();
           } else {
-            debugPrint("empty data: ${addUserResponse.message}");
             await hydrateFromCache();
           }
         } else {
-          debugPrint("Error: ${addUserResponse.message}");
           await hydrateFromCache();
         }
       } else {
         await hydrateFromCache();
       }
     } catch (error) {
-      debugPrint("Error: $error");
       await hydrateFromCache();
     }
   }
@@ -1144,7 +1141,6 @@ class UserProvider extends BaseProvider {
         };
       } else {
         return {'failure': true, 'message': 'Something went wrong!'};
-        // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
       debugPrint("Error: $error");
@@ -1388,10 +1384,64 @@ class UserProvider extends BaseProvider {
     notifyListeners();
   }
 
+  Future<void> loadDistrictOptionsByState(String state) async {
+    final selectedState = state.trim();
+
+    districtController.clear();
+    cityController.clear();
+    pinCodeDateController.clear();
+    districtOptions = [];
+    talukaOptions = [];
+    pincodeOptions = [];
+
+    if (selectedState.isEmpty) {
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final districts =
+          await _countryService.fetchDistrictsByState(selectedState);
+      districtOptions = districts;
+    } catch (error) {
+      log('District list fetch error: $error');
+      districtOptions = [];
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> loadTalukaOptionsByDistrict(String district) async {
+    final selectedDistrict = district.trim();
+
+    cityController.clear();
+    talukaController.clear();
+    pinCodeDateController.clear();
+    talukaOptions = [];
+    pincodeOptions = [];
+
+    if (selectedDistrict.isEmpty) {
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final talukas =
+          await _countryService.fetchTalukasByDistrict(selectedDistrict);
+      talukaOptions = talukas;
+    } catch (error) {
+      log('Taluka list fetch error: $error');
+      talukaOptions = [];
+    }
+
+    notifyListeners();
+  }
+
   void disposeData() {
     firstNameController.clear();
     lastNameController.clear();
     cityController.clear();
+    talukaController.clear();
     countryController.clear();
     addressSuggestions = [];
     countryOptions = [];

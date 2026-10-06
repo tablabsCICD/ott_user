@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/l10n/app_localizations.dart';
-import 'package:url_launcher/link.dart';
 
 class FooterSection extends StatelessWidget {
   const FooterSection({
@@ -71,6 +70,7 @@ class FooterSection extends StatelessWidget {
                             _FooterLinkData(lang.movie, 'Movies'),
                             _FooterLinkData(lang.series, 'Series'),
                             _FooterLinkData(lang.minSeries, 'Mini Series'),
+                            _FooterLinkData(lang.shortFilm, 'Short Film'),
                           ],
                           onOpenLink: onOpenLink,
                         ),
@@ -119,13 +119,13 @@ class FooterSection extends StatelessWidget {
                               'Terms & Conditions',
                               href: '/terms-of-service.html',
                             ),
-                            const _FooterLinkData(
-                              'Cookies',
+                            _FooterLinkData(
+                              lang.cookies,
                               'Cookies',
                               href: '/cookies.html',
                             ),
                             _FooterLinkData(
-                              'Account Deletion',
+                              lang.accountDeletion,
                               'Account Deletion',
                             ),
                           ],
@@ -204,11 +204,16 @@ class _BrandBlock extends StatelessWidget {
         children: [
           Image.asset(
             ImageConstant.logo,
-            height: 100,
-            width: 250,
+            height: 48,
             alignment: Alignment.centerLeft,
             fit: BoxFit.contain,
             filterQuality: FilterQuality.high,
+            errorBuilder: (_, __, ___) => Image.asset(
+              ImageConstant.fullScreenLogo,
+              height: 48,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            ),
           ),
           const SizedBox(height: 22),
           Builder(
@@ -220,7 +225,6 @@ class _BrandBlock extends StatelessWidget {
                 children: [
                   _TrustBadge(label: lang.payPerMovie),
                   _TrustBadge(label: lang.giftAccess),
-                  _TrustBadge(label: lang.downloadOffline),
                 ],
               );
             },
@@ -232,6 +236,8 @@ class _BrandBlock extends StatelessWidget {
             children: [
               _SocialButton(label: 'Facebook', onTap: onOpenLink),
               _SocialButton(label: 'Instagram', onTap: onOpenLink),
+              _SocialButton(label: 'LinkedIn', onTap: onOpenLink),
+              _SocialButton(label: 'YouTube', onTap: onOpenLink),
               _SocialButton(label: 'X (Twitter)', onTap: onOpenLink),
             ],
           ),
@@ -298,9 +304,9 @@ class _EcosystemCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'One OTT ecosystem for viewers and creators',
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context)!.oneOttEcosystem,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
@@ -308,7 +314,7 @@ class _EcosystemCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Secure streaming, pay-per-movie access, gifting, production house publishing, promoter growth tools, and multi-device entertainment.',
+                  AppLocalizations.of(context)!.oneOttEcosystemDescription,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.62),
                     height: 1.45,
@@ -425,32 +431,12 @@ class _FooterLinkState extends State<_FooterLink> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final href = widget.href;
-    if (href != null) {
-      return Link(
-        uri: kIsWeb
-            ? Uri.base.resolve(href)
-            : Uri.https(
-                'filmytell.com',
-                href.startsWith('/') ? href : '/$href',
-              ),
-        target: LinkTarget.self,
-        builder: (context, followLink) => _buildInteractiveLink(
-          theme,
-          followLink ?? widget.onTap,
-        ),
-      );
-    }
-
-    return _buildInteractiveLink(theme, widget.onTap);
-  }
-
-  Widget _buildInteractiveLink(ThemeData theme, VoidCallback onTap) {
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => _setHovered(true),
       onExit: (_) => _setHovered(false),
       child: GestureDetector(
-        onTap: onTap,
+        onTap: widget.onTap,
         behavior: HitTestBehavior.opaque,
         child: AnimatedPadding(
           duration: const Duration(milliseconds: 160),
@@ -498,7 +484,6 @@ class _SocialButtonState extends State<_SocialButton> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final icon = _SocialIconData.forLabel(widget.label);
 
     return MouseRegion(
@@ -561,6 +546,16 @@ class _SocialIconData {
       case 'Instagram':
         return const _SocialIconData(
           color: Color(0xFFE4405F),
+          size: 27,
+        );
+      case 'LinkedIn':
+        return const _SocialIconData(
+          color: Color(0xFF0A66C2),
+          size: 27,
+        );
+      case 'YouTube':
+        return const _SocialIconData(
+          color: Color(0xFFFF0000),
           size: 27,
         );
       case 'X (Twitter)':
@@ -669,6 +664,40 @@ class _SocialIcon extends StatelessWidget {
               height: 1,
               fontWeight: FontWeight.w900,
             ),
+          ),
+        );
+      case 'LinkedIn':
+        return Container(
+          height: size,
+          width: size,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0A66C2),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          alignment: Alignment.center,
+          child: const Text(
+            'in',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              height: 1,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        );
+      case 'YouTube':
+        return Container(
+          height: size,
+          width: size,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF0000),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          alignment: Alignment.center,
+          child: const Icon(
+            Icons.play_arrow_rounded,
+            color: Colors.white,
+            size: 20,
           ),
         );
       default:

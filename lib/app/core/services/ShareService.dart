@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:universal_html/html.dart' as html;
 
+import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/QRService.dart';
 import 'package:ott/data/models/content.dart';
@@ -18,13 +19,18 @@ class PreparedMovieShareData {
     required this.qrLink,
     required this.qrCode,
     required this.message,
-  });
+    Uri? appStoreQrLink,
+    GeneratedQrCode? appStoreQrCode,
+  })  : appStoreQrLink = appStoreQrLink ?? qrLink,
+        appStoreQrCode = appStoreQrCode ?? qrCode;
 
   final Content movie;
   final DeepLinkContentType contentType;
   final Uri deepLink;
   final Uri qrLink;
   final GeneratedQrCode qrCode;
+  final Uri appStoreQrLink;
+  final GeneratedQrCode appStoreQrCode;
   final String message;
 }
 
@@ -50,7 +56,7 @@ class ShareService {
     final qrCode = await QRService.instance.generatePng(
       data: qrLink.toString(),
       fileName: '${contentType.name}_${contentId}_qr.png',
-      foregroundColor: Color(0xFFFFFFFF),
+      foregroundColor: const Color(0xFFFFFFFF),
       backgroundColor: const Color(0xFF111111),
     );
 
@@ -72,7 +78,7 @@ class ShareService {
     return SharePlus.instance.share(
       ShareParams(
         text: data.message,
-        subject: data.movie.title ?? 'Movie',
+        subject: data.movie.title ?? 'Filmytell',
       ),
     );
   }
@@ -86,7 +92,7 @@ class ShareService {
     return SharePlus.instance.share(
       ShareParams(
         text: data.message,
-        subject: '${data.movie.title ?? 'Movie'} QR',
+        subject: '${data.movie.title ?? 'Filmytell'} QR',
         files: <XFile>[qrFile],
       ),
     );
@@ -94,12 +100,7 @@ class ShareService {
 
   Future<String> downloadQrImage(PreparedMovieShareData data) async {
     if (kIsWeb) {
-      final blob = html.Blob(<Object>[data.qrCode.bytes], 'image/png');
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      final anchor = html.AnchorElement(href: url)
-        ..download = '${data.contentType.name}_${data.movie.id}_qr.png'
-        ..click();
-      html.Url.revokeObjectUrl(url);
+      _triggerWebDownload(data.qrCode.bytes, '${data.contentType.name}_${data.movie.id}_qr.png');
       return 'browser download started';
     }
 
@@ -111,6 +112,20 @@ class ShareService {
     return file.path;
   }
 
+  Future<List<String>> downloadAllQrImages(PreparedMovieShareData data) async {
+    final path = await downloadQrImage(data);
+    return <String>[path];
+  }
+
+  void _triggerWebDownload(Uint8List bytes, String fileName) {
+    final blob = html.Blob(<Object>[bytes], 'image/png');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    html.AnchorElement(href: url)
+      ..download = fileName
+      ..click();
+    html.Url.revokeObjectUrl(url);
+  }
+
   String _buildShareMessage({
     required Content movie,
     required DeepLinkContentType contentType,
@@ -118,19 +133,15 @@ class ShareService {
   }) {
     final contentLabel = _contentLabel(contentType);
     final buffer = StringBuffer()
-      ..writeln(movie.title ?? contentLabel)
+      ..writeln('🎬 ${movie.title ?? contentLabel}')
       ..writeln()
-      ..writeln(movie.description?.trim().isNotEmpty == true
-          ? movie.description!.trim()
-          : 'Open this $contentLabel in the Filmytell app.')
+      ..writeln('Watch now 👇')
+      ..writeln(deepLink.toString())
       ..writeln()
-      ..writeln('Watch now:')
-      ..writeln(deepLink.toString());
-
-    buffer
-      ..writeln()
-      ..writeln('Play Store:')
-      ..writeln(DeepLinkService.playStoreUrl);
+      ..writeln('📲 Download App:')
+      ..writeln('iOS App Store: ${AppConstant.appStoreLink}')
+      ..writeln('Android Play Store: ${AppConstant.playStoreLink}')
+      ..writeln('Web: ${AppConstant.webAppLink}');
 
     return buffer.toString().trim();
   }
@@ -139,13 +150,17 @@ class ShareService {
     switch (contentType) {
       case DeepLinkContentType.movie:
         return 'movie';
+      case DeepLinkContentType.shortFilm:
+        return 'short film';
       case DeepLinkContentType.series:
         return 'series';
+      case DeepLinkContentType.miniSeries:
+        return 'mini series';
       case DeepLinkContentType.short:
         return 'short';
       case DeepLinkContentType.gift:
         return 'gift';
-      case DeepLinkContentType.referral:
+      case DeepLinkContentType.register:
         return 'referral';
     }
   }

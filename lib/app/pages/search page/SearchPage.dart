@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
+import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
@@ -26,8 +28,7 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   bool isLoading = true;
-  final FocusNode _searchFocusNode =
-      FocusNode(debugLabel: 'search-field');
+  final FocusNode _searchFocusNode = FocusNode(debugLabel: 'search-field');
 
   @override
   void initState() {
@@ -52,6 +53,7 @@ class _SearchPageState extends State<SearchPage> {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     final selectedThemeData = themeProvider.getTheme;
     final lang = AppLocalizations.of(context)!;
+
     final movies = featuredContent["movies"] as List<dynamic>? ?? [];
     final genreSet = <String>{
       'Action',
@@ -188,124 +190,124 @@ class _SearchPageState extends State<SearchPage> {
                               icon: const Icon(Icons.filter_list, color: Colors.white),
                               itemBuilder: (context) => [
                                 PopupMenuItem(
-                              child: StatefulBuilder(
-                                builder: (context, setState) {
-                                  return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        lang.filterOptions,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: selectedThemeData.primaryColor,
-                                        ),
-                                      ),
-                                      const Divider(),
-                                      Text(lang.genre),
-                                      DropdownButton<String>(
-                                        dropdownColor: selectedThemeData.cardColor,
-                                        isExpanded: true,
-                                        value: provider.selectedGenre,
-                                        hint: Text(lang.selectGenre),
-                                        onChanged: (value) {
-                                          setState(() {
-                                            provider.selectedGenre = value;
-                                          });
-                                          provider.applyFilter(
-                                            value,
-                                            provider.selectedLanguage,
-                                            provider.selectedRating,
-                                          );
-                                        },
-                                        items: genreSet
-                                            .map((genre) => DropdownMenuItem<String>(
-                                                  value: genre,
-                                                  child: Text(genre),
-                                                ))
-                                            .toList(),
-                                      ),
-                                      Text(lang.language),
-                                      DropdownButton<String>(
-                                        dropdownColor: selectedThemeData.cardColor,
-                                        isExpanded: true,
-                                        value: provider.selectedLanguage,
-                                        hint: Text(lang.selectLanguage),
-                                        onChanged: (value) {
-                                          setState(() {
-                                            provider.selectedLanguage = value;
-                                          });
-                                          provider.applyFilter(
-                                            provider.selectedGenre,
-                                            value,
-                                            provider.selectedRating,
-                                          );
-                                        },
-                                        items: languageSet
-                                            .map((language) => DropdownMenuItem<String>(
-                                                  value: language,
-                                                  child: Text(language),
-                                                ))
-                                            .toList(),
-                                      ),
-                                      Text(lang.minimumRating),
-                                      DropdownButton<double>(
-                                        dropdownColor: selectedThemeData.cardColor,
-                                        isExpanded: true,
-                                        value: provider.selectedRating,
-                                        hint: Text(lang.selectRating),
-                                        onChanged: (value) {
-                                          setState(() {
-                                            provider.selectedRating = value;
-                                          });
-                                          provider.applyFilter(
-                                            provider.selectedGenre,
-                                            provider.selectedLanguage,
-                                            value,
-                                          );
-                                        },
-                                        items: [3.0, 4.0, 4.5, 5.0]
-                                            .map((rating) => DropdownMenuItem<double>(
-                                                  value: rating,
-                                                  child: Text("$rating+"),
-                                                ))
-                                            .toList(),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Center(
-                                        child: ElevatedButton(
-                                          onPressed: () {
-                                            provider.clearFilters();
-                                            Navigator.pop(context);
-                                          },
-                                          child: Text(
-                                            lang.clearFilter,
+                                  child: StatefulBuilder(
+                                    builder: (context, setState) {
+                                      return Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            lang.filterOptions,
                                             style: TextStyle(
+                                              fontWeight: FontWeight.bold,
                                               color: selectedThemeData.primaryColor,
                                             ),
                                           ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
+                                          const Divider(),
+                                          Text(lang.genre),
+                                          DropdownButton<String>(
+                                            dropdownColor: selectedThemeData.cardColor,
+                                            isExpanded: true,
+                                            value: provider.selectedGenre,
+                                            hint: Text(lang.selectGenre),
+                                            onChanged: (value) {
+                                              setState(() {
+                                                provider.selectedGenre = value;
+                                              });
+                                              provider.applyFilter(
+                                                value,
+                                                provider.selectedLanguage,
+                                                provider.selectedRating,
+                                              );
+                                            },
+                                            items: genreSet
+                                                .map((genre) => DropdownMenuItem<String>(
+                                                      value: genre,
+                                                      child: Text(genre),
+                                                    ))
+                                                .toList(),
+                                          ),
+                                          Text(lang.language),
+                                          DropdownButton<String>(
+                                            dropdownColor: selectedThemeData.cardColor,
+                                            isExpanded: true,
+                                            value: provider.selectedLanguage,
+                                            hint: Text(lang.selectLanguage),
+                                            onChanged: (value) {
+                                              setState(() {
+                                                provider.selectedLanguage = value;
+                                              });
+                                              provider.applyFilter(
+                                                provider.selectedGenre,
+                                                value,
+                                                provider.selectedRating,
+                                              );
+                                            },
+                                            items: languageSet
+                                                .map((language) => DropdownMenuItem<String>(
+                                                      value: language,
+                                                      child: Text(language),
+                                                    ))
+                                                .toList(),
+                                          ),
+                                          Text(lang.minimumRating),
+                                          DropdownButton<double>(
+                                            dropdownColor: selectedThemeData.cardColor,
+                                            isExpanded: true,
+                                            value: provider.selectedRating,
+                                            hint: Text(lang.selectRating),
+                                            onChanged: (value) {
+                                              setState(() {
+                                                provider.selectedRating = value;
+                                              });
+                                              provider.applyFilter(
+                                                provider.selectedGenre,
+                                                provider.selectedLanguage,
+                                                value,
+                                              );
+                                            },
+                                            items: [3.0, 4.0, 4.5, 5.0]
+                                                .map((rating) => DropdownMenuItem<double>(
+                                                      value: rating,
+                                                      child: Text("$rating+"),
+                                                    ))
+                                                .toList(),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Center(
+                                            child: ElevatedButton(
+                                              onPressed: () {
+                                                provider.clearFilters();
+                                                Navigator.pop(context);
+                                              },
+                                              child: Text(
+                                                lang.clearFilter,
+                                                style: TextStyle(
+                                                  color: selectedThemeData.primaryColor,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                    ],
-                  ),
-                ),
+                      ),
               ),
             ],
           ),
           body: isLoading
-              ? SearchShimmer()
+              ? const SearchShimmer()
               : ResponsiveWidget.isMobile(context)
                   ? provider.filteredContentList.isEmpty
                       ? Center(
                           child: Text(
                             lang.noContentFound,
-                            style: TextStyle(
+                            style: const TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.w500),
                           ),
                         )
@@ -330,7 +332,7 @@ class _SearchPageState extends State<SearchPage> {
                             child: Center(
                               child: Text(
                                 lang.noContentFound,
-                                style: TextStyle(
+                                style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w500),
                               ),
@@ -670,6 +672,7 @@ class SearchMovieCard extends StatefulWidget {
 }
 
 class _SearchMovieCardState extends State<SearchMovieCard> {
+  bool _isLoadingCast = false;
   List<CastMember> _apiCastAndCrew = [];
 
   Content get movie => widget.movie;
@@ -693,6 +696,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
     if (contentId == null) return;
 
     setState(() {
+      _isLoadingCast = true;
       _apiCastAndCrew = [];
     });
 
@@ -719,6 +723,10 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
       }
     } catch (error) {
       debugPrint('Search cast fetch error: $error');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingCast = false);
+      }
     }
   }
 
@@ -773,9 +781,10 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => movie.type!.toLowerCase() == 'movie'
+              builder: (context) => ContentType.isMovieLike(movie.type)
                   ? MovieDetailsPage(
                       movieId: movie.id!,
+                      contentType: movie.type,
                     )
                   : SeriesDetailsPage(
                       seriesId: movie.id!,
@@ -808,7 +817,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                             width: 100,
                             height: 140,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Icon(
+                            errorBuilder: (context, error, stackTrace) => const Icon(
                                 Icons.broken_image,
                                 size: 30,
                                 color: Colors.grey),
@@ -843,7 +852,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                               children: [
                                 TextSpan(
                                   text: ' ${movie.ratings ?? '-'}',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                       color: Colors.amberAccent,
                                       fontWeight: FontWeight.w600),
                                 ),
@@ -924,7 +933,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                               ),
                               children: [
                                 TextSpan(
-                                  text: movie.releaseDate ?? '',
+                                  text: formatReleaseDate(movie.releaseDate),
                                   style: TextStyle(
                                     color: theme.canvasColor,
                                     fontSize: 12,
@@ -948,6 +957,8 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                                 )
                               ]),
                         ),
+                        const SizedBox(height: 4),
+                        _buildPeopleSection(context),
                       ],
                     ),
                   ),
@@ -977,5 +988,92 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
         .where((name) => name.isNotEmpty)
         .toList();
     return names.isEmpty ? 'N/A' : names.join(', ');
+  }
+
+  Widget _buildPeopleSection(BuildContext context) {
+    final cast = _castList;
+    final crew = _crewList;
+
+    if (_isLoadingCast && cast.isEmpty && crew.isEmpty) {
+      return const SizedBox(
+        height: 18,
+        width: 18,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+
+    if (cast.isEmpty && crew.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (cast.isNotEmpty) _buildPeopleChips(context, 'Cast', cast),
+        if (cast.isNotEmpty && crew.isNotEmpty) const SizedBox(height: 4),
+        if (crew.isNotEmpty) _buildPeopleChips(context, 'Crew', crew),
+      ],
+    );
+  }
+
+  Widget _buildPeopleChips(
+    BuildContext context,
+    String label,
+    List<CastMember> members,
+  ) {
+    final theme = Theme.of(context);
+    final visibleMembers = members.take(4).toList();
+
+    return SizedBox(
+      height: 28,
+      child: Row(
+        children: [
+          Text(
+            '$label: ',
+            style: TextStyle(
+              color: theme.primaryColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: visibleMembers.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (context, index) {
+                return _buildPersonChip(context, visibleMembers[index]);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPersonChip(BuildContext context, CastMember member) {
+    final theme = Theme.of(context);
+    final name = member.name?.trim() ?? 'N/A';
+    final role = member.role?.trim() ?? '';
+
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 140),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.cardColor.withOpacity(0.75),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.canvasColor.withOpacity(0.12)),
+      ),
+      child: Text(
+        role.isEmpty ? name : '$name ($role)',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: theme.canvasColor.withOpacity(0.78),
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
   }
 }

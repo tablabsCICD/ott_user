@@ -91,7 +91,7 @@ class DeviceBinding {
 }
 
 class SignedPlaybackRequest {
-  const SignedPlaybackRequest({
+  SignedPlaybackRequest({
     required this.contentId,
     required this.deviceId,
     required this.playbackUrl,
@@ -261,7 +261,7 @@ class SignedPlaybackResponse {
   bool isValidAt(DateTime now) {
     final uri = Uri.tryParse(playbackUrl);
     return uri != null &&
-        uri.scheme == 'https' &&
+        (uri.scheme == 'https' || uri.scheme == 'http') &&
         uri.host.isNotEmpty &&
         (authorizationType == cloudFrontSignedUrl ||
             (authorizationType == cloudFrontSignedCookies &&
@@ -285,7 +285,9 @@ class SignedPlaybackResponse {
   }) {
     final playbackUrl = (json['playbackUrl'] ?? '').toString().trim();
     final uri = Uri.tryParse(playbackUrl);
-    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+    if (uri == null ||
+        (uri.scheme != 'https' && uri.scheme != 'http') ||
+        uri.host.isEmpty) {
       throw const FormatException('Invalid secure playback URL.');
     }
 
@@ -431,6 +433,24 @@ class WatermarkData {
   final DateTime timestamp;
   final String signature;
 
+  WatermarkData copyWith({
+    String? userId,
+    String? userName,
+    String? email,
+    String? deviceId,
+    DateTime? timestamp,
+    String? signature,
+  }) {
+    return WatermarkData(
+      userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
+      email: email ?? this.email,
+      deviceId: deviceId ?? this.deviceId,
+      timestamp: timestamp ?? this.timestamp,
+      signature: signature ?? this.signature,
+    );
+  }
+
   factory WatermarkData.fromJson(Map<String, dynamic> json) {
     return WatermarkData(
       userId: (json['userId'] ?? '').toString(),
@@ -445,20 +465,15 @@ class WatermarkData {
   }
 
   String get displayText {
-    final identity = maskEmail(email).isNotEmpty
-        ? maskEmail(email)
-        : (userId.isEmpty ? 'Viewer' : userId);
-    final normalizedDevice = deviceId.replaceAll('-', '').toUpperCase();
-    final shortDevice = normalizedDevice.length <= 6
-        ? normalizedDevice
-        : normalizedDevice.substring(normalizedDevice.length - 6);
-    final local = timestamp.toLocal();
-    final date = '${local.day.toString().padLeft(2, '0')}/'
-        '${local.month.toString().padLeft(2, '0')}/'
-        '${local.year} '
-        '${local.hour.toString().padLeft(2, '0')}:'
-        '${local.minute.toString().padLeft(2, '0')}';
-    return '$identity • $date';
+    final rawEmail = email.trim();
+    if (rawEmail.isNotEmpty) {
+      return rawEmail;
+    }
+    final rawUserName = userName.trim();
+    if (rawUserName.isNotEmpty) {
+      return rawUserName;
+    }
+    return userId.trim().isNotEmpty ? userId.trim() : 'Viewer';
   }
 
   static String maskEmail(String value) {

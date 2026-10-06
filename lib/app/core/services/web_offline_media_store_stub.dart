@@ -1,12 +1,9 @@
-Future<void> storeWebOfflineMedia(int contentId, String sourceUrl) =>
-    Future<void>.error(
-      UnsupportedError('Browser offline storage is unavailable.'),
-    );
+Future<bool> hasWebOfflineMediaImpl(int contentId) async => false;
 
-Future<bool> hasWebOfflineMedia(int contentId) async => false;
+Future<String?> openWebOfflineMediaImpl(int contentId) async => null;
 
-Future<String?> openWebOfflineMedia(int contentId) async => null;
+Future<void> storeWebOfflineMediaImpl(int contentId, String videoUrl) async {}
 
-Future<void> deleteWebOfflineMedia(int contentId) async {}
+Future<void> deleteWebOfflineMediaImpl(int contentId) async {}
 
-void revokeWebOfflineMediaUrl(String? url) {}
+void revokeWebOfflineMediaUrlImpl(String? url) {}

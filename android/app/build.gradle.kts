@@ -91,9 +91,9 @@ android {
                 signingConfigs.getByName("debug")
             }
 
-            // ✅ Safe for first release (avoid crashes)
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // ✅ Enabled R8 obfuscation & resource shrinking (generates mapping.txt)
+            isMinifyEnabled = true
+            isShrinkResources = true
 
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -114,6 +114,9 @@ dependencies {
 
     // Firebase Analytics
     implementation("com.google.firebase:firebase-analytics")
+
+    // Google Play Install Referrer for deferred deep linking
+    implementation("com.android.installreferrer:installreferrer:2.2")
 
     // Desugaring support
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
