@@ -6,9 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/utils/content_type.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/utils/text_capitalization_formatter.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
+
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
 import 'package:ott/app/pages/movie%20details%20page/component/actionButtonWidget.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
@@ -31,8 +33,13 @@ import 'component/starRating.dart';
 
 class MovieDetailsPage extends StatefulWidget {
   final int movieId;
+  final String? contentType;
 
-  const MovieDetailsPage({super.key, required this.movieId});
+  const MovieDetailsPage({
+    super.key,
+    required this.movieId,
+    this.contentType,
+  });
 
   @override
   State<MovieDetailsPage> createState() => _MovieDetailsPageState();
@@ -41,9 +48,16 @@ class MovieDetailsPage extends StatefulWidget {
 class _MovieDetailsPageState extends State<MovieDetailsPage> {
   static const double _mediaPlayerBottomMargin = 24;
 
+  String get _contentType {
+    final loadedType = context.read<DashboardProvider>().content.type;
+    final resolved = ContentType.normalize(loadedType ?? widget.contentType);
+    return resolved.isEmpty ? ContentType.movie : resolved;
+  }
+
   bool isLoading = true;
   bool _contentLoadCompleted = false;
   bool _contentLoadFailed = false;
+  bool _isDescriptionExpanded = false;
   final TrailerPreviewController _trailerController =
       TrailerPreviewController();
   final TrailerPreviewController _teaserController = TrailerPreviewController();
@@ -91,10 +105,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
             .refreshStatus(loadedContent);
         await Provider.of<BookmarkProvider>(context, listen: false)
             .getUserBookmarks();
-        await dashboardProvider.getContinueWatchedMovieList("MOVIE");
+        await dashboardProvider.getContinueWatchedMovieList(
+          ContentType.normalize(loadedContent.type ?? widget.contentType),
+        );
       }
     } catch (error) {
-      debugPrint("Movie details fetch error: $error");
       if (mounted) {
         setState(() {
           _contentLoadFailed = true;
@@ -124,9 +139,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     if (movie.id == null) return;
 
     Content contentToPlay = movie;
-    var contentUrl = contentToPlay.contentUrl;
+    var contentUrl = contentToPlay.contentUrl?.trim();
 
-    if (contentUrl == null || contentUrl.trim().isEmpty) {
+    if (contentUrl == null || contentUrl.isEmpty) {
       final fetchedContent =
           await context.read<DashboardProvider>().getContentById(movie.id!);
       if (!mounted) return;
@@ -135,11 +150,16 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
         fetchedContent.watchedSeconds ??= movie.watchedSeconds;
         fetchedContent.watchedPercentage ??= movie.watchedPercentage;
         contentToPlay = fetchedContent;
-        contentUrl = contentToPlay.contentUrl;
+        contentUrl = contentToPlay.contentUrl?.trim();
       }
     }
 
-    if (contentUrl == null || contentUrl.trim().isEmpty) {
+    if (contentUrl == null || contentUrl.isEmpty) {
+      contentUrl =
+          (contentToPlay.trailerUrl ?? contentToPlay.teaserUrl)?.trim();
+    }
+
+    if (contentUrl == null || contentUrl.isEmpty) {
       CustomToast.show(
         context,
         "Video is not available",
@@ -147,6 +167,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
       );
       return;
     }
+
+    final sanitizedUrl = Uri.encodeFull(contentUrl);
 
     await _trailerController.disposePlayer?.call();
     await _teaserController.disposePlayer?.call();
@@ -159,13 +181,15 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           seasons: null,
           seasonIndex: 0,
           episodeIndex: 0,
-          videoUrl: contentUrl!,
+          videoUrl: sanitizedUrl,
           content: contentToPlay,
         ),
       ),
     ).then((_) {
       if (!mounted) return;
-      context.read<DashboardProvider>().getContinueWatchedMovieList("MOVIE");
+      context
+          .read<DashboardProvider>()
+          .getContinueWatchedMovieList(_contentType);
     });
   }
 
@@ -409,7 +433,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
             ),
             Positioned(
               left: ResponsiveWidget.isDesktop(context) ? 64 : 32,
-              right: size.width * 0.43,
+              right: kIsWeb ? size.width * 0.52 : size.width * 0.43,
               bottom: 54,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -429,16 +453,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                   const SizedBox(height: 16),
                   _buildTvMetaRow(content, theme),
                   const SizedBox(height: 16),
-                  Text(
+                  _buildExpandableDescription(
                     content.description ?? 'N/A',
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.82),
-                      fontSize: 17,
-                      height: 1.42,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    theme,
+                    maxCollapsedLines: 4,
                   ),
                   const SizedBox(height: 24),
                   content.isFeatured == true
@@ -451,7 +469,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
             Positioned(
               right: ResponsiveWidget.isDesktop(context) ? 64 : 32,
               bottom: 70,
-              width: ResponsiveWidget.isDesktop(context) ? 500 : 390,
+              width: kIsWeb
+                  ? 620
+                  : ResponsiveWidget.isDesktop(context)
+                      ? 500
+                      : 390,
               child: _buildTvTrailerPanel(content, theme),
             ),
           ],
@@ -584,7 +606,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           onPressed: () => showContentShareSheet(
             context,
             content,
-            contentType: DeepLinkContentType.movie,
+            contentType: _contentType == ContentType.shortFilm
+                ? DeepLinkContentType.shortFilm
+                : DeepLinkContentType.movie,
             unavailableMessage: "Movie details are not available yet",
           ),
         ),
@@ -901,7 +925,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => MovieDetailsPage(movieId: content.id!),
+                  builder: (_) => MovieDetailsPage(
+                    movieId: content.id!,
+                    contentType: content.type,
+                  ),
                 ),
               );
             },
@@ -996,11 +1023,26 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
 
   Future<void> _openTrailer(Content content) async {
     _stopHeroTrailer();
+    // Movie-detail responses can expose the playable promotional video as
+    // either teaserUrl or trailerUrl. Use the model's established resolver;
+    // both fields are promotional media and neither enters secure playback.
+    final trailerUrl = content.teaserOrTrailerUrl?.trim() ?? '';
+    if (kDebugMode) {
+      debugPrint('TRAILER_FLOW: Trailer button clicked');
+      debugPrint('TRAILER_FLOW: Trailer URL resolved');
+    }
+    if (trailerUrl.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Trailer is not available.')),
+      );
+      return;
+    }
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => TrailerPage(
-          trailerUrl: content.teaserOrTrailerUrl,
+          trailerUrl: trailerUrl,
           isTrailerUrl: true,
           content: content,
         ),
@@ -1159,7 +1201,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
         Row(
           children: [
             Expanded(
-              flex: 2,
+              flex: 3,
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -1257,20 +1299,19 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 ),
               ),
             ),
-            const SizedBox(width: 20),
+            const SizedBox(width: 24),
             Expanded(
-              flex: 2,
+              flex: 4,
               child: SingleChildScrollView(
+                padding: const EdgeInsets.only(top: 20, right: 24),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    SizedBox(
-                      height: 100,
-                    ),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(14),
-                      child: AspectRatio(
-                        aspectRatio: 16 / 9,
+                      child: SizedBox(
+                        width: 500,
+                        height: 500,
                         child: TrailerPreview(
                           trailerUrl: content.teaserOrTrailerUrl,
                           content: content,
@@ -1385,15 +1426,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 ],
               ),
               const SizedBox(height: 9),
-              Text(
+              _buildExpandableDescription(
                 content.description ?? 'N/A',
-                textAlign: TextAlign.left,
-                maxLines: 6,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.7),
-                  fontWeight: FontWeight.normal,
-                ),
+                selectedThemeData,
+                maxCollapsedLines: 3,
               ),
               const SizedBox(height: 8),
               content.isFeatured == true
@@ -1476,11 +1512,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   }) {
     final theme = Theme.of(context);
     final posters = content.posterUrlList ?? [];
-    final teaserUrl = _galleryVideoUrl(content);
-    final hasPosters = posters.isNotEmpty;
-    final hasTeaser = teaserUrl.isNotEmpty;
 
-    if (!hasPosters && !hasTeaser) return const SizedBox.shrink();
+    if (posters.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1498,30 +1531,13 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           height: 180,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: posters.length + (hasTeaser ? 1 : 0),
+            itemCount: posters.length,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
-              if (hasTeaser && index == 0) {
-                return SizedBox(
-                  width: 320,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: TrailerPreview(
-                      trailerUrl: teaserUrl,
-                      content: content,
-                      controller: _teaserController,
-                      autoPlay: previewAutoPlay,
-                      muted: !previewAutoPlay,
-                    ),
-                  ),
-                );
-              }
-
-              final posterIndex = hasTeaser ? index - 1 : index;
               return ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
-                  posters[posterIndex],
+                  posters[index],
                   width: 320,
                   height: 180,
                   fit: BoxFit.cover,
@@ -1786,8 +1802,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 },
               )
             : ActionButtonWidget(
-                label:
-                    contentType == "movie" ? lang.watchMovie : lang.watchSeries,
+                label: contentType == "movie"
+                    ? lang.watchMovie
+                    : contentType == "series"
+                        ? lang.watchSeries
+                        : "Watch Now",
                 icon: Icons.play_circle_fill,
                 iconOnly: showIconOnlyButtons,
                 onTap: () {
@@ -1840,10 +1859,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   }
 
   bool _canDownloadOffline(Content movie) {
-    final contentType = (movie.type ?? '').toLowerCase();
+    final contentType = ContentType.normalize(movie.type ?? widget.contentType);
     return movie.isRental == true &&
         movie.isDownloadable == true &&
-        (contentType == 'movie' || contentType == 'series') &&
+        (ContentType.isMovieLike(contentType) ||
+            ContentType.isSeries(contentType)) &&
         (movie.contentUrl?.trim().isNotEmpty ?? false);
   }
 
@@ -2029,9 +2049,83 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
       onTap: () => showContentShareSheet(
         context,
         movie,
-        contentType: DeepLinkContentType.movie,
+        contentType: _contentType == ContentType.shortFilm
+            ? DeepLinkContentType.shortFilm
+            : DeepLinkContentType.movie,
         unavailableMessage: "Movie details are not available yet",
       ),
+    );
+  }
+
+  Widget _buildExpandableDescription(
+    String text,
+    ThemeData theme, {
+    int maxCollapsedLines = 3,
+  }) {
+    final cleanText = text.trim();
+    if (cleanText.isEmpty || cleanText == 'N/A') {
+      return Text(
+        'N/A',
+        style: TextStyle(
+          color: Colors.white.withOpacity(0.7),
+          fontWeight: FontWeight.normal,
+        ),
+      );
+    }
+
+    final isLongText = cleanText.length > 130;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          cleanText,
+          textAlign: TextAlign.left,
+          maxLines: _isDescriptionExpanded ? null : maxCollapsedLines,
+          overflow: _isDescriptionExpanded
+              ? TextOverflow.visible
+              : TextOverflow.ellipsis,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.75),
+            fontWeight: FontWeight.normal,
+            fontSize: 14,
+            height: 1.4,
+          ),
+        ),
+        if (isLongText)
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isDescriptionExpanded = !_isDescriptionExpanded;
+              });
+            },
+            borderRadius: BorderRadius.circular(4),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _isDescriptionExpanded ? "Read Less" : "Read More",
+                    style: TextStyle(
+                      color: theme.primaryColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    _isDescriptionExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    color: theme.primaryColor,
+                    size: 16,
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 
