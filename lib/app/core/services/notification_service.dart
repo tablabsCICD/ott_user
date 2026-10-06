@@ -12,6 +12,8 @@ import 'package:ott/app/route/navigation_service.dart';
 import 'package:ott/app/route/routes/app_routes.dart';
 import 'package:ott/firebase_options.dart';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 const AndroidNotificationChannel _highImportanceChannel =
     AndroidNotificationChannel(
   'high_importance_channel',
@@ -22,6 +24,7 @@ const AndroidNotificationChannel _highImportanceChannel =
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  if (kIsWeb) return;
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -44,7 +47,15 @@ class NotificationService {
   static const String _fcmTokenKey = 'fcm_token';
   static const String _notificationPayloadKey = 'last_notification_payload';
 
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  FirebaseMessaging? get _messaging {
+    if (kIsWeb) return null;
+    try {
+      return FirebaseMessaging.instance;
+    } catch (_) {
+      return null;
+    }
+  }
+
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
@@ -52,7 +63,8 @@ class NotificationService {
   Map<String, dynamic>? _pendingNavigationPayload;
 
   Future<void> init() async {
-    if (_isInitialized) {
+    if (_isInitialized || kIsWeb) {
+      _isInitialized = true;
       return;
     }
 
@@ -72,14 +84,17 @@ class NotificationService {
   }
 
   Future<String?> getDeviceToken() async {
-    try {
-      final token = await _messaging.getToken();
-      if (token != null && token.trim().isNotEmpty) {
-        await _persistToken(token);
-        return token;
+    final messaging = _messaging;
+    if (messaging != null) {
+      try {
+        final token = await messaging.getToken();
+        if (token != null && token.trim().isNotEmpty) {
+          await _persistToken(token);
+          return token;
+        }
+      } catch (_) {
+        // Token lookup failures are intentionally non-fatal.
       }
-    } catch (_) {
-      // Token lookup failures are intentionally non-fatal.
     }
 
     final prefs = await SharedPreferences.getInstance();
@@ -88,6 +103,7 @@ class NotificationService {
   }
 
   Future<void> _initializeLocalNotifications() async {
+    if (kIsWeb) return;
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings();
@@ -111,7 +127,9 @@ class NotificationService {
   }
 
   Future<void> _requestPermissions() async {
-    await _messaging.requestPermission(
+    final messaging = _messaging;
+    if (messaging == null) return;
+    await messaging.requestPermission(
       alert: true,
       announcement: false,
       badge: true,
@@ -121,14 +139,18 @@ class NotificationService {
       sound: true,
     );
 
-    final androidPlugin =
-        _localNotifications.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-    await androidPlugin?.requestNotificationsPermission();
+    if (!kIsWeb) {
+      final androidPlugin =
+          _localNotifications.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      await androidPlugin?.requestNotificationsPermission();
+    }
   }
 
   Future<void> _configureForegroundPresentation() async {
-    await _messaging.setForegroundNotificationPresentationOptions(
+    final messaging = _messaging;
+    if (messaging == null) return;
+    await messaging.setForegroundNotificationPresentationOptions(
       alert: true,
       badge: true,
       sound: true,
@@ -136,14 +158,16 @@ class NotificationService {
   }
 
   Future<void> _setupTokenHandlers() async {
+    final messaging = _messaging;
+    if (messaging == null) return;
     try {
-      final token = await _messaging.getToken();
+      final token = await messaging.getToken();
       await _persistToken(token);
     } catch (_) {
       // Token fetch failures are intentionally non-fatal.
     }
 
-    _messaging.onTokenRefresh.listen((newToken) async {
+    messaging.onTokenRefresh.listen((newToken) async {
       await _persistToken(newToken);
     }, onError: (Object _, StackTrace __) {
       // Token refresh stream failures are intentionally non-fatal.
@@ -160,15 +184,19 @@ class NotificationService {
   }
 
   void _listenForegroundMessages() {
+    if (kIsWeb) return;
     FirebaseMessaging.onMessage.listen(handleForeground);
   }
 
   void _listenNotificationTaps() {
+    if (kIsWeb) return;
     FirebaseMessaging.onMessageOpenedApp.listen(handleBackground);
   }
 
   Future<void> _handleInitialMessage() async {
-    final initialMessage = await _messaging.getInitialMessage();
+    final messaging = _messaging;
+    if (messaging == null) return;
+    final initialMessage = await messaging.getInitialMessage();
     if (initialMessage != null) {
       await handleBackground(initialMessage);
     }
