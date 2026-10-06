@@ -17,6 +17,8 @@ import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ott/app/provider/language_provider.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 import 'package:ott/app/core/services/referral_service.dart';
 
@@ -110,6 +112,11 @@ class _LoginCardState extends State<LoginCard>
     _mobileController.dispose();
     _otpController.dispose();
     super.dispose();
+  }
+
+  void _showTextInputKeyboard(FocusNode node) {
+    node.requestFocus();
+    SystemChannels.textInput.invokeMethod<void>('TextInput.show');
   }
 
   Future<void> _checkPendingReferralCode() async {
@@ -718,12 +725,14 @@ class _LoginCardState extends State<LoginCard>
           });
           // Sync user languages into LanguageProvider
           final user = userProvider.userObj;
+          final langProvider =
+              Provider.of<LanguageProvider>(context, listen: false);
           langProvider.setUserLanguages(user.selectedLanguages ?? []);
           log(user.selectedLanguages.toString());
 
           CustomToast.show(context, lang.loginSuccessfully, isSuccess: true);
           final navigationWatch = Stopwatch()..start();
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
               builder: (context) => const NavigationPage(),
@@ -1073,3 +1082,26 @@ class _TvNumberPadKey {
   final Color? actionColor;
   final VoidCallback onTap;
 }
+
+class _TvFocusFrame extends StatelessWidget {
+  const _TvFocusFrame({
+    required this.child,
+    this.focusNode,
+    this.enabled = true,
+  });
+
+  final Widget child;
+  final FocusNode? focusNode;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled) return child;
+    return OttTvFocus(
+      focusNode: focusNode,
+      enabled: enabled,
+      child: child,
+    );
+  }
+}
+

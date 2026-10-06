@@ -926,7 +926,6 @@ class UserProvider extends BaseProvider {
     _logOtpPerformance(
       'OTP device/session prep completed in ${totalWatch.elapsedMilliseconds}ms',
     );
-    final referralCode = await ReferralService.instance.getReferralCode();
     final apiUrl = ApiConstant.verifyOTP(
       mobileNum: mobile,
       otp: otp,

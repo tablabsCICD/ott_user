@@ -158,6 +158,8 @@ class ShareService {
         return 'mini series';
       case DeepLinkContentType.short:
         return 'short';
+      case DeepLinkContentType.gift:
+        return 'gift';
       case DeepLinkContentType.referral:
       case DeepLinkContentType.register:
         return 'referral';

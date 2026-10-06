@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/data/models/content.dart';
@@ -888,3 +889,19 @@ class _CarouselLoadingMore extends StatelessWidget {
     );
   }
 }
+
+class _PosterFallback extends StatelessWidget {
+  const _PosterFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: FilmytellTheme.surfaceDark,
+      child: const Center(
+        child: Icon(Icons.movie_filter_outlined,
+            color: Colors.white38, size: 28),
+      ),
+    );
+  }
+}
+

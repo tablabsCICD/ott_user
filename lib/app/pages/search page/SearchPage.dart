@@ -727,12 +727,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                   .toList();
         });
       }
-    } catch (error) {
-    } finally {
-      if (mounted) {
-        setState(() => _isLoadingCast = false);
-      }
-    }
+    } catch (error) {}
   }
 
   List<CastMember> get _castList {

@@ -21,6 +21,8 @@ import 'package:ott/presentation/web_landing/widgets/latest_content_section.dart
 import 'package:ott/presentation/web_landing/widgets/production_house_section.dart';
 import 'package:ott/presentation/web_landing/widgets/trending_section.dart';
 import 'package:ott/presentation/web_landing/widgets/user_portal_section.dart';
+import 'package:ott/presentation/web_landing/screens/producer_learn_more_screen.dart';
+import 'package:ott/presentation/web_landing/utils/filmytell_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';

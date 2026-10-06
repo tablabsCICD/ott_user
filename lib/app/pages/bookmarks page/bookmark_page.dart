@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/utils/content_type.dart';
 import 'package:ott/app/pages/bookmarks page/component/bookmark_card.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';

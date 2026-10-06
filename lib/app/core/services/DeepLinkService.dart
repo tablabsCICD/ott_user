@@ -725,6 +725,8 @@ class DeepLinkService {
         return shortHost;
       case DeepLinkContentType.gift:
         return giftHost;
+      case DeepLinkContentType.referral:
+        return registerHost;
       case DeepLinkContentType.register:
         return registerHost;
     }

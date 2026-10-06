@@ -1850,27 +1850,24 @@ class _HomePageState extends State<HomePage>
     var selectedThemeData = themeProvider.getTheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
-      children: [
-        ...ContentType.homeTypes,
-      ].map((type) {
-        Future<void> onSelectType() async {
-          setState(() {
-            selectedType = type;
-          });
-          final selectedLanguages =
-              Provider.of<UserProvider>(context, listen: false)
-                      .userObject
-                      .selectedLanguages ??
-                  []; // Ensure it doesn't throw null
+      children: ContentType.homeTypes.map<Widget>((type) {
+        return Padding(
+          padding: const EdgeInsets.only(right: 8.0),
+          child: InkWell(
+            onTap: () async {
+              setState(() {
+                selectedType = type;
+              });
+              final selectedLanguages =
+                  Provider.of<UserProvider>(context, listen: false)
+                          .userObject
+                          .selectedLanguages ??
+                      [];
 
-              print(selectedLanguages);
-              if (selectedType == 'MINI SERIES') {
+              if (selectedType == 'MINI SERIES' || selectedType == 'MADIOO') {
                 return;
               }
-              if (selectedType == 'MADIOO') {
-                return;
-              }
-              if (selectedLanguages.isEmpty || selectedLanguages == []) {
+              if (selectedLanguages.isEmpty) {
                 await getMovieList(
                     dashboardProvider, selectedType, ["Hindi", "English"]);
               } else {
@@ -1888,9 +1885,7 @@ class _HomePageState extends State<HomePage>
                       ? selectedThemeData.primaryColor
                       : selectedThemeData.canvasColor.withOpacity(0.6),
                 ),
-                borderRadius: BorderRadius.circular(
-                  10,
-                ),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Padding(
                 padding:
@@ -1915,7 +1910,6 @@ class _HomePageState extends State<HomePage>
               ),
             ),
           ),
-          //
         );
       }).toList(),
     );
