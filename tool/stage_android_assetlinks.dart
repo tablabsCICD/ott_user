@@ -26,6 +26,13 @@ void main() {
     return;
   }
   if (!_copyRequiredFile(
+    source: File('web/.well-known/apple-app-site-association'),
+    destination: File('${webBuildDirectory.path}/.well-known/apple-app-site-association'),
+    label: 'iOS Apple App Site Association file',
+  )) {
+    return;
+  }
+  if (!_copyRequiredFile(
     source: File('web/account-delete.html'),
     destination: File('${webBuildDirectory.path}/account-delete.html'),
     label: 'account deletion page',

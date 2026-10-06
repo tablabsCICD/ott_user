@@ -27,6 +27,7 @@
 -keep class **.model.** { *; }
 
 # =========================
+# =========================
 # MediaKit / MPV Keep Rules
 # =========================
 -keep class com.alexmercerind.mediakitandroidhelper.** { *; }
@@ -51,3 +52,9 @@
 # =========================
 -keep class androidx.security.crypto.** { *; }
 -dontwarn androidx.security.crypto.**
+
+# =========================
+# Google Play Install Referrer
+# =========================
+-keep class com.android.installreferrer.** { *; }
+-dontwarn com.android.installreferrer.**

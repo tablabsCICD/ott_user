@@ -1,8 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/l10n/app_localizations.dart';
+import 'package:ott/presentation/web_landing/utils/filmytell_theme.dart';
+import 'package:ott/presentation/web_landing/widgets/filmytell_movie_card.dart';
+import 'package:ott/presentation/web_landing/widgets/filmytell_section_header.dart';
 
 class ContentCarousel extends StatefulWidget {
   const ContentCarousel({
@@ -76,77 +78,97 @@ class _ContentCarouselState extends State<ContentCarousel> {
   Widget build(BuildContext context) {
     if (widget.items.isEmpty) return const SizedBox.shrink();
     final width = MediaQuery.of(context).size.width;
-    final horizontalPadding = width < 600 ? 16.0 : (width < 1024 ? 32.0 : 56.0);
-    final cardWidth = width < 600 ? 138.0 : (width >= 1360 ? 178.0 : 156.0);
+    final isMobile = width < 600;
+    final isTablet = width >= 600 && width < 1024;
+    final horizontalPadding = isMobile ? 18.0 : (isTablet ? 32.0 : 56.0);
+
+    // Responsive card dimensions: wide landscape cards matching Hero Banner aspect ratio (1.38)
+    final double cardWidth;
+    if (width >= 1600) {
+      cardWidth = 340.0; // Ultra-wide / 4K monitors (Height: 246px)
+    } else if (width >= 1280) {
+      cardWidth = 300.0; // Standard Full HD desktop (Height: 217px)
+    } else if (width >= 1024) {
+      cardWidth = 260.0; // Laptops / compact desktop (Height: 188px)
+    } else if (width >= 768) {
+      cardWidth = 225.0; // Tablets landscape / iPads (Height: 163px)
+    } else if (width >= 480) {
+      cardWidth = 195.0; // Large phones / small tablets (Height: 141px)
+    } else if (width >= 360) {
+      cardWidth = 170.0; // Standard mobile (Height: 123px)
+    } else {
+      cardWidth = 150.0; // Compact mobile (Height: 108px)
+    }
+
+    final cardHeight = cardWidth / 1.38; // Wide 1.38 aspect ratio matching Hero Banner
+    final containerHeight = cardHeight + 36.0; // Clearance for 1.04x hover scale & shadows
 
     return RepaintBoundary(
       child: Padding(
-        padding: const EdgeInsets.only(bottom: 48),
+        padding: EdgeInsets.only(bottom: isMobile ? 32 : 48),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Reusable Section Header
             Padding(
               padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-              child: Row(
-                children: [
-                  Text(
-                    widget.title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 25,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (width >= 600) ...[
-                    _ArrowButton(
-                      icon: Icons.chevron_left,
-                      onTap: () => _scrollBy(-720),
-                    ),
-                    const SizedBox(width: 10),
-                    _ArrowButton(
-                      icon: Icons.chevron_right,
-                      onTap: () => _scrollBy(720),
-                    ),
-                  ],
-                ],
+              child: FilmytellSectionHeader(
+                title: widget.title,
+                onPrev: () => _scrollBy(-cardWidth * 3.5),
+                onNext: () => _scrollBy(cardWidth * 3.5),
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
+            // Horizontal Carousel List
             Listener(
               onPointerSignal: (event) {
                 if (event is PointerScrollEvent) {
                   _scrollBy(event.scrollDelta.dy == 0
                       ? event.scrollDelta.dx
-                      : event.scrollDelta.dy * 2.4);
+                      : event.scrollDelta.dy * 2.2);
                 }
               },
               child: SizedBox(
-                height: widget.numbered ? 292 : 270,
+                height: containerHeight,
                 child: ListView.separated(
                   controller: _controller,
-                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: 8.0,
+                  ),
                   scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
                   itemCount: widget.items.length +
                       (widget.isLoadingMore || widget.hasMore ? 1 : 0),
-                  separatorBuilder: (_, __) => const SizedBox(width: 18),
+                  separatorBuilder: (_, __) =>
+                      SizedBox(width: isMobile ? 12 : 16),
                   itemBuilder: (context, index) {
                     if (index >= widget.items.length) {
                       return SizedBox(
-                        width: widget.numbered ? cardWidth + 42 : cardWidth,
+                        width: cardWidth,
                         child: _CarouselLoadingMore(
                           onLoadMore: widget.onLoadMore,
                           isLoading: widget.isLoadingMore,
+                          height: cardHeight,
                         ),
                       );
                     }
 
+                    final rank = widget.numbered ? index + 1 : null;
+                    final isSmallMobile = cardWidth < 120;
+                    final rankOffset = rank != null
+                        ? (rank >= 10
+                            ? (isSmallMobile ? 24.0 : (isMobile ? 28.0 : (cardWidth >= 170 ? 44.0 : 36.0)))
+                            : (isSmallMobile ? 16.0 : (isMobile ? 20.0 : (cardWidth >= 170 ? 30.0 : 24.0))))
+                        : 0.0;
+
                     return SizedBox(
-                      width: widget.numbered ? cardWidth + 42 : cardWidth,
-                      child: _LandingPosterCard(
+                      width: cardWidth + rankOffset,
+                      child: FilmytellMovieCard(
                         content: widget.items[index],
-                        rank: widget.numbered ? index + 1 : null,
+                        rank: rank,
                         width: cardWidth,
+                        height: cardHeight,
                         onTap: () => widget.onContentTap(widget.items[index]),
                       ),
                     );
@@ -807,55 +829,54 @@ class _ArrowButton extends StatelessWidget {
     );
   }
 }
-
 class _CarouselLoadingMore extends StatelessWidget {
   const _CarouselLoadingMore({
     required this.onLoadMore,
     required this.isLoading,
+    required this.height,
   });
 
   final VoidCallback? onLoadMore;
   final bool isLoading;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Center(
       child: InkWell(
         onTap: isLoading ? null : onLoadMore,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          height: 226,
-          width: 150,
+          height: height,
+          width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.06),
+            color: Colors.white.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.10)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
           ),
           child: Center(
             child: isLoading
-                ? SizedBox(
+                ? const SizedBox(
                     height: 26,
                     width: 26,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.6,
-                      color: theme.primaryColor,
+                      color: FilmytellTheme.primary,
                     ),
                   )
                 : Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.add_circle_outline_rounded,
-                        color: theme.primaryColor,
+                        color: FilmytellTheme.primary,
                         size: 30,
                       ),
                       const SizedBox(height: 10),
                       Text(
                         AppLocalizations.of(context)!.loadMore,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.78),
+                          color: Colors.white.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -863,20 +884,6 @@ class _CarouselLoadingMore extends StatelessWidget {
                   ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _PosterFallback extends StatelessWidget {
-  const _PosterFallback();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.grey.shade900,
-      child: const Center(
-        child: Icon(Icons.movie_creation_outlined, color: Colors.white54),
       ),
     );
   }

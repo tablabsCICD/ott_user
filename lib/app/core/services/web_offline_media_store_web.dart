@@ -1,5 +1,4 @@
 import 'dart:js_interop';
-
 import 'package:web/web.dart' as web;
 
 const String _cacheName = 'filmytell-offline-media-v1';

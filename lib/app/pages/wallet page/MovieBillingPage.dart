@@ -113,7 +113,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            "₹ ${walletProvider.walletBalance.toStringAsFixed(0)}",
+                            "₹ ${walletProvider.walletBalance.toStringAsFixed(2)}",
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 36,
@@ -189,7 +189,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   //const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
-                                      "Wallet: ₹ ${provider.walletBalance.toStringAsFixed(0)}",
+                                      "Wallet: ₹ ${provider.walletBalance.toStringAsFixed(2)}",
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
@@ -615,13 +615,8 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   pageContext,
                                   listen: false,
                                 ).getContentById(widget.movie.id!).catchError((
-                                  error,
-                                ) {
-                                  debugPrint(
-                                    'Dashboard refresh failed after purchase: $error',
-                                  );
-                                  return null;
-                                });
+                                      error,
+                                    ) {});
 
                                 if (!mounted) return;
                                 _hidePurchaseLoader(pageContext);
@@ -824,12 +819,11 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                               if (!mounted) return;
                               if (result is Map && result['success'] == true) {
                                 _showWalletReflectLoader(pageContext);
-                                final addResult =
-                                    await provider
-                                        .onPaymentVerified(
-                                          expectedAmount: amount,
-                                        )
-                                        .whenComplete(() {
+                                final addResult = await provider
+                                    .onPaymentVerified(
+                                  expectedAmount: amount,
+                                )
+                                    .whenComplete(() {
                                   if (mounted) {
                                     Navigator.of(pageContext,
                                             rootNavigator: true)
@@ -924,7 +918,6 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
         'Purchase completed, but invoice generation failed.',
         isSuccess: false,
       );
-      debugPrint('Invoice generation error: $error');
     }
   }
 }

@@ -70,7 +70,6 @@ Gift code: $couponCode
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         foregroundColor: Colors.white,
         title: const Text(
           "Gifted Movies",

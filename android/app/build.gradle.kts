@@ -117,9 +117,9 @@ android {
                 signingConfigs.getByName("debug")
             }
 
-            // ✅ Safe for first release (avoid crashes)
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // ✅ Enabled R8 obfuscation & resource shrinking (generates mapping.txt)
+            isMinifyEnabled = true
+            isShrinkResources = true
 
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -141,6 +141,10 @@ dependencies {
     // Firebase Analytics (Scoped to Mobile and Google TV)
     add("mobileImplementation", "com.google.firebase:firebase-analytics")
     add("tvImplementation", "com.google.firebase:firebase-analytics")
+
+    // Google Play Install Referrer (Scoped to Mobile and Google TV)
+    add("mobileImplementation", "com.android.installreferrer:installreferrer:2.2")
+    add("tvImplementation", "com.android.installreferrer:installreferrer:2.2")
 
     // Desugaring support
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")

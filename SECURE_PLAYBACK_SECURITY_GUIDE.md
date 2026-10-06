@@ -464,6 +464,24 @@ Check:
 - CloudFront distribution hostname.
 - CORS on Web.
 
+For Flutter Web, CORS must be enabled on every HLS response (the master
+playlist, child playlists, segments, encryption keys, and subtitle/audio
+tracks), not only on the master manifest. Configure a CloudFront response
+headers policy on the HLS cache behavior with:
+
+- `Access-Control-Allow-Origin: https://filmytell.com` (and the exact `www`
+  origin too if that hostname serves the app), or `*` when credentials are not
+  used.
+- `Access-Control-Allow-Methods: GET, HEAD, OPTIONS`.
+- `Access-Control-Allow-Headers: Range, Origin, Accept`.
+- `Access-Control-Expose-Headers: Content-Length, Content-Range, Accept-Ranges`.
+
+If CloudFront signed cookies are used in the browser, use the exact site origin
+instead of `*`, add `Access-Control-Allow-Credentials: true`, and forward the
+required cookies. Invalidate cached `.m3u8` and segment responses after applying
+the response headers policy; an HTTP `200` without CORS headers is still blocked
+by the browser.
+
 ### Master loads but playback fails
 
 Check:

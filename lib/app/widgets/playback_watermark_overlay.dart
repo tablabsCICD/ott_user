@@ -18,6 +18,8 @@ class PlaybackWatermarkOverlay extends StatefulWidget {
 }
 
 class _PlaybackWatermarkOverlayState extends State<PlaybackWatermarkOverlay> {
+  static const Duration _displayDuration = Duration(seconds: 10);
+  static const Duration _displayInterval = Duration(minutes: 30);
   static const List<Alignment> _positions = [
     Alignment.topLeft,
     Alignment.topRight,
@@ -28,28 +30,46 @@ class _PlaybackWatermarkOverlayState extends State<PlaybackWatermarkOverlay> {
     Alignment.center,
   ];
 
-  Timer? _timer;
+  Timer? _intervalTimer;
+  Timer? _hideTimer;
   int _positionIndex = 0;
+  bool _isVisible = true;
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 12), (_) {
-      if (!mounted) return;
-      setState(() {
-        _positionIndex = (_positionIndex + 1) % _positions.length;
-      });
+    _scheduleHide();
+    _intervalTimer = Timer.periodic(_displayInterval, (_) => _showWatermark());
+  }
+
+  void _showWatermark() {
+    if (!mounted) return;
+    _hideTimer?.cancel();
+    setState(() {
+      _positionIndex = (_positionIndex + 1) % _positions.length;
+      _isVisible = true;
+    });
+    _scheduleHide();
+  }
+
+  void _scheduleHide() {
+    _hideTimer?.cancel();
+    _hideTimer = Timer(_displayDuration, () {
+      if (mounted) setState(() => _isVisible = false);
     });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _intervalTimer?.cancel();
+    _hideTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_isVisible) return const SizedBox.shrink();
+
     return IgnorePointer(
       child: SafeArea(
         minimum: const EdgeInsets.all(28),

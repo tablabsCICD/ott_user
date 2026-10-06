@@ -4,6 +4,7 @@ import 'package:ott/app/core/network/anti_piracy_api_client.dart';
 import 'package:ott/app/core/services/device_identity_service.dart';
 import 'package:ott/app/core/services/device_integrity_service.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/anti_piracy_models.dart';
 
 class SecurePlaybackRepository {
@@ -143,7 +144,32 @@ class SecurePlaybackRepository {
 
   Future<WatermarkData> getCurrentWatermark() async {
     final current = await identity;
-    return _apiClient.getWatermark(deviceId: current.deviceId);
+    final localUser =
+        await LocalSharePreferences.localSharePreferences.getUser();
+    final localEmail = localUser?.emailId?.trim() ?? '';
+    try {
+      final remote = await _apiClient.getWatermark(deviceId: current.deviceId);
+      if (remote.email.trim().isNotEmpty) {
+        return remote;
+      }
+      if (localEmail.isNotEmpty) {
+        return remote.copyWith(email: localEmail);
+      }
+      return remote;
+    } catch (_) {
+      if (localEmail.isNotEmpty) {
+        return WatermarkData(
+          userId: localUser?.id?.toString() ?? '',
+          userName:
+              '${localUser?.firstName ?? ''} ${localUser?.lastName ?? ''}'.trim(),
+          email: localEmail,
+          deviceId: current.deviceId,
+          timestamp: DateTime.now(),
+          signature: '',
+        );
+      }
+      rethrow;
+    }
   }
 
   Future<void> sendAnalytics({

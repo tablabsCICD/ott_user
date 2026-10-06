@@ -1,10 +1,9 @@
 import 'dart:async';
-
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:ott/data/models/request/saveRatingAndReview.dart';
 import 'package:ott/data/models/response/getRatingsAndReview.dart';
 import 'package:ott/data/models/response/saveRatingAndReview.dart';
-import 'dart:convert';
 
 import '../../data/models/content.dart';
 import '../../data/models/request/getAllVideoResponse.dart';
@@ -307,7 +306,6 @@ class VideoProvider extends BaseProvider {
           'success': false,
           'message': responseMessage ?? 'Something went wrong!'
         };
-        // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
       debugPrint("Error: $error");
@@ -368,7 +366,6 @@ class VideoProvider extends BaseProvider {
         Map<String, dynamic> responseBody = json.decode(response.body);
         GetRatingsAndReview getRatingsAndReview =
             GetRatingsAndReview.fromJson(responseBody);
-        //CustomToast.show("Error: ${getRatingsAndReview.message}",isSuccess:false);
         return {
           'success': false,
           'message': getRatingsAndReview.message ?? 'Error in response'

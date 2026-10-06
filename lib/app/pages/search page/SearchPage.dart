@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
+import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
@@ -26,8 +28,7 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   bool isLoading = true;
-  final FocusNode _searchFocusNode =
-      FocusNode(debugLabel: 'search-field');
+  final FocusNode _searchFocusNode = FocusNode(debugLabel: 'search-field');
 
   @override
   void initState() {
@@ -134,7 +135,8 @@ class _SearchPageState extends State<SearchPage> {
                           ),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: selectedThemeData.cardColor.withOpacity(0.3),
+                              color:
+                                  selectedThemeData.cardColor.withOpacity(0.3),
                               borderRadius: BorderRadius.circular(22),
                             ),
                             padding: const EdgeInsets.symmetric(
@@ -185,116 +187,127 @@ class _SearchPageState extends State<SearchPage> {
                             PopupMenuButton(
                               color: selectedThemeData.cardColor,
                               tooltip: lang.filter,
-                              icon: const Icon(Icons.filter_list, color: Colors.white),
+                              icon: const Icon(Icons.filter_list,
+                                  color: Colors.white),
                               itemBuilder: (context) => [
                                 PopupMenuItem(
-                              child: StatefulBuilder(
-                                builder: (context, setState) {
-                                  return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        lang.filterOptions,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: selectedThemeData.primaryColor,
-                                        ),
-                                      ),
-                                      const Divider(),
-                                      Text(lang.genre),
-                                      DropdownButton<String>(
-                                        dropdownColor: selectedThemeData.cardColor,
-                                        isExpanded: true,
-                                        value: provider.selectedGenre,
-                                        hint: Text(lang.selectGenre),
-                                        onChanged: (value) {
-                                          setState(() {
-                                            provider.selectedGenre = value;
-                                          });
-                                          provider.applyFilter(
-                                            value,
-                                            provider.selectedLanguage,
-                                            provider.selectedRating,
-                                          );
-                                        },
-                                        items: genreSet
-                                            .map((genre) => DropdownMenuItem<String>(
-                                                  value: genre,
-                                                  child: Text(genre),
-                                                ))
-                                            .toList(),
-                                      ),
-                                      Text(lang.language),
-                                      DropdownButton<String>(
-                                        dropdownColor: selectedThemeData.cardColor,
-                                        isExpanded: true,
-                                        value: provider.selectedLanguage,
-                                        hint: Text(lang.selectLanguage),
-                                        onChanged: (value) {
-                                          setState(() {
-                                            provider.selectedLanguage = value;
-                                          });
-                                          provider.applyFilter(
-                                            provider.selectedGenre,
-                                            value,
-                                            provider.selectedRating,
-                                          );
-                                        },
-                                        items: languageSet
-                                            .map((language) => DropdownMenuItem<String>(
-                                                  value: language,
-                                                  child: Text(language),
-                                                ))
-                                            .toList(),
-                                      ),
-                                      Text(lang.minimumRating),
-                                      DropdownButton<double>(
-                                        dropdownColor: selectedThemeData.cardColor,
-                                        isExpanded: true,
-                                        value: provider.selectedRating,
-                                        hint: Text(lang.selectRating),
-                                        onChanged: (value) {
-                                          setState(() {
-                                            provider.selectedRating = value;
-                                          });
-                                          provider.applyFilter(
-                                            provider.selectedGenre,
-                                            provider.selectedLanguage,
-                                            value,
-                                          );
-                                        },
-                                        items: [3.0, 4.0, 4.5, 5.0]
-                                            .map((rating) => DropdownMenuItem<double>(
-                                                  value: rating,
-                                                  child: Text("$rating+"),
-                                                ))
-                                            .toList(),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Center(
-                                        child: ElevatedButton(
-                                          onPressed: () {
-                                            provider.clearFilters();
-                                            Navigator.pop(context);
-                                          },
-                                          child: Text(
-                                            lang.clearFilter,
+                                  child: StatefulBuilder(
+                                    builder: (context, setState) {
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            lang.filterOptions,
                                             style: TextStyle(
-                                              color: selectedThemeData.primaryColor,
+                                              fontWeight: FontWeight.bold,
+                                              color: selectedThemeData
+                                                  .primaryColor,
                                             ),
                                           ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
+                                          const Divider(),
+                                          Text(lang.genre),
+                                          DropdownButton<String>(
+                                            dropdownColor:
+                                                selectedThemeData.cardColor,
+                                            isExpanded: true,
+                                            value: provider.selectedGenre,
+                                            hint: Text(lang.selectGenre),
+                                            onChanged: (value) {
+                                              setState(() {
+                                                provider.selectedGenre = value;
+                                              });
+                                              provider.applyFilter(
+                                                value,
+                                                provider.selectedLanguage,
+                                                provider.selectedRating,
+                                              );
+                                            },
+                                            items: genreSet
+                                                .map((genre) =>
+                                                    DropdownMenuItem<String>(
+                                                      value: genre,
+                                                      child: Text(genre),
+                                                    ))
+                                                .toList(),
+                                          ),
+                                          Text(lang.language),
+                                          DropdownButton<String>(
+                                            dropdownColor:
+                                                selectedThemeData.cardColor,
+                                            isExpanded: true,
+                                            value: provider.selectedLanguage,
+                                            hint: Text(lang.selectLanguage),
+                                            onChanged: (value) {
+                                              setState(() {
+                                                provider.selectedLanguage =
+                                                    value;
+                                              });
+                                              provider.applyFilter(
+                                                provider.selectedGenre,
+                                                value,
+                                                provider.selectedRating,
+                                              );
+                                            },
+                                            items: languageSet
+                                                .map((language) =>
+                                                    DropdownMenuItem<String>(
+                                                      value: language,
+                                                      child: Text(language),
+                                                    ))
+                                                .toList(),
+                                          ),
+                                          Text(lang.minimumRating),
+                                          DropdownButton<double>(
+                                            dropdownColor:
+                                                selectedThemeData.cardColor,
+                                            isExpanded: true,
+                                            value: provider.selectedRating,
+                                            hint: Text(lang.selectRating),
+                                            onChanged: (value) {
+                                              setState(() {
+                                                provider.selectedRating = value;
+                                              });
+                                              provider.applyFilter(
+                                                provider.selectedGenre,
+                                                provider.selectedLanguage,
+                                                value,
+                                              );
+                                            },
+                                            items: [3.0, 4.0, 4.5, 5.0]
+                                                .map((rating) =>
+                                                    DropdownMenuItem<double>(
+                                                      value: rating,
+                                                      child: Text("$rating+"),
+                                                    ))
+                                                .toList(),
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Center(
+                                            child: ElevatedButton(
+                                              onPressed: () {
+                                                provider.clearFilters();
+                                                Navigator.pop(context);
+                                              },
+                                              child: Text(
+                                                lang.clearFilter,
+                                                style: TextStyle(
+                                                  color: selectedThemeData
+                                                      .primaryColor,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                    ],
-                  ),
-                ),
+                      ),
               ),
             ],
           ),
@@ -331,8 +344,7 @@ class _SearchPageState extends State<SearchPage> {
                               child: Text(
                                 lang.noContentFound,
                                 style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500),
+                                    fontSize: 16, fontWeight: FontWeight.w500),
                               ),
                             ),
                           )
@@ -573,8 +585,7 @@ class _SearchPageState extends State<SearchPage> {
                         spacing: 8,
                         runSpacing: 8,
                         children: [3.0, 4.0, 4.5, 5.0].map((rating) {
-                          final isSelected =
-                              provider.selectedRating == rating;
+                          final isSelected = provider.selectedRating == rating;
                           return OttTvFocus(
                             borderRadius: 16,
                             scale: 1.04,
@@ -629,8 +640,7 @@ class _SearchPageState extends State<SearchPage> {
                     },
                     child: Text(
                       lang.clearFilter,
-                      style:
-                          TextStyle(color: selectedThemeData.primaryColor),
+                      style: TextStyle(color: selectedThemeData.primaryColor),
                     ),
                   ),
                 ),
@@ -718,7 +728,10 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
         });
       }
     } catch (error) {
-      debugPrint('Search cast fetch error: $error');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingCast = false);
+      }
     }
   }
 
@@ -773,9 +786,10 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => movie.type!.toLowerCase() == 'movie'
+              builder: (context) => ContentType.isMovieLike(movie.type)
                   ? MovieDetailsPage(
                       movieId: movie.id!,
+                      contentType: movie.type,
                     )
                   : SeriesDetailsPage(
                       seriesId: movie.id!,
@@ -924,7 +938,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                               ),
                               children: [
                                 TextSpan(
-                                  text: movie.releaseDate ?? '',
+                                  text: formatReleaseDate(movie.releaseDate),
                                   style: TextStyle(
                                     color: theme.canvasColor,
                                     fontSize: 12,

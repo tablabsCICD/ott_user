@@ -1,5 +1,3 @@
-import 'dart:developer' as developer;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/utils/text_capitalization_formatter.dart';
@@ -13,10 +11,8 @@ import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/l10n/app_localizations.dart';
-import 'package:ott/presentation/web_landing/screens/about_filmytell_screen.dart';
-import 'package:ott/presentation/web_landing/screens/faq_screen.dart';
 import 'package:ott/presentation/web_landing/models/web_landing_provider.dart';
-import 'package:ott/presentation/web_landing/widgets/available_devices_section.dart';
+
 import 'package:ott/presentation/web_landing/widgets/final_cta_section.dart';
 import 'package:ott/presentation/web_landing/widgets/footer_section.dart';
 import 'package:ott/presentation/web_landing/widgets/hero_banner.dart';
@@ -44,7 +40,6 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
   final GlobalKey _liveTvKey = GlobalKey();
   late final WebLandingProvider _provider;
   bool _scrolled = false;
-  final Stopwatch _screenLoadWatch = Stopwatch();
   String _privacyPolicyUrl = AppConstant.privacyPolicy;
   String _termsAndConditionUrl = AppConstant.termsAndCondition;
 
@@ -54,21 +49,20 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     _provider = WebLandingProvider();
     _provider.loadLandingContent();
     _loadLegalDocumentUrls();
-    _screenLoadWatch.start();
     _scrollController.addListener(_handleScroll);
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      _logPerformance(
-        'Landing first frame rendered in ${_screenLoadWatch.elapsedMilliseconds}ms',
-      );
-      if (kIsWeb) {
-        final referralCode = await ReferralService.instance.captureFromUri(Uri.base);
+    if (kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        final referralCode =
+            await ReferralService.instance.captureFromUri(Uri.base);
         final path = Uri.base.path.toLowerCase().replaceAll('//', '/');
-        if (referralCode != null || path.endsWith('/register') || path.endsWith('/login')) {
+        if (referralCode != null ||
+            path.endsWith('/register') ||
+            path.endsWith('/login')) {
           _openLogin();
         }
-      }
-    });
+      });
+    }
   }
 
   Future<void> _loadLegalDocumentUrls() async {
@@ -104,14 +98,24 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     );
   }
 
-  bool _scrollTo(GlobalKey key) {
-    final context = key.currentContext;
-    if (context == null) return false;
-    Scrollable.ensureVisible(
-      context,
+  bool _scrollTo(GlobalKey key, {double extraTopPadding = 20.0}) {
+    final targetContext = key.currentContext;
+    if (targetContext == null || !_scrollController.hasClients) return false;
+    final renderBox = targetContext.findRenderObject() as RenderBox?;
+    if (renderBox == null) return false;
+
+    final headerHeight = LandingHeader.getHeaderHeight(context);
+    final totalOffset = headerHeight + extraTopPadding;
+
+    final position = renderBox.localToGlobal(Offset.zero);
+    final currentScroll = _scrollController.offset;
+    final targetOffset = (currentScroll + position.dy - totalOffset)
+        .clamp(0.0, _scrollController.position.maxScrollExtent);
+
+    _scrollController.animateTo(
+      targetOffset,
       duration: const Duration(milliseconds: 560),
       curve: Curves.easeOutCubic,
-      alignment: 0.05,
     );
     return true;
   }
@@ -123,6 +127,9 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
         break;
       case 'Movies':
         _showLatestContentType('MOVIE');
+        break;
+      case 'Short Film':
+        _showLatestContentType('SHORT_FILM');
         break;
       case 'Series':
         _showLatestContentType('SERIES');
@@ -144,7 +151,10 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     });
     await loadFuture;
     if (!mounted) return;
-    _scrollTo(_latestKey);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _scrollTo(_latestKey);
+    });
   }
 
   @override
@@ -152,7 +162,7 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     return ChangeNotifierProvider.value(
       value: _provider,
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: FilmytellTheme.background,
         body: Stack(
           children: [
             Consumer<WebLandingProvider>(
@@ -192,19 +202,22 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                       SliverToBoxAdapter(
                         child: KeyedSubtree(
                           key: _latestKey,
-                          child: provider.latestContent.isEmpty
-                              ? _LatestContentStatus(
-                                  isLoading: provider.isLoadingLatest,
-                                )
-                              : LatestContentSection(
-                                  items: provider.latestContent,
-                                  onContentTap: _openContent,
-                                  onLoadMore: () {
-                                    provider.loadMoreLatestContent();
-                                  },
-                                  isLoadingMore: provider.isLoadingLatest,
-                                  hasMore: provider.hasMoreLatest,
-                                ),
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 16),
+                            child: provider.latestContent.isEmpty
+                                ? _LatestContentStatus(
+                                    isLoading: provider.isLoadingLatest,
+                                  )
+                                : LatestContentSection(
+                                    items: provider.latestContent,
+                                    onContentTap: _openContent,
+                                    onLoadMore: () {
+                                      provider.loadMoreLatestContent();
+                                    },
+                                    isLoadingMore: provider.isLoadingLatest,
+                                    hasMore: provider.hasMoreLatest,
+                                  ),
+                          ),
                         ),
                       ),
                     SliverToBoxAdapter(
@@ -214,20 +227,12 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                       ),
                     ),
                     SliverToBoxAdapter(
-                      child: AvailableDevicesSection(
-                        onStartWatching: _openLogin,
-                        onExplorePlans: _openLogin,
-                      ),
-                    ),
-                    SliverToBoxAdapter(
                       child: ProductionHouseSection(
                         key: _liveTvKey,
                         onRegister: () => _openExternal(
                           AppConstant.productionHouseUrl,
                         ),
-                        onLearnMore: () => _openExternal(
-                          AppConstant.productionHouseUrl,
-                        ),
+                        onLearnMore: _openProducerLearnMore,
                       ),
                     ),
                     SliverToBoxAdapter(
@@ -289,9 +294,16 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
 
   Future<void> _openInternalStaticPage(String path) async {
     try {
+      final cleanPath = path.startsWith('/') ? path : '/$path';
+      final base = Uri.base;
       final uri = kIsWeb
-          ? Uri.base.resolve(path)
-          : Uri.https('filmytell.com', path.startsWith('/') ? path : '/$path');
+          ? Uri(
+              scheme: base.scheme.isNotEmpty ? base.scheme : 'https',
+              host: base.host.isNotEmpty ? base.host : 'filmytell.com',
+              port: base.hasPort ? base.port : null,
+              path: cleanPath,
+            )
+          : Uri.https('filmytell.com', cleanPath);
       final opened = await launchUrl(
         uri,
         mode: LaunchMode.platformDefault,
@@ -381,6 +393,15 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     );
   }
 
+  void _openProducerLearnMore() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        settings: const RouteSettings(name: '/producer-learn-more'),
+        builder: (_) => const ProducerLearnMoreScreen(),
+      ),
+    );
+  }
+
   void _handleFooterLink(String label) {
     switch (label) {
       case 'Home':
@@ -397,6 +418,9 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
         return;
       case 'Mini Series':
         _showLatestContentType('MINI SERIES');
+        return;
+      case 'Short Film':
+        _showLatestContentType('SHORT_FILM');
         return;
       case 'Production House':
         _openExternal(
@@ -427,6 +451,12 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
         return;
       case 'Instagram':
         _openExternal(AppConstant.instagramUrl);
+        return;
+      case 'LinkedIn':
+        _openExternal(AppConstant.linkedinUrl);
+        return;
+      case 'YouTube':
+        _openExternal(AppConstant.youtubeUrl);
         return;
       case 'X (Twitter)':
         _openExternal(AppConstant.xUrl);
@@ -484,11 +514,6 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
         ),
       ),
     );
-  }
-
-  void _logPerformance(String message) {
-    if (!kDebugMode) return;
-    developer.log(message, name: 'WebLandingPerformance');
   }
 }
 
@@ -890,7 +915,7 @@ class _LatestContentStatus extends StatelessWidget {
               child: isLoading
                   ? CircularProgressIndicator(color: theme.primaryColor)
                   : Text(
-                      'No content found',
+                      lang.noContentFound,
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.70),
                         fontWeight: FontWeight.w800,

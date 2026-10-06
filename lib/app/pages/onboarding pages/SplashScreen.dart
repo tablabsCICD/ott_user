@@ -7,6 +7,7 @@ import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/app_update_service.dart';
+import 'package:ott/app/core/services/referral_service.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/onboarding pages/selectLanguagePage.dart';
 import 'package:ott/app/route/routes/web_navigation_routes.dart';
@@ -44,6 +45,10 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _startFlow() async {
     final flowVersion = ++_flowVersion;
     final requestedPath = widget.initialNavigationRoute?.path ?? '/';
+
+    // Recover any deferred install referral code on cold start / first launch
+    unawaited(ReferralService.instance.checkDeferredInstallReferrer());
+
     final loggedIn =
         await _prefs.getBool(SharedPreferencesConstant.isUserLoggedIn);
     if (!_isActiveFlow(flowVersion)) return;
@@ -114,7 +119,7 @@ class _SplashScreenState extends State<SplashScreen> {
       ),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
+      if (mounted && isLoggedIn) {
         DeepLinkService.instance.consumePendingNavigation();
       }
     });
@@ -187,46 +192,21 @@ class _SplashScreenState extends State<SplashScreen> {
     return Scaffold(
       backgroundColor: theme.primaryColor,
       body: SafeArea(
-          child: Stack(fit: StackFit.expand, children: [
-        kIsWeb
-            ? Hero(
-                tag: 'logo',
-                child: Image.asset(
-                  ImageConstant.webFullScreenLogo,
-                  fit: BoxFit.cover,
-                ),
-              )
-            : Hero(
-                tag: 'logo',
-                child: Image.asset(
-                  ImageConstant.fullScreenLogo,
-                  fit: BoxFit.cover,
-                ),
-              ),
-        /* Align(
-          alignment: Alignment.bottomCenter,
+        child: Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-            child: Text(
-              'Watch First Day First Show',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: textSize,
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
-                shadows: const [
-                  Shadow(
-                    blurRadius: 8,
-                    color: Colors.black54,
-                    offset: Offset(0, 2),
-                  ),
-                ],
+            padding: const EdgeInsets.all(20),
+            child: Hero(
+              tag: 'logo',
+              child: Image.asset(
+                kIsWeb
+                    ? ImageConstant.webFullScreenLogo
+                    : ImageConstant.fullScreenLogo,
+                fit: BoxFit.contain,
               ),
             ),
           ),
-        ), */
-      ])),
+        ),
+      ),
     );
   }
 }

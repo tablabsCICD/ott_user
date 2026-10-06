@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
+import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
@@ -41,7 +43,6 @@ class _UpcomingPageState extends State<UpcomingPage> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
         centerTitle: true,
         backgroundColor: theme.primaryColor,
         foregroundColor: Colors.white,
@@ -93,8 +94,11 @@ class _UpcomingPageState extends State<UpcomingPage> {
                 isTrailerUrl: true,
                 content: movie)
             :  */
-                movie.type!.toLowerCase() == 'movie'
-                    ? MovieDetailsPage(movieId: movie.id!)
+                ContentType.isMovieLike(movie.type)
+                    ? MovieDetailsPage(
+                        movieId: movie.id!,
+                        contentType: movie.type,
+                      )
                     : SeriesDetailsPage(seriesId: movie.id!, content: movie),
       ),
     );
@@ -165,7 +169,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
                         size: 12, color: Colors.white70),
                     const SizedBox(width: 4),
                     Text(
-                      item.releaseDate ?? '',
+                      formatReleaseDate(item.releaseDate),
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 12,

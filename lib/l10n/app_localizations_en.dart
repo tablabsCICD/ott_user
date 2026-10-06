@@ -393,7 +393,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get viewersEntertainmentDescription =>
-      'Buy or gift the movies and series you choose. No subscription needed. Download content to watch offline.';
+      'Rent and Gift Movies, Series, Short Films. No subscription, No adds. Pure entertainment.';
 
   @override
   String get createAccountMobileOtp => 'Create Account With Mobile OTP';
@@ -512,8 +512,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unableOpenWhatsapp => 'Unable to open WhatsApp. Please try again.';
 
   @override
-  String get haveQuestionHelp =>
-      'Have a question? We\'ll help you get started.';
+  String get haveQuestionHelp => 'Connect with our team';
 
   @override
   String get messageQueryOptional =>
@@ -552,7 +551,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get streamPremiumMoviesSeries =>
-      'Watch premium movies, series and mini series.';
+      'Watch Premium Movies, Series, Mini Series and Short Film.';
 
   @override
   String get userPortal => 'User Portal';
@@ -562,7 +561,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get publishContentDescription =>
-      'Upload, manage and monetize your releases.';
+      'Upload, Manage and Monetize Your Content.';
 
   @override
   String get productionHousePortal => 'Production House Portal';
@@ -641,4 +640,56 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get everyDay => 'Every Day';
+
+  @override
+  String get shortFilm => 'Short Film';
+
+  @override
+  String get cookies => 'Cookies';
+
+  @override
+  String get accountDeletion => 'Account Deletion';
+
+  @override
+  String get oneOttEcosystem => 'One OTT ecosystem for viewers and creators';
+
+  @override
+  String get oneOttEcosystemDescription =>
+      'Secure streaming, pay-per-movie access, gifting, production house publishing, promoter growth tools, and multi-device entertainment.';
+
+  @override
+  String get readMore => 'Read More';
+
+  @override
+  String get readLess => 'Read Less';
+
+  @override
+  String get step => 'STEP';
+
+  @override
+  String get enterEmailAddress => 'Please enter email';
+
+  @override
+  String get enterValidEmailAddress => 'Please enter a valid email';
+
+  @override
+  String get enterPhoneNumber => 'Please enter phone number';
+
+  @override
+  String get enterValidPhoneNumber => 'Please enter a valid phone number';
+
+  @override
+  String get enterMessage => 'Please enter message';
+
+  @override
+  String get emailSentSuccessfully => 'Email sent successfully.';
+
+  @override
+  String get failedToSendEmail => 'Failed to send email. Please try again.';
+
+  @override
+  String get message => 'Message';
+
+  @override
+  String get phoneNumber => 'Phone Number';
 }

@@ -1,0 +1,4 @@
+enum PaymentGatewayType {
+  razorpay,
+  stripe,
+}

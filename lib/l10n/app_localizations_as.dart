@@ -394,7 +394,7 @@ class AppLocalizationsAs extends AppLocalizations {
 
   @override
   String get viewersEntertainmentDescription =>
-      'আপোনাৰ পছন্দৰ চলচ্চিত্ৰ আৰু শৃংখলাবোৰ ক্ৰয় বা উপহাৰ দিয়ক। কোনো সদস্যতা প্ৰয়োজন নাই। অফলাইন চাবলৈ ডাউনলোড কৰক।';
+      'চলচ্চিত্ৰ, শৃংখলা, চুটি ছবি ভাড়া লওক আৰু উপহাৰ দিয়ক। কোনো সদস্যভুক্তি নাই, কোনো বিজ্ঞাপন নাই। কেৱল বিশুদ্ধ মনোৰঞ্জন।';
 
   @override
   String get createAccountMobileOtp =>
@@ -516,8 +516,7 @@ class AppLocalizationsAs extends AppLocalizations {
   String get unableOpenWhatsapp => 'Unable to open WhatsApp. Please try again.';
 
   @override
-  String get haveQuestionHelp =>
-      'Have a question? We\'ll help you get started.';
+  String get haveQuestionHelp => 'Connect with our team';
 
   @override
   String get messageQueryOptional =>
@@ -645,4 +644,58 @@ class AppLocalizationsAs extends AppLocalizations {
 
   @override
   String get everyDay => 'প্ৰতিদিন';
+
+  @override
+  String get shortFilm => 'চুটি ছবি';
+
+  @override
+  String get cookies => 'কুকিজ';
+
+  @override
+  String get accountDeletion => 'একাউণ্ট মচি পেলোৱা';
+
+  @override
+  String get oneOttEcosystem =>
+      'দৰ্শক আৰু সৃষ্টিকৰ্তাসকলৰ বাবে এটা OTT পৰিৱেশ তন্ত্ৰ';
+
+  @override
+  String get oneOttEcosystemDescription =>
+      'সুৰক্ষিত ষ্ট্ৰীমিং, প্ৰতি-চলচ্চিত্ৰৰ প্ৰৱেশাধিকাৰ, উপহাৰ, প্ৰযোজনা গৃহ প্ৰকাশন, প্ৰচাৰক বৃদ্ধি সঁজুলি আৰু বহু-ডিভাইচ মনোৰঞ্জন।';
+
+  @override
+  String get readMore => 'অধিক পঢ়ক';
+
+  @override
+  String get readLess => 'কম পঢ়ক';
+
+  @override
+  String get step => 'পদক্ষেপ';
+
+  @override
+  String get enterEmailAddress => 'অনুগ্ৰহ কৰি ইমেইল প্ৰবিষ্ট কৰক';
+
+  @override
+  String get enterValidEmailAddress => 'অনুগ্ৰহ কৰি বৈধ ইমেইল প্ৰবিষ্ট কৰক';
+
+  @override
+  String get enterPhoneNumber => 'অনুগ্ৰহ কৰি ফোন নম্বৰ প্ৰবিষ্ট কৰক';
+
+  @override
+  String get enterValidPhoneNumber => 'অনুগ্ৰহ কৰি বৈধ ফোন নম্বৰ প্ৰবিষ্ট কৰক';
+
+  @override
+  String get enterMessage => 'অনুগ্ৰহ কৰি বাৰ্তা প্ৰবিষ্ট কৰক';
+
+  @override
+  String get emailSentSuccessfully => 'ইমেইল সফলতাৰে প্ৰেৰণ কৰা হ\'ল।';
+
+  @override
+  String get failedToSendEmail =>
+      'ইমেইল প্ৰেৰণ কৰাত ব্যৰ্থ হ\'ল। অনুগ্ৰহ কৰি পুনৰ চেষ্টা কৰক।';
+
+  @override
+  String get message => 'বাৰ্তা';
+
+  @override
+  String get phoneNumber => 'ফোন নম্বৰ';
 }

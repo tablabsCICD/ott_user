@@ -10,6 +10,8 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/utils/direct_trailer_source.dart';
+import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
@@ -21,6 +23,7 @@ import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -38,6 +41,7 @@ class ContinueWatchMovieCard extends StatefulWidget {
   final ValueListenable<int?>? activeIndexListenable;
   final int? index;
   final bool enableTrailerPreview;
+  final bool isShortFilmTab;
 
   const ContinueWatchMovieCard({
     super.key,
@@ -45,6 +49,7 @@ class ContinueWatchMovieCard extends StatefulWidget {
     this.activeIndexListenable,
     this.index,
     this.enableTrailerPreview = true,
+    this.isShortFilmTab = false,
   });
 
   @override
@@ -155,7 +160,6 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
           if (mounted) setState(() {});
         }))
         ..add(player.stream.error.listen((error) {
-          debugPrint("Trailer playback error: $error");
           _stopPreview();
           if (_activePreviewState == this) {
             _activePreviewState = null;
@@ -177,7 +181,6 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       }
       return true;
     } catch (e) {
-      debugPrint("Video init failed: $e");
       await player.dispose();
       _disposeVideoController();
       return false;
@@ -382,7 +385,6 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       if (!mounted) return;
       setState(() => _isPreviewPlaying = true);
     } catch (e) {
-      debugPrint("Trailer play failed: $e");
       _stopPreview();
       if (_activePreviewState == this) {
         _activePreviewState = null;
@@ -415,9 +417,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     try {
       player.pause();
       player.seek(Duration.zero);
-    } catch (e) {
-      debugPrint("Trailer stop failed: $e");
-    }
+    } catch (e) {}
 
     if (!mounted) return;
     setState(() {
@@ -433,27 +433,15 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
         ? widget.movie.posterUrlList!.first
         : null;
     final showPreview = _isPreviewPlaying;
-    final isHighlighted = showPreview || _isHovered;
-    final highlightColor = ResponsiveWidget.isTabletOrTv(context)
-        ? theme.primaryColor
-        : (theme.brightness == Brightness.light
-            ? const Color.fromARGB(255, 185, 169, 169)
-            : const Color.fromARGB(255, 58, 49, 49));
+    final highlightColor = theme.brightness == Brightness.light
+        ? const Color.fromARGB(255, 185, 169, 169)
+        : const Color.fromARGB(255, 58, 49, 49);
     return Stack(children: [
       Focus(
         canRequestFocus: ResponsiveWidget.isTabletOrTv(context),
         onFocusChange: (hasFocus) {
           if (ResponsiveWidget.isTabletOrTv(context)) {
             _handleHover(hasFocus);
-            if (hasFocus) {
-              Scrollable.ensureVisible(
-                context,
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-                alignmentPolicy:
-                    ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-              );
-            }
           }
         },
         onKeyEvent: (node, event) {
@@ -477,24 +465,21 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
               width: ContinueWatchMovieCard.itemWidth,
+              //  margin: const EdgeInsets.all(ContinueWatchMovieCard.itemMargin),
               margin: EdgeInsets.only(
                 left: ContinueWatchMovieCard.itemMargin,
                 right: ContinueWatchMovieCard.itemMargin,
                 bottom: ContinueWatchMovieCard.itemMargin,
-                top: isHighlighted
-                    ? 4
-                    : 12, // 👈 selected card moves slightly up
+                top: showPreview ? 4 : 12, // 👈 selected card moves slightly up
               ),
               decoration: BoxDecoration(
                 color: theme.cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isHighlighted
-                      ? highlightColor
-                      : Colors.transparent,
-                  width: isHighlighted ? 2.5 : 1,
+                  color: showPreview ? highlightColor : Colors.transparent,
+                  width: showPreview ? 2.5 : 1,
                 ),
-                boxShadow: isHighlighted
+                boxShadow: showPreview
                     ? [
                         BoxShadow(
                           color: highlightColor.withValues(alpha: 0.35),
@@ -555,12 +540,24 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
           Positioned(
             right: 5,
             bottom: 5,
-            child: IconButton(
-              icon: Icon(
-                _isMuted ? Icons.volume_off : Icons.volume_up,
-                color: Colors.white.withOpacity(0.7),
+            child: Semantics(
+              button: true,
+              label: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+              child: Material(
+                color: Colors.black54,
+                shape: const CircleBorder(),
+                child: IconButton(
+                  padding: const EdgeInsets.all(2),
+                  constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                  iconSize: 12,
+                  tooltip: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                  icon: Icon(
+                    _isMuted ? Icons.volume_off : Icons.volume_up,
+                    color: Colors.white,
+                  ),
+                  onPressed: _toggleMute,
+                ),
               ),
-              onPressed: _toggleMute,
             ),
           ),
           Positioned(
@@ -671,7 +668,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                     fontSize: 12,
                   ),
                   children: [
-                    TextSpan(text: movie.releaseDate ?? ''),
+                    TextSpan(text: formatReleaseDate(movie.releaseDate)),
                     const TextSpan(text: ' | '),
                     TextSpan(
                       text: movie.genreList?.join(', ') ?? 'N/A',
@@ -720,6 +717,8 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       ThemeData theme, AppLocalizations lang, double price) {
     final movie = widget.movie;
     final isRental = movie.isRental ?? false;
+    final isShortFilm = widget.isShortFilmTab ||
+        ContentType.normalize(movie.type) == ContentType.shortFilm;
 
     return GestureDetector(
       onTap: () => movie.type!.toLowerCase() == 'series'
@@ -736,12 +735,14 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
         child: Text(
           movie.type!.toLowerCase() == 'series'
               ? isRental
-                  ? "Watch Series"
+                  ? (isShortFilm ? 'Watch Now' : 'Watch Series')
                   : 'Rent Series'
               : isRental
-                  ? movie.type?.toLowerCase() == "movie"
-                      ? lang.watchMovie
-                      : lang.watchSeries
+                  ? isShortFilm
+                      ? 'Watch Now'
+                      : movie.type?.toLowerCase() == "movie"
+                          ? lang.watchMovie
+                          : lang.watchSeries
                   : "₹ $price",
           style: const TextStyle(
             fontSize: 12,
@@ -758,7 +759,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
 
     if (movie.id == null || movie.type == null) return;
 
-    if (movie.type!.toLowerCase() == "movie") {
+    if (ContentType.isMovieLike(movie.type)) {
       _playContent();
     } else {
       Navigator.push(
@@ -769,8 +770,11 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                   trailerUrl: movie.teaserOrTrailerUrl ?? "",
                   isTrailerUrl: true,
                   content: movie)
-              : movie.type!.toLowerCase() == 'movie'
-                  ? MovieDetailsPage(movieId: movie.id!)
+              : ContentType.isMovieLike(movie.type)
+                  ? MovieDetailsPage(
+                      movieId: movie.id!,
+                      contentType: movie.type,
+                    )
                   : SeriesDetailsPage(seriesId: movie.id!, content: movie),
         ),
       );
@@ -1028,37 +1032,29 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   }
 
   void _shareMovie(BuildContext context, Content movie) async {
-    final shareLink = movie.id == null
-        ? (movie.trailerUrl ?? '')
-        : DeepLinkService.instance.buildMovieAppLink(movie.id!).toString();
-    final String shareText = '''
-🎬 ${movie.title ?? ''}
-
-${movie.description ?? ''}
-
-▶️ Watch here:
-$shareLink
-
-📲 Download Filmytell App now!
-'''
-        .trim();
-
-    if (kIsWeb) {
-      // Flutter Web fallback → Copy to Clipboard
-      await Clipboard.setData(ClipboardData(text: shareText));
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Share text copied to clipboard"),
-        ),
+    if (movie.id == null || movie.id! <= 0) {
+      CustomToast.show(
+        context,
+        "Content details are not available yet",
+        isSuccess: false,
       );
-    } else {
-      // Android / iOS / Desktop
-      await Share.share(
-        shareText,
-        subject: movie.title ?? "Movie",
-      );
+      return;
     }
+
+    final normalized = ContentType.normalize(movie.type);
+    final contentType = normalized == ContentType.shortFilm
+        ? DeepLinkContentType.shortFilm
+        : normalized == ContentType.series
+            ? DeepLinkContentType.series
+            : normalized == ContentType.miniSeries
+                ? DeepLinkContentType.miniSeries
+                : DeepLinkContentType.movie;
+
+    showContentShareSheet(
+      context,
+      movie,
+      contentType: contentType,
+    );
   }
 
   void _showGiftDialog(

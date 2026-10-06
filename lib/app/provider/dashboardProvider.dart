@@ -44,11 +44,7 @@ class DashboardProvider extends BaseProvider {
     _isLoadingDashboard = true;
     List<DashboardData> finalDashboardData = [];
 
-    debugPrint("Languages: $languages");
-
     for (final lang in languages) {
-      debugPrint("➡ Loading dashboard for: $lang");
-
       try {
         final latest = await getDashboardLatestData(type, [lang], userId);
         final trending = await getDashboardTrendingData(type, [lang], userId);
@@ -61,9 +57,7 @@ class DashboardProvider extends BaseProvider {
         finalDashboardData.addAll(latest);
         finalDashboardData.addAll(trending);
         finalDashboardData.addAll(upcoming);
-      } catch (e) {
-        debugPrint("❌ Dashboard error ($lang): $e");
-      }
+      } catch (e) {}
     }
 
     _dashboardData = finalDashboardData;
@@ -115,9 +109,7 @@ class DashboardProvider extends BaseProvider {
         row.movies!.addAll(newData.first.movies!);
         row.pagination = newData.first.pagination;
       }
-    } catch (e) {
-      debugPrint("❌ Pagination error: $e");
-    }
+    } catch (e) {}
 
     row.isRowLoading = false;
     notifyListeners();
@@ -213,9 +205,7 @@ class DashboardProvider extends BaseProvider {
           return _content;
         }
       }
-    } catch (error) {
-      debugPrint("❌ getContentById error::: $error");
-    }
+    } catch (error) {}
     return null;
   }
 
@@ -239,7 +229,6 @@ class DashboardProvider extends BaseProvider {
         _castList = [];
       }
     } catch (error) {
-      debugPrint("cast fetch error: $error");
       _castList = [];
     } finally {
       _isLoadingCast = false;
@@ -250,28 +239,18 @@ class DashboardProvider extends BaseProvider {
   Future<void> getContinueWatchedMovieList(String type) async {
     final localSharePreferences = LocalSharePreferences();
     final user = await localSharePreferences.getUser();
-    final authToken = await localSharePreferences.getAuthToken();
     if (user?.id == null) {
-      debugPrint(
-          'Continue watching fetch skipped: authenticated user ID missing');
       _continueWatchedMovies.clear();
       notifyListeners();
       return;
     }
     String apiUrl = ApiConstant.continueWatchedMoviesByUser(user!.id, type);
     ApiHelper apiHelper = ApiHelper();
-    debugPrint(
-      'Continue watching fetch request: userId=${user.id} contentType=$type '
-      'authTokenPresent=${authToken != null}',
-    );
+
     try {
       var response = await apiHelper.getApi1(apiUrl);
 
       if (response.statusCode == 200) {
-        debugPrint(
-          'Continue watching fetch response: status=${response.statusCode} '
-          'bytes=${response.bodyBytes.length}',
-        );
         final responseBody = json.decode(response.body);
 
         ContinueWatchedResponse continueWatchedResponse =
@@ -280,26 +259,13 @@ class DashboardProvider extends BaseProvider {
         if (continueWatchedResponse.isSuccess == true &&
             continueWatchedResponse.data != null) {
           _continueWatchedMovies = continueWatchedResponse.data!;
-          debugPrint(
-            'Continue watching parsed: count=${_continueWatchedMovies.length}',
-          );
         } else {
           _continueWatchedMovies.clear();
-          debugPrint(
-            'Continue watching response rejected: '
-            'isSuccess=${continueWatchedResponse.isSuccess} '
-            'message=${continueWatchedResponse.message}',
-          );
         }
       } else {
         _continueWatchedMovies.clear();
-        debugPrint(
-          'Continue watching fetch failed: status=${response.statusCode} '
-          'body=${response.body}',
-        );
       }
     } catch (error) {
-      debugPrint("❌ continue watching error: $error");
       _continueWatchedMovies.clear();
     } finally {
       notifyListeners();

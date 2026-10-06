@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
+import 'package:ott/app/core/utils/content_type.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/shorts%20page/component/ShortsPlayerPage.dart';

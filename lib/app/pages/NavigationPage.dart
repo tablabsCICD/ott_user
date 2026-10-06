@@ -16,8 +16,9 @@ import 'package:ott/app/pages/watchlist%20page/WatchlistPage.dart';
 import 'package:ott/app/pages/upcoming%20movies%20page/UpcomingPage.dart';
 import 'package:ott/app/pages/home%20page/HomePage.dart';
 import 'package:ott/app/pages/profile%20page/ProfilePage.dart';
+import 'package:ott/app/pages/profile%20page/component/profile_detail_shell.dart';
 import 'package:ott/app/pages/search%20page/SearchPage.dart';
-import 'package:ott/app/pages/series%20page/SeriesListPage.dart';
+
 import 'package:ott/app/provider/onboarding_tour_provider.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/feature_tour.dart';
@@ -49,6 +50,8 @@ class _NavigationPageState extends State<NavigationPage> {
   late int _currentIndex;
   bool _isExitDialogOpen = false;
   bool _isSidebarExpanded = false;
+  Widget? _profileDetail;
+  String? _profileDetailTitle;
   late String _homeContentType;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -56,11 +59,13 @@ class _NavigationPageState extends State<NavigationPage> {
     switch (pageIndex ?? _currentIndex) {
       case 0:
         return HomePage(
-          key: ValueKey(_homeContentType),
           initialSelectedType: _homeContentType,
         );
       case 1:
-        return SeriesListPage();
+        return const HomePage(
+          initialSelectedType: 'SHORT_FILM',
+          lockContentType: true,
+        );
       case 2:
         return ShortsPage();
       case 3:
@@ -68,7 +73,15 @@ class _NavigationPageState extends State<NavigationPage> {
       case 4:
         return WatchlistPage();
       case 5:
-        return ProfilePage();
+        final detail = _profileDetail;
+        if (detail != null) {
+          return ProfileDetailShell(
+            title: _profileDetailTitle ?? 'Profile',
+            onBack: _closeProfileDetail,
+            child: detail,
+          );
+        }
+        return ProfilePage(onOpenDetail: _openProfileDetail);
       case 6:
         return UpcomingPage();
       case 7:
@@ -82,7 +95,6 @@ class _NavigationPageState extends State<NavigationPage> {
 
       default:
         return HomePage(
-          key: ValueKey(_homeContentType),
           initialSelectedType: _homeContentType,
         );
     }
@@ -128,7 +140,7 @@ class _NavigationPageState extends State<NavigationPage> {
             : _currentIndex;
 
     return PopScope(
-      canPop: kIsWeb,
+      canPop: kIsWeb && _profileDetail == null,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         await _handleBackNavigation();
@@ -201,7 +213,7 @@ class _NavigationPageState extends State<NavigationPage> {
                   ),
                   BottomNavigationBarItem(
                     icon: Icon(Icons.video_library),
-                    label: lang.series,
+                    label: 'Short Film',
                   ),
                   /*   BottomNavigationBarItem(
                     icon: Icon(Icons.play_circle),
@@ -283,6 +295,11 @@ class _NavigationPageState extends State<NavigationPage> {
       return;
     }
 
+    if (_currentIndex == 5 && _profileDetail != null) {
+      _closeProfileDetail();
+      return;
+    }
+
     if (_currentIndex != 0) {
       setState(() => _currentIndex = 0);
       return;
@@ -295,6 +312,38 @@ class _NavigationPageState extends State<NavigationPage> {
 
     if (shouldExit == true) {
       SystemNavigator.pop();
+    }
+  }
+
+  void _openProfileDetail(String title, Widget page) {
+    setState(() {
+      _currentIndex = 5;
+      _profileDetailTitle = title;
+      _profileDetail = page;
+    });
+    if (kIsWeb) {
+      final slug = title
+          .toLowerCase()
+          .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+          .replaceAll(RegExp(r'^-|-$'), '');
+      SystemNavigator.routeInformationUpdated(
+        uri: Uri(path: '/profile/$slug'),
+        replace: false,
+      );
+    }
+  }
+
+  void _closeProfileDetail() {
+    if (!mounted || _profileDetail == null) return;
+    setState(() {
+      _profileDetail = null;
+      _profileDetailTitle = null;
+    });
+    if (kIsWeb) {
+      SystemNavigator.routeInformationUpdated(
+        uri: Uri(path: WebNavigationRoutes.profile.path),
+        replace: true,
+      );
     }
   }
 
@@ -444,6 +493,10 @@ class _NavigationPageState extends State<NavigationPage> {
     }
 
     setState(() {
+      if (index != 5) {
+        _profileDetail = null;
+        _profileDetailTitle = null;
+      }
       _currentIndex = index;
       if (homeContentType != null) {
         _homeContentType = homeContentType;

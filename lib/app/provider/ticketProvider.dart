@@ -87,14 +87,14 @@ class TicketProvider extends BaseProvider {
                   raiseTicketResponse.message ?? 'Ticket raised successfully'
             };
           } else {
-            debugPrint("Empty data: ${raiseTicketResponse.message}");
+
             return {
               'success': false,
               'message': raiseTicketResponse.message ?? 'No data returned'
             };
           }
         } else {
-          debugPrint("Error: ${raiseTicketResponse.message}");
+
           return {
             'success': false,
             'message': raiseTicketResponse.message ?? 'Error in response'
@@ -105,7 +105,7 @@ class TicketProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
       return {
         'success': false,
         'message': 'An error occurred while adding user: $error'
@@ -146,7 +146,7 @@ class TicketProvider extends BaseProvider {
               'message': getRaiseTicketListResponse.message!
             };
           } else {
-            debugPrint("Empty data: ${getRaiseTicketListResponse.message}");
+
             _ticketList.clear();
             notifyListeners();
             return {
@@ -156,7 +156,7 @@ class TicketProvider extends BaseProvider {
             };
           }
         } else {
-          debugPrint("Error: ${getRaiseTicketListResponse.message}");
+
           _ticketList.clear();
           notifyListeners();
           return {
@@ -169,7 +169,7 @@ class TicketProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      debugPrint("Error: $error");
+
       return {
         'success': false,
         'message': 'An error occurred while adding user: $error'
@@ -206,7 +206,7 @@ class TicketProvider extends BaseProvider {
 
       return {'success': false, 'message': 'Unable to delete ticket'};
     } catch (error) {
-      debugPrint("Delete ticket error: $error");
+
       return {
         'success': false,
         'message': 'An error occurred while deleting ticket'

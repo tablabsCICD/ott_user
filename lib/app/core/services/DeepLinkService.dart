@@ -20,23 +20,29 @@ import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:provider/provider.dart';
 import 'package:uni_links/uni_links.dart';
+import 'package:ott/app/core/services/referral_service.dart';
 
 class MovieDetailsRouteArgs {
   const MovieDetailsRouteArgs({
     required this.movieId,
     this.source = 'internal',
+    this.contentType = 'MOVIE',
   });
 
   final int movieId;
   final String source;
+  final String contentType;
 }
 
 enum DeepLinkContentType {
   movie,
+  shortFilm,
   series,
+  miniSeries,
   short,
   gift,
   referral,
+  register,
 }
 
 class DeepLinkTarget {
@@ -62,15 +68,24 @@ class DeepLinkService {
 
   static const String scheme = 'myapp';
   static const String movieHost = 'movie';
+  static const String shortFilmHost = 'short-film';
   static const String seriesHost = 'series';
+  static const String miniseriesHost = 'miniseries';
   static const String shortHost = 'short';
   static const String giftHost = 'gift';
-  static const String httpsHost = 'filmytell.com';
+  static const String registerHost = 'register';
+  static const String loginHost = 'login';
+  static const String httpsInHost = 'filmytell.in';
+  static const String httpsHost = 'filmytell.in';
+  static const String httpsLegacyHost = 'filmytell.com';
   static const String httpsWwwHost = 'www.filmytell.com';
+  static const String httpsWwwInHost = 'www.filmytell.in';
   static const String ottPathPrefix = 'ott';
   static const String androidPackageName = 'com.filmytell.ott';
   static const String playStoreUrl =
       'https://play.google.com/store/apps/details?id=$androidPackageName';
+  static const String appStoreUrl =
+      'https://apps.apple.com/fr/app/filmytell/id6783863260';
 
   StreamSubscription<Uri?>? _linkSubscription;
   DeepLinkTarget? _pendingTarget;
@@ -153,7 +168,7 @@ class DeepLinkService {
   }) {
     return Uri(
       scheme: scheme,
-      host: type.name,
+      host: _hostForType(type),
       pathSegments: <String>['$id'],
     );
   }
@@ -169,11 +184,21 @@ class DeepLinkService {
     );
   }
 
+  /// Builds a clean universal URL without '/share/'.
+  /// Examples:
+  /// - https://filmytell.com/movie/123
+  /// - https://filmytell.com/series/456
+  /// - https://filmytell.com/miniseries/789
+  /// - https://filmytell.com/short-film/101
   Uri buildAppLink({
     required DeepLinkContentType type,
     required int id,
+    String? customHost,
   }) {
-    return Uri.https(httpsHost, '${type.name}/$id');
+    return Uri.https(
+      customHost ?? httpsHost,
+      '${_hostForType(type)}/$id',
+    );
   }
 
   Uri buildPreferredQrLink({
@@ -191,7 +216,13 @@ class DeepLinkService {
       final firstSegment =
           uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
 
-      if (type == DeepLinkContentType.gift) {
+      if (type == DeepLinkContentType.register) {
+        final referralCode = ReferralService.extractCodeFromUri(uri);
+        return DeepLinkTarget(
+          type: DeepLinkContentType.register,
+          referralCode: referralCode,
+        );
+      } else if (type == DeepLinkContentType.gift) {
         final couponCode = _parseCouponCode(firstSegment);
         if (couponCode != null) {
           return DeepLinkTarget(
@@ -219,7 +250,13 @@ class DeepLinkService {
           ? _typeFromString(normalizedPathSegments.first)
           : null;
 
-      if (pathType == DeepLinkContentType.gift) {
+      if (pathType == DeepLinkContentType.register) {
+        final referralCode = ReferralService.extractCodeFromUri(uri);
+        return DeepLinkTarget(
+          type: DeepLinkContentType.register,
+          referralCode: referralCode,
+        );
+      } else if (pathType == DeepLinkContentType.gift) {
         final couponCode = normalizedPathSegments.length >= 2
             ? _parseCouponCode(normalizedPathSegments[1])
             : _parseCouponCode(
@@ -244,7 +281,13 @@ class DeepLinkService {
       final queryType = _typeFromString(uri.queryParameters['type']);
       final queryId = _parsePositiveInt(uri.queryParameters['id']);
 
-      if (queryType == DeepLinkContentType.gift) {
+      if (queryType == DeepLinkContentType.register) {
+        final referralCode = ReferralService.extractCodeFromUri(uri);
+        return DeepLinkTarget(
+          type: DeepLinkContentType.register,
+          referralCode: referralCode,
+        );
+      } else if (queryType == DeepLinkContentType.gift) {
         final couponCode = _parseCouponCode(
           uri.queryParameters['couponCode'] ?? uri.queryParameters['code'],
         );
@@ -295,15 +338,26 @@ class DeepLinkService {
 
   bool _isSupportedHttpHost(String rawHost) {
     final host = rawHost.trim().toLowerCase();
-    return host == httpsHost || host == httpsWwwHost;
+    return host == 'filmytell.in' ||
+        host == 'www.filmytell.in' ||
+        host == 'filmytell.com' ||
+        host == 'www.filmytell.com' ||
+        host.endsWith('.filmytell.in') ||
+        host.endsWith('.filmytell.com');
   }
 
   List<String> _normalizePathSegments(List<String> pathSegments) {
-    if (pathSegments.isNotEmpty &&
-        pathSegments.first.toLowerCase() == ottPathPrefix) {
-      return pathSegments.sublist(1);
+    var segments = pathSegments;
+    if (segments.isNotEmpty &&
+        segments.first.toLowerCase() == ottPathPrefix) {
+      segments = segments.sublist(1);
     }
-    return pathSegments;
+    // Backward compatibility: strip 'share' prefix if present (e.g. /share/movie/123 -> /movie/123)
+    if (segments.isNotEmpty &&
+        segments.first.toLowerCase() == 'share') {
+      segments = segments.sublist(1);
+    }
+    return segments;
   }
 
   List<String> _httpPathSegments(Uri uri) {
@@ -345,10 +399,11 @@ class DeepLinkService {
       return false;
     }
 
-    await ReferralService.instance.captureFromUri(uri);
+    final capturedReferralCode =
+        await ReferralService.instance.captureFromUri(uri);
     final target = parseTarget(uri);
     developer.log(
-      'Deep Link Received: $uri source=$source',
+      'Deep Link Received: $uri source=$source referralCode=${capturedReferralCode ?? 'none'}',
       name: 'DeepLinkService',
     );
     developer.log(
@@ -365,6 +420,13 @@ class DeepLinkService {
     );
 
     if (target == null) {
+      if (capturedReferralCode != null) {
+        developer.log(
+          'Captured referral code $capturedReferralCode from non-target deep link',
+          name: 'DeepLinkService',
+        );
+        return true;
+      }
       developer.log(
         'Ignoring unsupported deep link',
         name: 'DeepLinkService',
@@ -407,11 +469,25 @@ class DeepLinkService {
 
     switch (target.type) {
       case DeepLinkContentType.movie:
-        await _openMovieDetails(navigator, target.id!, source: source);
+        await _openMovieDetails(
+          navigator,
+          target.id!,
+          source: source,
+          contentType: 'MOVIE',
+        );
+        return;
+      case DeepLinkContentType.shortFilm:
+        await _openMovieDetails(
+          navigator,
+          target.id!,
+          source: source,
+          contentType: 'SHORT_FILM',
+        );
         return;
       case DeepLinkContentType.series:
         await _openSeriesDetails(navigator, target.id!);
         return;
+      case DeepLinkContentType.miniSeries:
       case DeepLinkContentType.short:
         await _openShortDetails(navigator, target.id!);
         return;
@@ -419,7 +495,8 @@ class DeepLinkService {
         await _openGiftClaimDialog(navigator, target.couponCode!);
         return;
       case DeepLinkContentType.referral:
-        await _handleReferralNavigation(
+      case DeepLinkContentType.register:
+        await _openRegistration(
           navigator,
           target.referralCode,
           source: source,
@@ -428,7 +505,7 @@ class DeepLinkService {
     }
   }
 
-  Future<void> _handleReferralNavigation(
+  Future<void> _openRegistration(
     NavigatorState navigator,
     String? referralCode, {
     required String source,
@@ -450,6 +527,13 @@ class DeepLinkService {
       return;
     }
 
+    developer.log(
+      'Navigation Triggered: opening registration for referralCode=$referralCode source=$source',
+      name: 'DeepLinkService',
+    );
+    if (referralCode != null && ReferralService.isValidCode(referralCode)) {
+      await ReferralService.instance.saveReferralCode(referralCode);
+    }
     navigator.push(
       MaterialPageRoute<void>(
         settings: const RouteSettings(name: AppRoutes.login),
@@ -476,6 +560,7 @@ class DeepLinkService {
     NavigatorState navigator,
     int movieId, {
     required String source,
+    required String contentType,
   }) async {
     final dashboardProvider =
         Provider.of<DashboardProvider>(navigator.context, listen: false);
@@ -488,6 +573,13 @@ class DeepLinkService {
         name: 'DeepLinkService',
         level: 900,
       );
+      if (navigator.mounted) {
+        CustomToast.show(
+          navigator.context,
+          'Movie details are not available or have been removed',
+          isSuccess: false,
+        );
+      }
       return;
     }
 
@@ -498,9 +590,13 @@ class DeepLinkService {
           arguments: MovieDetailsRouteArgs(
             movieId: movieId,
             source: source,
+            contentType: contentType,
           ),
         ),
-        builder: (_) => MovieDetailsPage(movieId: movieId),
+        builder: (_) => MovieDetailsPage(
+          movieId: movieId,
+          contentType: contentType,
+        ),
       ),
     );
   }
@@ -520,6 +616,13 @@ class DeepLinkService {
         name: 'DeepLinkService',
         level: 900,
       );
+      if (navigator.mounted) {
+        CustomToast.show(
+          navigator.context,
+          'Series details are not available or have been removed',
+          isSuccess: false,
+        );
+      }
       return;
     }
 
@@ -552,6 +655,13 @@ class DeepLinkService {
         name: 'DeepLinkService',
         level: 900,
       );
+      if (navigator.mounted) {
+        CustomToast.show(
+          navigator.context,
+          'Content details are not available or have been removed',
+          isSuccess: false,
+        );
+      }
       return;
     }
 
@@ -569,15 +679,54 @@ class DeepLinkService {
   DeepLinkContentType? _typeFromString(String? rawType) {
     switch ((rawType ?? '').trim().toLowerCase()) {
       case movieHost:
+      case 'movies':
         return DeepLinkContentType.movie;
+      case shortFilmHost:
+      case 'short_film':
+      case 'shortfilm':
+      case 'shortfilms':
+      case 'short-films':
+        return DeepLinkContentType.shortFilm;
       case seriesHost:
         return DeepLinkContentType.series;
+      case miniseriesHost:
+      case 'mini-series':
+      case 'mini_series':
+        return DeepLinkContentType.miniSeries;
       case shortHost:
+      case 'shorts':
         return DeepLinkContentType.short;
       case giftHost:
+      case 'gifts':
         return DeepLinkContentType.gift;
+      case registerHost:
+      case loginHost:
+      case 'signup':
+      case 'sign-up':
+      case 'signin':
+      case 'sign-in':
+        return DeepLinkContentType.register;
       default:
         return null;
+    }
+  }
+
+  String _hostForType(DeepLinkContentType type) {
+    switch (type) {
+      case DeepLinkContentType.movie:
+        return movieHost;
+      case DeepLinkContentType.shortFilm:
+        return shortFilmHost;
+      case DeepLinkContentType.series:
+        return seriesHost;
+      case DeepLinkContentType.miniSeries:
+        return miniseriesHost;
+      case DeepLinkContentType.short:
+        return shortHost;
+      case DeepLinkContentType.gift:
+        return giftHost;
+      case DeepLinkContentType.register:
+        return registerHost;
     }
   }
 
