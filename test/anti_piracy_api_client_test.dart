@@ -70,7 +70,6 @@ void main() {
           type: 'movie',
           country: 'IN',
           platform: 'ANDROID',
-          type: 'movie',
           deviceIntegrity: DeviceIntegrityStatus(
             rooted: false,
             jailbroken: false,

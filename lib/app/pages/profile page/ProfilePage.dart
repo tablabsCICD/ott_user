@@ -43,6 +43,7 @@ import 'package:ott/presentation/web_landing/utils/post_logout_navigation.dart';
 import '../../core/utils/sharepreferences.dart';
 import '../../provider/userProvider.dart';
 import '../../widgets/show_toast.dart';
+import 'package:ott/app/pages/sign in page/LoginCard.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, this.onOpenDetail});
@@ -382,13 +383,26 @@ class _ProfilePageState extends State<ProfilePage> {
                             profileCard(
                               '',
                               [
-                                ProfileOption(
-                                  icon: Icons.logout,
-                                  title: lang.logout,
-                                  onTap: () {
-                                    _showCupertinoDialog(context);
-                                  },
-                                ),
+                                (userProvider.userObj.id != null &&
+                                        (userProvider.userObj.id ?? 0) > 0)
+                                    ? ProfileOption(
+                                        icon: Icons.logout,
+                                        title: lang.logout,
+                                        onTap: () {
+                                          _showCupertinoDialog(context);
+                                        },
+                                      )
+                                    : ProfileOption(
+                                        icon: Icons.login,
+                                        title: lang.login,
+                                        onTap: () {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) => const LoginCard(),
+                                            ),
+                                          );
+                                        },
+                                      ),
                               ],
                             ),
                             const SizedBox(height: 250),
@@ -583,16 +597,18 @@ class _ProfilePageState extends State<ProfilePage> {
             themeProvider.toggleTheme();
           },
         ),
-        IconButton(
-          onPressed: () {
-            _showCupertinoDialog(context);
-          },
-          tooltip: "Logout",
-          icon: Icon(
-            Icons.logout,
-            color: theme.canvasColor,
+        if (userProvider.userObj.id != null &&
+            (userProvider.userObj.id ?? 0) > 0)
+          IconButton(
+            onPressed: () {
+              _showCupertinoDialog(context);
+            },
+            tooltip: "Logout",
+            icon: Icon(
+              Icons.logout,
+              color: theme.canvasColor,
+            ),
           ),
-        ),
       ],
       flexibleSpace: FlexibleSpaceBar(
         //titlePadding: const EdgeInsetsDirectional.only(start: 16, bottom: 16),

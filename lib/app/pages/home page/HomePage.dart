@@ -258,6 +258,10 @@ class _HomePageState extends State<HomePage>
     final userProvider =
         Provider.of<UserProvider>(context, listen: false).userObject;
 
+    if (userProvider.id == null || (userProvider.id ?? 0) <= 0) {
+      return;
+    }
+
     // Stage 1: Email ID & Date of Birth
     final hasEmail =
         userProvider.emailId != null && userProvider.emailId!.trim().isNotEmpty;
@@ -266,13 +270,15 @@ class _HomePageState extends State<HomePage>
     if (!hasEmail || !hasDob) {
       stage1ProfilePopUp(context);
       return;
-    } else if (userProvider.location!.country == null ||
+    } else if (userProvider.location == null ||
+        userProvider.location!.country == null ||
         userProvider.location!.state == null ||
         userProvider.location!.district == null) {
       userLocationPopUp(context);
       return;
     }
   }
+
 
   Future<void> _fetchUserData() async {
     final localSharePreferences = LocalSharePreferences();
@@ -2058,12 +2064,24 @@ class _HomePageState extends State<HomePage>
             Provider.of<ThemeProvider>(context, listen: true).getTheme;
         return AlertDialog(
           backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-          title: Text(
-            lang.enterDetails,
-            style: TextStyle(
-              color: selectedThemeData.canvasColor,
-              fontWeight: FontWeight.bold,
-            ),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                lang.enterDetails,
+                style: TextStyle(
+                  color: selectedThemeData.canvasColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.close, color: selectedThemeData.canvasColor),
+                onPressed: () => Navigator.of(ctx).pop(),
+                splashRadius: 20,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
           ),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -2236,12 +2254,24 @@ class _HomePageState extends State<HomePage>
             Provider.of<ThemeProvider>(context, listen: true).getTheme;
         return AlertDialog(
           backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-          title: Text(
-            lang.enterDetails,
-            style: TextStyle(
-              color: selectedThemeData.canvasColor,
-              fontWeight: FontWeight.bold,
-            ),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                lang.enterDetails,
+                style: TextStyle(
+                  color: selectedThemeData.canvasColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.close, color: selectedThemeData.canvasColor),
+                onPressed: () => Navigator.of(ctx).pop(),
+                splashRadius: 20,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
           ),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -2356,12 +2386,24 @@ class _HomePageState extends State<HomePage>
             Provider.of<ThemeProvider>(context, listen: true).getTheme;
         return AlertDialog(
           backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-          title: Text(
-            lang.enterLocationDetails,
-            style: TextStyle(
-              color: selectedThemeData.canvasColor,
-              fontWeight: FontWeight.bold,
-            ),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                lang.enterLocationDetails,
+                style: TextStyle(
+                  color: selectedThemeData.canvasColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.close, color: selectedThemeData.canvasColor),
+                onPressed: () => Navigator.of(ctx).pop(),
+                splashRadius: 20,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
           ),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

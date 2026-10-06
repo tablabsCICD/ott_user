@@ -12,6 +12,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:ott/app/widgets/video_skip_controls.dart';
 
+import 'package:ott/app/flavor/app_flavor.dart';
 import '../../../../data/models/content.dart';
 import '../../../core/constant/api_constant.dart';
 import '../../../core/network/api_helper.dart';
@@ -409,7 +410,14 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
     WakelockPlus.disable();
 
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    SystemChrome.setPreferredOrientations(
+      FlavorConfig.current.isTv
+          ? const [
+              DeviceOrientation.landscapeLeft,
+              DeviceOrientation.landscapeRight,
+            ]
+          : const [DeviceOrientation.portraitUp],
+    );
     if (kDebugMode) {
       debugPrint('TRAILER_FLOW: Trailer player disposed');
     }

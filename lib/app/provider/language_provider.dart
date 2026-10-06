@@ -96,26 +96,52 @@ class LanguageProvider extends BaseProvider {
     try {
       final response = await ApiHelper().getApi(ApiConstant.fetchGroupedLang);
 
-      if (response.statusCode != 200) {
-        throw Exception('Failed to fetch grouped languages');
+      if (response.statusCode == 200) {
+        final body = json.decode(response.body);
+        final res = GroupedLanguageResponse.fromJson(body);
+
+        majorIndianLanguages = res.majorIndianLanguages;
+        otherIndianLanguages = res.otherIndianLanguages;
+        foreignLanguages = res.foreignLanguages;
+
+        log(
+          'Grouped languages loaded → '
+          'Major: ${majorIndianLanguages.length}, '
+          'Other: ${otherIndianLanguages.length}, '
+          'Foreign: ${foreignLanguages.length}',
+        );
+      } else {
+        throw Exception('Grouped language API status: ${response.statusCode}');
       }
-
-      final body = json.decode(response.body);
-      final res = GroupedLanguageResponse.fromJson(body);
-
-      majorIndianLanguages = res.majorIndianLanguages;
-      otherIndianLanguages = res.otherIndianLanguages;
-      foreignLanguages = res.foreignLanguages;
-
-      log(
-        'Grouped languages loaded → '
-        'Major: ${majorIndianLanguages.length}, '
-        'Other: ${otherIndianLanguages.length}, '
-        'Foreign: ${foreignLanguages.length}',
-      );
     } catch (e) {
-      _error = e.toString();
-      log('Grouped language fetch error: $_error');
+      log('Grouped language fetch error: $e, falling back to standard list');
+      try {
+        await fetchLanguages();
+        if (_allLanguages.isNotEmpty) {
+          majorIndianLanguages = _allLanguages
+              .map((name) => GroupedLanguageItem(id: 0, name: name, native: name))
+              .toList();
+        }
+      } catch (_) {}
+
+      // If still empty, supply default major Indian languages fallback
+      if (majorIndianLanguages.isEmpty &&
+          otherIndianLanguages.isEmpty &&
+          foreignLanguages.isEmpty) {
+        majorIndianLanguages = [
+          GroupedLanguageItem(id: 1, name: 'Hindi', native: 'हिन्दी'),
+          GroupedLanguageItem(id: 2, name: 'English', native: 'English'),
+          GroupedLanguageItem(id: 3, name: 'Marathi', native: 'मराठी'),
+          GroupedLanguageItem(id: 4, name: 'Tamil', native: 'தமிழ்'),
+          GroupedLanguageItem(id: 5, name: 'Telugu', native: 'తెలుగు'),
+          GroupedLanguageItem(id: 6, name: 'Kannada', native: 'ಕನ್ನಡ'),
+          GroupedLanguageItem(id: 7, name: 'Malayalam', native: 'മലയാളം'),
+          GroupedLanguageItem(id: 8, name: 'Bengali', native: 'বাংলা'),
+          GroupedLanguageItem(id: 9, name: 'Gujarati', native: 'ગુજરાતી'),
+          GroupedLanguageItem(id: 10, name: 'Punjabi', native: 'ਪੰਜਾਬੀ'),
+        ];
+      }
+      _error = null;
     } finally {
       _loading = false;
       notifyListeners();
@@ -141,3 +167,4 @@ class LanguageProvider extends BaseProvider {
     notifyListeners();
   }
 }
+

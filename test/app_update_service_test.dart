@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/core/services/app_update_service.dart';
 
+import 'package:ott/app/flavor/app_flavor.dart';
+
 class _FakeApiHelper extends ApiHelper {
   _FakeApiHelper(this.response);
 
@@ -21,6 +23,16 @@ AppUpdateService _service(String body, {int statusCode = 200}) {
 
 void main() {
   group('AppUpdateService version ordering', () {
+    setUp(() {
+      FlavorConfig.current = const FlavorConfig.forFlavor(FilmytellFlavor.mobile);
+    });
+
+    test('bypasses update check for Jio flavor', () async {
+      FlavorConfig.current = const FlavorConfig.forFlavor(FilmytellFlavor.jio);
+      final info =
+          await _service('{"version":"2.0.0"}').getUpdateInfo();
+      expect(info.isUpdateAvailable, isFalse);
+    });
     final cases = <String, bool>{
       '1.0.15': false,
       '1.0.16': false,

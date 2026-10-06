@@ -56,6 +56,14 @@ android {
         jniLibs {
             excludes.addAll(listOf("lib/x86/**", "lib/x86_64/**"))
         }
+        resources {
+            excludes.addAll(
+                listOf(
+                    "META-INF/com/razorpay/**",
+                    "META-INF/com.razorpay.**",
+                )
+            )
+        }
     }
 
     flavorDimensions += "platform"
@@ -85,8 +93,8 @@ android {
         create("jio") {
             dimension = "platform"
             applicationId = "com.filmytell.ott"
-            versionCode = flutter.versionCode
-            versionName = flutter.versionName
+            versionCode = 1
+            versionName = "1.0.0"
             resValue("string", "app_name", "Filmytell")
             manifestPlaceholders["appAuthRedirectScheme"] = "com.filmytell.ott"
             ndk {
@@ -142,9 +150,8 @@ dependencies {
     add("mobileImplementation", "com.google.firebase:firebase-analytics")
     add("tvImplementation", "com.google.firebase:firebase-analytics")
 
-    // Google Play Install Referrer (Scoped to Mobile and Google TV)
-    add("mobileImplementation", "com.android.installreferrer:installreferrer:2.2")
-    add("tvImplementation", "com.android.installreferrer:installreferrer:2.2")
+    // Google Play Install Referrer
+    implementation("com.android.installreferrer:installreferrer:2.2")
 
     // Desugaring support
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")

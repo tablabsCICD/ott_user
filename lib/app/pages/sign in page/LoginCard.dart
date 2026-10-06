@@ -545,7 +545,7 @@ class _LoginCardState extends State<LoginCard>
                                   focusOrderStart: 3,
                                   onDigit: _appendTvDigit,
                                   onBackspace: _removeTvDigit,
-                                  onDone: () => _submitFocusNode.requestFocus(),
+                                  onDone: _handleTvDone,
                                 ),
                                 const SizedBox(height: 20),
                               ],

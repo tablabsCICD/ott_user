@@ -110,9 +110,12 @@ class GroupedLanguageItem {
 
   factory GroupedLanguageItem.fromJson(Map<String, dynamic> json) {
     return GroupedLanguageItem(
-      id: json['id'],
-      name: json['name'],
-      native: json['native'],
+      id: json['id'] is int
+          ? json['id'] as int
+          : int.tryParse(json['id']?.toString() ?? '') ?? 0,
+      name: json['name']?.toString() ?? '',
+      native: json['native']?.toString() ?? json['name']?.toString() ?? '',
     );
   }
 }
+

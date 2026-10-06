@@ -29,6 +29,7 @@ import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 import '../provider/userProvider.dart';
+import 'package:ott/app/pages/sign in page/LoginCard.dart';
 
 class NavigationPage extends StatefulWidget {
   const NavigationPage({
@@ -611,12 +612,31 @@ class _NavigationPageState extends State<NavigationPage> {
             index: 9, icon: Icons.settings, title: "Settings"),
         _buildDrawerTile(context,
             index: 10, icon: Icons.support_agent_sharp, title: lang.help),
-        _buildDrawerTile(
-          context,
-          index: -1,
-          icon: Icons.logout,
-          title: lang.logout,
-          onTap: _showLogoutDialog,
+        Consumer<UserProvider>(
+          builder: (context, userProvider, _) {
+            final isLoggedIn = userProvider.userObj.id != null &&
+                (userProvider.userObj.id ?? 0) > 0;
+            if (isLoggedIn) {
+              return _buildDrawerTile(
+                context,
+                index: -1,
+                icon: Icons.logout,
+                title: lang.logout,
+                onTap: _showLogoutDialog,
+              );
+            }
+            return _buildDrawerTile(
+              context,
+              index: -1,
+              icon: Icons.login,
+              title: lang.login,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const LoginCard()),
+                );
+              },
+            );
+          },
         ),
       ],
     );

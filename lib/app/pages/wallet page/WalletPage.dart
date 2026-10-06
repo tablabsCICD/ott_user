@@ -92,7 +92,7 @@ class _WalletPageState extends State<WalletPage> {
             automaticallyImplyLeading:
                 !(kIsWeb || ResponsiveWidget.isTv(context)),
             pinned: true,
-            expandedHeight: 280,
+            expandedHeight: ResponsiveWidget.isTabletOrTv(context) ? 310 : 280,
             backgroundColor: theme.primaryColor,
             foregroundColor: Colors.white,
             elevation: 0,
@@ -118,7 +118,10 @@ class _WalletPageState extends State<WalletPage> {
                       width: ResponsiveWidget.isMobile(context)
                           ? double.infinity
                           : 500,
-                      padding: const EdgeInsets.all(20.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0,
+                        vertical: 14.0,
+                      ),
                       decoration: BoxDecoration(
                         color: theme.primaryColor,
                         borderRadius: ResponsiveWidget.isDesktop(context)
@@ -131,38 +134,41 @@ class _WalletPageState extends State<WalletPage> {
                       child: Consumer<WalletProvider>(
                         builder: (_, walletProvider, __) {
                           return Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Spacer(),
-
+                              const SizedBox(height: 10),
                               const Icon(
                                 Icons.account_balance_wallet,
-                                size: 80,
+                                size: 64,
                                 color: Colors.white38,
                               ),
-
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 4),
 
                               /// Balance
-                              Text(
-                                "₹ ${walletProvider.walletBalance.toStringAsFixed(1)}",
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.bold,
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  "₹ ${walletProvider.walletBalance.toStringAsFixed(1)}",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 34,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
 
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 2),
 
                               const Text(
                                 "Available Balance",
                                 style: TextStyle(
                                   color: Colors.white70,
-                                  fontSize: 14,
+                                  fontSize: 13,
                                 ),
                               ),
 
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 8),
 
                               /// CTA
                               _tvFocus(
@@ -172,14 +178,14 @@ class _WalletPageState extends State<WalletPage> {
                                     foregroundColor: theme.primaryColor,
                                     minimumSize:
                                         ResponsiveWidget.isTabletOrTv(context)
-                                            ? const Size(220, 52)
+                                            ? const Size(200, 46)
                                             : null,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                   ),
                                   onPressed: _showBuyDialog,
-                                  icon: const Icon(Icons.add),
+                                  icon: const Icon(Icons.add, size: 20),
                                   label: const Text(
                                     "Recharge Wallet",
                                     style:
@@ -206,6 +212,7 @@ class _WalletPageState extends State<WalletPage> {
                                   return KeyEventResult.ignored;
                                 },
                               ),
+                              const SizedBox(height: 6),
                             ],
                           );
                         },

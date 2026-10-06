@@ -8,8 +8,9 @@ import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/app_update_service.dart';
 import 'package:ott/app/core/services/referral_service.dart';
+import 'package:ott/app/flavor/app_flavor.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
-import 'package:ott/app/pages/onboarding pages/selectLanguagePage.dart';
+import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/route/routes/web_navigation_routes.dart';
 import 'package:ott/presentation/web_landing/screens/web_landing_screen.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -98,7 +99,7 @@ class _SplashScreenState extends State<SplashScreen> {
       MaterialPageRoute(
         settings: RouteSettings(name: routeName),
         builder: (routeContext) {
-          if (isLoggedIn || ResponsiveWidget.isTv(routeContext)) {
+          if (isLoggedIn) {
             final route = initialNavigationRoute;
             return NavigationPage(
               initialIndex: route?.index ?? 0,
@@ -114,7 +115,7 @@ class _SplashScreenState extends State<SplashScreen> {
             }
             return const WebLandingScreen();
           }
-          return const SelectLocaleLanguagePage();
+          return const LoginCard();
         },
       ),
     );
@@ -145,6 +146,11 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   bool get _supportsUpdateDialog {
+    // TEMPORARY JIO STB CHANGE:
+    // App update dialog/version check is disabled for the first Jio STB release
+    // because the Jio STB latest-version API is not available yet.
+    // Re-enable this logic when the Jio STB version API is implemented.
+    if (FlavorConfig.current.isJio) return false;
     if (kIsWeb) return false;
     return defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS;

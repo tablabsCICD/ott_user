@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
+import 'package:ott/app/flavor/app_flavor.dart';
 
 class AppUpdateInfo {
   const AppUpdateInfo({
@@ -32,6 +33,18 @@ class AppUpdateService {
 
   Future<AppUpdateInfo> getUpdateInfo() async {
     final currentVersion = _currentVersion;
+
+    // TEMPORARY JIO STB CHANGE:
+    // App update dialog/version check is disabled for the first Jio STB release
+    // because the Jio STB latest-version API is not available yet.
+    // Re-enable this logic when the Jio STB version API is implemented.
+    if (FlavorConfig.current.isJio) {
+      return AppUpdateInfo(
+        isUpdateAvailable: false,
+        currentVersion: currentVersion,
+        latestVersion: currentVersion,
+      );
+    }
 
     try {
       final response = await _apiHelper.getApi(ApiConstant.getLatestVersion);

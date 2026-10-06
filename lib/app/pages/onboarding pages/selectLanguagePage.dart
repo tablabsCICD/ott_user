@@ -74,9 +74,7 @@ class SelectLocaleLanguagePage extends StatelessWidget {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ResponsiveWidget.isTv(context)
-                              ? const NavigationPage()
-                              : const LoginCard(),
+                          builder: (context) => const LoginCard(),
                         ),
                       );
                     },
@@ -86,9 +84,7 @@ class SelectLocaleLanguagePage extends StatelessWidget {
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ResponsiveWidget.isTv(context)
-                                ? const NavigationPage()
-                                : const LoginCard(),
+                            builder: (context) => const LoginCard(),
                           ),
                         );
                       },

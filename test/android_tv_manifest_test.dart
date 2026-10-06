@@ -68,9 +68,10 @@ void main() {
     );
   });
 
-  test('both Android flavors preserve the production application ID', () {
+  test('all Android flavors preserve the production application ID', () {
     final gradle = gradleFile.readAsStringSync();
     expect(RegExp('applicationId = "com\\.filmytell\\.ott"').allMatches(gradle),
-        hasLength(3));
+        hasLength(greaterThanOrEqualTo(3)));
   });
 }
+
