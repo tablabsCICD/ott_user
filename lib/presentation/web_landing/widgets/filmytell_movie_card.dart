@@ -94,7 +94,8 @@ class _FilmytellMovieCardState extends State<FilmytellMovieCard> {
                             imageUrls: widget.content.posterUrlList,
                             width: widget.width,
                             height: widget.height,
-                            fit: BoxFit.fill,
+                            fit: BoxFit.cover,
+                            alignment: Alignment.topCenter,
                           ),
                           // Subtle bottom dark gradient
                           Positioned(

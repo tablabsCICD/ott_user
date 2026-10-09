@@ -874,6 +874,7 @@ class _HomePageState extends State<HomePage>
                         Image.network(
                           imageUrl,
                           fit: BoxFit.cover,
+                          alignment: Alignment.topCenter,
                           errorBuilder: (_, __, ___) => Container(
                             color: theme.cardColor,
                             alignment: Alignment.center,

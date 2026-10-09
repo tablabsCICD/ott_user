@@ -665,7 +665,8 @@ class _HeroPosterCard extends StatelessWidget {
             child: FilmytellNetworkImage(
               imageUrl: posterUrl,
               imageUrls: posterUrls,
-              fit: BoxFit.fill,
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
             ),
           ),
         ),

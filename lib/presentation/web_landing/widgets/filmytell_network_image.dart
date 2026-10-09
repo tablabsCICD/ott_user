@@ -11,6 +11,7 @@ class FilmytellNetworkImage extends StatefulWidget {
     this.width,
     this.height,
     this.fit = BoxFit.cover,
+    this.alignment = Alignment.topCenter,
     this.borderRadius = BorderRadius.zero,
     this.fallbackIcon = Icons.movie_outlined,
     this.showShimmer = true,
@@ -21,6 +22,7 @@ class FilmytellNetworkImage extends StatefulWidget {
   final double? width;
   final double? height;
   final BoxFit fit;
+  final Alignment alignment;
   final BorderRadius borderRadius;
   final IconData fallbackIcon;
   final bool showShimmer;
@@ -132,6 +134,7 @@ class _FilmytellNetworkImageState extends State<FilmytellNetworkImage> {
         width: widget.width,
         height: widget.height,
         fit: widget.fit,
+        alignment: widget.alignment,
         filterQuality: FilterQuality.medium,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
