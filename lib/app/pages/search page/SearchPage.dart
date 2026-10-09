@@ -817,6 +817,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                             width: 100,
                             height: 140,
                             fit: BoxFit.cover,
+                            alignment: Alignment.topCenter,
                             errorBuilder: (context, error, stackTrace) => const Icon(
                                 Icons.broken_image,
                                 size: 30,

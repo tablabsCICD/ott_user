@@ -942,6 +942,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 width: 300,
                 height: 170,
                 fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
                 errorBuilder: (_, __, ___) => Container(
                   width: 300,
                   height: 170,

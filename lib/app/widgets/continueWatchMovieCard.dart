@@ -584,6 +584,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
             ? Image.network(
                 posterUrl,
                 fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
                 width: double.infinity,
                 height: double.infinity,
                 errorBuilder: (_, __, ___) => Icon(

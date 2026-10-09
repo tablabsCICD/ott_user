@@ -206,13 +206,21 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<void> _initializeData() async {
-    await _updateConnectionStatus();
-    await _fetchUserData();
-    if (!mounted) return;
-    setState(() {
-      isLoading = false;
-    });
-    confirmDetails(context);
+    try {
+      await _updateConnectionStatus();
+      await _fetchUserData();
+    } catch (e) {
+      log('Error initializing home data: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+        if (!ResponsiveWidget.isTv(context)) {
+          confirmDetails(context);
+        }
+      }
+    }
   }
 
   Future<void> _updateConnectionStatus() async {
@@ -916,6 +924,7 @@ class _HomePageState extends State<HomePage>
                         Image.network(
                           imageUrl,
                           fit: BoxFit.cover,
+                          alignment: Alignment.topCenter,
                           errorBuilder: (_, __, ___) => Container(
                             color: theme.cardColor,
                             alignment: Alignment.center,

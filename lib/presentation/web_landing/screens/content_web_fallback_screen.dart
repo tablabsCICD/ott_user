@@ -465,6 +465,7 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
           ? Image.network(
               posterUrl,
               fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
               errorBuilder: (_, __, ___) => const Center(
                 child: Icon(
                   Icons.movie,

@@ -112,6 +112,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
             child: Image.network(
               item.posterUrlList?.first ?? '',
               fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
               errorBuilder: (_, __, ___) => Container(color: Colors.black26),
             ),
           ),

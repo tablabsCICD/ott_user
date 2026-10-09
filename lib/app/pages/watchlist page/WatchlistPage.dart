@@ -641,6 +641,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
     return Image.network(
       posterUrl,
       fit: BoxFit.cover,
+      alignment: Alignment.topCenter,
       errorBuilder: (_, __, ___) => _offlinePosterFallback(item),
     );
   }

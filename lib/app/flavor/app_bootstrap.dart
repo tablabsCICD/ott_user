@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:ott/app/core/constant/prefrense_constant.dart';
@@ -146,11 +147,21 @@ Future<FlavorConfig> _resolveFlavor(FilmytellFlavor fallbackFlavor) async {
   final configured = FlavorConfig.fromEnvironment(fallback: fallbackFlavor);
   if (kIsWeb) return configured;
 
-  // Mobile and TV intentionally share the Play Store application ID. Their
-  // entrypoints are therefore the authoritative platform signal; package-name
-  // detection cannot distinguish them.
-  if (fallbackFlavor == FilmytellFlavor.tv ||
-      fallbackFlavor == FilmytellFlavor.mobile) {
+  if (fallbackFlavor == FilmytellFlavor.tv) {
+    return FlavorConfig.forFlavor(fallbackFlavor);
+  }
+
+  if (defaultTargetPlatform == TargetPlatform.android) {
+    try {
+      const channel = MethodChannel('com.filmytell.ott/anti_piracy');
+      final isNativeTv = await channel.invokeMethod<bool>('isTv');
+      if (isNativeTv == true) {
+        return const FlavorConfig.forFlavor(FilmytellFlavor.tv);
+      }
+    } catch (_) {}
+  }
+
+  if (fallbackFlavor == FilmytellFlavor.mobile) {
     return FlavorConfig.forFlavor(fallbackFlavor);
   }
 

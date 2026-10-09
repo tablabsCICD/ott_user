@@ -53,13 +53,25 @@ class MainActivity : FlutterActivity() {
                     result.success(
                         mapOf(
                             "deviceName" to "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}".trim(),
-                            "osVersion" to "Android ${android.os.Build.VERSION.RELEASE}"
+                            "osVersion" to "Android ${android.os.Build.VERSION.RELEASE}",
+                            "isTv" to isTvDevice()
                         )
                     )
+                }
+                "isTv" -> {
+                    result.success(isTvDevice())
                 }
                 else -> result.notImplemented()
             }
         }
+    }
+
+    private fun isTvDevice(): Boolean {
+        val uiModeManager = getSystemService(android.content.Context.UI_MODE_SERVICE) as? android.app.UiModeManager
+        val isTelevisionMode = uiModeManager?.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
+        val hasLeanback = packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
+        val hasTelevisionFeature = packageManager.hasSystemFeature("android.hardware.type.television")
+        return isTelevisionMode || hasLeanback || hasTelevisionFeature
     }
 
     private fun isRootedDevice(): Boolean {

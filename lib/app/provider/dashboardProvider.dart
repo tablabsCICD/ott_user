@@ -43,21 +43,30 @@ class DashboardProvider extends BaseProvider {
     _isLoadingDashboard = true;
     List<DashboardData> finalDashboardData = [];
 
-    for (final lang in languages) {
-      try {
-        final latest = await getDashboardLatestData(type, [lang], userId);
-        final trending = await getDashboardTrendingData(type, [lang], userId);
-        final upcoming = await getDashboardUpcomingData(type, [lang], userId);
+    try {
+      final tasks = languages.map((lang) async {
+        try {
+          final results = await Future.wait([
+            getDashboardLatestData(type, [lang], userId).catchError((_) => <DashboardData>[]),
+            getDashboardTrendingData(type, [lang], userId).catchError((_) => <DashboardData>[]),
+            getDashboardUpcomingData(type, [lang], userId).catchError((_) => <DashboardData>[]),
+          ]);
+          final group = <DashboardData>[];
+          for (final rowList in results) {
+            _initRowLoadingState(rowList);
+            group.addAll(rowList);
+          }
+          return group;
+        } catch (_) {
+          return <DashboardData>[];
+        }
+      });
 
-        _initRowLoadingState(latest);
-        _initRowLoadingState(trending);
-        _initRowLoadingState(upcoming);
-
-        finalDashboardData.addAll(latest);
-        finalDashboardData.addAll(trending);
-        finalDashboardData.addAll(upcoming);
-      } catch (e) {}
-    }
+      final rowGroups = await Future.wait(tasks);
+      for (final rows in rowGroups) {
+        finalDashboardData.addAll(rows);
+      }
+    } catch (_) {}
 
     _dashboardData = finalDashboardData;
     notifyListeners();
