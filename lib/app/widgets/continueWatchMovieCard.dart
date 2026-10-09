@@ -592,22 +592,40 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       );
     }
 
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: Colors.black,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          ResponsivePosterImage(
-            imageUrl: posterUrl,
-            imageUrls: content.posterUrlList,
-            fit: BoxFit.contain,
-            alignment: Alignment.center,
-            backgroundColor: Colors.black,
-            loadingProgressColor: theme.primaryColor,
-            errorIconColor: theme.canvasColor.withValues(alpha: 0.3),
+    return Stack(
+      children: [
+        posterUrl != null
+            ? Image.network(
+                posterUrl,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (_, __, ___) => Icon(
+                  Icons.broken_image,
+                  color: theme.canvasColor.withOpacity(0.3),
+                  size: 40,
+                ),
+              )
+            : Icon(
+                Icons.broken_image,
+                color: theme.canvasColor.withOpacity(0.3),
+                size: 40,
+              ),
+        Positioned(
+          bottom: 10,
+          left: 8,
+          child: Text(
+            content.title ?? 'No Title',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: theme.canvasColor,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
+        ),
 
           /// 🔥 CONTINUE WATCHING BAR
           if ((widget.movie.watchedPercentage ?? 0) > 0)

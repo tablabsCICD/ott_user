@@ -939,22 +939,17 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Container(
+              child: Image.network(
+                image,
                 width: 300,
                 height: 170,
-                color: Colors.black,
-                child: Image.network(
-                  image,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+                errorBuilder: (_, __, ___) => Container(
                   width: 300,
                   height: 170,
-                  fit: BoxFit.contain,
-                  alignment: Alignment.center,
-                  errorBuilder: (_, __, ___) => Container(
-                    width: 300,
-                    height: 170,
-                    color: Colors.grey.shade900,
-                    child: const Icon(Icons.movie, color: Colors.white54),
-                  ),
+                  color: Colors.grey.shade900,
+                  child: const Icon(Icons.movie, color: Colors.white54),
                 ),
               ),
             ),

@@ -218,9 +218,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
     if (confirmed != true || !mounted) return;
 
     try {
-      final result = await context
-          .read<OfflineDownloadProvider>()
-          .deleteContent(item);
+      final result =
+          await context.read<OfflineDownloadProvider>().deleteContent(item);
       if (!mounted) return;
       CustomToast.show(
         context,
@@ -588,8 +587,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
                       ),
                       child: IconButton(
                         visualDensity: VisualDensity.compact,
-                        constraints:
-                            const BoxConstraints.tightFor(width: 32, height: 32),
+                        constraints: const BoxConstraints.tightFor(
+                            width: 32, height: 32),
                         padding: EdgeInsets.zero,
                         icon: const Icon(Icons.delete_outline,
                             color: Colors.white, size: 18),
@@ -636,13 +635,11 @@ class _WatchlistPageState extends State<WatchlistPage> {
     final posterUrl =
         item.posterUrlList?.isNotEmpty == true ? item.posterUrlList!.first : '';
 
-    return ResponsivePosterImage(
-      imageUrl: posterUrl,
-      imageUrls: item.posterUrlList,
-      fit: BoxFit.contain,
-      alignment: Alignment.center,
-      backgroundColor: Colors.black,
-      fallbackBuilder: () => _offlinePosterFallback(item),
+    return Image.network(
+      posterUrl,
+      fit: BoxFit.cover,
+      alignment: Alignment.topCenter,
+      errorBuilder: (_, __, ___) => _offlinePosterFallback(item),
     );
   }
 

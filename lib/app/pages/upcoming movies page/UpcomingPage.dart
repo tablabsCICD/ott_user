@@ -116,12 +116,11 @@ class _UpcomingPageState extends State<UpcomingPage> {
         children: [
           // 🎞 Poster
           Positioned.fill(
-            child: ResponsivePosterImage(
-              imageUrl: item.posterUrlList?.first ?? '',
-              imageUrls: item.posterUrlList,
-              fit: BoxFit.contain,
-              alignment: Alignment.center,
-              backgroundColor: Colors.black,
+            child: Image.network(
+              item.posterUrlList?.first ?? '',
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+              errorBuilder: (_, __, ___) => Container(color: Colors.black26),
             ),
           ),
 

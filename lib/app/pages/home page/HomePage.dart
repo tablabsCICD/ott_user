@@ -225,13 +225,15 @@ class _HomePageState extends State<HomePage>
       await _updateConnectionStatus();
       await _fetchUserData();
     } catch (e) {
-      log('HomePage initialization warning: $e');
+      log('Error initializing home data: $e');
     } finally {
       if (mounted) {
         setState(() {
           isLoading = false;
         });
-        confirmDetails(context);
+        if (!ResponsiveWidget.isTv(context)) {
+          confirmDetails(context);
+        }
       }
     }
   }
@@ -320,7 +322,6 @@ class _HomePageState extends State<HomePage>
         break;
     }
   }
-
 
   Future<void> _fetchUserData() async {
     final localSharePreferences = LocalSharePreferences();
@@ -734,8 +735,10 @@ class _HomePageState extends State<HomePage>
                                                                   ? SizedBox
                                                                       .shrink()
                                                                   : OttTvFocus(
-                                                                      onTap: () {
-                                                                        Navigator.push(
+                                                                      onTap:
+                                                                          () {
+                                                                        Navigator
+                                                                            .push(
                                                                           context,
                                                                           MaterialPageRoute(
                                                                             builder: (_) =>
@@ -746,26 +749,37 @@ class _HomePageState extends State<HomePage>
                                                                           ),
                                                                         );
                                                                       },
-                                                                      borderRadius: 8,
-                                                                      scale: 1.01,
-                                                                      semanticLabel: "See all ${dashboardData.language} ${dashboardData.category}",
-                                                                      child: InkWell(
-                                                                        splashColor: Colors.transparent,
-                                                                        onTap: () {
-                                                                          Navigator.push(
+                                                                      borderRadius:
+                                                                          8,
+                                                                      scale:
+                                                                          1.01,
+                                                                      semanticLabel:
+                                                                          "See all ${dashboardData.language} ${dashboardData.category}",
+                                                                      child:
+                                                                          InkWell(
+                                                                        splashColor:
+                                                                            Colors.transparent,
+                                                                        onTap:
+                                                                            () {
+                                                                          Navigator
+                                                                              .push(
                                                                             context,
                                                                             MaterialPageRoute(
-                                                                              builder: (_) =>
-                                                                                  CategoryContentPage(
+                                                                              builder: (_) => CategoryContentPage(
                                                                                 categoryTitle: "${dashboardData.language} - ${dashboardData.category}",
                                                                                 contents: dashboardData.movies ?? [],
                                                                               ),
                                                                             ),
                                                                           );
                                                                         },
-                                                                        child: Padding(
-                                                                          padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
-                                                                          child: Row(
+                                                                        child:
+                                                                            Padding(
+                                                                          padding: const EdgeInsets
+                                                                              .symmetric(
+                                                                              horizontal: 4.0,
+                                                                              vertical: 8.0),
+                                                                          child:
+                                                                              Row(
                                                                             children: [
                                                                               Expanded(
                                                                                 child: Text(
@@ -954,8 +968,7 @@ class _HomePageState extends State<HomePage>
                         Image.network(
                           imageUrl,
                           fit: BoxFit.cover,
-                          alignment: Alignment.center,
-                          cacheWidth: 1920,
+                          alignment: Alignment.topCenter,
                           errorBuilder: (_, __, ___) => Container(
                             color: theme.cardColor,
                             alignment: Alignment.center,

@@ -95,90 +95,89 @@ class _HeroBannerState extends State<HeroBanner> {
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                      if (poster != null) ...[
-                        Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 460),
-                            child: _HeroPosterCard(
-                              key: ValueKey(
-                                  'hero_poster_${item?.id ?? item?.title}'),
-                              posterUrl: poster,
-                              posterUrls: item?.posterUrlList,
-                              aspectRatio: 1.38,
-                              onTap: item == null
-                                  ? null
-                                  : () => widget.onWatchNow(item),
-                            ),
-                          ),
+                  if (poster != null) ...[
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 460),
+                        child: _HeroPosterCard(
+                          key: ValueKey(
+                              'hero_poster_${item?.id ?? item?.title}'),
+                          posterUrl: poster,
+                          posterUrls: item?.posterUrlList,
+                          aspectRatio: 1.38,
+                          onTap: item == null
+                              ? null
+                              : () => widget.onWatchNow(item),
                         ),
-                        const SizedBox(height: 28),
-                      ],
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 400),
-                        switchInCurve: Curves.easeOutCubic,
-                        child: item == null
-                            ? const _HeroCopySkeleton()
-                            : _HeroContentBlock(
-                                key: ValueKey(item.id ?? item.title),
-                                item: item,
-                                compact: true,
-                                onWatchNow: () => widget.onWatchNow(item),
-                                onPlayTrailer: () => widget.onPlayTrailer(item),
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                  ],
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    switchInCurve: Curves.easeOutCubic,
+                    child: item == null
+                        ? const _HeroCopySkeleton()
+                        : _HeroContentBlock(
+                            key: ValueKey(item.id ?? item.title),
+                            item: item,
+                            compact: true,
+                            onWatchNow: () => widget.onWatchNow(item),
+                            onPlayTrailer: () => widget.onPlayTrailer(item),
+                          ),
+                  ),
+                ],
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    flex: 50,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 400),
+                      switchInCurve: Curves.easeOutCubic,
+                      child: item == null
+                          ? const _HeroCopySkeleton()
+                          : _HeroContentBlock(
+                              key: ValueKey(item.id ?? item.title),
+                              item: item,
+                              compact: false,
+                              onWatchNow: () => widget.onWatchNow(item),
+                              onPlayTrailer: () => widget.onPlayTrailer(item),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 36),
+                  Expanded(
+                    flex: 50,
+                    child: Center(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 500),
+                        child: poster == null
+                            ? const _HeroPosterFallback()
+                            : ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: isTablet
+                                      ? 420
+                                      : (width >= 1400 ? 580 : 500),
+                                ),
+                                child: _HeroPosterCard(
+                                  key: ValueKey(
+                                    'hero_poster_${item?.id ?? item?.title}',
+                                  ),
+                                  posterUrl: poster,
+                                  posterUrls: item?.posterUrlList,
+                                  aspectRatio: 1.38,
+                                  onTap: item == null
+                                      ? null
+                                      : () => widget.onWatchNow(item),
+                                ),
                               ),
                       ),
-                    ],
-                  )
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        flex: 50,
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 400),
-                          switchInCurve: Curves.easeOutCubic,
-                          child: item == null
-                              ? const _HeroCopySkeleton()
-                              : _HeroContentBlock(
-                                  key: ValueKey(item.id ?? item.title),
-                                  item: item,
-                                  compact: false,
-                                  onWatchNow: () => widget.onWatchNow(item),
-                                  onPlayTrailer: () =>
-                                      widget.onPlayTrailer(item),
-                                ),
-                        ),
-                      ),
-                      const SizedBox(width: 36),
-                      Expanded(
-                        flex: 50,
-                        child: Center(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 500),
-                            child: poster == null
-                                ? const _HeroPosterFallback()
-                                : ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                      maxWidth: isTablet
-                                          ? 420
-                                          : (width >= 1400 ? 580 : 500),
-                                    ),
-                                    child: _HeroPosterCard(
-                                      key: ValueKey(
-                                        'hero_poster_${item?.id ?? item?.title}',
-                                      ),
-                                      posterUrl: poster,
-                                      posterUrls: item?.posterUrlList,
-                                      aspectRatio: 1.38,
-                                      onTap: item == null
-                                          ? null
-                                          : () => widget.onWatchNow(item),
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
+                ],
+              ),
       ),
     );
   }
@@ -660,16 +659,13 @@ class _HeroPosterCard extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(15),
-          child: Container(
-            color: const Color(0xFF0D0D12),
-            child: AspectRatio(
-              aspectRatio: aspectRatio,
-              child: FilmytellNetworkImage(
-                imageUrl: posterUrl,
-                imageUrls: posterUrls,
-                fit: BoxFit.contain,
-                alignment: Alignment.center,
-              ),
+          child: AspectRatio(
+            aspectRatio: aspectRatio,
+            child: FilmytellNetworkImage(
+              imageUrl: posterUrl,
+              imageUrls: posterUrls,
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
             ),
           ),
         ),

@@ -809,31 +809,30 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                 SizedBox(
                   width: 100,
                   height: 140,
-                  child: ResponsivePosterImage(
-                    imageUrl: (movie.portraitPosterUrl != null &&
-                            movie.portraitPosterUrl!.isNotEmpty)
-                        ? movie.portraitPosterUrl
-                        : (movie.posterUrlList != null &&
-                                movie.posterUrlList!.isNotEmpty
-                            ? movie.posterUrlList![0]
-                            : null),
-                    imageUrls: movie.posterUrlList,
-                    fit: BoxFit.contain,
-                    alignment: Alignment.center,
-                    backgroundColor: Colors.black,
+                  child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    fallbackBuilder: () => Container(
-                      width: 100,
-                      height: 140,
-                      color: Colors.grey[900],
-                      child: const Center(
-                        child: Icon(
-                          Icons.movie,
-                          size: 48,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ),
+                    child: movie.posterUrlList != null &&
+                            movie.posterUrlList!.isNotEmpty
+                        ? Image.network(
+                            movie.posterUrlList![0],
+                            width: 100,
+                            height: 140,
+                            fit: BoxFit.cover,
+                            alignment: Alignment.topCenter,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.broken_image,
+                                    size: 30, color: Colors.grey),
+                          )
+                        : Container(
+                            width: 100,
+                            height: 140,
+                            color: Colors.grey[300],
+                            child: Icon(
+                              Icons.movie,
+                              size: 60,
+                              color: Colors.grey[600],
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 12),

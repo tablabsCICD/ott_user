@@ -38,8 +38,12 @@ class _FilmytellMovieCardState extends State<FilmytellMovieCard> {
     final isSmallMobile = widget.width < 165;
     final rankOffset = hasRank
         ? (widget.rank! >= 10
-            ? (isSmallMobile ? 26.0 : (isMobile ? 32.0 : (widget.width >= 260 ? 46.0 : 38.0)))
-            : (isSmallMobile ? 18.0 : (isMobile ? 22.0 : (widget.width >= 260 ? 32.0 : 26.0))))
+            ? (isSmallMobile
+                ? 26.0
+                : (isMobile ? 32.0 : (widget.width >= 260 ? 46.0 : 38.0)))
+            : (isSmallMobile
+                ? 18.0
+                : (isMobile ? 22.0 : (widget.width >= 260 ? 32.0 : 26.0))))
         : 0.0;
     final price = widget.content.price;
 
@@ -79,7 +83,8 @@ class _FilmytellMovieCardState extends State<FilmytellMovieCard> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: _hovered ? 0.80 : 0.60),
+                          color: Colors.black
+                              .withValues(alpha: _hovered ? 0.80 : 0.60),
                           blurRadius: _hovered ? 24 : 16,
                           offset: const Offset(0, 8),
                         ),
@@ -95,8 +100,8 @@ class _FilmytellMovieCardState extends State<FilmytellMovieCard> {
                             imageUrls: widget.content.posterUrlList,
                             width: widget.width,
                             height: widget.height,
-                            fit: BoxFit.contain,
-                            alignment: Alignment.center,
+                            fit: BoxFit.cover,
+                            alignment: Alignment.topCenter,
                           ),
                           // Subtle bottom dark gradient
                           Positioned(

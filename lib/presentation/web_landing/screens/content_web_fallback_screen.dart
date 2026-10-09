@@ -256,7 +256,8 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
             onPressed: () {
               Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);
             },
-            icon: const Icon(Icons.home_rounded, color: Colors.white70, size: 18),
+            icon:
+                const Icon(Icons.home_rounded, color: Colors.white70, size: 18),
             label: const Text(
               'Home',
               style: TextStyle(color: Colors.white70),
@@ -353,14 +354,14 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
     final title = content.title ?? 'Watch on Filmytell';
     final description = content.description ??
         'Stream exclusive movies, web series, and mini series on Filmytell.';
-    final posterUrl = (content.posterUrlList != null &&
-            content.posterUrlList!.isNotEmpty)
-        ? content.posterUrlList!.first
-        : '';
-    final backdropUrl = (content.posterUrlList != null &&
-            content.posterUrlList!.length > 1)
-        ? content.posterUrlList![1]
-        : posterUrl;
+    final posterUrl =
+        (content.posterUrlList != null && content.posterUrlList!.isNotEmpty)
+            ? content.posterUrlList!.first
+            : '';
+    final backdropUrl =
+        (content.posterUrlList != null && content.posterUrlList!.length > 1)
+            ? content.posterUrlList![1]
+            : posterUrl;
     final typeLabel = ContentType.displayLabel(
       content.type ?? widget.contentType.name,
     );
@@ -464,8 +465,8 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
       child: posterUrl.isNotEmpty
           ? Image.network(
               posterUrl,
-              fit: BoxFit.contain,
-              alignment: Alignment.center,
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
               errorBuilder: (_, __, ___) => const Center(
                 child: Icon(
                   Icons.movie,
@@ -493,16 +494,16 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
     required bool showQrCode,
   }) {
     final content = _content!;
-    final language = (content.languageList != null && content.languageList!.isNotEmpty)
-        ? (content.languageList!.first.language ?? '')
-        : '';
+    final language =
+        (content.languageList != null && content.languageList!.isNotEmpty)
+            ? (content.languageList!.first.language ?? '')
+            : '';
     final releaseDate = content.releaseDate?.toString() ?? '';
     final rating = content.ageRating ?? '';
 
     return Column(
-      crossAxisAlignment: showQrCode
-          ? CrossAxisAlignment.start
-          : CrossAxisAlignment.center,
+      crossAxisAlignment:
+          showQrCode ? CrossAxisAlignment.start : CrossAxisAlignment.center,
       children: [
         // Type Badge
         Container(
@@ -542,8 +543,7 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
           runSpacing: 8,
           alignment: showQrCode ? WrapAlignment.start : WrapAlignment.center,
           children: [
-            if (language.isNotEmpty)
-              _buildMetaTag(Icons.language, language),
+            if (language.isNotEmpty) _buildMetaTag(Icons.language, language),
             if (releaseDate.isNotEmpty)
               _buildMetaTag(Icons.calendar_today, releaseDate),
             if (rating.isNotEmpty)
@@ -883,7 +883,8 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
             children: [
               _buildFooterLink('Privacy Policy', AppConstant.privacyPolicy),
               _buildFooterLink('Terms of Use', AppConstant.termsAndCondition),
-              _buildFooterLink('Help Center', '${AppConstant.webAppLink}/help-center.html'),
+              _buildFooterLink(
+                  'Help Center', '${AppConstant.webAppLink}/help-center.html'),
             ],
           ),
         ],

@@ -10,8 +10,8 @@ class FilmytellNetworkImage extends StatefulWidget {
     this.imageUrls,
     this.width,
     this.height,
-    this.fit = BoxFit.contain,
-    this.alignment = Alignment.center,
+    this.fit = BoxFit.cover,
+    this.alignment = Alignment.topCenter,
     this.borderRadius = BorderRadius.zero,
     this.fallbackIcon = Icons.movie_outlined,
     this.showShimmer = true,
@@ -22,6 +22,7 @@ class FilmytellNetworkImage extends StatefulWidget {
   final double? width;
   final double? height;
   final BoxFit fit;
+  final Alignment alignment;
   final Alignment alignment;
   final BorderRadius borderRadius;
   final IconData fallbackIcon;
@@ -133,19 +134,14 @@ class _FilmytellNetworkImageState extends State<FilmytellNetworkImage> {
 
     return ClipRRect(
       borderRadius: widget.borderRadius,
-      child: Container(
+      child: Image.network(
+        activeUrl,
+        key: ValueKey(activeUrl),
         width: widget.width,
         height: widget.height,
-        color: FilmytellTheme.surfaceDark,
+        fit: widget.fit,
         alignment: widget.alignment,
-        child: Image.network(
-          activeUrl,
-          key: ValueKey(activeUrl),
-          width: widget.width,
-          height: widget.height,
-          fit: widget.fit,
-          alignment: widget.alignment,
-          filterQuality: FilterQuality.medium,
+        filterQuality: FilterQuality.medium,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
           return widget.showShimmer ? _buildShimmer() : _buildFallback();

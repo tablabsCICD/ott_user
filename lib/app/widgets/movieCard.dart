@@ -753,22 +753,28 @@ class _MovieCardState extends State<MovieCard> {
       );
     }
 
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: Colors.black,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          ResponsivePosterImage(
-            imageUrl: posterUrl,
-            imageUrls: content.posterUrlList,
-            fit: widget.posterFit ?? BoxFit.contain,
-            alignment: Alignment.center,
-            backgroundColor: Colors.black,
-            loadingProgressColor: theme.primaryColor,
-            errorIconColor: theme.canvasColor.withValues(alpha: 0.3),
-          ),
+    return Stack(
+      children: [
+        posterUrl != null
+            ? Image.network(
+                posterUrl,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (_, __, ___) => Center(
+                  child: Icon(
+                    Icons.broken_image,
+                    color: theme.canvasColor.withOpacity(0.3),
+                    size: 60,
+                  ),
+                ),
+              )
+            : Icon(
+                Icons.broken_image,
+                color: theme.canvasColor.withOpacity(0.3),
+                size: 60,
+              ),
 
           /// 🔥 CONTINUE WATCHING BAR
           if ((widget.movie.watchedPercentage ?? 0) > 0)
