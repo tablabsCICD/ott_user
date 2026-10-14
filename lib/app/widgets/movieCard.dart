@@ -27,6 +27,7 @@ import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/feature_tour.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/app/widgets/filmytell_poster_image.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -716,27 +717,12 @@ class _MovieCardState extends State<MovieCard> {
     }
 
     return Stack(
+      fit: StackFit.expand,
       children: [
-        posterUrl != null
-            ? Image.network(
-                posterUrl,
-                fit: BoxFit.cover,
-                alignment: Alignment.topCenter,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (_, __, ___) => Center(
-                  child: Icon(
-                    Icons.broken_image,
-                    color: theme.canvasColor.withOpacity(0.3),
-                    size: 60,
-                  ),
-                ),
-              )
-            : Icon(
-                Icons.broken_image,
-                color: theme.canvasColor.withOpacity(0.3),
-                size: 60,
-              ),
+        FilmytellPosterImage(
+          posterUrl: posterUrl,
+          fallbackIconSize: 60,
+        ),
 
         /// 🔥 CONTINUE WATCHING BAR
         if ((widget.movie.watchedPercentage ?? 0) > 0) _watchProgressBar(theme),

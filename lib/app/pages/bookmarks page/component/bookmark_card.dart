@@ -8,6 +8,7 @@ import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
+import 'package:ott/app/widgets/filmytell_poster_image.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/content.dart';
@@ -74,13 +75,10 @@ class BookmarkPosterCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
-                child: Image.network(
-                  posterUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: theme.dividerColor,
-                    child: const Icon(Icons.movie, size: 40),
-                  ),
+                child: FilmytellPosterImage(
+                  posterUrl: posterUrl,
+                  fallbackIconSize: 40,
+                  fallbackIcon: Icons.movie,
                 ),
               ),
             ),

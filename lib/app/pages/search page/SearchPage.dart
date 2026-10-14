@@ -11,6 +11,7 @@ import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/filmytell_poster_image.dart';
 import 'package:ott/app/widgets/shimmer%20loader/search_shimmer.dart';
 import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
@@ -810,29 +811,16 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                   height: 140,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: movie.posterUrlList != null &&
-                            movie.posterUrlList!.isNotEmpty
-                        ? Image.network(
-                            movie.posterUrlList![0],
-                            width: 100,
-                            height: 140,
-                            fit: BoxFit.cover,
-                            alignment: Alignment.topCenter,
-                            errorBuilder: (context, error, stackTrace) => const Icon(
-                                Icons.broken_image,
-                                size: 30,
-                                color: Colors.grey),
-                          )
-                        : Container(
-                            width: 100,
-                            height: 140,
-                            color: Colors.grey[300],
-                            child: Icon(
-                              Icons.movie,
-                              size: 60,
-                              color: Colors.grey[600],
-                            ),
-                          ),
+                    child: FilmytellPosterImage(
+                      posterUrl: movie.posterUrlList != null &&
+                              movie.posterUrlList!.isNotEmpty
+                          ? movie.posterUrlList![0]
+                          : null,
+                      width: 100,
+                      height: 140,
+                      fallbackIconSize: 30,
+                      fallbackIcon: Icons.movie,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),

@@ -7,6 +7,7 @@ import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/shimmer%20loader/comming_soon_shimmer.dart';
+import 'package:ott/app/widgets/filmytell_poster_image.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -109,11 +110,10 @@ class _UpcomingPageState extends State<UpcomingPage> {
         children: [
           // 🎞 Poster
           Positioned.fill(
-            child: Image.network(
-              item.posterUrlList?.first ?? '',
-              fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
-              errorBuilder: (_, __, ___) => Container(color: Colors.black26),
+            child: FilmytellPosterImage(
+              posterUrl: item.posterUrlList?.first,
+              fallbackIconSize: 48,
+              fallbackIcon: Icons.movie,
             ),
           ),
 

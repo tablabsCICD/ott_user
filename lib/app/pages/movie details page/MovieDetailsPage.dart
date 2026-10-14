@@ -20,6 +20,7 @@ import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/filmytell_poster_image.dart';
 import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -937,17 +938,15 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                image,
+              child: SizedBox(
                 width: 300,
                 height: 170,
-                fit: BoxFit.cover,
-                alignment: Alignment.topCenter,
-                errorBuilder: (_, __, ___) => Container(
+                child: FilmytellPosterImage(
+                  posterUrl: image,
                   width: 300,
                   height: 170,
-                  color: Colors.grey.shade900,
-                  child: const Icon(Icons.movie, color: Colors.white54),
+                  fallbackIconSize: 48,
+                  fallbackIcon: Icons.movie,
                 ),
               ),
             ),

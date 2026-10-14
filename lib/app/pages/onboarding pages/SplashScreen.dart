@@ -6,7 +6,6 @@ import 'package:ott/app/core/services/session_manager.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
-import 'package:ott/app/core/services/app_update_service.dart';
 import 'package:ott/app/core/services/referral_service.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/onboarding pages/selectLanguagePage.dart';
@@ -32,7 +31,6 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   final LocalSharePreferences _prefs = LocalSharePreferences();
-  final AppUpdateService _appUpdateService = AppUpdateService();
   bool _isLoggedIn = false;
   int _flowVersion = 0;
 
@@ -65,18 +63,6 @@ class _SplashScreenState extends State<SplashScreen> {
       // Splash delay
       await Future.delayed(const Duration(seconds: 2));
       if (!_isActiveFlow(flowVersion)) return;
-
-      if (_supportsUpdateDialog) {
-        final updateInfo = await _appUpdateService.getUpdateInfo();
-        if (!_isActiveFlow(flowVersion)) return;
-
-        final shouldShowUpdateDialog = updateInfo.isUpdateAvailable;
-
-        if (shouldShowUpdateDialog) {
-          await _showUpdateDialog(updateInfo);
-          if (!_isActiveFlow(flowVersion)) return;
-        }
-      }
     }
 
     if (!_isActiveFlow(flowVersion)) return;
@@ -142,47 +128,6 @@ class _SplashScreenState extends State<SplashScreen> {
   void _logWebAuth(String message) {
     if (!kIsWeb || !kDebugMode) return;
     developer.log(message, name: 'WebAuthGuard');
-  }
-
-  bool get _supportsUpdateDialog {
-    if (kIsWeb) return false;
-    return defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS;
-  }
-
-  Future<void> _showUpdateDialog(AppUpdateInfo updateInfo) async {
-    await showDialog<void>(
-      context: context,
-      useRootNavigator: true,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        final theme = Theme.of(dialogContext);
-        return AlertDialog(
-          backgroundColor: theme.cardColor,
-          title: const Text('Update Available'),
-          content: Text(
-            'A newer version is available (${updateInfo.latestVersion}). Please update for the best experience.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () =>
-                  Navigator.of(dialogContext, rootNavigator: true).pop(),
-              child: const Text('Later'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final uri = Uri.parse(AppConstant.playStoreLink);
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-                if (dialogContext.mounted) {
-                  Navigator.of(dialogContext, rootNavigator: true).pop();
-                }
-              },
-              child: const Text('Update Now'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override

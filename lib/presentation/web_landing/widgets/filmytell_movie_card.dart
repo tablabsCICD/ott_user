@@ -89,13 +89,30 @@ class _FilmytellMovieCardState extends State<FilmytellMovieCard> {
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
+                          // 1. Ambient Background Layer (Fills card space)
                           FilmytellNetworkImage(
                             imageUrl: poster,
                             imageUrls: widget.content.posterUrlList,
                             width: widget.width,
                             height: widget.height,
                             fit: BoxFit.cover,
-                            alignment: Alignment.topCenter,
+                            alignment: Alignment.center,
+                            showShimmer: false,
+                          ),
+                          // 2. Ambient Dimming Scrim
+                          const DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Color(0xB8000000),
+                            ),
+                          ),
+                          // 3. Complete Uncropped Poster
+                          FilmytellNetworkImage(
+                            imageUrl: poster,
+                            imageUrls: widget.content.posterUrlList,
+                            width: widget.width,
+                            height: widget.height,
+                            fit: BoxFit.contain,
+                            alignment: Alignment.center,
                           ),
                           // Subtle bottom dark gradient
                           Positioned(

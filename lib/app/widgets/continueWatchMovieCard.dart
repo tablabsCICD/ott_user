@@ -25,6 +25,7 @@ import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/app/widgets/filmytell_poster_image.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -579,25 +580,12 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     }
 
     return Stack(
+      fit: StackFit.expand,
       children: [
-        posterUrl != null
-            ? Image.network(
-                posterUrl,
-                fit: BoxFit.cover,
-                alignment: Alignment.topCenter,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (_, __, ___) => Icon(
-                  Icons.broken_image,
-                  color: theme.canvasColor.withOpacity(0.3),
-                  size: 40,
-                ),
-              )
-            : Icon(
-                Icons.broken_image,
-                color: theme.canvasColor.withOpacity(0.3),
-                size: 40,
-              ),
+        FilmytellPosterImage(
+          posterUrl: posterUrl,
+          fallbackIconSize: 40,
+        ),
         Positioned(
           bottom: 10,
           left: 8,
@@ -607,6 +595,13 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: theme.canvasColor,
+              shadows: const [
+                Shadow(
+                  color: Colors.black,
+                  offset: Offset(0, 1),
+                  blurRadius: 3,
+                ),
+              ],
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
