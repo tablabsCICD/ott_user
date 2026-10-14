@@ -7,6 +7,7 @@ import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/offline_download_provider.dart';
 import 'package:ott/app/provider/playMediaProvider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
+import 'package:ott/app/widgets/filmytell_poster_image.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/responsive_poster_image.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -635,11 +636,10 @@ class _WatchlistPageState extends State<WatchlistPage> {
     final posterUrl =
         item.posterUrlList?.isNotEmpty == true ? item.posterUrlList!.first : '';
 
-    return Image.network(
-      posterUrl,
-      fit: BoxFit.cover,
-      alignment: Alignment.topCenter,
-      errorBuilder: (_, __, ___) => _offlinePosterFallback(item),
+    return FilmytellPosterImage(
+      posterUrl: posterUrl,
+      fallbackIconSize: 42,
+      fallbackIcon: Icons.movie_creation_outlined,
     );
   }
 

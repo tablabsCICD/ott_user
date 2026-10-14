@@ -115,7 +115,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         onPressed: () => Navigator.of(dialogContext).pop(false),
                         child: Text(
                           "Cancel",
-                          style: TextStyle(color: selectedThemeData.canvasColor),
+                          style:
+                              TextStyle(color: selectedThemeData.canvasColor),
                         ),
                       ),
                     ),
@@ -191,10 +192,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ),
         leading: OttTvFocus(
           borderRadius: 20,
-          onTap: () => _handleBackPress(context, userProvider, selectedThemeData),
+          onTap: () =>
+              _handleBackPress(context, userProvider, selectedThemeData),
           child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_sharp, color: Colors.white),
-            onPressed: () => _handleBackPress(context, userProvider, selectedThemeData),
+            icon:
+                const Icon(Icons.arrow_back_ios_new_sharp, color: Colors.white),
+            onPressed: () =>
+                _handleBackPress(context, userProvider, selectedThemeData),
           ),
         ),
       ),
@@ -270,9 +274,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       focusNode: _nameFocusNode,
                       autofocus: ResponsiveWidget.isTabletOrTv(context),
                       label: 'Name',
-                      isName: true,
-                      textInputAction: TextInputAction.next,
-                      onFieldSubmitted: (_) => _emailFocusNode.requestFocus(),
                       hintText: (() {
                         final first =
                             (userProvider.userObj.firstName ?? '').trim();
@@ -286,6 +287,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       isValidator: false,
                       textInputType: TextInputType.name,
                       capitalization: TextCapitalization.words,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) => _emailFocusNode.requestFocus(),
                     ),
                     CustomTextField(
                       controller: userProvider.emailController,
@@ -293,11 +296,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       label: 'Email (Optional)',
                       isEmail: false,
                       isValidator: false,
-                      textInputAction: TextInputAction.next,
-                      onFieldSubmitted: (_) {
-                        _dobFocusNode.requestFocus();
-                        _selectDate(userProvider);
-                      },
                       validator: (val) {
                         if (val != null && val.trim().isNotEmpty) {
                           final emailRegex =
@@ -311,6 +309,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       hintText:
                           userProvider.userObj.emailId ?? 'Enter valid email',
                       textInputType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) {
+                        _dobFocusNode.requestFocus();
+                        _selectDate(userProvider);
+                      },
                     ),
                     CustomTextField(
                       controller: userProvider.dobController,
@@ -373,8 +376,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           userProvider.userObj.profilePhoto ?? '';
     }
     if (userProvider.emailController.text.isEmpty) {
-      userProvider.emailController.text =
-          userProvider.userObj.emailId ?? '';
+      userProvider.emailController.text = userProvider.userObj.emailId ?? '';
     }
     final fullName = userProvider.nameController.text.trim();
     if (fullName.isNotEmpty) {
@@ -391,8 +393,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           userProvider.userObj.mobileNumber ?? '';
     }
     if (userProvider.dobController.text.isEmpty) {
-      userProvider.dobController.text =
-          userProvider.userObj.dob ?? '';
+      userProvider.dobController.text = userProvider.userObj.dob ?? '';
     }
     if (!_formKey.currentState!.validate()) return;
     var result = await userProvider.updateUser();

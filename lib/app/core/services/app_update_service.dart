@@ -5,6 +5,8 @@ import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/flavor/app_flavor.dart';
 
+import 'package:ott/app/flavor/app_flavor.dart';
+
 class AppUpdateInfo {
   const AppUpdateInfo({
     required this.isUpdateAvailable,
@@ -28,6 +30,7 @@ class AppUpdateService {
   final String _currentVersion;
 
   Future<bool> isUpdateAvailable() async {
+    if (FlavorConfig.current.isTv) return false;
     return (await getUpdateInfo()).isUpdateAvailable;
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ott/app/provider/themeProvider.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 
 const List<String> kBirthMonths = [
   'January',
@@ -223,21 +224,23 @@ Future<Map<String, dynamic>?> showBirthMonthYearPicker({
               ),
             ),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogCtx).pop(null),
-                child: Text(
-                  'Cancel',
-                  style: TextStyle(color: themeData.canvasColor),
-                ),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: themeData.primaryColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              OttTvFocus(
+                borderRadius: 8,
+                onTap: () => Navigator.of(dialogCtx).pop(null),
+                child: TextButton(
+                  onPressed: () => Navigator.of(dialogCtx).pop(null),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(color: themeData.canvasColor),
                   ),
                 ),
-                onPressed: (selectedMonth == null ||
+              ),
+              OttTvFocus(
+                borderRadius: 8,
+                enabled: selectedMonth != null &&
+                    selectedYear != null &&
+                    errorMessage == null,
+                onTap: (selectedMonth == null ||
                         selectedYear == null ||
                         errorMessage != null)
                     ? null
@@ -247,11 +250,29 @@ Future<Map<String, dynamic>?> showBirthMonthYearPicker({
                           'year': selectedYear,
                         });
                       },
-                child: const Text(
-                  'Done',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: themeData.primaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: (selectedMonth == null ||
+                          selectedYear == null ||
+                          errorMessage != null)
+                      ? null
+                      : () {
+                          Navigator.of(dialogCtx).pop({
+                            'month': selectedMonth,
+                            'year': selectedYear,
+                          });
+                        },
+                  child: const Text(
+                    'Done',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),

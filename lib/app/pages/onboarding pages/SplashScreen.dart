@@ -6,7 +6,6 @@ import 'package:ott/app/core/services/session_manager.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
-import 'package:ott/app/core/services/app_update_service.dart';
 import 'package:ott/app/core/services/referral_service.dart';
 import 'package:ott/app/flavor/app_flavor.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
@@ -33,7 +32,6 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   final LocalSharePreferences _prefs = LocalSharePreferences();
-  final AppUpdateService _appUpdateService = AppUpdateService();
   bool _isLoggedIn = false;
   int _flowVersion = 0;
   bool _hasNavigated = false;
@@ -69,57 +67,6 @@ class _SplashScreenState extends State<SplashScreen> {
             onTimeout: () => false,
           );
       if (!_isActiveFlow(flowVersion)) return;
-
-      final token = await SessionManager.instance.token.timeout(
-        const Duration(milliseconds: 1000),
-        onTimeout: () => null,
-      );
-      if (!_isActiveFlow(flowVersion)) return;
-
-      final hasToken = token != null && token.trim().isNotEmpty;
-      _isLoggedIn = loggedIn && hasToken;
-      _logWebAuth(
-        'Splash auth check requestedPath=$requestedPath loggedInFlag=$loggedIn hasToken=$hasToken authenticated=$_isLoggedIn',
-      );
-
-      if (widget.initialNavigationRoute == null) {
-        // Minimum splash display duration for branding
-        await Future.delayed(const Duration(seconds: 2));
-        if (!_isActiveFlow(flowVersion)) return;
-
-        if (_supportsUpdateDialog) {
-          try {
-            final updateInfo = await _appUpdateService
-                .getUpdateInfo()
-                .timeout(
-                  const Duration(seconds: 2),
-                  onTimeout: () => AppUpdateInfo(
-                    isUpdateAvailable: false,
-                    currentVersion: AppConstant.appVersion,
-                    latestVersion: '',
-                  ),
-                );
-            if (!_isActiveFlow(flowVersion)) return;
-
-            if (updateInfo.isUpdateAvailable) {
-              await _showUpdateDialog(updateInfo);
-              if (!_isActiveFlow(flowVersion)) return;
-            }
-          } catch (error) {
-            if (kDebugMode) {
-              developer.log('App update check ignored error: $error', name: 'SplashScreen');
-            }
-          }
-        }
-      }
-    } catch (e, stack) {
-      if (kDebugMode) {
-        developer.log('Splash flow exception: $e\n$stack', name: 'SplashScreen');
-      }
-    } finally {
-      if (_isActiveFlow(flowVersion) && !_hasNavigated) {
-        _performNavigation(isLoggedIn: _isLoggedIn);
-      }
     }
   }
 
@@ -184,49 +131,6 @@ class _SplashScreenState extends State<SplashScreen> {
   void _logWebAuth(String message) {
     if (!kIsWeb || !kDebugMode) return;
     developer.log(message, name: 'WebAuthGuard');
-  }
-
-  bool get _supportsUpdateDialog {
-    // App update dialog is disabled for Jio STB and TV releases
-    if (FlavorConfig.current.isJio || FlavorConfig.current.isTv) return false;
-    if (kIsWeb) return false;
-    return defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS;
-  }
-
-  Future<void> _showUpdateDialog(AppUpdateInfo updateInfo) async {
-    await showDialog<void>(
-      context: context,
-      useRootNavigator: true,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        final theme = Theme.of(dialogContext);
-        return AlertDialog(
-          backgroundColor: theme.cardColor,
-          title: const Text('Update Available'),
-          content: Text(
-            'A newer version is available (${updateInfo.latestVersion}). Please update for the best experience.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () =>
-                  Navigator.of(dialogContext, rootNavigator: true).pop(),
-              child: const Text('Later'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final uri = Uri.parse(AppConstant.playStoreLink);
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-                if (dialogContext.mounted) {
-                  Navigator.of(dialogContext, rootNavigator: true).pop();
-                }
-              },
-              child: const Text('Update Now'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override

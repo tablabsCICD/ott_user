@@ -37,6 +37,7 @@ import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/movieCard.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../core/services/referral_service.dart';
@@ -286,17 +287,8 @@ class _HomePageState extends State<HomePage>
   }
 
   void confirmDetails(BuildContext context) {
-    if (ResponsiveWidget.isTv(context) ||
-        FlavorConfig.current.isTv ||
-        FlavorConfig.current.isJio) {
-      return;
-    }
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final user = userProvider.userObject;
-
-    if (user.id == null || (user.id ?? 0) <= 0) {
-      return;
-    }
 
     final stagedService = StagedRegistrationService.instance;
     final nextStep = stagedService.getNextIncompleteStep(user);
@@ -1680,7 +1672,7 @@ class _HomePageState extends State<HomePage>
     confirmDetails(context);
   }
 
-  // STAGE 1: First Login / Minimum Information Popup (Email, Age based on Birth Year, Optional Referral Code)
+  // STAGE 1: First Login / Minimum Information Popup (Birth Month & Year, Optional Email, Referral)
   Future<void> stage1ProfilePopUp(BuildContext context) async {
     final formKey = GlobalKey<FormState>();
     final lang = AppLocalizations.of(context)!;
@@ -1755,318 +1747,401 @@ class _HomePageState extends State<HomePage>
             final currentMonth = DateTime.now().month;
             final birthYears = getBirthYears();
 
-            return AlertDialog(
-              backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-              title: Text(
-                lang.enterDetails,
-                style: TextStyle(
-                  color: selectedThemeData.canvasColor,
-                  fontWeight: FontWeight.bold,
+            return PopScope(
+              canPop: !isSubmitting,
+              onPopInvokedWithResult: (didPop, _) {
+                if (didPop) {
+                  StagedRegistrationService.instance.setDialogActive(false);
+                  StagedRegistrationService.instance.markStepHandledForLaunch();
+                }
+              },
+              child: AlertDialog(
+                backgroundColor: selectedThemeData.scaffoldBackgroundColor,
+                title: Text(
+                  lang.enterDetails,
+                  style: TextStyle(
+                    color: selectedThemeData.canvasColor,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              content: SingleChildScrollView(
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Field 1: Birth Month and Year (Month & Year Only, No Day Field)
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Month Dropdown
-                          Expanded(
-                            flex: 3,
-                            child: DropdownButtonFormField<String>(
-                              value: selectedMonth,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText: 'Birth Month *',
-                                hintText: 'Month',
-                                isDense: true,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                content: SingleChildScrollView(
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Field 1: Birth Month and Year (Month & Year Only, No Day Field)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Month Dropdown
+                            Expanded(
+                              flex: 3,
+                              child: DropdownButtonFormField<String>(
+                                value: selectedMonth,
+                                isExpanded: true,
+                                decoration: InputDecoration(
+                                  labelText: 'Birth Month *',
+                                  hintText: 'Month',
+                                  isDense: true,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.calendar_month_outlined,
+                                    size: 18,
+                                    color: selectedThemeData.canvasColor
+                                        .withValues(alpha: 0.7),
+                                  ),
                                 ),
-                                prefixIcon: Icon(
-                                  Icons.calendar_month_outlined,
-                                  size: 18,
-                                  color: selectedThemeData.canvasColor
-                                      .withValues(alpha: 0.7),
-                                ),
-                              ),
-                              dropdownColor:
-                                  selectedThemeData.scaffoldBackgroundColor,
-                              items: kBirthMonths
-                                  .map(
-                                    (m) => DropdownMenuItem(
-                                      value: m,
-                                      child: Text(
-                                        m,
-                                        style: TextStyle(
-                                          color: selectedThemeData.canvasColor,
-                                          fontSize: 14,
+                                dropdownColor:
+                                    selectedThemeData.scaffoldBackgroundColor,
+                                items: kBirthMonths
+                                    .map(
+                                      (m) => DropdownMenuItem(
+                                        value: m,
+                                        child: Text(
+                                          m,
+                                          style: TextStyle(
+                                            color:
+                                                selectedThemeData.canvasColor,
+                                            fontSize: 14,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: isSubmitting
-                                  ? null
-                                  : (val) {
-                                      setDialogState(() {
-                                        selectedMonth = val;
-                                        if (selectedMonth != null &&
-                                            selectedYear != null) {
-                                          provider.setBirthMonthAndYear(
-                                            selectedMonth!,
-                                            selectedYear!,
-                                          );
-                                        }
-                                      });
-                                    },
-                              validator: (val) {
-                                if (val == null || val.trim().isEmpty) {
-                                  return 'Select month';
-                                }
-                                if (selectedYear == currentYear &&
-                                    val.isNotEmpty) {
-                                  final monthIndex =
-                                      kBirthMonths.indexOf(val) + 1;
-                                  if (monthIndex > currentMonth) {
-                                    return 'Invalid month';
+                                    )
+                                    .toList(),
+                                onChanged: isSubmitting
+                                    ? null
+                                    : (val) {
+                                        setDialogState(() {
+                                          selectedMonth = val;
+                                          if (selectedMonth != null &&
+                                              selectedYear != null) {
+                                            provider.setBirthMonthAndYear(
+                                              selectedMonth!,
+                                              selectedYear!,
+                                            );
+                                          }
+                                        });
+                                      },
+                                validator: (val) {
+                                  if (val == null || val.trim().isEmpty) {
+                                    return 'Select month';
                                   }
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          // Year Dropdown
-                          Expanded(
-                            flex: 2,
-                            child: DropdownButtonFormField<int>(
-                              value: selectedYear,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText: 'Birth Year *',
-                                hintText: 'Year',
-                                isDense: true,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
+                                  if (selectedYear == currentYear &&
+                                      val.isNotEmpty) {
+                                    final monthIndex =
+                                        kBirthMonths.indexOf(val) + 1;
+                                    if (monthIndex > currentMonth) {
+                                      return 'Invalid month';
+                                    }
+                                  }
+                                  return null;
+                                },
                               ),
-                              dropdownColor:
-                                  selectedThemeData.scaffoldBackgroundColor,
-                              items: birthYears
-                                  .map(
-                                    (y) => DropdownMenuItem(
-                                      value: y,
-                                      child: Text(
-                                        '$y',
-                                        style: TextStyle(
-                                          color: selectedThemeData.canvasColor,
-                                          fontSize: 14,
+                            ),
+                            const SizedBox(width: 10),
+                            // Year Dropdown
+                            Expanded(
+                              flex: 2,
+                              child: DropdownButtonFormField<int>(
+                                value: selectedYear,
+                                isExpanded: true,
+                                decoration: InputDecoration(
+                                  labelText: 'Birth Year *',
+                                  hintText: 'Year',
+                                  isDense: true,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                dropdownColor:
+                                    selectedThemeData.scaffoldBackgroundColor,
+                                items: birthYears
+                                    .map(
+                                      (y) => DropdownMenuItem(
+                                        value: y,
+                                        child: Text(
+                                          '$y',
+                                          style: TextStyle(
+                                            color:
+                                                selectedThemeData.canvasColor,
+                                            fontSize: 14,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: isSubmitting
-                                  ? null
-                                  : (val) {
-                                      setDialogState(() {
-                                        selectedYear = val;
-                                        if (selectedMonth != null &&
-                                            selectedYear != null) {
-                                          provider.setBirthMonthAndYear(
-                                            selectedMonth!,
-                                            selectedYear!,
-                                          );
-                                        }
-                                      });
-                                    },
-                              validator: (val) {
-                                if (val == null) {
-                                  return 'Select year';
-                                }
-                                if (val > currentYear) {
-                                  return 'Invalid year';
-                                }
-                                return null;
-                              },
+                                    )
+                                    .toList(),
+                                onChanged: isSubmitting
+                                    ? null
+                                    : (val) {
+                                        setDialogState(() {
+                                          selectedYear = val;
+                                          if (selectedMonth != null &&
+                                              selectedYear != null) {
+                                            provider.setBirthMonthAndYear(
+                                              selectedMonth!,
+                                              selectedYear!,
+                                            );
+                                          }
+                                        });
+                                      },
+                                validator: (val) {
+                                  if (val == null) {
+                                    return 'Select year';
+                                  }
+                                  if (val > currentYear) {
+                                    return 'Invalid year';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (selectedMonth != null && selectedYear != null) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: selectedThemeData.cardColor,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: selectedThemeData.primaryColor
+                                    .withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.cake_outlined,
+                                  size: 16,
+                                  color: selectedThemeData.primaryColor,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Birth Date: $selectedMonth $selectedYear',
+                                  style: TextStyle(
+                                    color: selectedThemeData.canvasColor,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
-                      ),
-                      if (selectedMonth != null && selectedYear != null) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: selectedThemeData.cardColor,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: selectedThemeData.primaryColor
-                                  .withValues(alpha: 0.4),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.cake_outlined,
-                                size: 16,
-                                color: selectedThemeData.primaryColor,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Birth Date: $selectedMonth $selectedYear',
-                                style: TextStyle(
-                                  color: selectedThemeData.canvasColor,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
+                        const SizedBox(height: 12),
+
+                        // Field 2: Email (Completely Optional)
+                        CustomTextField(
+                          controller: provider.emailController,
+                          isEmail: false,
+                          isValidator: false,
+                          label: '${lang.email} (Optional)',
+                          hintText: lang.enterEmail,
+                          textInputType: TextInputType.emailAddress,
+                          validator: (val) {
+                            if (val != null && val.trim().isNotEmpty) {
+                              final emailRegex =
+                                  RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                              if (!emailRegex.hasMatch(val.trim())) {
+                                return lang.enterEmail;
+                              }
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Field 3: Referral Code (Optional)
+                        CustomTextField(
+                          controller: provider.refferedByController,
+                          hintText: lang.referralCodeOptional,
+                          label: lang.enterReferralCode,
+                          textInputType: TextInputType.text,
+                          capitalization: TextCapitalization.characters,
+                          isValidator: false,
                         ),
                       ],
-                      const SizedBox(height: 12),
-
-                      // Field 2: Email (Completely Optional)
-                      CustomTextField(
-                        controller: provider.emailController,
-                        isEmail: false,
-                        isValidator: false,
-                        label: '${lang.email} (Optional)',
-                        hintText: lang.enterEmail,
-                        textInputType: TextInputType.emailAddress,
-                        validator: (val) {
-                          if (val != null && val.trim().isNotEmpty) {
-                            final emailRegex =
-                                RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-                            if (!emailRegex.hasMatch(val.trim())) {
-                              return lang.enterEmail;
-                            }
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Field 3: Referral Code (Optional)
-                      CustomTextField(
-                        controller: provider.refferedByController,
-                        hintText: lang.referralCodeOptional,
-                        label: lang.enterReferralCode,
-                        textInputType: TextInputType.text,
-                        capitalization: TextCapitalization.characters,
-                        isValidator: false,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: selectedThemeData.primaryColor,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
                     ),
                   ),
-                  onPressed: isSubmitting
-                      ? null
-                      : () async {
-                          if (!formKey.currentState!.validate()) return;
-                          if (selectedMonth != null && selectedYear != null) {
-                            provider.setBirthMonthAndYear(
-                              selectedMonth!,
-                              selectedYear!,
-                            );
-                          }
-                          setDialogState(() {
-                            isSubmitting = true;
-                          });
-
-                          print(
-                              "[DOB POPUP] Submitting birth month and year popup...");
-                          var result = await provider.updateUserDetails();
-                          print("[DOB POPUP] Update API result: $result");
-                          if (!dialogCtx.mounted) return;
-
-                          if (result['success'] == true) {
-                            final prefs = await SharedPreferences.getInstance();
-                            await prefs.setBool('isLoggedIn', true);
-
-                            if (provider.userObject.id != null) {
-                              await provider
-                                  .getUserById(provider.userObject.id!);
-                            }
-
-                            await StagedRegistrationService.instance
-                                .markStepCompleted(
-                              step: StagedRegistrationStep.dobAndEmail,
-                              userId: provider.userObject.id,
-                            );
-
-                            if (provider.refferedByController.text
-                                .trim()
-                                .isNotEmpty) {
-                              await ReferralService.instance
-                                  .clearReferralCode();
-                            }
-
-                            if (context.mounted) {
-                              CustomToast.show(
-                                context,
-                                lang.profileUpdatedSuccessfully,
-                                isSuccess: true,
-                              );
-                            }
-
-                            Navigator.of(dialogCtx).pop();
-                          } else {
-                            setDialogState(() {
-                              isSubmitting = false;
-                            });
-                            if (context.mounted) {
-                              CustomToast.show(
-                                context,
-                                'Failure: ${result['message']}',
-                                isSuccess: false,
-                              );
-                            }
-                          }
-                        },
-                  child: Center(
-                    child: isSubmitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Continue',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                  ),
                 ),
-              ],
+                actions: [
+                  OttTvFocus(
+                    borderRadius: 6,
+                    onTap: isSubmitting
+                        ? null
+                        : () async {
+                            if (!formKey.currentState!.validate()) return;
+                            if (selectedMonth != null && selectedYear != null) {
+                              provider.setBirthMonthAndYear(
+                                selectedMonth!,
+                                selectedYear!,
+                              );
+                            }
+                            setDialogState(() {
+                              isSubmitting = true;
+                            });
+
+                            print(
+                                "[DOB POPUP] Submitting birth month and year popup...");
+                            var result = await provider.updateUserDetails();
+                            print("[DOB POPUP] Update API result: $result");
+                            if (!dialogCtx.mounted) return;
+
+                            if (result['success'] == true) {
+                              final prefs =
+                                  await SharedPreferences.getInstance();
+                              await prefs.setBool('isLoggedIn', true);
+
+                              if (provider.userObject.id != null) {
+                                await provider
+                                    .getUserById(provider.userObject.id!);
+                              }
+
+                              await StagedRegistrationService.instance
+                                  .markStepCompleted(
+                                step: StagedRegistrationStep.dobAndEmail,
+                                userId: provider.userObject.id,
+                              );
+
+                              if (provider.refferedByController.text
+                                  .trim()
+                                  .isNotEmpty) {
+                                await ReferralService.instance
+                                    .clearReferralCode();
+                              }
+
+                              if (context.mounted) {
+                                CustomToast.show(
+                                  context,
+                                  lang.profileUpdatedSuccessfully,
+                                  isSuccess: true,
+                                );
+                              }
+
+                              Navigator.of(dialogCtx).pop();
+                            } else {
+                              setDialogState(() {
+                                isSubmitting = false;
+                              });
+                              if (context.mounted) {
+                                CustomToast.show(
+                                  context,
+                                  'Failure: ${result['message']}',
+                                  isSuccess: false,
+                                );
+                              }
+                            }
+                          },
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: selectedThemeData.primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              if (!formKey.currentState!.validate()) return;
+                              if (selectedMonth != null &&
+                                  selectedYear != null) {
+                                provider.setBirthMonthAndYear(
+                                  selectedMonth!,
+                                  selectedYear!,
+                                );
+                              }
+                              setDialogState(() {
+                                isSubmitting = true;
+                              });
+
+                              print(
+                                  "[DOB POPUP] Submitting birth month and year popup...");
+                              var result = await provider.updateUserDetails();
+                              print("[DOB POPUP] Update API result: $result");
+                              if (!dialogCtx.mounted) return;
+
+                              if (result['success'] == true) {
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+                                await prefs.setBool('isLoggedIn', true);
+
+                                if (provider.userObject.id != null) {
+                                  await provider
+                                      .getUserById(provider.userObject.id!);
+                                }
+
+                                await StagedRegistrationService.instance
+                                    .markStepCompleted(
+                                  step: StagedRegistrationStep.dobAndEmail,
+                                  userId: provider.userObject.id,
+                                );
+
+                                if (provider.refferedByController.text
+                                    .trim()
+                                    .isNotEmpty) {
+                                  await ReferralService.instance
+                                      .clearReferralCode();
+                                }
+
+                                if (context.mounted) {
+                                  CustomToast.show(
+                                    context,
+                                    lang.profileUpdatedSuccessfully,
+                                    isSuccess: true,
+                                  );
+                                }
+
+                                Navigator.of(dialogCtx).pop();
+                              } else {
+                                setDialogState(() {
+                                  isSubmitting = false;
+                                });
+                                if (context.mounted) {
+                                  CustomToast.show(
+                                    context,
+                                    'Failure: ${result['message']}',
+                                    isSuccess: false,
+                                  );
+                                }
+                              }
+                            },
+                      child: isSubmitting
+                          ? const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            )
+                          : const Center(
+                              child: Text(
+                                'Continue',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
             );
           },
         );
@@ -2101,184 +2176,285 @@ class _HomePageState extends State<HomePage>
             final selectedThemeData =
                 Provider.of<ThemeProvider>(context, listen: true).getTheme;
 
-            return AlertDialog(
-              backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-              title: Text(
-                lang.enterDetails,
-                style: TextStyle(
-                  color: selectedThemeData.canvasColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              content: SingleChildScrollView(
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CustomTextField(
-                        controller: nameController,
-                        isName: true,
-                        label: 'Name (Optional)',
-                        hintText: 'Enter your name',
-                        isValidator: false,
-                        textInputType: TextInputType.name,
-                        capitalization: TextCapitalization.words,
-                        validator: (val) {
-                          if (val != null &&
-                              val.trim().isNotEmpty &&
-                              val.trim().length < 2) {
-                            return 'Please enter a valid name';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
+            return PopScope(
+              canPop: !isSubmitting,
+              onPopInvokedWithResult: (didPop, _) {
+                if (didPop) {
+                  StagedRegistrationService.instance.setDialogActive(false);
+                  StagedRegistrationService.instance.markStepHandledForLaunch();
+                }
+              },
+              child: AlertDialog(
+                backgroundColor: selectedThemeData.scaffoldBackgroundColor,
+                title: Text(
+                  lang.enterDetails,
+                  style: TextStyle(
+                    color: selectedThemeData.canvasColor,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-              actions: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          side: BorderSide(
-                            color: selectedThemeData.canvasColor
-                                .withValues(alpha: 0.3),
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                content: SingleChildScrollView(
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CustomTextField(
+                          controller: nameController,
+                          autofocus: ResponsiveWidget.isTabletOrTv(context),
+                          isName: true,
+                          label: 'Name (Optional)',
+                          hintText: 'Enter your name',
+                          isValidator: false,
+                          textInputType: TextInputType.name,
+                          capitalization: TextCapitalization.words,
+                          validator: (val) {
+                            if (val != null &&
+                                val.trim().isNotEmpty &&
+                                val.trim().length < 2) {
+                              return 'Please enter a valid name';
+                            }
+                            return null;
+                          },
                         ),
-                        onPressed: isSubmitting
-                            ? null
-                            : () async {
-                                await StagedRegistrationService.instance
-                                    .markStepSkipped(
-                                  step: StagedRegistrationStep.name,
-                                  userId: provider.userObject.id,
-                                );
-                                Navigator.of(dialogCtx).pop();
-                              },
-                        child: Text(
-                          lang.skip,
-                          style: TextStyle(
-                            color: selectedThemeData.canvasColor
-                                .withValues(alpha: 0.8),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
+                      ],
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: selectedThemeData.primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                        onPressed: isSubmitting
-                            ? null
-                            : () async {
-                                if (!formKey.currentState!.validate()) return;
-                                final fullName = nameController.text.trim();
-
-                                if (fullName.isEmpty) {
+                  ),
+                ),
+                actions: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OttTvFocus(
+                          borderRadius: 6,
+                          onTap: isSubmitting
+                              ? null
+                              : () async {
                                   await StagedRegistrationService.instance
                                       .markStepSkipped(
                                     step: StagedRegistrationStep.name,
                                     userId: provider.userObject.id,
                                   );
                                   Navigator.of(dialogCtx).pop();
-                                  return;
-                                }
-
-                                setDialogState(() {
-                                  isSubmitting = true;
-                                });
-
-                                final parts = fullName.split(RegExp(r'\s+'));
-                                final firstName = parts.first;
-                                final lastName = parts.length > 1
-                                    ? parts.sublist(1).join(' ')
-                                    : '';
-
-                                provider.firstNameController.text = firstName;
-                                provider.lastNameController.text = lastName;
-
-                                var result = await provider.updateUserDetails();
-                                if (!dialogCtx.mounted) return;
-
-                                if (result['success'] == true) {
-                                  final prefs =
-                                      await SharedPreferences.getInstance();
-                                  await prefs.setBool('isLoggedIn', true);
-
-                                  if (provider.userObject.id != null) {
-                                    await provider
-                                        .getUserById(provider.userObject.id!);
-                                  }
-
-                                  await StagedRegistrationService.instance
-                                      .markStepCompleted(
-                                    step: StagedRegistrationStep.name,
-                                    userId: provider.userObject.id,
-                                  );
-
-                                  if (context.mounted) {
-                                    CustomToast.show(
-                                      context,
-                                      lang.profileUpdatedSuccessfully,
-                                      isSuccess: true,
-                                    );
-                                  }
-
-                                  Navigator.of(dialogCtx).pop();
-                                } else {
-                                  setDialogState(() {
-                                    isSubmitting = false;
-                                  });
-                                  if (context.mounted) {
-                                    CustomToast.show(
-                                      context,
-                                      'Failure: ${result['message']}',
-                                      isSuccess: false,
-                                    );
-                                  }
-                                }
-                              },
-                        child: isSubmitting
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Text(
-                                'Continue',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                },
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              side: BorderSide(
+                                color: selectedThemeData.canvasColor
+                                    .withValues(alpha: 0.3),
                               ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                            onPressed: isSubmitting
+                                ? null
+                                : () async {
+                                    await StagedRegistrationService.instance
+                                        .markStepSkipped(
+                                      step: StagedRegistrationStep.name,
+                                      userId: provider.userObject.id,
+                                    );
+                                    Navigator.of(dialogCtx).pop();
+                                  },
+                            child: Text(
+                              lang.skip,
+                              style: TextStyle(
+                                color: selectedThemeData.canvasColor
+                                    .withValues(alpha: 0.8),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OttTvFocus(
+                          borderRadius: 6,
+                          onTap: isSubmitting
+                              ? null
+                              : () async {
+                                  if (!formKey.currentState!.validate()) return;
+                                  final fullName = nameController.text.trim();
+
+                                  if (fullName.isEmpty) {
+                                    await StagedRegistrationService.instance
+                                        .markStepSkipped(
+                                      step: StagedRegistrationStep.name,
+                                      userId: provider.userObject.id,
+                                    );
+                                    Navigator.of(dialogCtx).pop();
+                                    return;
+                                  }
+
+                                  setDialogState(() {
+                                    isSubmitting = true;
+                                  });
+
+                                  final parts = fullName.split(RegExp(r'\s+'));
+                                  final firstName = parts.first;
+                                  final lastName = parts.length > 1
+                                      ? parts.sublist(1).join(' ')
+                                      : '';
+
+                                  provider.firstNameController.text = firstName;
+                                  provider.lastNameController.text = lastName;
+
+                                  var result =
+                                      await provider.updateUserDetails();
+                                  if (!dialogCtx.mounted) return;
+
+                                  if (result['success'] == true) {
+                                    final prefs =
+                                        await SharedPreferences.getInstance();
+                                    await prefs.setBool('isLoggedIn', true);
+
+                                    if (provider.userObject.id != null) {
+                                      await provider
+                                          .getUserById(provider.userObject.id!);
+                                    }
+
+                                    await StagedRegistrationService.instance
+                                        .markStepCompleted(
+                                      step: StagedRegistrationStep.name,
+                                      userId: provider.userObject.id,
+                                    );
+
+                                    if (context.mounted) {
+                                      CustomToast.show(
+                                        context,
+                                        lang.profileUpdatedSuccessfully,
+                                        isSuccess: true,
+                                      );
+                                    }
+
+                                    Navigator.of(dialogCtx).pop();
+                                  } else {
+                                    setDialogState(() {
+                                      isSubmitting = false;
+                                    });
+                                    if (context.mounted) {
+                                      CustomToast.show(
+                                        context,
+                                        'Failure: ${result['message']}',
+                                        isSuccess: false,
+                                      );
+                                    }
+                                  }
+                                },
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: selectedThemeData.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                            onPressed: isSubmitting
+                                ? null
+                                : () async {
+                                    if (!formKey.currentState!.validate())
+                                      return;
+                                    final fullName = nameController.text.trim();
+
+                                    if (fullName.isEmpty) {
+                                      await StagedRegistrationService.instance
+                                          .markStepSkipped(
+                                        step: StagedRegistrationStep.name,
+                                        userId: provider.userObject.id,
+                                      );
+                                      Navigator.of(dialogCtx).pop();
+                                      return;
+                                    }
+
+                                    setDialogState(() {
+                                      isSubmitting = true;
+                                    });
+
+                                    final parts =
+                                        fullName.split(RegExp(r'\s+'));
+                                    final firstName = parts.first;
+                                    final lastName = parts.length > 1
+                                        ? parts.sublist(1).join(' ')
+                                        : '';
+
+                                    provider.firstNameController.text =
+                                        firstName;
+                                    provider.lastNameController.text = lastName;
+
+                                    var result =
+                                        await provider.updateUserDetails();
+                                    if (!dialogCtx.mounted) return;
+
+                                    if (result['success'] == true) {
+                                      final prefs =
+                                          await SharedPreferences.getInstance();
+                                      await prefs.setBool('isLoggedIn', true);
+
+                                      if (provider.userObject.id != null) {
+                                        await provider.getUserById(
+                                            provider.userObject.id!);
+                                      }
+
+                                      await StagedRegistrationService.instance
+                                          .markStepCompleted(
+                                        step: StagedRegistrationStep.name,
+                                        userId: provider.userObject.id,
+                                      );
+
+                                      if (context.mounted) {
+                                        CustomToast.show(
+                                          context,
+                                          lang.profileUpdatedSuccessfully,
+                                          isSuccess: true,
+                                        );
+                                      }
+
+                                      Navigator.of(dialogCtx).pop();
+                                    } else {
+                                      setDialogState(() {
+                                        isSubmitting = false;
+                                      });
+                                      if (context.mounted) {
+                                        CustomToast.show(
+                                          context,
+                                          'Failure: ${result['message']}',
+                                          isSuccess: false,
+                                        );
+                                      }
+                                    }
+                                  },
+                            child: isSubmitting
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Continue',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             );
           },
         );
@@ -2312,252 +2488,204 @@ class _HomePageState extends State<HomePage>
             final selectedThemeData =
                 Provider.of<ThemeProvider>(context, listen: true).getTheme;
 
-            return AlertDialog(
-              backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-              title: Row(
-                children: [
-                  Icon(
-                    Icons.my_location,
-                    color: selectedThemeData.primaryColor,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      lang.enterLocationDetails,
-                      style: TextStyle(
-                        color: selectedThemeData.canvasColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+            return PopScope(
+              canPop: true,
+              onPopInvokedWithResult: (didPop, result) {
+                if (didPop) {
+                  StagedRegistrationService.instance.markStepHandledForLaunch();
+                }
+              },
+              child: AlertDialog(
+                backgroundColor: selectedThemeData.scaffoldBackgroundColor,
+                title: Row(
                   children: [
-                    Text(
-                      'Share your current location to get regional content and personalized recommendations.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: selectedThemeData.canvasColor
-                            .withValues(alpha: 0.8),
-                        height: 1.4,
+                    Icon(
+                      Icons.my_location,
+                      color: selectedThemeData.primaryColor,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        lang.enterLocationDetails,
+                        style: TextStyle(
+                          color: selectedThemeData.canvasColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    if (locationDetected) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: selectedThemeData.cardColor,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: selectedThemeData.primaryColor
-                                .withValues(alpha: 0.5),
-                          ),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.check_circle_outline,
-                              color: Colors.green,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Location Detected',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: selectedThemeData.canvasColor,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    detectedSummary,
-                                    style: TextStyle(
-                                      color: selectedThemeData.canvasColor
-                                          .withValues(alpha: 0.9),
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    if (locationError != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.red.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Text(
-                          locationError!,
-                          style: const TextStyle(
-                            color: Colors.redAccent,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                      if (isPermanentlyDenied) ...[
-                        const SizedBox(height: 10),
-                        OutlinedButton.icon(
-                          onPressed: () async {
-                            await Geolocator.openAppSettings();
-                          },
-                          icon: const Icon(Icons.settings, size: 16),
-                          label: const Text('Open App Settings'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: selectedThemeData.primaryColor,
-                            side: BorderSide(
-                              color: selectedThemeData.primaryColor,
-                            ),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                    ],
                   ],
                 ),
-              ),
-              actionsPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              actions: [
-                Row(
-                  children: [
-                    // CANCEL BUTTON
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: isFetching || isSaving
-                            ? null
-                            : () {
-                                // Close dialog without requesting or saving location.
-                                // Does not mark location as completed; prevents repeating in current session.
-                                StagedRegistrationService.instance
-                                    .markStepHandledForLaunch();
-                                Navigator.of(dialogCtx).pop();
-                              },
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(
-                            color: selectedThemeData.dividerColor,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Share your current location to get regional content and personalized recommendations.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: selectedThemeData.canvasColor
+                              .withValues(alpha: 0.8),
+                          height: 1.4,
                         ),
-                        child: Text(
-                          'Cancel',
-                          style: TextStyle(
-                            color: selectedThemeData.canvasColor,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                      ),
+                      const SizedBox(height: 16),
+                      if (locationDetected) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: selectedThemeData.cardColor,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: selectedThemeData.primaryColor
+                                  .withValues(alpha: 0.5),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.check_circle_outline,
+                                color: Colors.green,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Location Detected',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: selectedThemeData.canvasColor,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      detectedSummary,
+                                      style: TextStyle(
+                                        color: selectedThemeData.canvasColor
+                                            .withValues(alpha: 0.9),
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      if (locationError != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.red.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Text(
+                            locationError!,
+                            style: const TextStyle(
+                              color: Colors.redAccent,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        if (isPermanentlyDenied) ...[
+                          const SizedBox(height: 10),
+                          OttTvFocus(
+                            borderRadius: 8,
+                            onTap: () async {
+                              await Geolocator.openAppSettings();
+                            },
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                await Geolocator.openAppSettings();
+                              },
+                              icon: const Icon(Icons.settings, size: 16),
+                              label: const Text('Open App Settings'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: selectedThemeData.primaryColor,
+                                side: BorderSide(
+                                  color: selectedThemeData.primaryColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                      ],
+                    ],
+                  ),
+                ),
+                actionsPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                actions: [
+                  Row(
+                    children: [
+                      // CANCEL BUTTON
+                      Expanded(
+                        child: OttTvFocus(
+                          borderRadius: 8,
+                          onTap: isFetching || isSaving
+                              ? null
+                              : () {
+                                  StagedRegistrationService.instance
+                                      .markStepHandledForLaunch();
+                                  Navigator.of(dialogCtx).pop();
+                                },
+                          child: OutlinedButton(
+                            onPressed: isFetching || isSaving
+                                ? null
+                                : () {
+                                    StagedRegistrationService.instance
+                                        .markStepHandledForLaunch();
+                                    Navigator.of(dialogCtx).pop();
+                                  },
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(
+                                color: selectedThemeData.dividerColor,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                color: selectedThemeData.canvasColor,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    // USE CURRENT LOCATION / SAVE LOCATION BUTTON
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: selectedThemeData.primaryColor,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        onPressed: isFetching || isSaving
-                            ? null
-                            : () async {
-                                if (locationDetected) {
-                                  // Save already detected location
-                                  setDialogState(() {
-                                    isSaving = true;
-                                  });
-                                  final saveResult =
-                                      await provider.updateUserLocation();
-                                  setDialogState(() {
-                                    isSaving = false;
-                                  });
-
-                                  if (saveResult['success'] == true) {
-                                    await StagedRegistrationService.instance
-                                        .markStepCompleted(
-                                      step: StagedRegistrationStep.location,
-                                      userId: provider.userObject.id,
-                                    );
-                                    if (context.mounted) {
-                                      CustomToast.show(
-                                        context,
-                                        lang.profileUpdatedSuccessfully,
-                                        isSuccess: true,
-                                      );
-                                    }
-                                    Navigator.of(dialogCtx).pop();
-                                  } else {
+                      const SizedBox(width: 12),
+                      // USE CURRENT LOCATION / SAVE LOCATION BUTTON
+                      Expanded(
+                        child: OttTvFocus(
+                          borderRadius: 8,
+                          autofocus: true,
+                          onTap: isFetching || isSaving
+                              ? null
+                              : () async {
+                                  if (locationDetected) {
                                     setDialogState(() {
-                                      locationError =
-                                          saveResult['message']?.toString() ??
-                                              'Failed to save location';
-                                    });
-                                  }
-                                } else {
-                                  // Fetch current location via device GPS + Google Geocoding
-                                  setDialogState(() {
-                                    isFetching = true;
-                                    locationError = null;
-                                    isPermanentlyDenied = false;
-                                  });
-
-                                  final fetchResult = await provider
-                                      .fetchAndApplyCurrentDeviceLocation();
-
-                                  if (fetchResult['success'] == true) {
-                                    final city =
-                                        fetchResult['city']?.toString() ?? '';
-                                    final state =
-                                        fetchResult['state']?.toString() ?? '';
-                                    final country =
-                                        fetchResult['country']?.toString() ??
-                                            '';
-                                    final summary = [city, state, country]
-                                        .where((s) => s.isNotEmpty)
-                                        .join(', ');
-
-                                    setDialogState(() {
-                                      isFetching = false;
-                                      locationDetected = true;
-                                      detectedSummary = summary.isNotEmpty
-                                          ? summary
-                                          : (fetchResult['formattedAddress']
-                                                  ?.toString() ??
-                                              'Current Location');
                                       isSaving = true;
                                     });
-
-                                    // Save the resolved location using existing API
                                     final saveResult =
                                         await provider.updateUserLocation();
                                     setDialogState(() {
@@ -2580,49 +2708,233 @@ class _HomePageState extends State<HomePage>
                                       Navigator.of(dialogCtx).pop();
                                     } else {
                                       setDialogState(() {
-                                        locationError = saveResult['message']
-                                                ?.toString() ??
-                                            'Failed to save location to profile';
+                                        locationError =
+                                            saveResult['message']?.toString() ??
+                                                'Failed to save location';
                                       });
                                     }
                                   } else {
                                     setDialogState(() {
-                                      isFetching = false;
-                                      locationError = fetchResult['error']
-                                              ?.toString() ??
-                                          'Could not determine your location';
-                                      isPermanentlyDenied =
-                                          fetchResult['isPermanentlyDenied'] ==
-                                              true;
+                                      isFetching = true;
+                                      locationError = null;
+                                      isPermanentlyDenied = false;
                                     });
+
+                                    final fetchResult = await provider
+                                        .fetchAndApplyCurrentDeviceLocation();
+
+                                    if (fetchResult['success'] == true) {
+                                      final city =
+                                          fetchResult['city']?.toString() ?? '';
+                                      final state =
+                                          fetchResult['state']?.toString() ??
+                                              '';
+                                      final country =
+                                          fetchResult['country']?.toString() ??
+                                              '';
+                                      final summary = [city, state, country]
+                                          .where((s) => s.isNotEmpty)
+                                          .join(', ');
+
+                                      setDialogState(() {
+                                        isFetching = false;
+                                        locationDetected = true;
+                                        detectedSummary = summary.isNotEmpty
+                                            ? summary
+                                            : (fetchResult['formattedAddress']
+                                                    ?.toString() ??
+                                                'Current Location');
+                                        isSaving = true;
+                                      });
+
+                                      final saveResult =
+                                          await provider.updateUserLocation();
+                                      setDialogState(() {
+                                        isSaving = false;
+                                      });
+
+                                      if (saveResult['success'] == true) {
+                                        await StagedRegistrationService.instance
+                                            .markStepCompleted(
+                                          step: StagedRegistrationStep.location,
+                                          userId: provider.userObject.id,
+                                        );
+                                        if (context.mounted) {
+                                          CustomToast.show(
+                                            context,
+                                            lang.profileUpdatedSuccessfully,
+                                            isSuccess: true,
+                                          );
+                                        }
+                                        Navigator.of(dialogCtx).pop();
+                                      } else {
+                                        setDialogState(() {
+                                          locationError = saveResult['message']
+                                                  ?.toString() ??
+                                              'Failed to save location to profile';
+                                        });
+                                      }
+                                    } else {
+                                      setDialogState(() {
+                                        isFetching = false;
+                                        locationError = fetchResult['error']
+                                                ?.toString() ??
+                                            'Could not determine your location';
+                                        isPermanentlyDenied = fetchResult[
+                                                'isPermanentlyDenied'] ==
+                                            true;
+                                      });
+                                    }
                                   }
-                                }
-                              },
-                        child: isFetching || isSaving
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Text(
-                                locationDetected
-                                    ? 'Save Location'
-                                    : 'Use Current Location',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                                textAlign: TextAlign.center,
+                                },
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: selectedThemeData.primaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
                               ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: isFetching || isSaving
+                                ? null
+                                : () async {
+                                    if (locationDetected) {
+                                      setDialogState(() {
+                                        isSaving = true;
+                                      });
+                                      final saveResult =
+                                          await provider.updateUserLocation();
+                                      setDialogState(() {
+                                        isSaving = false;
+                                      });
+
+                                      if (saveResult['success'] == true) {
+                                        await StagedRegistrationService.instance
+                                            .markStepCompleted(
+                                          step: StagedRegistrationStep.location,
+                                          userId: provider.userObject.id,
+                                        );
+                                        if (context.mounted) {
+                                          CustomToast.show(
+                                            context,
+                                            lang.profileUpdatedSuccessfully,
+                                            isSuccess: true,
+                                          );
+                                        }
+                                        Navigator.of(dialogCtx).pop();
+                                      } else {
+                                        setDialogState(() {
+                                          locationError = saveResult['message']
+                                                  ?.toString() ??
+                                              'Failed to save location';
+                                        });
+                                      }
+                                    } else {
+                                      setDialogState(() {
+                                        isFetching = true;
+                                        locationError = null;
+                                        isPermanentlyDenied = false;
+                                      });
+
+                                      final fetchResult = await provider
+                                          .fetchAndApplyCurrentDeviceLocation();
+
+                                      if (fetchResult['success'] == true) {
+                                        final city =
+                                            fetchResult['city']?.toString() ??
+                                                '';
+                                        final state =
+                                            fetchResult['state']?.toString() ??
+                                                '';
+                                        final country = fetchResult['country']
+                                                ?.toString() ??
+                                            '';
+                                        final summary = [city, state, country]
+                                            .where((s) => s.isNotEmpty)
+                                            .join(', ');
+
+                                        setDialogState(() {
+                                          isFetching = false;
+                                          locationDetected = true;
+                                          detectedSummary = summary.isNotEmpty
+                                              ? summary
+                                              : (fetchResult['formattedAddress']
+                                                      ?.toString() ??
+                                                  'Current Location');
+                                          isSaving = true;
+                                        });
+
+                                        final saveResult =
+                                            await provider.updateUserLocation();
+                                        setDialogState(() {
+                                          isSaving = false;
+                                        });
+
+                                        if (saveResult['success'] == true) {
+                                          await StagedRegistrationService
+                                              .instance
+                                              .markStepCompleted(
+                                            step:
+                                                StagedRegistrationStep.location,
+                                            userId: provider.userObject.id,
+                                          );
+                                          if (context.mounted) {
+                                            CustomToast.show(
+                                              context,
+                                              lang.profileUpdatedSuccessfully,
+                                              isSuccess: true,
+                                            );
+                                          }
+                                          Navigator.of(dialogCtx).pop();
+                                        } else {
+                                          setDialogState(() {
+                                            locationError = saveResult[
+                                                        'message']
+                                                    ?.toString() ??
+                                                'Failed to save location to profile';
+                                          });
+                                        }
+                                      } else {
+                                        setDialogState(() {
+                                          isFetching = false;
+                                          locationError = fetchResult['error']
+                                                  ?.toString() ??
+                                              'Could not determine your location';
+                                          isPermanentlyDenied = fetchResult[
+                                                  'isPermanentlyDenied'] ==
+                                              true;
+                                        });
+                                      }
+                                    }
+                                  },
+                            child: isFetching || isSaving
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(
+                                    locationDetected
+                                        ? 'Save Location'
+                                        : 'Use Current Location',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             );
           },
         );

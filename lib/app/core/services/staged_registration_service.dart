@@ -20,10 +20,8 @@ class StagedRegistrationService {
   static final StagedRegistrationService instance =
       StagedRegistrationService._();
 
-  static const String _prefKeyPrefixCompleted =
-      'staged_reg_completed_step_';
-  static const String _prefKeyPrefixSkipped =
-      'staged_reg_skipped_step_';
+  static const String _prefKeyPrefixCompleted = 'staged_reg_completed_step_';
+  static const String _prefKeyPrefixSkipped = 'staged_reg_skipped_step_';
 
   // In-memory state tracking for the current application launch/process.
   bool _hasHandledStepInCurrentLaunch = false;
@@ -79,7 +77,7 @@ class StagedRegistrationService {
 
   /// Determines if Step 1 (Date of Birth) is complete.
   /// Complete only when [dob] is present and non-empty.
-  /// Returns false if [dob] is null, empty string ("" ), or missing.
+  /// Returns false if [dob] is null, empty string (""), or missing.
   static bool isDobComplete(User? user) {
     if (user == null) return false;
     final dob = user.dob?.trim() ?? '';
