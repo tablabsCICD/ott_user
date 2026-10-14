@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
+import 'package:ott/data/models/content.dart';
+import 'package:ott/data/models/response/get_dashboard_data.dart';
 
 void main() {
   group('DashboardProvider Category Separation & Type Filtering', () {
