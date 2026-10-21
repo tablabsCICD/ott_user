@@ -466,83 +466,89 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     final highlightColor = theme.brightness == Brightness.light
         ? const Color.fromARGB(255, 185, 169, 169)
         : const Color.fromARGB(255, 58, 49, 49);
-    return Stack(
-      children: [
-        Focus(
-          canRequestFocus: ResponsiveWidget.isTabletOrTv(context),
-          onFocusChange: (hasFocus) {
-            if (ResponsiveWidget.isTabletOrTv(context)) {
-              _handleHover(hasFocus);
-            }
-          },
-          onKeyEvent: (node, event) {
-            if (event is! KeyDownEvent) return KeyEventResult.ignored;
-            final key = event.logicalKey;
-            if (key == LogicalKeyboardKey.enter ||
-                key == LogicalKeyboardKey.select ||
-                key == LogicalKeyboardKey.space ||
-                key == LogicalKeyboardKey.gameButtonA) {
-              _playContent();
-              return KeyEventResult.handled;
-            }
-            return KeyEventResult.ignored;
-          },
-          child: MouseRegion(
-            onEnter: (_) => _handleHover(true),
-            onExit: (_) => _handleHover(false),
-            child: GestureDetector(
-              onTap: _playContent,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOut,
-                width: ContinueWatchMovieCard.itemWidth,
-                //  margin: const EdgeInsets.all(ContinueWatchMovieCard.itemMargin),
-                margin: EdgeInsets.only(
-                  left: ContinueWatchMovieCard.itemMargin,
-                  right: ContinueWatchMovieCard.itemMargin,
-                  bottom: ContinueWatchMovieCard.itemMargin,
-                  top: showPreview
-                      ? 4
-                      : 12, // 👈 selected card moves slightly up
-                ),
-                decoration: BoxDecoration(
-                  color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: showPreview ? highlightColor : Colors.transparent,
-                    width: showPreview ? 2.5 : 1,
-                  ),
-                  boxShadow: showPreview
-                      ? [
-                          BoxShadow(
-                            color: highlightColor.withValues(alpha: 0.35),
-                            blurRadius: 18,
-                            spreadRadius: 1,
-                            offset: const Offset(0, 6),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: theme.cardColor, width: 1),
-                      left: BorderSide(color: theme.cardColor, width: 1),
-                      right: BorderSide(color: theme.cardColor, width: 1),
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: _buildMediaPreview(
-                      posterUrl,
-                      theme,
-                      widget.movie,
-                      showPreview,
-                    ),
-                  ),
-                ),
+    return Stack(children: [
+      Focus(
+        canRequestFocus: ResponsiveWidget.isTabletOrTv(context),
+        onFocusChange: (hasFocus) {
+          if (ResponsiveWidget.isTabletOrTv(context)) {
+            _handleHover(hasFocus);
+          }
+        },
+        onKeyEvent: (node, event) {
+          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+          final key = event.logicalKey;
+          if (key == LogicalKeyboardKey.enter ||
+              key == LogicalKeyboardKey.select ||
+              key == LogicalKeyboardKey.space ||
+              key == LogicalKeyboardKey.gameButtonA) {
+            _playContent();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: MouseRegion(
+          onEnter: (_) => _handleHover(true),
+          onExit: (_) => _handleHover(false),
+          child: GestureDetector(
+            onTap: _playContent,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              width: cardWidth,
+              //  margin: const EdgeInsets.all(ContinueWatchMovieCard.itemMargin),
+              margin: EdgeInsets.only(
+                left: ContinueWatchMovieCard.itemMargin,
+                right: ContinueWatchMovieCard.itemMargin,
+                bottom: ContinueWatchMovieCard.itemMargin,
+                top: showPreview ? 4 : 12, // 👈 selected card moves slightly up
               ),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: showPreview ? highlightColor : Colors.transparent,
+                  width: showPreview ? 2.5 : 1,
+                ),
+                boxShadow: showPreview
+                    ? [
+                        BoxShadow(
+                          color: highlightColor.withValues(alpha: 0.35),
+                          blurRadius: 18,
+                          spreadRadius: 1,
+                          offset: const Offset(0, 6),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  /// 🎬 POSTER + PROGRESS BAR STACK
+                  Expanded(
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(11),
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(11),
+                        ),
+                        child: _buildMediaPreview(
+                          posterUrl,
+                          theme,
+                          widget.movie,
+                          showPreview,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  /// 📄 MOVIE TITLE & INFO BELOW POSTER
+                  _buildContentSection(theme, lang),
+                ],              ),
             ),
           ),
         ),
@@ -571,16 +577,34 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                 controls: null,
               ),
             ),
-          ),
-          Positioned(bottom: 5, left: 0, right: 0, child: _previewProgress()),
-          Positioned(
-            right: 5,
-            bottom: 5,
-            child: IconButton(
-              icon: Icon(
-                _isMuted ? Icons.volume_off : Icons.volume_up,
-                color: Colors.white.withValues(alpha: 0.7),
-              ),
+            Positioned(
+              bottom: 5,
+              left: 0,
+              right: 0,
+              child: _previewProgress(),
+            ),
+            Positioned(
+              right: 5,
+              bottom: 5,
+              child: Semantics(
+                button: true,
+                label: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                child: Material(
+                  color: Colors.black54,
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    padding: const EdgeInsets.all(2),
+                    constraints:
+                        const BoxConstraints(minWidth: 20, minHeight: 20),
+                    iconSize: 12,
+                    tooltip: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                    icon: Icon(
+                      _isMuted ? Icons.volume_off : Icons.volume_up,
+                      color: Colors.white,
+                    ),
+                    onPressed: _toggleMute,
+                  ),
+                ),              ),
               onPressed: _toggleMute,
             ),
           ],
@@ -588,40 +612,48 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       );
     }
 
-    return Stack(
-      children: [
-        posterUrl != null
-            ? Image.network(
-                posterUrl,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (_, __, ___) => Icon(
-                  Icons.broken_image,
-                  color: theme.canvasColor.withValues(alpha: 0.3),
-                  size: 40,
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: Colors.black,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          posterUrl != null && posterUrl.isNotEmpty
+              ? Image.network(
+                  posterUrl,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.center,
+                  width: double.infinity,
+                  height: double.infinity,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                            : null,
+                        color: theme.primaryColor,
+                      ),
+                    );
+                  },
+                  errorBuilder: (_, __, ___) => Center(
+                    child: Icon(
+                      Icons.broken_image,
+                      color: theme.canvasColor.withValues(alpha: 0.3),
+                      size: 40,
+                    ),
+                  ),
+                )
+              : Center(
+                  child: Icon(
+                    Icons.broken_image,
+                    color: theme.canvasColor.withValues(alpha: 0.3),
+                    size: 40,
+                  ),
                 ),
-              )
-            : Icon(
-                Icons.broken_image,
-                color: theme.canvasColor.withValues(alpha: 0.3),
-                size: 40,
-              ),
-        Positioned(
-          bottom: 10,
-          left: 8,
-          child: Text(
-            content.title ?? 'No Title',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: theme.canvasColor,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-
           /// 🔥 CONTINUE WATCHING BAR
           if ((widget.movie.watchedPercentage ?? 0) > 0)
             _watchProgressBar(theme),
@@ -637,83 +669,40 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     final rating = movie.ratings ?? 0.0;
     final price = movie.price ?? 0;
 
-    return Stack(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  StarRatingWidget(rating: rating),
-                  Text(
-                    " (${movie.ratingCount ?? 0})",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.canvasColor.withValues(alpha: 0.7),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                movie.title ?? 'No Title',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: theme.canvasColor,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text.rich(
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                TextSpan(
-                  style: TextStyle(
-                    color: theme.canvasColor.withValues(alpha: 0.7),
-                    fontSize: 12,
-                  ),
-                  children: [
-                    TextSpan(text: movie.releaseDate ?? ''),
-                    const TextSpan(text: ' | '),
-                    TextSpan(text: movie.genreList?.join(', ') ?? 'N/A'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        Positioned(
-          right: 6,
-          top: 6,
-          child: Row(
-            children: [
-              // _optionButton(context, movie),
-              // SizedBox(
-              //   width: 5,
-              // ),
-              movie.isFeatured == true
-                  ? Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 6,
-                        horizontal: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        color: theme.primaryColor.withValues(alpha: 0.9),
-                      ),
-                      child: Text(
-                        "Watch Trailer",
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (rating > 0) ...[
+                  Row(
+                    children: [
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              StarRatingWidget(
+                                rating: rating,
+                              ),
+                              Text(
+                                " (${movie.ratingCount ?? 0})",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: theme.canvasColor.withValues(alpha: 0.7),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),                        ),
                       ),
                     ],
                   ),
