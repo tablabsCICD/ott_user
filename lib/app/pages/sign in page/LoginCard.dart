@@ -21,6 +21,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ott/app/provider/language_provider.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 import 'package:ott/app/core/services/referral_service.dart';
+import 'package:ott/app/flavor/app_flavor.dart';
 
 class LoginCard extends StatefulWidget {
   const LoginCard({super.key});
@@ -29,8 +30,7 @@ class LoginCard extends StatefulWidget {
   State<LoginCard> createState() => _LoginCardState();
 }
 
-class _LoginCardState extends State<LoginCard>
-    with CodeAutoFill, SingleTickerProviderStateMixin {
+class _LoginCardState extends State<LoginCard> with CodeAutoFill {
   static const int _otpLength = 6;
   static const int _resendCooldownSeconds = 60;
   static const Duration _otpAutoFillTimeout = Duration(seconds: 60);
@@ -64,9 +64,6 @@ class _LoginCardState extends State<LoginCard>
 
   String selectedCode = '+91';
 
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
-
   @override
   void initState() {
     super.initState();
@@ -94,7 +91,6 @@ class _LoginCardState extends State<LoginCard>
 
   @override
   void dispose() {
-    _pulseController.dispose();
     unawaited(_stopOtpAutoFillListener());
     _resendTimer?.cancel();
     _otpAutoFillTimeoutTimer?.cancel();
@@ -822,7 +818,7 @@ class _LoginCardState extends State<LoginCard>
 
   Future<void> _startOtpAutoFillListener() async {
     await _stopOtpAutoFillListener();
-    if (kIsWeb) return;
+    if (kIsWeb || FlavorConfig.current.isTv || FlavorConfig.current.isJio) return;
 
     try {
       final appSignature = await SmsAutoFill().getAppSignature;

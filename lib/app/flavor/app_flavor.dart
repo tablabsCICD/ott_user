@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show appFlavor;
 
 enum FilmytellFlavor {
   mobile,
@@ -13,11 +14,38 @@ class FlavorConfig {
 
   const FlavorConfig.forFlavor(this.flavor);
 
+  static bool get hasExplicitFlavor {
+    final env = const String.fromEnvironment('FLAVOR');
+    final flutterAppFlavor = const String.fromEnvironment('FLUTTER_APP_FLAVOR');
+    final runtime = (appFlavor ?? '').trim();
+    return runtime.isNotEmpty || env.trim().isNotEmpty || flutterAppFlavor.trim().isNotEmpty;
+  }
+
   factory FlavorConfig.fromEnvironment({
     FilmytellFlavor? fallback,
   }) {
-    const value = String.fromEnvironment('FLAVOR');
-    return FlavorConfig._(_parse(value, fallback: fallback));
+    final env = const String.fromEnvironment('FLAVOR').trim();
+    final flutterAppFlavor = const String.fromEnvironment('FLUTTER_APP_FLAVOR').trim();
+    final runtime = (appFlavor ?? '').trim();
+
+    if (env.isNotEmpty && env.toLowerCase() != 'mobile') {
+      return FlavorConfig._(_parse(env, fallback: fallback));
+    }
+    if (flutterAppFlavor.isNotEmpty && flutterAppFlavor.toLowerCase() != 'mobile') {
+      return FlavorConfig._(_parse(flutterAppFlavor, fallback: fallback));
+    }
+    if (runtime.isNotEmpty && runtime.toLowerCase() != 'mobile') {
+      return FlavorConfig._(_parse(runtime, fallback: fallback));
+    }
+
+    if (fallback != null) {
+      return FlavorConfig.forFlavor(fallback);
+    }
+
+    final candidate = env.isNotEmpty
+        ? env
+        : (flutterAppFlavor.isNotEmpty ? flutterAppFlavor : runtime);
+    return FlavorConfig._(_parse(candidate, fallback: FilmytellFlavor.mobile));
   }
 
   final FilmytellFlavor flavor;

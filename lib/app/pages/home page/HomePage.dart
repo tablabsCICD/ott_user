@@ -843,7 +843,8 @@ class _HomePageState extends State<HomePage>
         .expand((row) => row.movies ?? const <Content>[])
         .where((item) =>
             item.id != null &&
-            (item.posterUrlList?.isNotEmpty ?? false) &&
+            ((item.landscapeBannerUrl?.isNotEmpty ?? false) ||
+                (item.posterUrlList?.isNotEmpty ?? false)) &&
             (item.title?.trim().isNotEmpty ?? false))
         .toList();
 
@@ -897,13 +898,18 @@ class _HomePageState extends State<HomePage>
                   },
                   itemBuilder: (context, index) {
                     final item = heroItems[index];
-                    final imageUrl = item.posterUrlList?.first ?? '';
+                    final imageUrl = item.landscapeBannerUrl ??
+                        (item.posterUrlList?.isNotEmpty == true
+                            ? item.posterUrlList!.first
+                            : '');
                     return Stack(
                       fit: StackFit.expand,
                       children: [
                         Image.network(
                           imageUrl,
                           fit: BoxFit.cover,
+                          alignment: Alignment.center,
+                          cacheWidth: 1920,
                           errorBuilder: (_, __, ___) => Container(
                             color: theme.cardColor,
                             alignment: Alignment.center,

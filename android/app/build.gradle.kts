@@ -41,6 +41,10 @@ android {
         jvmTarget = "17"
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.filmytell.ott"
         minSdk = flutter.minSdkVersion
@@ -93,8 +97,8 @@ android {
         create("jio") {
             dimension = "platform"
             applicationId = "com.filmytell.ott"
-            versionCode = 1
-            versionName = "1.0.0"
+            versionCode = flutter.versionCode
+            versionName = flutter.versionName
             resValue("string", "app_name", "Filmytell")
             manifestPlaceholders["appAuthRedirectScheme"] = "com.filmytell.ott"
             ndk {

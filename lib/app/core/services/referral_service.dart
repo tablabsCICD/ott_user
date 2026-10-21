@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ott/app/flavor/app_flavor.dart';
 import '../constant/prefrense_constant.dart';
 
 class ReferralService {
@@ -229,11 +230,14 @@ class ReferralService {
         true,
       );
 
-      // Android: query Google Play Install Referrer API
-      if (defaultTargetPlatform == TargetPlatform.android) {
+      // Android: query Google Play Install Referrer API (skip on non-GMS Jio STB and TV)
+      if (defaultTargetPlatform == TargetPlatform.android &&
+          !FlavorConfig.current.isJio &&
+          !FlavorConfig.current.isTv) {
         try {
           final String? rawReferrer = await _installReferrerChannel
-              .invokeMethod<String>('getInstallReferrer');
+              .invokeMethod<String>('getInstallReferrer')
+              .timeout(const Duration(seconds: 2), onTimeout: () => null);
           developer.log(
             'Raw Android Install Referrer: ${rawReferrer ?? 'none'}',
             name: 'ReferralService',

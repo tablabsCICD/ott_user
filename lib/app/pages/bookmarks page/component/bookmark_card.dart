@@ -25,9 +25,10 @@ class BookmarkPosterCard extends StatelessWidget {
     final provider = context.watch<BookmarkProvider>();
     final bool isBookmarked = provider.isBookmarkedLocally(movie.id ?? 0);
 
-    final posterUrl = movie.posterUrlList?.isNotEmpty == true
-        ? movie.posterUrlList!.first
-        : "";
+    final posterUrl = movie.portraitPosterUrl ??
+        (movie.posterUrlList?.isNotEmpty == true
+            ? movie.posterUrlList!.first
+            : "");
 
     void openDetails() {
       Navigator.push(
@@ -74,14 +75,39 @@ class BookmarkPosterCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
-                child: Image.network(
-                  posterUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: theme.dividerColor,
-                    child: const Icon(Icons.movie, size: 40),
-                  ),
-                ),
+                child: posterUrl.isNotEmpty
+                    ? Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.network(
+                            posterUrl,
+                            fit: BoxFit.cover,
+                            alignment: Alignment.topCenter,
+                            cacheWidth: 600,
+                            errorBuilder: (_, __, ___) =>
+                                const SizedBox.shrink(),
+                          ),
+                          Container(
+                            color: Colors.black.withValues(alpha: 0.55),
+                          ),
+                          Center(
+                            child: Image.network(
+                              posterUrl,
+                              fit: BoxFit.contain,
+                              alignment: Alignment.topCenter,
+                              cacheWidth: 600,
+                              errorBuilder: (_, __, ___) => Container(
+                                color: theme.dividerColor,
+                                child: const Icon(Icons.movie, size: 40),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Container(
+                        color: theme.dividerColor,
+                        child: const Icon(Icons.movie, size: 40),
+                      ),
               ),
             ),
 

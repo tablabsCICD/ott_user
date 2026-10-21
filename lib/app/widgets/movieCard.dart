@@ -507,15 +507,18 @@ class _MovieCardState extends State<MovieCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
-    final posterUrl = widget.movie.posterUrlList?.isNotEmpty == true
-        ? widget.movie.posterUrlList!.first
-        : null;
+    final posterUrl = widget.movie.portraitPosterUrl ??
+        (widget.movie.posterUrlList?.isNotEmpty == true
+            ? widget.movie.posterUrlList!.first
+            : null);
     final showPreview = _isPreviewPlaying;
     final cardWidth = widget.cardWidth ?? MovieCard.itemWidth;
     final cardMargin = widget.cardMargin ?? MovieCard.itemMargin;
     final highlightColor = theme.brightness == Brightness.light
-        ? const Color.fromARGB(255, 185, 169, 169)
-        : const Color.fromARGB(255, 58, 49, 49);
+        ? theme.primaryColor
+        : (ResponsiveWidget.isTabletOrTv(context)
+            ? Colors.white
+            : theme.primaryColor);
 
     return Stack(
       children: [
@@ -581,25 +584,15 @@ class _MovieCardState extends State<MovieCard> {
                     /// 🎬 POSTER + PROGRESS BAR STACK
                     Expanded(
                       flex: 8,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border(
-                            top: BorderSide(color: theme.cardColor, width: 1),
-                            left: BorderSide(color: theme.cardColor, width: 1),
-                            right: BorderSide(color: theme.cardColor, width: 1),
-                          ),
-                          borderRadius: BorderRadius.circular(12),
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(10),
                         ),
-                        child: ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(12),
-                          ),
-                          child: _buildMediaPreview(
-                            posterUrl,
-                            theme,
-                            widget.movie,
-                            showPreview,
-                          ),
+                        child: _buildMediaPreview(
+                          posterUrl,
+                          theme,
+                          widget.movie,
+                          showPreview,
                         ),
                       ),
                     ),
@@ -714,24 +707,56 @@ class _MovieCardState extends State<MovieCard> {
 
     return Stack(
       children: [
-        posterUrl != null
-            ? Image.network(
-                posterUrl,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (_, __, ___) => Center(
-                  child: Icon(
-                    Icons.broken_image,
-                    color: theme.canvasColor.withOpacity(0.3),
-                    size: 60,
+        posterUrl != null && posterUrl.isNotEmpty
+            ? Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Ambient background fill: edge-to-edge color atmosphere from artwork, darkened
+                  Image.network(
+                    posterUrl,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.topCenter,
+                    width: double.infinity,
+                    height: double.infinity,
+                    cacheWidth: 600,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                   ),
-                ),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.50),
+                          Colors.black.withValues(alpha: 0.75),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Foreground poster: uncropped, preserving 2:3 aspect ratio, top pinned so faces/titles never get cut
+                  Center(
+                    child: Image.network(
+                      posterUrl,
+                      fit: BoxFit.contain,
+                      alignment: Alignment.topCenter,
+                      cacheWidth: 600,
+                      errorBuilder: (_, __, ___) => Center(
+                        child: Icon(
+                          Icons.movie_creation_outlined,
+                          color: theme.canvasColor.withValues(alpha: 0.4),
+                          size: 48,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               )
-            : Icon(
-                Icons.broken_image,
-                color: theme.canvasColor.withOpacity(0.3),
-                size: 60,
+            : Center(
+                child: Icon(
+                  Icons.movie_creation_outlined,
+                  color: theme.canvasColor.withValues(alpha: 0.3),
+                  size: 48,
+                ),
               ),
 
         /// 🔥 CONTINUE WATCHING BAR

@@ -36,10 +36,21 @@ class _SplashScreenState extends State<SplashScreen> {
   final AppUpdateService _appUpdateService = AppUpdateService();
   bool _isLoggedIn = false;
   int _flowVersion = 0;
+  bool _hasNavigated = false;
+  Timer? _safetyTimer;
 
   @override
   void initState() {
     super.initState();
+    // Safety timer: guarantees the splash screen will NEVER freeze indefinitely
+    _safetyTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted && !_hasNavigated) {
+        if (kDebugMode) {
+          developer.log('Splash safety timer triggered navigation', name: 'SplashScreen');
+        }
+        _performNavigation(isLoggedIn: _isLoggedIn);
+      }
+    });
     _startFlow();
   }
 
@@ -47,47 +58,77 @@ class _SplashScreenState extends State<SplashScreen> {
     final flowVersion = ++_flowVersion;
     final requestedPath = widget.initialNavigationRoute?.path ?? '/';
 
-    // Recover any deferred install referral code on cold start / first launch
-    unawaited(ReferralService.instance.checkDeferredInstallReferrer());
+    try {
+      // Recover any deferred install referral code on cold start / first launch
+      unawaited(ReferralService.instance.checkDeferredInstallReferrer());
 
-    final loggedIn =
-        await _prefs.getBool(SharedPreferencesConstant.isUserLoggedIn);
-    if (!_isActiveFlow(flowVersion)) return;
-    final token = await SessionManager.instance.token;
-    if (!_isActiveFlow(flowVersion)) return;
-    final hasToken = token != null;
-
-    _isLoggedIn = kIsWeb ? loggedIn && hasToken : loggedIn;
-    _logWebAuth(
-      'Splash auth check requestedPath=$requestedPath loggedInFlag=$loggedIn hasToken=$hasToken authenticated=$_isLoggedIn',
-    );
-
-    if (widget.initialNavigationRoute == null) {
-      // Splash delay
-      await Future.delayed(const Duration(seconds: 2));
+      final loggedIn = await _prefs
+          .getBool(SharedPreferencesConstant.isUserLoggedIn)
+          .timeout(
+            const Duration(milliseconds: 1000),
+            onTimeout: () => false,
+          );
       if (!_isActiveFlow(flowVersion)) return;
 
-      if (_supportsUpdateDialog) {
-        final updateInfo = await _appUpdateService.getUpdateInfo();
+      final token = await SessionManager.instance.token.timeout(
+        const Duration(milliseconds: 1000),
+        onTimeout: () => null,
+      );
+      if (!_isActiveFlow(flowVersion)) return;
+
+      final hasToken = token != null && token.trim().isNotEmpty;
+      _isLoggedIn = loggedIn && hasToken;
+      _logWebAuth(
+        'Splash auth check requestedPath=$requestedPath loggedInFlag=$loggedIn hasToken=$hasToken authenticated=$_isLoggedIn',
+      );
+
+      if (widget.initialNavigationRoute == null) {
+        // Minimum splash display duration for branding
+        await Future.delayed(const Duration(seconds: 2));
         if (!_isActiveFlow(flowVersion)) return;
 
-        final shouldShowUpdateDialog = updateInfo.isUpdateAvailable;
+        if (_supportsUpdateDialog) {
+          try {
+            final updateInfo = await _appUpdateService
+                .getUpdateInfo()
+                .timeout(
+                  const Duration(seconds: 2),
+                  onTimeout: () => AppUpdateInfo(
+                    isUpdateAvailable: false,
+                    currentVersion: AppConstant.appVersion,
+                    latestVersion: '',
+                  ),
+                );
+            if (!_isActiveFlow(flowVersion)) return;
 
-        if (shouldShowUpdateDialog) {
-          await _showUpdateDialog(updateInfo);
-          if (!_isActiveFlow(flowVersion)) return;
+            if (updateInfo.isUpdateAvailable) {
+              await _showUpdateDialog(updateInfo);
+              if (!_isActiveFlow(flowVersion)) return;
+            }
+          } catch (error) {
+            if (kDebugMode) {
+              developer.log('App update check ignored error: $error', name: 'SplashScreen');
+            }
+          }
         }
       }
+    } catch (e, stack) {
+      if (kDebugMode) {
+        developer.log('Splash flow exception: $e\n$stack', name: 'SplashScreen');
+      }
+    } finally {
+      if (_isActiveFlow(flowVersion) && !_hasNavigated) {
+        _performNavigation(isLoggedIn: _isLoggedIn);
+      }
     }
+  }
 
-    if (!_isActiveFlow(flowVersion)) return;
-    final route = ModalRoute.of(context);
-    if (route != null && !route.isCurrent) {
-      return;
-    }
+  void _performNavigation({required bool isLoggedIn}) {
+    if (_hasNavigated || !mounted) return;
+    _hasNavigated = true;
+    _safetyTimer?.cancel();
 
     final initialNavigationRoute = widget.initialNavigationRoute;
-    final isLoggedIn = _isLoggedIn;
     final routeName = isLoggedIn
         ? initialNavigationRoute?.path
         : kIsWeb
@@ -119,6 +160,7 @@ class _SplashScreenState extends State<SplashScreen> {
         },
       ),
     );
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && isLoggedIn) {
         DeepLinkService.instance.consumePendingNavigation();
@@ -127,12 +169,13 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   bool _isActiveFlow(int flowVersion) {
-    return mounted && flowVersion == _flowVersion;
+    return mounted && flowVersion == _flowVersion && !_hasNavigated;
   }
 
   @override
   void dispose() {
     _flowVersion++;
+    _safetyTimer?.cancel();
     super.dispose();
   }
 
@@ -146,11 +189,8 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   bool get _supportsUpdateDialog {
-    // TEMPORARY JIO STB CHANGE:
-    // App update dialog/version check is disabled for the first Jio STB release
-    // because the Jio STB latest-version API is not available yet.
-    // Re-enable this logic when the Jio STB version API is implemented.
-    if (FlavorConfig.current.isJio) return false;
+    // App update dialog is disabled for Jio STB and TV releases
+    if (FlavorConfig.current.isJio || FlavorConfig.current.isTv) return false;
     if (kIsWeb) return false;
     return defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS;

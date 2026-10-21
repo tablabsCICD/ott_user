@@ -915,7 +915,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     Content content,
     ThemeData theme,
   ) {
-    final image = _heroImage(content) ?? '';
+    final image = content.portraitPosterUrl ?? _heroImage(content) ?? '';
     return _MovieTvFocusableScale(
       width: 300,
       onPressed: content.id == null
@@ -939,17 +939,47 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                image,
+              child: SizedBox(
                 width: 300,
                 height: 170,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 300,
-                  height: 170,
-                  color: Colors.grey.shade900,
-                  child: const Icon(Icons.movie, color: Colors.white54),
-                ),
+                child: image.isNotEmpty
+                    ? Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.network(
+                            image,
+                            fit: BoxFit.cover,
+                            alignment: Alignment.topCenter,
+                            width: 300,
+                            height: 170,
+                            cacheWidth: 600,
+                            errorBuilder: (_, __, ___) =>
+                                const SizedBox.shrink(),
+                          ),
+                          Container(
+                            color: Colors.black.withValues(alpha: 0.55),
+                          ),
+                          Center(
+                            child: Image.network(
+                              image,
+                              fit: BoxFit.contain,
+                              alignment: Alignment.topCenter,
+                              cacheWidth: 600,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.movie,
+                                color: Colors.white54,
+                                size: 40,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Container(
+                        width: 300,
+                        height: 170,
+                        color: Colors.grey.shade900,
+                        child: const Icon(Icons.movie, color: Colors.white54),
+                      ),
               ),
             ),
             const SizedBox(height: 10),
@@ -1154,6 +1184,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   }
 
   String? _heroImage(Content content) {
+    if (content.landscapeBannerUrl != null &&
+        content.landscapeBannerUrl!.isNotEmpty) {
+      return content.landscapeBannerUrl;
+    }
     final posters = content.posterUrlList ?? const <String>[];
     if (posters.isNotEmpty) return posters.first;
     return null;

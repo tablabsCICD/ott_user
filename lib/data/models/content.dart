@@ -18,6 +18,7 @@ class Content {
 
   String? ageRating;
   List<String>? posterUrlList;
+  List<String>? bannerUrlList;
   String? teaserUrl;
   String? trailerUrl;
   String? contentUrl;
@@ -64,6 +65,7 @@ class Content {
     this.totalRevenue,
     this.ageRating,
     this.posterUrlList,
+    this.bannerUrlList,
     this.teaserUrl,
     this.trailerUrl,
     this.contentUrl,
@@ -87,6 +89,26 @@ class Content {
     this.seasonId,
     this.episodeId,
   });
+
+  String? get portraitPosterUrl {
+    if (posterUrlList != null && posterUrlList!.isNotEmpty) {
+      return posterUrlList!.first;
+    }
+    if (bannerUrlList != null && bannerUrlList!.isNotEmpty) {
+      return bannerUrlList!.first;
+    }
+    return null;
+  }
+
+  String? get landscapeBannerUrl {
+    if (bannerUrlList != null && bannerUrlList!.isNotEmpty) {
+      return bannerUrlList!.first;
+    }
+    if (posterUrlList != null && posterUrlList!.isNotEmpty) {
+      return posterUrlList!.first;
+    }
+    return null;
+  }
 
   String? get teaserOrTrailerUrl {
     final teaser = teaserUrl?.trim();
@@ -124,6 +146,7 @@ class Content {
         ageRating: json['ageRating'],
 
         posterUrlList: _posterUrlsFromJson(json),
+        bannerUrlList: _bannerUrlsFromJson(json),
 
         teaserUrl: _firstStringValue(json, const [
               'teaserUrl',
@@ -212,6 +235,7 @@ class Content {
         "totalRevenue": totalRevenue,
         "ageRating": ageRating,
         "posterUrlList": posterUrlList ?? [],
+        "bannerUrlList": bannerUrlList ?? [],
         "teaserUrl": teaserUrl,
         "trailerUrl": trailerUrl,
         "contentUrl": contentUrl,
@@ -356,8 +380,9 @@ List<String> _posterUrlsFromJson(Map<String, dynamic> json) {
       json['poster_url_list'] ??
       json['posters'] ??
       json['posterList'] ??
-      json['images'] ??
-      json['thumbnails'];
+      json['thumbnails'] ??
+      json['portraitUrlList'] ??
+      json['portrait_url_list'];
 
   if (posterList is List) {
     for (final item in posterList) {
@@ -370,17 +395,19 @@ List<String> _posterUrlsFromJson(Map<String, dynamic> json) {
 
   for (final key in const [
     'posterUrl',
-    'poster',
-    'thumbnail',
-    'thumbnailUrl',
-    'imageUrl',
-    'bannerUrl',
-    'coverUrl',
     'poster_url',
+    'poster',
+    'portraitUrl',
+    'portrait_url',
+    'portraitPoster',
+    'portrait_poster',
+    'posterImage',
+    'poster_image',
+    'thumbnailUrl',
     'thumbnail_url',
+    'thumbnail',
+    'imageUrl',
     'image_url',
-    'banner_url',
-    'cover_url',
   ]) {
     final s = _sanitizeUrl(json[key]?.toString());
     if (s != null && s.isNotEmpty && !posters.contains(s)) {
@@ -401,7 +428,105 @@ List<String> _posterUrlsFromJson(Map<String, dynamic> json) {
     }
   }
 
+  // Fallback to banner/cover if no portrait poster was found
+  if (posters.isEmpty) {
+    for (final key in const [
+      'bannerUrl',
+      'banner_url',
+      'banner',
+      'coverUrl',
+      'cover_url',
+      'coverImage',
+      'cover_image',
+      'landscapeUrl',
+      'landscape_url',
+    ]) {
+      final s = _sanitizeUrl(json[key]?.toString());
+      if (s != null && s.isNotEmpty && !posters.contains(s)) {
+        posters.add(s);
+      }
+    }
+  }
+
   return posters;
+}
+
+List<String> _bannerUrlsFromJson(Map<String, dynamic> json) {
+  final banners = <String>[];
+  final bannerList = json['bannerUrlList'] ??
+      json['banner_url_list'] ??
+      json['banners'] ??
+      json['bannerList'] ??
+      json['landscapeUrlList'] ??
+      json['landscape_url_list'];
+
+  if (bannerList is List) {
+    for (final item in bannerList) {
+      final s = _sanitizeUrl(_stringFromField(item));
+      if (s != null && s.isNotEmpty && !banners.contains(s)) {
+        banners.add(s);
+      }
+    }
+  }
+
+  for (final key in const [
+    'bannerUrl',
+    'banner_url',
+    'banner',
+    'landscapeUrl',
+    'landscape_url',
+    'landscapeBanner',
+    'landscape_banner',
+    'bannerImage',
+    'banner_image',
+    'coverUrl',
+    'cover_url',
+    'coverImage',
+    'cover_image',
+    'backdropUrl',
+    'backdrop_url',
+    'backdrop',
+  ]) {
+    final s = _sanitizeUrl(json[key]?.toString());
+    if (s != null && s.isNotEmpty && !banners.contains(s)) {
+      banners.add(s);
+    }
+  }
+
+  // Also check nested media/movie/series objects if present
+  for (final subKey in const ['movie', 'series', 'video', 'media', 'details']) {
+    final sub = json[subKey];
+    if (sub is Map<String, dynamic>) {
+      final subBanners = _bannerUrlsFromJson(sub);
+      for (final s in subBanners) {
+        if (!banners.contains(s)) {
+          banners.add(s);
+        }
+      }
+    }
+  }
+
+  // Fallback to portrait poster if no banner was found
+  if (banners.isEmpty) {
+    for (final key in const [
+      'posterUrl',
+      'poster_url',
+      'poster',
+      'portraitUrl',
+      'portrait_url',
+      'thumbnailUrl',
+      'thumbnail_url',
+      'imageUrl',
+      'image_url',
+    ]) {
+      final s = _sanitizeUrl(json[key]?.toString());
+      if (s != null && s.isNotEmpty && !banners.contains(s)) {
+        banners.add(s);
+      }
+    }
+  }
+
+  return banners;
 }
 
 String? _sanitizeUrl(String? raw) {

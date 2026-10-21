@@ -23,6 +23,10 @@
 # Keep Dart-generated code
 -keep class io.flutter.plugins.** { *; }
 
+# Keep App Launcher Activity
+-keep class com.filmytell.ott.MainActivity { *; }
+-keep class com.filmytell.ott.** { *; }
+
 # Don't strip out model/data classes (optional safety)
 -keep class **.model.** { *; }
 

@@ -428,14 +428,16 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lang = AppLocalizations.of(context)!;
-    final posterUrl = widget.movie.posterUrlList?.isNotEmpty == true
-        ? widget.movie.posterUrlList!.first
-        : null;
+    final posterUrl = widget.movie.portraitPosterUrl ??
+        (widget.movie.posterUrlList?.isNotEmpty == true
+            ? widget.movie.posterUrlList!.first
+            : null);
     final showPreview = _isPreviewPlaying;
     final highlightColor = theme.brightness == Brightness.light
-        ? const Color.fromARGB(255, 185, 169, 169)
-        : const Color.fromARGB(255, 58, 49, 49);
+        ? theme.primaryColor
+        : (ResponsiveWidget.isTabletOrTv(context)
+            ? Colors.white
+            : theme.primaryColor);
     return Stack(children: [
       Focus(
         canRequestFocus: ResponsiveWidget.isTabletOrTv(context),
@@ -490,23 +492,13 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                       ]
                     : null,
               ),
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border(
-                    top: BorderSide(color: theme.cardColor, width: 1),
-                    left: BorderSide(color: theme.cardColor, width: 1),
-                    right: BorderSide(color: theme.cardColor, width: 1),
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: _buildMediaPreview(
-                    posterUrl,
-                    theme,
-                    widget.movie,
-                    showPreview,
-                  ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: _buildMediaPreview(
+                  posterUrl,
+                  theme,
+                  widget.movie,
+                  showPreview,
                 ),
               ),
             ),
@@ -580,32 +572,72 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
 
     return Stack(
       children: [
-        posterUrl != null
-            ? Image.network(
-                posterUrl,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (_, __, ___) => Icon(
-                  Icons.broken_image,
-                  color: theme.canvasColor.withOpacity(0.3),
+        posterUrl != null && posterUrl.isNotEmpty
+            ? Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    posterUrl,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.topCenter,
+                    width: double.infinity,
+                    height: double.infinity,
+                    cacheWidth: 600,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.45),
+                          Colors.black.withValues(alpha: 0.85),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: Image.network(
+                      posterUrl,
+                      fit: BoxFit.contain,
+                      alignment: Alignment.topCenter,
+                      cacheWidth: 600,
+                      errorBuilder: (_, __, ___) => Center(
+                        child: Icon(
+                          Icons.movie_creation_outlined,
+                          color: theme.canvasColor.withValues(alpha: 0.4),
+                          size: 40,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Center(
+                child: Icon(
+                  Icons.movie_creation_outlined,
+                  color: theme.canvasColor.withValues(alpha: 0.3),
                   size: 40,
                 ),
-              )
-            : Icon(
-                Icons.broken_image,
-                color: theme.canvasColor.withOpacity(0.3),
-                size: 40,
               ),
         Positioned(
           bottom: 10,
-          left: 8,
+          left: 10,
+          right: 10,
           child: Text(
             content.title ?? 'No Title',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: theme.canvasColor,
+              color: Colors.white,
+              shadows: [
+                Shadow(
+                  color: Colors.black87,
+                  blurRadius: 4,
+                  offset: Offset(0, 1),
+                ),
+              ],
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

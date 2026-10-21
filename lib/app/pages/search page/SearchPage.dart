@@ -810,26 +810,27 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                   height: 140,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: movie.posterUrlList != null &&
-                            movie.posterUrlList!.isNotEmpty
+                    child: (movie.portraitPosterUrl != null &&
+                            movie.portraitPosterUrl!.isNotEmpty)
                         ? Image.network(
-                            movie.posterUrlList![0],
+                            movie.portraitPosterUrl!,
                             width: 100,
                             height: 140,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Icon(
-                                Icons.broken_image,
-                                size: 30,
-                                color: Colors.grey),
+                            alignment: Alignment.topCenter,
+                            cacheWidth: 300,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.broken_image,
+                                    size: 30, color: Colors.grey),
                           )
                         : Container(
                             width: 100,
                             height: 140,
-                            color: Colors.grey[300],
-                            child: Icon(
+                            color: Colors.grey[800],
+                            child: const Icon(
                               Icons.movie,
-                              size: 60,
-                              color: Colors.grey[600],
+                              size: 48,
+                              color: Colors.white54,
                             ),
                           ),
                   ),

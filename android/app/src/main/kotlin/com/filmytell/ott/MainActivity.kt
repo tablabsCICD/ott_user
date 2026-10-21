@@ -1,3 +1,5 @@
+package com.filmytell.ott
+
 import android.os.Bundle
 import android.os.StatFs
 import android.view.WindowManager
@@ -149,6 +151,22 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun fetchInstallReferrer(result: MethodChannel.Result) {
+        if (BuildConfig.FLAVOR == "jio" || packageManager.hasSystemFeature("android.software.leanback")) {
+            result.success(null)
+            return
+        }
+
+        val completed = java.util.concurrent.atomic.AtomicBoolean(false)
+        fun safeResult(value: String?) {
+            if (completed.compareAndSet(false, true)) {
+                runOnUiThread {
+                    try {
+                        result.success(value)
+                    } catch (_: Exception) {}
+                }
+            }
+        }
+
         try {
             val referrerClient = InstallReferrerClient.newBuilder(this).build()
             referrerClient.startConnection(object : InstallReferrerStateListener {
@@ -158,32 +176,26 @@ class MainActivity : FlutterActivity() {
                             try {
                                 val response: ReferrerDetails = referrerClient.installReferrer
                                 val referrerUrl = response.installReferrer
-                                referrerClient.endConnection()
-                                runOnUiThread {
-                                    result.success(referrerUrl)
-                                }
+                                try { referrerClient.endConnection() } catch (_: Exception) {}
+                                safeResult(referrerUrl)
                             } catch (e: Exception) {
                                 try { referrerClient.endConnection() } catch (_: Exception) {}
-                                runOnUiThread {
-                                    result.success(null)
-                                }
+                                safeResult(null)
                             }
                         }
                         else -> {
                             try { referrerClient.endConnection() } catch (_: Exception) {}
-                            runOnUiThread {
-                                result.success(null)
-                            }
+                            safeResult(null)
                         }
                     }
                 }
 
                 override fun onInstallReferrerServiceDisconnected() {
-                    // Disconnected - no further action needed
+                    safeResult(null)
                 }
             })
         } catch (e: Exception) {
-            result.success(null)
+            safeResult(null)
         }
     }
 }

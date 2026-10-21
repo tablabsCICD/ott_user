@@ -40,7 +40,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> runFilmytellApp({
-  required FilmytellFlavor fallbackFlavor,
+  FilmytellFlavor? fallbackFlavor,
 }) {
   if (!kReleaseMode) {
     return _runFilmytellApp(fallbackFlavor: fallbackFlavor);
@@ -55,35 +55,33 @@ Future<void> runFilmytellApp({
 }
 
 Future<void> _runFilmytellApp({
-  required FilmytellFlavor fallbackFlavor,
+  FilmytellFlavor? fallbackFlavor,
 }) async {
   WidgetsFlutterBinding.ensureInitialized();
   FlavorConfig.current = await _resolveFlavor(fallbackFlavor);
-  MediaKit.ensureInitialized();
-  if (!kIsWeb && !FlavorConfig.current.isJio) {
-    try {
-      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    } catch (_) {}
-  }
-  if (!FlavorConfig.current.isJio) {
-    try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-    } catch (_) {}
-  }
+
+  bool themeBool = true;
+  bool isLoggedIn = false;
   try {
-    await DeepLinkService.instance.init();
-  } catch (_) {}
+    final prefs = await SharedPreferences.getInstance().timeout(
+      const Duration(milliseconds: 500),
+      onTimeout: () => throw TimeoutException('prefs timeout'),
+    );
+    themeBool = prefs.getBool("isDark") ?? true;
+    final localSharePreferences = LocalSharePreferences();
+    isLoggedIn = await localSharePreferences.getBool(
+      SharedPreferencesConstant.isUserLoggedIn,
+    ).timeout(
+      const Duration(milliseconds: 500),
+      onTimeout: () => false,
+    );
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('Startup preferences read note: $e');
+    }
+  }
 
-  final prefs = await SharedPreferences.getInstance();
-  final themeBool = prefs.getBool("isDark") ?? true;
-
-  final localSharePreferences = LocalSharePreferences();
-  final isLoggedIn = await localSharePreferences.getBool(
-    SharedPreferencesConstant.isUserLoggedIn,
-  );
-
+  // Mount application immediately so the first frame and splash screen render without UI blocking
   runApp(
     MultiProvider(
       providers: [
@@ -145,32 +143,67 @@ Future<void> _runFilmytellApp({
     ),
   );
 
-  if (!kIsWeb && !FlavorConfig.current.isJio) {
-    unawaited(_initializeNotificationsSafely());
-  }
+  // Initialize non-critical services asynchronously in background with timeouts and safety guards
+  unawaited(_initializeBackgroundServicesSafely());
 }
 
-Future<FlavorConfig> _resolveFlavor(FilmytellFlavor fallbackFlavor) async {
-  final configured = FlavorConfig.fromEnvironment(fallback: fallbackFlavor);
-  if (kIsWeb) return configured;
+Future<void> _initializeBackgroundServicesSafely() async {
+  // 1. Initialize MediaKit safely in background without blocking UI rendering
+  try {
+    MediaKit.ensureInitialized();
+  } catch (e) {
+    if (kDebugMode) {
+      debugPrint('MediaKit background init note: $e');
+    }
+  }
 
-  // Dedicated entrypoints (main_tv.dart, main_jio.dart, main_mobile.dart, etc.)
-  // provide the authoritative platform flavor signal since Android flavors
-  // intentionally share the application ID.
-  if (fallbackFlavor == FilmytellFlavor.tv ||
-      fallbackFlavor == FilmytellFlavor.jio ||
-      fallbackFlavor == FilmytellFlavor.mobile ||
-      fallbackFlavor == FilmytellFlavor.ios) {
+  // 2. Firebase & Notifications (strictly bypassed on Jio STB and Web)
+  if (!kIsWeb && !FlavorConfig.current.isJio) {
+    try {
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    } catch (_) {}
+
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      ).timeout(const Duration(seconds: 3));
+    } catch (_) {}
+
+    try {
+      await NotificationService.instance.init().timeout(const Duration(seconds: 2));
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('Notification initialization failed: $error');
+      }
+    }
+  }
+
+  // 3. Deep link service initialization (with timeout)
+  try {
+    await DeepLinkService.instance.init().timeout(const Duration(seconds: 2));
+  } catch (_) {}
+}
+
+Future<FlavorConfig> _resolveFlavor(FilmytellFlavor? fallbackFlavor) async {
+  // 1. Explicit flavor from appFlavor, FLAVOR, or FLUTTER_APP_FLAVOR takes highest priority
+  if (FlavorConfig.hasExplicitFlavor) {
+    return FlavorConfig.fromEnvironment();
+  }
+
+  // 2. Web platform
+  if (kIsWeb) return const FlavorConfig.forFlavor(FilmytellFlavor.web);
+
+  // 3. Dedicated entrypoint fallback (main_jio.dart, main_tv.dart, etc.)
+  if (fallbackFlavor != null) {
     return FlavorConfig.forFlavor(fallbackFlavor);
   }
 
   try {
-    final packageInfo = await PackageInfo.fromPlatform();
+    final packageInfo = await PackageInfo.fromPlatform().timeout(
+      const Duration(milliseconds: 500),
+    );
     if (packageInfo.packageName == 'com.filmytell.ott.tv') {
       return const FlavorConfig.forFlavor(FilmytellFlavor.tv);
-    }
-    if (packageInfo.packageName == 'com.filmytell.ott') {
-      return const FlavorConfig.forFlavor(FilmytellFlavor.mobile);
     }
   } catch (error) {
     if (kDebugMode) {
@@ -178,16 +211,7 @@ Future<FlavorConfig> _resolveFlavor(FilmytellFlavor fallbackFlavor) async {
     }
   }
 
-  return configured;
-}
-
-Future<void> _initializeNotificationsSafely() async {
-  try {
-    await NotificationService.instance.init();
-  } catch (error, stackTrace) {
-    debugPrint('Notification initialization failed: $error');
-    debugPrintStack(stackTrace: stackTrace);
-  }
+  return FlavorConfig.fromEnvironment(fallback: FilmytellFlavor.mobile);
 }
 
 class MyApp extends StatefulWidget {
@@ -269,7 +293,9 @@ class _MyAppState extends State<MyApp> {
   Future<void> sendNotification() async {
     if (kIsWeb || FlavorConfig.current.isJio) return;
     try {
-      await FirebaseMessaging.instance.subscribeToTopic('all');
+      await FirebaseMessaging.instance
+          .subscribeToTopic('all')
+          .timeout(const Duration(seconds: 2));
     } catch (_) {}
   }
 }
