@@ -459,6 +459,10 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
         ? widget.movie.posterUrlList!.first
         : null;
     final showPreview = _isPreviewPlaying;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = screenWidth < 340
+        ? (screenWidth - 24)
+        : ContinueWatchMovieCard.itemWidth;
     final highlightColor = theme.brightness == Brightness.light
         ? const Color.fromARGB(255, 185, 169, 169)
         : const Color.fromARGB(255, 58, 49, 49);
@@ -556,13 +560,16 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     bool showPreview,
   ) {
     if (showPreview && _isVideoInitialized && _videoController != null) {
-      return Stack(
-        children: [
-          Positioned.fill(
-            child: Video(
-              controller: _videoController!,
-              fit: BoxFit.cover,
-              controls: null,
+      return Container(
+        color: Colors.black,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Video(
+                controller: _videoController!,
+                fit: BoxFit.contain,
+                controls: null,
+              ),
             ),
           ),
           Positioned(bottom: 5, left: 0, right: 0, child: _previewProgress()),
@@ -576,22 +583,8 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
               ),
               onPressed: _toggleMute,
             ),
-          ),
-          Positioned(
-            top: 5,
-            left: 8,
-            child: Text(
-              content.title ?? 'No Title',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: theme.canvasColor,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
+          ],
+        ),
       );
     }
 
@@ -629,15 +622,18 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
           ),
         ),
 
-        /// 🔥 CONTINUE WATCHING BAR
-        if ((widget.movie.watchedPercentage ?? 0) > 0) _watchProgressBar(theme),
-      ],
+          /// 🔥 CONTINUE WATCHING BAR
+          if ((widget.movie.watchedPercentage ?? 0) > 0)
+            _watchProgressBar(theme),
+        ],
+      ),
     );
   }
 
   Widget _buildContentSection(ThemeData theme, AppLocalizations lang) {
     final movie = widget.movie;
-
+    final title = movie.title ?? 'No Title';
+    final percentage = movie.watchedPercentage;
     final rating = movie.ratings ?? 0.0;
     final price = movie.price ?? 0;
 
@@ -719,12 +715,68 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                           color: Colors.white,
                         ),
                       ),
-                    )
-                  : _buildPriceButton(theme, lang, price),
-            ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                ],
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: theme.canvasColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text.rich(
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  TextSpan(
+                    style: TextStyle(
+                      color: theme.canvasColor.withValues(alpha: 0.7),
+                      fontSize: 12,
+                    ),
+                    children: [
+                      if (percentage != null && percentage > 0) ...[
+                        TextSpan(text: '${percentage.toInt()}% watched'),
+                        if (movie.genreList != null && movie.genreList!.isNotEmpty)
+                          const TextSpan(text: ' | '),
+                      ],
+                      if (movie.genreList != null && movie.genreList!.isNotEmpty)
+                        TextSpan(text: movie.genreList!.join(', '))
+                      else if (movie.releaseDate != null)
+                        TextSpan(text: formatReleaseDate(movie.releaseDate)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+          if (price > 0 && (percentage == null || percentage == 0)) ...[
+            const SizedBox(width: 6),
+            movie.isFeatured == true
+                ? Container(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 6, horizontal: 10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: theme.primaryColor.withValues(alpha: 0.9),
+                    ),
+                    child: const Text(
+                      "Watch Trailer",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  )
+                : _buildPriceButton(theme, lang, price),
+          ],
+        ],
+      ),
     );
   }
 
@@ -757,10 +809,10 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                   : 'Rent Series'
               : isRental
                   ? isShortFilm
-                      ? 'Watch Now'
-                      : movie.type?.toLowerCase() == "movie"
-                          ? lang.watchMovie
-                          : lang.watchSeries
+                  ? 'Watch Now'
+                  : movie.type?.toLowerCase() == "movie"
+                  ? lang.watchMovie
+                  : lang.watchSeries
                   : "₹ $price",
           style: const TextStyle(
             fontSize: 12,

@@ -1092,16 +1092,22 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                image,
+              child: Container(
                 width: 300,
                 height: 170,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                color: Colors.black,
+                child: Image.network(
+                  image,
                   width: 300,
                   height: 170,
-                  color: Colors.grey.shade900,
-                  child: const Icon(Icons.movie, color: Colors.white54),
+                  fit: BoxFit.contain,
+                  alignment: Alignment.center,
+                  errorBuilder: (_, __, ___) => Container(
+                    width: 300,
+                    height: 170,
+                    color: Colors.grey.shade900,
+                    child: const Icon(Icons.movie, color: Colors.white54),
+                  ),
                 ),
               ),
             ),

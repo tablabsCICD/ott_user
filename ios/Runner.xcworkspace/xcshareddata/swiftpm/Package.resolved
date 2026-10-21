@@ -1,4 +1,8 @@
 {
+<<<<<<< HEAD
+=======
+  "originHash" : "8113cb43d5a72883bde0ec743de1f4e2e07841d64489698724c055d1db383359",
+>>>>>>> 3d1759d (feat: bump version to 1.0.22+55, migrate lucide icons, and improve responsive movie cards)
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -136,5 +140,9 @@
       }
     }
   ],
+<<<<<<< HEAD
   "version" : 2
+=======
+  "version" : 3
+>>>>>>> 3d1759d (feat: bump version to 1.0.22+55, migrate lucide icons, and improve responsive movie cards)
 }

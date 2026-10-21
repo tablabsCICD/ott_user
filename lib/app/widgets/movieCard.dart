@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -609,40 +610,19 @@ class _MovieCardState extends State<MovieCard> {
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: isIOS ? MainAxisSize.min : MainAxisSize.max,
                   children: [
                     /// 🎬 POSTER + PROGRESS BAR STACK
-                    if (isIOS)
-                      AspectRatio(
-                        aspectRatio: 16 / 9,
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            color: Colors.black,
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(11),
-                            ),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(11),
-                            ),
-                            child: _buildMediaPreview(
-                              posterUrl,
-                              theme,
-                              widget.movie,
-                              showPreview,
-                            ),
+                    Expanded(
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(11),
                           ),
                         ),
-                      )
-                    else
-                      Expanded(
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            color: Colors.black,
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(11),
-                            ),
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(11),
                           ),
                           child: ClipRRect(
                             borderRadius: const BorderRadius.vertical(
@@ -733,8 +713,37 @@ class _MovieCardState extends State<MovieCard> {
                 controls: null,
               ),
             ),
-            Positioned(bottom: 0, left: 0, right: 0, child: _previewProgress()),
-            Positioned(right: 6, bottom: 6, child: _muteToggleButton()),
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: _previewProgress(),
+            ),
+            Positioned(
+              right: 5,
+              bottom: 5,
+              child: Semantics(
+                button: true,
+                label: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                child: Material(
+                  color: Colors.black54,
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    padding: const EdgeInsets.all(2),
+                    constraints:
+                        const BoxConstraints(minWidth: 25, minHeight: 25),
+                    iconSize: 20,
+                    tooltip: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                    icon: Icon(
+                      _isMuted ? Icons.volume_off : Icons.volume_up,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    onPressed: _toggleMute,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       );
@@ -770,7 +779,7 @@ class _MovieCardState extends State<MovieCard> {
                   errorBuilder: (_, __, ___) => Center(
                     child: Icon(
                       Icons.broken_image,
-                      color: theme.canvasColor.withValues(alpha: 0.3),
+                      color: theme.canvasColor.withOpacity(0.3),
                       size: 48,
                     ),
                   ),
@@ -778,7 +787,7 @@ class _MovieCardState extends State<MovieCard> {
               : Center(
                   child: Icon(
                     Icons.broken_image,
-                    color: theme.canvasColor.withValues(alpha: 0.3),
+                    color: theme.canvasColor.withOpacity(0.3),
                     size: 48,
                   ),
                 ),
@@ -786,183 +795,73 @@ class _MovieCardState extends State<MovieCard> {
           /// 🔥 CONTINUE WATCHING BAR
           if ((widget.movie.watchedPercentage ?? 0) > 0)
             _watchProgressBar(theme),
-
-          if (Theme.of(context).platform == TargetPlatform.iOS &&
-              widget.index == 0)
-            Positioned(
-              right: 6,
-              bottom: 6,
-              child: _muteToggleButton(),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildIosContentSection(ThemeData theme, AppLocalizations lang) {
-    final movie = widget.movie;
-    final isRental = movie.isRental ?? false;
-
-    final genreText = (movie.genreList?.isNotEmpty ?? false)
-        ? movie.genreList!.first
-        : 'Drama';
-    final dateText = formatReleaseDate(movie.releaseDate);
-    final subtitleText = '$dateText | $genreText';
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  movie.title ?? 'No Title',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitleText,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey.shade400,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => movie.type?.toLowerCase() == 'series'
-                ? _openDetails()
-                : isRental
-                    ? _playMovie()
-                    : _showCupertinoDialog(context, movie),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: theme.primaryColor,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                movie.isFeatured == true ? 'Watch Trailer' : 'Watch Now',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
   Widget _buildContentSection(ThemeData theme, AppLocalizations lang) {
-    if (Theme.of(context).platform == TargetPlatform.iOS) {
-      return _buildIosContentSection(theme, lang);
-    }
     final movie = widget.movie;
-
-    final rating = movie.ratings ?? 0.0;
     final price = movie.price ?? 0;
-
+    final dateStr = formatReleaseDate(movie.releaseDate);
+    final genreStr = (movie.genreList != null && movie.genreList!.isNotEmpty)
+        ? movie.genreList!.join(', ')
+        : 'Drama';
+    //  final metadataText = dateStr.isNotEmpty ? '$dateStr | $genreStr' : genreStr;
+    final metadataText = genreStr;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            StarRatingWidget(
-                              rating: rating,
-                            ),
-                            Text(
-                              " (${movie.ratingCount ?? 0})",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: theme.canvasColor.withValues(alpha: 0.7),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    movie.title ?? 'No Title',
+                    style: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      height: 1.15,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  movie.title ?? 'No Title',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: theme.canvasColor,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text.rich(
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  TextSpan(
-                    style: TextStyle(
-                      color: theme.canvasColor.withValues(alpha: 0.7),
-                      fontSize: 12,
+                  const SizedBox(height: 2),
+                  Text(
+                    metadataText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w500,
                     ),
-                    children: [
-                      TextSpan(text: formatReleaseDate(movie.releaseDate)),
-                      const TextSpan(text: ' | '),
-                      TextSpan(
-                        text: (movie.genreList?.isNotEmpty ?? false)
-                            ? movie.genreList!.join(', ')
-                            : 'Movie',
-                      ),
-                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           movie.isFeatured == true
               ? Container(
                   padding:
-                      const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                      const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    color: theme.primaryColor.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(6),
+                    color: const Color(0xFFE50914),
                   ),
                   child: const Text(
-                    "Watch Trailer",
+                    "Watch Now",
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11.5,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
