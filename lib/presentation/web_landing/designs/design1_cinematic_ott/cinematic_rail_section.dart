@@ -186,7 +186,8 @@ class _CinematicRailSectionState extends State<CinematicRailSection> {
                               foreground: Paint()
                                 ..style = PaintingStyle.stroke
                                 ..strokeWidth = 3
-                                ..color = colors.primaryAccent.withOpacity(0.35),
+                                ..color = colors.primaryAccent
+                                    .withValues(alpha: 0.35),
                             ),
                           ),
                         ),
@@ -248,7 +249,8 @@ class _ArrowButtonState extends State<_ArrowButton> {
     final colors = LandingThemeColors.of(context);
 
     return MouseRegion(
-      cursor: widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      cursor:
+          widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
@@ -261,11 +263,11 @@ class _ArrowButtonState extends State<_ArrowButton> {
             shape: BoxShape.circle,
             color: widget.enabled
                 ? (_hovered ? colors.primaryAccent : colors.surface)
-                : colors.surface.withOpacity(0.4),
+                : colors.surface.withValues(alpha: 0.4),
             border: Border.all(
               color: widget.enabled
                   ? (_hovered ? colors.primaryAccent : colors.border)
-                  : colors.border.withOpacity(0.3),
+                  : colors.border.withValues(alpha: 0.3),
             ),
           ),
           child: Center(
@@ -274,7 +276,7 @@ class _ArrowButtonState extends State<_ArrowButton> {
               size: 22,
               color: widget.enabled
                   ? (_hovered ? Colors.white : colors.textPrimary)
-                  : colors.textMuted.withOpacity(0.4),
+                  : colors.textMuted.withValues(alpha: 0.4),
             ),
           ),
         ),

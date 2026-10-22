@@ -33,7 +33,7 @@ class WalletRechargeSummaryDialog extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.cardColor,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: theme.primaryColor.withOpacity(0.22)),
+          border: Border.all(color: theme.primaryColor.withValues(alpha: 0.22)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -123,7 +123,7 @@ class _SummaryRow extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                color: theme.canvasColor.withOpacity(0.68),
+                color: theme.canvasColor.withValues(alpha: 0.68),
                 fontWeight: FontWeight.w600,
               ),
             ),

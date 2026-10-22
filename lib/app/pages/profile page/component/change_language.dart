@@ -138,7 +138,7 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
                         fontSize: 12,
                         color: isSelected
                             ? Colors.white70
-                            : theme.canvasColor.withOpacity(0.7),
+                            : theme.canvasColor.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -175,7 +175,7 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
             border: Border.all(
               color: isSelected
                   ? theme.primaryColor
-                  : theme.canvasColor.withOpacity(0.2),
+                  : theme.canvasColor.withValues(alpha: 0.2),
             ),
           ),
           child: Text(

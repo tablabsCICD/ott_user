@@ -121,16 +121,16 @@ class _LandingPageDesignPreviewState extends State<LandingPageDesignPreview> {
       ),
       decoration: BoxDecoration(
         color: isDark
-            ? const Color(0xFF141720).withOpacity(0.94)
-            : Colors.white.withOpacity(0.96),
+            ? const Color(0xFF141720).withValues(alpha: 0.94)
+            : Colors.white.withValues(alpha: 0.96),
         borderRadius: BorderRadius.circular(36),
         border: Border.all(
-          color: colors.primaryAccent.withOpacity(0.4),
+          color: colors.primaryAccent.withValues(alpha: 0.4),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.45),
+            color: Colors.black.withValues(alpha: 0.45),
             blurRadius: 28,
             offset: const Offset(0, 10),
           ),
@@ -142,7 +142,8 @@ class _LandingPageDesignPreviewState extends State<LandingPageDesignPreview> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.palette_rounded, color: colors.primaryAccent, size: 20),
+                  Icon(Icons.palette_rounded,
+                      color: colors.primaryAccent, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     'Preview Switcher',
@@ -153,7 +154,8 @@ class _LandingPageDesignPreviewState extends State<LandingPageDesignPreview> {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Icon(Icons.keyboard_arrow_up_rounded, color: colors.textPrimary, size: 18),
+                  Icon(Icons.keyboard_arrow_up_rounded,
+                      color: colors.textPrimary, size: 18),
                 ],
               ),
             )
@@ -165,15 +167,17 @@ class _LandingPageDesignPreviewState extends State<LandingPageDesignPreview> {
               children: [
                 // Design Label Tag
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: colors.primaryAccent.withOpacity(0.15),
+                    color: colors.primaryAccent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.layers_rounded, size: 14, color: colors.primaryAccent),
+                      Icon(Icons.layers_rounded,
+                          size: 14, color: colors.primaryAccent),
                       const SizedBox(width: 6),
                       Text(
                         'DESIGNS',
@@ -192,13 +196,13 @@ class _LandingPageDesignPreviewState extends State<LandingPageDesignPreview> {
                 _DockOptionBtn(
                   label: 'Existing',
                   isSelected: _selectedVariant == LandingDesignVariant.existing,
-                  onTap: () => setState(() =>
-                      _selectedVariant = LandingDesignVariant.existing),
+                  onTap: () => setState(
+                      () => _selectedVariant = LandingDesignVariant.existing),
                 ),
                 _DockOptionBtn(
                   label: 'Design 1 (Cinematic)',
-                  isSelected: _selectedVariant ==
-                      LandingDesignVariant.design1Cinematic,
+                  isSelected:
+                      _selectedVariant == LandingDesignVariant.design1Cinematic,
                   onTap: () => setState(() =>
                       _selectedVariant = LandingDesignVariant.design1Cinematic),
                 ),
@@ -281,19 +285,21 @@ class _DockOptionBtnState extends State<_DockOptionBtn> {
             color: widget.isSelected
                 ? colors.primaryAccent
                 : (_hovered
-                    ? colors.primaryAccent.withOpacity(0.12)
+                    ? colors.primaryAccent.withValues(alpha: 0.12)
                     : colors.surfaceElevated),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: widget.isSelected
                   ? colors.primaryAccent
-                  : (_hovered ? colors.primaryAccent.withOpacity(0.4) : colors.border),
+                  : (_hovered
+                      ? colors.primaryAccent.withValues(alpha: 0.4)
+                      : colors.border),
               width: 1.2,
             ),
             boxShadow: [
               if (widget.isSelected)
                 BoxShadow(
-                  color: colors.primaryAccent.withOpacity(0.45),
+                  color: colors.primaryAccent.withValues(alpha: 0.45),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),

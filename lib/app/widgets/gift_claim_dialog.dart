@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
@@ -59,7 +59,7 @@ Future<bool?> showGiftClaimDialog(
                   child: Icon(
                     LucideIcons.gift,
                     size: 200,
-                    color: theme.canvasColor.withOpacity(0.1),
+                    color: theme.canvasColor.withValues(alpha: 0.1),
                   ),
                 ),
                 Column(

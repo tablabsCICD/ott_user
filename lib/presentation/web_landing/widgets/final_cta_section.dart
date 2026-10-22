@@ -44,15 +44,15 @@ class FinalCtaSection extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.white.withOpacity(0.070),
-            Colors.white.withOpacity(0.032),
-            Colors.black.withOpacity(0.16),
+            Colors.white.withValues(alpha: 0.070),
+            Colors.white.withValues(alpha: 0.032),
+            Colors.black.withValues(alpha: 0.16),
           ],
         ),
-        border: Border.all(color: Colors.white.withOpacity(0.11)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.11)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.28),
+            color: Colors.black.withValues(alpha: 0.28),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),
@@ -86,7 +86,7 @@ class FinalCtaSection extends StatelessWidget {
             lang.chooseHowUseFilmytell,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.74),
+              color: Colors.white.withValues(alpha: 0.74),
               fontSize: 17,
               fontWeight: FontWeight.w600,
             ),
@@ -153,17 +153,17 @@ class _CtaCardState extends State<_CtaCard> {
           height: 230,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(_hovered ? 0.42 : 0.26),
+            color: Colors.black.withValues(alpha: _hovered ? 0.42 : 0.26),
             borderRadius: BorderRadius.circular(9),
             border: Border.all(
               color: _hovered
-                  ? widget.color.withOpacity(0.44)
-                  : Colors.white.withOpacity(0.10),
+                  ? widget.color.withValues(alpha: 0.44)
+                  : Colors.white.withValues(alpha: 0.10),
             ),
             boxShadow: [
               if (_hovered)
                 BoxShadow(
-                  color: widget.color.withOpacity(0.14),
+                  color: widget.color.withValues(alpha: 0.14),
                   blurRadius: 22,
                   offset: const Offset(0, 10),
                 ),
@@ -176,9 +176,10 @@ class _CtaCardState extends State<_CtaCard> {
                 height: 48,
                 width: 48,
                 decoration: BoxDecoration(
-                  color: widget.color.withOpacity(_hovered ? 0.24 : 0.14),
+                  color: widget.color.withValues(alpha: _hovered ? 0.24 : 0.14),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: widget.color.withOpacity(0.32)),
+                  border:
+                      Border.all(color: widget.color.withValues(alpha: 0.32)),
                 ),
                 child: Icon(widget.data.icon, color: Colors.white, size: 28),
               ),
@@ -195,7 +196,7 @@ class _CtaCardState extends State<_CtaCard> {
               Text(
                 widget.data.body,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.66),
+                  color: Colors.white.withValues(alpha: 0.66),
                   height: 1.4,
                   fontWeight: FontWeight.w600,
                 ),
@@ -209,9 +210,11 @@ class _CtaCardState extends State<_CtaCard> {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: widget.color.withOpacity(_hovered ? 0.22 : 0.14),
+                      color: widget.color
+                          .withValues(alpha: _hovered ? 0.22 : 0.14),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: widget.color.withOpacity(0.28)),
+                      border: Border.all(
+                          color: widget.color.withValues(alpha: 0.28)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,

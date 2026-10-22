@@ -45,7 +45,8 @@ class GenresSection extends StatelessWidget {
                 builder: (context, value, child) {
                   return Transform.translate(
                     offset: Offset(0, value),
-                    child: Opacity(opacity: value == 0 ? 1 : 0.65, child: child),
+                    child:
+                        Opacity(opacity: value == 0 ? 1 : 0.65, child: child),
                   );
                 },
                 child: _GenreCard(
@@ -95,15 +96,16 @@ class _GenreCardState extends State<_GenreCard> {
           borderRadius: BorderRadius.circular(8),
           gradient: LinearGradient(
             colors: [
-              widget.color.withOpacity(_hovered ? 0.72 : 0.48),
-              Colors.white.withOpacity(_hovered ? 0.13 : 0.07),
+              widget.color.withValues(alpha: _hovered ? 0.72 : 0.48),
+              Colors.white.withValues(alpha: _hovered ? 0.13 : 0.07),
             ],
           ),
-          border: Border.all(color: Colors.white.withOpacity(_hovered ? 0.22 : 0.10)),
+          border: Border.all(
+              color: Colors.white.withValues(alpha: _hovered ? 0.22 : 0.10)),
           boxShadow: [
             if (_hovered)
               BoxShadow(
-                color: widget.color.withOpacity(0.24),
+                color: widget.color.withValues(alpha: 0.24),
                 blurRadius: 24,
                 offset: const Offset(0, 12),
               ),
@@ -123,7 +125,8 @@ class _GenreCardState extends State<_GenreCard> {
                 ),
               ),
             ),
-            const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+            const Icon(Icons.arrow_forward_rounded,
+                color: Colors.white, size: 18),
           ],
         ),
       ),

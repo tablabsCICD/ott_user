@@ -95,10 +95,10 @@ class FeatureTourOverlay extends StatelessWidget {
           screenSize: screenSize,
           spotlight: spotlight,
         );
-        final tooltipLeft = ((spotlight?.center.dx ?? screenSize.width / 2) -
-                tooltipWidth / 2)
-            .clamp(16.0, screenSize.width - tooltipWidth - 16)
-            .toDouble();
+        final tooltipLeft =
+            ((spotlight?.center.dx ?? screenSize.width / 2) - tooltipWidth / 2)
+                .clamp(16.0, screenSize.width - tooltipWidth - 16)
+                .toDouble();
 
         return Semantics(
           label: '${step.title}. ${step.description}',
@@ -112,7 +112,7 @@ class FeatureTourOverlay extends StatelessWidget {
                   child: CustomPaint(
                     painter: _SpotlightPainter(
                       spotlight: spotlight,
-                      overlayColor: Colors.black.withOpacity(0.74),
+                      overlayColor: Colors.black.withValues(alpha: 0.74),
                       borderColor: theme.primaryColor,
                     ),
                   ),
@@ -126,12 +126,12 @@ class FeatureTourOverlay extends StatelessWidget {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: theme.primaryColor.withOpacity(0.95),
+                          color: theme.primaryColor.withValues(alpha: 0.95),
                           width: 2,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: theme.primaryColor.withOpacity(0.32),
+                            color: theme.primaryColor.withValues(alpha: 0.32),
                             blurRadius: 22,
                           ),
                         ],
@@ -207,7 +207,7 @@ class _TourCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: theme.cardColor,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withOpacity(0.10)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
             boxShadow: const [
               BoxShadow(
                 color: Colors.black54,
@@ -245,7 +245,7 @@ class _TourCard extends StatelessWidget {
               Text(
                 step.description,
                 style: TextStyle(
-                  color: theme.canvasColor.withOpacity(0.76),
+                  color: theme.canvasColor.withValues(alpha: 0.76),
                   fontSize: 14,
                   height: 1.42,
                 ),

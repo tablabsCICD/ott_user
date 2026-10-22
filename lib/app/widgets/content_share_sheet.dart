@@ -165,7 +165,7 @@ class _ContentShareSheetBodyState extends State<_ContentShareSheetBody> {
           /// TOGGLE TABS (Content QR / Apple Store QR)
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.08),
+              color: Colors.white.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
             ),
             padding: const EdgeInsets.all(4),

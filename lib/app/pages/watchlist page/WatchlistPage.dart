@@ -356,13 +356,13 @@ class _WatchlistPageState extends State<WatchlistPage> {
         border: Border.all(
           color: selected
               ? theme.primaryColor
-              : theme.canvasColor.withOpacity(0.6),
+              : theme.canvasColor.withValues(alpha: 0.6),
         ),
 
         boxShadow: selected
             ? [
                 BoxShadow(
-                  color: theme.primaryColor.withOpacity(0.25),
+                  color: theme.primaryColor.withValues(alpha: 0.25),
                   blurRadius: 8,
                   offset: const Offset(0, 3),
                 )
@@ -521,7 +521,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
           if (content.active == false)
             Positioned.fill(
               child: Container(
-                color: Colors.black.withOpacity(0.55),
+                color: Colors.black.withValues(alpha: 0.55),
                 alignment: Alignment.center,
                 child: const Text(
                   "Expired",
@@ -711,7 +711,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
         if (showSegmentedToggle) _segmentedToggle(theme),
         const Spacer(),
         Icon(Icons.video_library_outlined,
-            size: 80, color: theme.canvasColor.withOpacity(0.6)),
+            size: 80, color: theme.canvasColor.withValues(alpha: 0.6)),
         const SizedBox(height: 12),
         Text(
           emptyTitle,

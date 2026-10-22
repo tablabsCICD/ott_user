@@ -114,8 +114,7 @@ class _LanguageDropdownState extends State<LanguageDropdown> {
                   entry.value,
                   style: TextStyle(
                     color: theme.canvasColor,
-                    fontWeight:
-                        selected ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
               ],
@@ -135,7 +134,7 @@ class _LanguageDropdownState extends State<LanguageDropdown> {
           color: widget.backgroundColor ?? Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: widget.showSelectedLabel
-              ? Border.all(color: color.withOpacity(0.24))
+              ? Border.all(color: color.withValues(alpha: 0.24))
               : null,
         ),
         child: Row(

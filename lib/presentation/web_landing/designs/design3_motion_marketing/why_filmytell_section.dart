@@ -16,25 +16,29 @@ class WhyFilmytellSection extends StatelessWidget {
       _PillarData(
         icon: Icons.movie_filter_rounded,
         title: 'Handpicked Regional & Indie Gems',
-        desc: 'Discover powerful untold stories, festival-winning cinema, and breakout regional talents you won’t find on mainstream OTTs.',
+        desc:
+            'Discover powerful untold stories, festival-winning cinema, and breakout regional talents you won’t find on mainstream OTTs.',
         tag: 'EXCLUSIVE TITLES',
       ),
       _PillarData(
         icon: Icons.hd_rounded,
         title: 'Pristine 4K HDR & Spatial Sound',
-        desc: 'Every title is encoded with dynamic bitrate algorithms to deliver cinema-grade clarity and Dolby Atmos audio even on modest connections.',
+        desc:
+            'Every title is encoded with dynamic bitrate algorithms to deliver cinema-grade clarity and Dolby Atmos audio even on modest connections.',
         tag: 'MASTER AUDIO/VISUAL',
       ),
       _PillarData(
         icon: Icons.workspace_premium_rounded,
         title: 'Direct Creator Empowerment',
-        desc: 'We share transparent revenue with indie filmmakers and production houses, fueling the next generation of cinematic storytellers.',
+        desc:
+            'We share transparent revenue with indie filmmakers and production houses, fueling the next generation of cinematic storytellers.',
         tag: 'ETHICAL STREAMING',
       ),
       _PillarData(
         icon: Icons.lock_open_rounded,
         title: 'Pure Freedom, Zero Lock-In',
-        desc: 'Flexible pay-per-view and subscription plans. No hidden lock-in contracts, cancel anytime with a single click.',
+        desc:
+            'Flexible pay-per-view and subscription plans. No hidden lock-in contracts, cancel anytime with a single click.',
         tag: 'USER FIRST',
       ),
     ];
@@ -51,7 +55,7 @@ class WhyFilmytellSection extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
-              color: colors.primaryAccent.withOpacity(0.12),
+              color: colors.primaryAccent.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
@@ -154,14 +158,14 @@ class _PillarCardState extends State<_PillarCard> {
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: _hovered
-                ? colors.primaryAccent.withOpacity(0.7)
+                ? colors.primaryAccent.withValues(alpha: 0.7)
                 : colors.border,
             width: _hovered ? 1.6 : 1.0,
           ),
           boxShadow: [
             if (_hovered)
               BoxShadow(
-                color: colors.primaryAccent.withOpacity(0.18),
+                color: colors.primaryAccent.withValues(alpha: 0.18),
                 blurRadius: 20,
                 offset: const Offset(0, 6),
               ),
@@ -174,7 +178,7 @@ class _PillarCardState extends State<_PillarCard> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: colors.primaryAccent.withOpacity(0.12),
+                color: colors.primaryAccent.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(

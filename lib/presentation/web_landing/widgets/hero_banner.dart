@@ -103,9 +103,9 @@ class _HeroBannerState extends State<HeroBanner> {
                   end: Alignment.centerRight,
                   colors: [
                     Colors.black,
-                    Colors.black.withOpacity(0.82),
-                    Colors.black.withOpacity(0.42),
-                    Colors.black.withOpacity(0.78),
+                    Colors.black.withValues(alpha: 0.82),
+                    Colors.black.withValues(alpha: 0.42),
+                    Colors.black.withValues(alpha: 0.78),
                   ],
                 ),
               ),
@@ -116,7 +116,7 @@ class _HeroBannerState extends State<HeroBanner> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.12),
+                    Colors.black.withValues(alpha: 0.12),
                     Colors.transparent,
                     Colors.black,
                   ],
@@ -338,7 +338,7 @@ class _HeroDescriptionState extends State<_HeroDescription> {
             maxLines: _expanded ? null : 3,
             overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.82),
+              color: Colors.white.withValues(alpha: 0.82),
               fontSize: 17,
               height: 1.55,
               fontWeight: FontWeight.w500,
@@ -401,12 +401,12 @@ class _HeroMoviePrice extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.36),
+        color: Colors.black.withValues(alpha: 0.36),
         borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: color.withOpacity(0.42)),
+        border: Border.all(color: color.withValues(alpha: 0.42)),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.13),
+            color: color.withValues(alpha: 0.13),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -509,7 +509,7 @@ class _FloatingPosterState extends State<_FloatingPoster> {
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.42),
+                color: Colors.black.withValues(alpha: 0.42),
                 blurRadius: 22,
                 offset: const Offset(0, 14),
               ),
@@ -552,7 +552,7 @@ class _MetaBadge extends StatelessWidget {
       margin: const EdgeInsets.only(right: 10),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
+        color: Colors.white.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -577,14 +577,14 @@ class _GenreChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.10),
+        color: Colors.white.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withOpacity(0.14)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: Colors.white.withOpacity(0.88),
+          color: Colors.white.withValues(alpha: 0.88),
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -604,7 +604,7 @@ class _HeroFallback extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             Colors.black,
-            theme.primaryColor.withOpacity(0.30),
+            theme.primaryColor.withValues(alpha: 0.30),
             Colors.black,
           ],
         ),

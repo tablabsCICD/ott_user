@@ -1,6 +1,5 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
@@ -62,6 +61,7 @@ class PlayMediaProvider extends BaseProvider {
     int? episodeId,
     required Duration position,
     required Duration duration,
+    bool force = false,
   }) async {
     try {
       if (duration.inSeconds == 0) {
@@ -79,10 +79,10 @@ class PlayMediaProvider extends BaseProvider {
       final currentSeconds = position.inSeconds;
       final lastSaved = _lastSavedSecondsMap[key] ?? 0;
 
-      /// ❌ DO NOT SPAM API
-      if ((currentSeconds - lastSaved) < 5) return;
+      /// ❌ DO NOT SPAM API (check absolute difference so rewinding still saves)
+      if (!force && (currentSeconds - lastSaved).abs() < 5) return;
 
-      // 🔥 SAVE LOCALLY (THIS FIXES YOUR BUG)
+      // 🔥 SAVE LOCALLY
       _resumeSecondsMap[key] = currentSeconds;
       _lastSavedSecondsMap[key] = currentSeconds;
 
@@ -107,6 +107,7 @@ class PlayMediaProvider extends BaseProvider {
       });
 
       final response = await ApiHelper().postApi(uri.toString());
+      debugPrint("Save continue watching response: ${response.statusCode}");
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return;
       }

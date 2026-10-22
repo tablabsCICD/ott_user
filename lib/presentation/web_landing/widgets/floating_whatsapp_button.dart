@@ -123,7 +123,7 @@ class _FloatingWhatsAppButtonState extends State<FloatingWhatsAppButton>
                                 borderRadius: BorderRadius.circular(999),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.22),
+                                    color: Colors.black.withValues(alpha: 0.22),
                                     blurRadius: 18,
                                     offset: const Offset(0, 8),
                                   ),
@@ -149,8 +149,8 @@ class _FloatingWhatsAppButtonState extends State<FloatingWhatsAppButton>
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF25D366).withOpacity(
-                                  _hovering ? 0.46 : 0.32,
+                                color: const Color(0xFF25D366).withValues(
+                                  alpha: _hovering ? 0.46 : 0.32,
                                 ),
                                 blurRadius: _hovering ? 24 : 18,
                                 offset: const Offset(0, 9),

@@ -75,15 +75,15 @@ class ProductionHouseSection extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.white.withOpacity(0.070),
-            Colors.white.withOpacity(0.032),
-            Colors.black.withOpacity(0.16),
+            Colors.white.withValues(alpha: 0.070),
+            Colors.white.withValues(alpha: 0.032),
+            Colors.black.withValues(alpha: 0.16),
           ],
         ),
-        border: Border.all(color: Colors.white.withOpacity(0.11)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.11)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.28),
+            color: Colors.black.withValues(alpha: 0.28),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),
@@ -119,7 +119,7 @@ class ProductionHouseSection extends StatelessWidget {
                 Text(
                   lang.productionHouseDescription,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.68),
+                    color: Colors.white.withValues(alpha: 0.68),
                     fontSize: 17,
                     fontWeight: FontWeight.w600,
                   ),
@@ -154,7 +154,8 @@ class ProductionHouseSection extends StatelessWidget {
                       onPressed: onLearnMore,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        side: BorderSide(color: Colors.white.withOpacity(0.30)),
+                        side: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.30)),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 24, vertical: 17),
                         shape: RoundedRectangleBorder(
@@ -325,9 +326,9 @@ Submitted At: $submittedAt''';
       hintText: hint,
       errorText: errorText,
       filled: true,
-      fillColor: Colors.black.withOpacity(0.28),
+      fillColor: Colors.black.withValues(alpha: 0.28),
       hintStyle: TextStyle(
-        color: Colors.white.withOpacity(0.45),
+        color: Colors.white.withValues(alpha: 0.45),
         fontSize: 13,
         fontWeight: FontWeight.w600,
       ),
@@ -335,11 +336,11 @@ Submitted At: $submittedAt''';
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: const BorderRadius.all(Radius.circular(8)),
@@ -400,18 +401,18 @@ Submitted At: $submittedAt''';
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              const Color(0xFF151515).withOpacity(_hovered ? 0.94 : 0.86),
-              const Color(0xFF0D0D0D).withOpacity(_hovered ? 0.96 : 0.90),
+              const Color(0xFF151515).withValues(alpha: _hovered ? 0.94 : 0.86),
+              const Color(0xFF0D0D0D).withValues(alpha: _hovered ? 0.96 : 0.90),
             ],
           ),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: theme.primaryColor.withOpacity(_hovered ? 0.48 : 0.24),
+            color: theme.primaryColor.withValues(alpha: _hovered ? 0.48 : 0.24),
           ),
           boxShadow: [
             if (_hovered)
               BoxShadow(
-                color: theme.primaryColor.withOpacity(0.13),
+                color: theme.primaryColor.withValues(alpha: 0.13),
                 blurRadius: 22,
                 offset: const Offset(0, 10),
               ),
@@ -428,10 +429,10 @@ Submitted At: $submittedAt''';
                     width: 30,
                     height: 30,
                     decoration: BoxDecoration(
-                      color: theme.primaryColor.withOpacity(0.18),
+                      color: theme.primaryColor.withValues(alpha: 0.18),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: theme.primaryColor.withOpacity(0.48),
+                        color: theme.primaryColor.withValues(alpha: 0.48),
                       ),
                     ),
                     alignment: Alignment.center,
@@ -500,7 +501,7 @@ Submitted At: $submittedAt''';
                       backgroundColor: theme.primaryColor,
                       foregroundColor: Colors.white,
                       disabledBackgroundColor:
-                          theme.primaryColor.withOpacity(0.55),
+                          theme.primaryColor.withValues(alpha: 0.55),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 18,
                         vertical: 14,
@@ -582,7 +583,7 @@ class _TimelineRowState extends State<_TimelineRow> {
                       : Container(
                           height: rowGap,
                           width: 1,
-                          color: Colors.white.withOpacity(0.14),
+                          color: Colors.white.withValues(alpha: 0.14),
                         ),
                 ),
                 Positioned(
@@ -594,9 +595,10 @@ class _TimelineRowState extends State<_TimelineRow> {
                     decoration: BoxDecoration(
                       color: _hovered
                           ? widget.color
-                          : Colors.white.withOpacity(0.10),
+                          : Colors.white.withValues(alpha: 0.10),
                       shape: BoxShape.circle,
-                      border: Border.all(color: widget.color.withOpacity(0.55)),
+                      border: Border.all(
+                          color: widget.color.withValues(alpha: 0.55)),
                     ),
                     child: Center(
                       child: Text(
@@ -620,10 +622,11 @@ class _TimelineRowState extends State<_TimelineRow> {
               margin: EdgeInsets.only(bottom: widget.isLast ? 0 : rowGap),
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(_hovered ? 0.42 : 0.26),
+                color: Colors.black.withValues(alpha: _hovered ? 0.42 : 0.26),
                 borderRadius: BorderRadius.circular(9),
                 border: Border.all(
-                    color: Colors.white.withOpacity(_hovered ? 0.18 : 0.08)),
+                    color:
+                        Colors.white.withValues(alpha: _hovered ? 0.18 : 0.08)),
               ),
               child: Text(
                 widget.label,
@@ -650,14 +653,14 @@ class _ModuleBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.30),
+        color: Colors.black.withValues(alpha: 0.30),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.28)),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: Colors.white.withOpacity(0.82),
+          color: Colors.white.withValues(alpha: 0.82),
           fontSize: 12,
           fontWeight: FontWeight.w800,
         ),

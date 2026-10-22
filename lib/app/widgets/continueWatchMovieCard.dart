@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
@@ -20,6 +20,7 @@ import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/userProvider.dart';
+import 'package:ott/app/provider/playMediaProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -307,8 +308,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     if (!widget.enableTrailerPreview) return;
 
     final activeIndex = widget.activeIndexListenable?.value;
-    final shouldAutoPlay =
-        _isAutoPlayDevice &&
+    final shouldAutoPlay = _isAutoPlayDevice &&
         widget.index != null &&
         activeIndex != null &&
         activeIndex == widget.index;
@@ -572,7 +572,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
             child: IconButton(
               icon: Icon(
                 _isMuted ? Icons.volume_off : Icons.volume_up,
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
               ),
               onPressed: _toggleMute,
             ),
@@ -605,13 +605,13 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                 height: double.infinity,
                 errorBuilder: (_, __, ___) => Icon(
                   Icons.broken_image,
-                  color: theme.canvasColor.withOpacity(0.3),
+                  color: theme.canvasColor.withValues(alpha: 0.3),
                   size: 40,
                 ),
               )
             : Icon(
                 Icons.broken_image,
-                color: theme.canvasColor.withOpacity(0.3),
+                color: theme.canvasColor.withValues(alpha: 0.3),
                 size: 40,
               ),
         Positioned(
@@ -655,7 +655,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                     " (${movie.ratingCount ?? 0})",
                     style: TextStyle(
                       fontSize: 12,
-                      color: theme.canvasColor.withOpacity(0.7),
+                      color: theme.canvasColor.withValues(alpha: 0.7),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -679,7 +679,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                 overflow: TextOverflow.ellipsis,
                 TextSpan(
                   style: TextStyle(
-                    color: theme.canvasColor.withOpacity(0.7),
+                    color: theme.canvasColor.withValues(alpha: 0.7),
                     fontSize: 12,
                   ),
                   children: [
@@ -709,7 +709,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                       ),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
-                        color: theme.primaryColor.withOpacity(0.9),
+                        color: theme.primaryColor.withValues(alpha: 0.9),
                       ),
                       child: Text(
                         "Watch Trailer",
@@ -735,34 +735,33 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   ) {
     final movie = widget.movie;
     final isRental = movie.isRental ?? false;
-    final isShortFilm =
-        widget.isShortFilmTab ||
+    final isShortFilm = widget.isShortFilmTab ||
         ContentType.normalize(movie.type) == ContentType.shortFilm;
 
     return GestureDetector(
       onTap: () => movie.type!.toLowerCase() == 'series'
           ? _openDetails()
           : isRental
-          ? _playMovie()
-          : _showCupertinoDialog(context, movie),
+              ? _playMovie()
+              : _showCupertinoDialog(context, movie),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
-          color: theme.primaryColor.withOpacity(0.9),
+          color: theme.primaryColor.withValues(alpha: 0.9),
         ),
         child: Text(
           movie.type!.toLowerCase() == 'series'
               ? isRental
-                    ? (isShortFilm ? 'Watch Now' : 'Watch Series')
-                    : 'Rent Series'
+                  ? (isShortFilm ? 'Watch Now' : 'Watch Series')
+                  : 'Rent Series'
               : isRental
-              ? isShortFilm
-                    ? 'Watch Now'
-                    : movie.type?.toLowerCase() == "movie"
-                    ? lang.watchMovie
-                    : lang.watchSeries
-              : "₹ $price",
+                  ? isShortFilm
+                      ? 'Watch Now'
+                      : movie.type?.toLowerCase() == "movie"
+                          ? lang.watchMovie
+                          : lang.watchSeries
+                  : "₹ $price",
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
@@ -791,10 +790,17 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                   content: movie,
                 )
               : ContentType.isMovieLike(movie.type)
-              ? MovieDetailsPage(movieId: movie.id!, contentType: movie.type)
-              : SeriesDetailsPage(seriesId: movie.id!, content: movie),
+                  ? MovieDetailsPage(
+                      movieId: movie.id!, contentType: movie.type)
+                  : SeriesDetailsPage(seriesId: movie.id!, content: movie),
         ),
-      );
+      ).then((_) {
+        if (!mounted) return;
+        context.read<DashboardProvider>().getContinueWatchedMovieList(
+              movie.type ?? "SERIES",
+              forceRefresh: true,
+            );
+      });
     }
   }
 
@@ -821,17 +827,32 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     final movie = widget.movie;
     if (movie.id == null) return;
 
+    if (!ContentType.isMovieLike(movie.type)) {
+      _openDetails();
+      return;
+    }
+
     Content contentToPlay = movie;
     var contentUrl = contentToPlay.contentUrl;
 
+    final localResumeSeconds = context.read<PlayMediaProvider>().getLocalResume(
+          contentId: movie.id!,
+          seasonId: movie.seasonId,
+          episodeId: movie.episodeId,
+        );
+    final latestResumeSeconds = (movie.watchedSeconds ?? 0) > localResumeSeconds
+        ? movie.watchedSeconds ?? 0
+        : localResumeSeconds;
+
     if (contentUrl == null || contentUrl.trim().isEmpty) {
-      final fetchedContent = await context
-          .read<DashboardProvider>()
-          .getContentById(movie.id!);
+      final fetchedContent =
+          await context.read<DashboardProvider>().getContentById(movie.id!);
       if (!mounted) return;
 
       if (fetchedContent != null) {
-        fetchedContent.watchedSeconds ??= movie.watchedSeconds;
+        if ((fetchedContent.watchedSeconds ?? 0) < latestResumeSeconds) {
+          fetchedContent.watchedSeconds = latestResumeSeconds;
+        }
         fetchedContent.watchedPercentage ??= movie.watchedPercentage;
         fetchedContent.seasonId ??= movie.seasonId;
         fetchedContent.episodeId ??= movie.episodeId;
@@ -839,6 +860,11 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
         contentUrl = contentToPlay.contentUrl;
       }
     }
+
+    if ((contentToPlay.watchedSeconds ?? 0) < latestResumeSeconds) {
+      contentToPlay.watchedSeconds = latestResumeSeconds;
+    }
+    contentToPlay.watchedPercentage ??= movie.watchedPercentage;
 
     if (contentUrl == null || contentUrl.trim().isEmpty) {
       CustomToast.show(context, "Video is not available", isSuccess: false);
@@ -861,8 +887,9 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     ).then((_) {
       if (!mounted) return;
       context.read<DashboardProvider>().getContinueWatchedMovieList(
-        contentToPlay.type ?? "MOVIE",
-      );
+            contentToPlay.type ?? "MOVIE",
+            forceRefresh: true,
+          );
     });
   }
 
@@ -988,8 +1015,8 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                   ),
                   backgroundColor: theme.primaryColor,
                   onTap: () async {
-                    final bool wasBookmarked = bookmarkProvider
-                        .isBookmarkedLocally(movie.id ?? 0);
+                    final bool wasBookmarked =
+                        bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
 
                     await bookmarkProvider.toggleBookmark(movie);
 
@@ -1044,15 +1071,14 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     final shareLink = movie.id == null
         ? (movie.trailerUrl ?? '')
         : DeepLinkService.instance
-              .buildAppLink(
-                type: ContentType.normalize(movie.type) == ContentType.shortFilm
-                    ? DeepLinkContentType.shortFilm
-                    : DeepLinkContentType.movie,
-                id: movie.id!,
-              )
-              .toString();
-    final String shareText =
-        '''
+            .buildAppLink(
+              type: ContentType.normalize(movie.type) == ContentType.shortFilm
+                  ? DeepLinkContentType.shortFilm
+                  : DeepLinkContentType.movie,
+              id: movie.id!,
+            )
+            .toString();
+    final String shareText = '''
 🎬 ${movie.title ?? ''}
 
 ${movie.description ?? ''}
@@ -1062,7 +1088,7 @@ $shareLink
 
 📲 Download Filmytell App now!
 '''
-            .trim();
+        .trim();
 
     if (kIsWeb) {
       // Flutter Web fallback → Copy to Clipboard
@@ -1124,7 +1150,7 @@ $shareLink
                     "How many people do you want to gift this movie to?",
                     style: TextStyle(
                       fontSize: 13,
-                      color: theme.canvasColor.withOpacity(0.7),
+                      color: theme.canvasColor.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 10),

@@ -604,19 +604,19 @@ Submitted At: $submittedAt''';
       labelText: label,
       hintText: hint,
       filled: true,
-      fillColor: Colors.white.withOpacity(0.055),
+      fillColor: Colors.white.withValues(alpha: 0.055),
       labelStyle: TextStyle(
-        color: Colors.white.withOpacity(0.64),
+        color: Colors.white.withValues(alpha: 0.64),
         fontWeight: FontWeight.w700,
       ),
       hintStyle: TextStyle(
-        color: Colors.white.withOpacity(0.34),
+        color: Colors.white.withValues(alpha: 0.34),
         fontWeight: FontWeight.w600,
       ),
       errorStyle: const TextStyle(fontWeight: FontWeight.w700),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
@@ -671,10 +671,10 @@ Submitted At: $submittedAt''';
             decoration: BoxDecoration(
               color: const Color(0xFF101010),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.10)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.55),
+                  color: Colors.black.withValues(alpha: 0.55),
                   blurRadius: 32,
                   offset: const Offset(0, 18),
                 ),
@@ -692,7 +692,7 @@ Submitted At: $submittedAt''';
                         height: 44,
                         width: 44,
                         decoration: BoxDecoration(
-                          color: theme.primaryColor.withOpacity(0.14),
+                          color: theme.primaryColor.withValues(alpha: 0.14),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
@@ -717,7 +717,7 @@ Submitted At: $submittedAt''';
                             _sending ? null : () => Navigator.pop(context),
                         icon: Icon(
                           Icons.close_rounded,
-                          color: Colors.white.withOpacity(0.72),
+                          color: Colors.white.withValues(alpha: 0.72),
                         ),
                       ),
                     ],
@@ -726,7 +726,7 @@ Submitted At: $submittedAt''';
                   Text(
                     'Send us your message and our support team will get back to you.',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.64),
+                      color: Colors.white.withValues(alpha: 0.64),
                       height: 1.45,
                       fontWeight: FontWeight.w600,
                     ),
@@ -885,9 +885,9 @@ class _LatestContentStatus extends StatelessWidget {
             height: 150,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.055),
+              color: Colors.white.withValues(alpha: 0.055),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.white.withOpacity(0.10)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
             ),
             child: Center(
               child: isLoading
@@ -895,7 +895,7 @@ class _LatestContentStatus extends StatelessWidget {
                   : Text(
                       'No content found',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.70),
+                        color: Colors.white.withValues(alpha: 0.70),
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -935,14 +935,14 @@ class _LandingError extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.08),
+          color: Colors.white.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white.withOpacity(0.12)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
         ),
         child: Text(
           message,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.72),
+            color: Colors.white.withValues(alpha: 0.72),
             fontWeight: FontWeight.w700,
           ),
         ),

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
 
-import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
@@ -40,8 +39,8 @@ class SeriesPurchaseResult {
 
     return SeriesPurchaseResult(
       success: json['success'] == true || json['isSuccess'] == true,
-      message: (data['message'] ?? json['message'] ?? 'Purchase failed')
-          .toString(),
+      message:
+          (data['message'] ?? json['message'] ?? 'Purchase failed').toString(),
       coinsDeducted: _asInt(data['coinsDeducted']),
       newBalance: _asInt(data['newBalance']),
       seriesId: _asInt(data['seriesId']),

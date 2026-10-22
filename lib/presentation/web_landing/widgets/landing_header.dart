@@ -38,16 +38,18 @@ class LandingHeader extends StatelessWidget {
       duration: const Duration(milliseconds: 260),
       height: 84,
       decoration: BoxDecoration(
-        color: scrolled ? Colors.black.withOpacity(0.72) : Colors.transparent,
+        color: scrolled
+            ? Colors.black.withValues(alpha: 0.72)
+            : Colors.transparent,
         border: Border(
           bottom: BorderSide(
-            color: Colors.white.withOpacity(scrolled ? 0.10 : 0),
+            color: Colors.white.withValues(alpha: scrolled ? 0.10 : 0),
           ),
         ),
         boxShadow: [
           if (scrolled)
             BoxShadow(
-              color: Colors.black.withOpacity(0.35),
+              color: Colors.black.withValues(alpha: 0.35),
               blurRadius: 24,
               offset: const Offset(0, 12),
             ),
@@ -99,7 +101,7 @@ class LandingHeader extends StatelessWidget {
                   LanguageDropdown(
                     showSelectedLabel: showLanguageLabel,
                     foregroundColor: Colors.white,
-                    backgroundColor: Colors.white.withOpacity(0.08),
+                    backgroundColor: Colors.white.withValues(alpha: 0.08),
                     constraints: const BoxConstraints.tightFor(
                       height: headerControlHeight,
                     ),
@@ -167,14 +169,17 @@ class _HeaderNavItemState extends State<_HeaderNavItem> {
           margin: const EdgeInsets.only(right: 6),
           padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
           decoration: BoxDecoration(
-            color:
-                _hovered ? Colors.white.withOpacity(0.10) : Colors.transparent,
+            color: _hovered
+                ? Colors.white.withValues(alpha: 0.10)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
             widget.label,
             style: TextStyle(
-              color: _hovered ? Colors.white : Colors.white.withOpacity(0.78),
+              color: _hovered
+                  ? Colors.white
+                  : Colors.white.withValues(alpha: 0.78),
               fontSize: 14,
               fontWeight: FontWeight.w700,
               letterSpacing: 0,
@@ -220,8 +225,8 @@ class _IconCircleState extends State<_IconCircle> {
           width: 42,
           decoration: BoxDecoration(
             color: _hovered
-                ? Colors.white.withOpacity(0.16)
-                : Colors.white.withOpacity(0.08),
+                ? Colors.white.withValues(alpha: 0.16)
+                : Colors.white.withValues(alpha: 0.08),
             shape: BoxShape.circle,
           ),
           child: Icon(widget.icon, color: Colors.white, size: 21),

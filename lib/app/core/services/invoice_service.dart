@@ -491,7 +491,7 @@ class _ShareActionTile extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
-        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+        backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
         child: Icon(
           icon,
           color: Theme.of(context).primaryColor,

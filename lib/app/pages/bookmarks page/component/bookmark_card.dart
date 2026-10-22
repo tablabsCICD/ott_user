@@ -85,7 +85,7 @@ class BookmarkPosterCard extends StatelessWidget {
                   " (${movie.ratingCount ?? 0})",
                   style: TextStyle(
                     fontSize: 12,
-                    color: theme.canvasColor.withOpacity(0.7),
+                    color: theme.canvasColor.withValues(alpha: 0.7),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -190,7 +190,7 @@ class ShortBookmarkPosterCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 gradient: LinearGradient(
                   colors: [
-                    Colors.black.withOpacity(0.55),
+                    Colors.black.withValues(alpha: 0.55),
                     Colors.transparent,
                   ],
                   begin: Alignment.bottomCenter,
@@ -237,7 +237,7 @@ class ShortBookmarkPosterCard extends StatelessWidget {
                     Shadow(
                       offset: Offset(2, 2), // x, y
                       blurRadius: 4,
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withValues(alpha: 0.3),
                     ),
                   ],
                 ),

@@ -19,10 +19,12 @@ class ShimmerLoader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final baseColor =
-        isDark ? Colors.grey.withOpacity(0.35) : Colors.grey.withOpacity(0.2);
-    final highlightColor =
-        isDark ? Colors.grey.withOpacity(0.55) : Colors.grey.withOpacity(0.4);
+    final baseColor = isDark
+        ? Colors.grey.withValues(alpha: 0.35)
+        : Colors.grey.withValues(alpha: 0.2);
+    final highlightColor = isDark
+        ? Colors.grey.withValues(alpha: 0.55)
+        : Colors.grey.withValues(alpha: 0.4);
 
     return Shimmer.fromColors(
       baseColor: baseColor,

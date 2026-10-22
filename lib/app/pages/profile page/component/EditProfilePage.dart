@@ -152,7 +152,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           Positioned.fill(
                             child: DecoratedBox(
                               decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.35),
+                                color: Colors.black.withValues(alpha: 0.35),
                                 shape: BoxShape.circle,
                               ),
                               child: const Center(
@@ -233,52 +233,55 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       onPressed: userProvider.isUploading
                           ? null
                           : () async {
-                        if (userProvider.profileController.text.isEmpty) {
-                          userProvider.profileController.text =
-                              userProvider.userObj.profilePhoto ?? '';
-                        }
-                        if (userProvider.emailController.text.isEmpty) {
-                          userProvider.emailController.text =
-                              userProvider.userObj.emailId ?? '';
-                        }
-                        if (userProvider.firstNameController.text.isEmpty) {
-                          userProvider.firstNameController.text =
-                              userProvider.userObj.firstName ?? '';
-                        }
-                        if (userProvider.lastNameController.text.isEmpty) {
-                          userProvider.lastNameController.text =
-                              userProvider.userObj.lastName ?? '';
-                        }
-                        if (userProvider.mobileController.text.isEmpty) {
-                          userProvider.mobileController.text =
-                              userProvider.userObj.mobileNumber ?? '';
-                        }
-                        if (userProvider.dobController.text.isEmpty) {
-                          userProvider.dobController.text =
-                              userProvider.userObj.dob ?? '';
-                        }
-                        if (!_formKey.currentState!.validate()) return;
-                        var result = await userProvider.updateUser();
-                        if (!mounted) return;
-                        if (result['success'] == true) {
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setBool('isLoggedIn', true);
-                          if (!mounted) return;
+                              if (userProvider.profileController.text.isEmpty) {
+                                userProvider.profileController.text =
+                                    userProvider.userObj.profilePhoto ?? '';
+                              }
+                              if (userProvider.emailController.text.isEmpty) {
+                                userProvider.emailController.text =
+                                    userProvider.userObj.emailId ?? '';
+                              }
+                              if (userProvider
+                                  .firstNameController.text.isEmpty) {
+                                userProvider.firstNameController.text =
+                                    userProvider.userObj.firstName ?? '';
+                              }
+                              if (userProvider
+                                  .lastNameController.text.isEmpty) {
+                                userProvider.lastNameController.text =
+                                    userProvider.userObj.lastName ?? '';
+                              }
+                              if (userProvider.mobileController.text.isEmpty) {
+                                userProvider.mobileController.text =
+                                    userProvider.userObj.mobileNumber ?? '';
+                              }
+                              if (userProvider.dobController.text.isEmpty) {
+                                userProvider.dobController.text =
+                                    userProvider.userObj.dob ?? '';
+                              }
+                              if (!_formKey.currentState!.validate()) return;
+                              var result = await userProvider.updateUser();
+                              if (!mounted) return;
+                              if (result['success'] == true) {
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+                                await prefs.setBool('isLoggedIn', true);
+                                if (!mounted) return;
 
-                          CustomToast.show(
-                            context,
-                            "Profile updated successfully!",
-                            isSuccess: true,
-                          );
-                          Navigator.of(context).pop();
-                        } else {
-                          CustomToast.show(
-                            context,
-                            'Failure: ${result['message']}',
-                            isSuccess: false,
-                          );
-                        }
-                      },
+                                CustomToast.show(
+                                  context,
+                                  "Profile updated successfully!",
+                                  isSuccess: true,
+                                );
+                                Navigator.of(context).pop();
+                              } else {
+                                CustomToast.show(
+                                  context,
+                                  'Failure: ${result['message']}',
+                                  isSuccess: false,
+                                );
+                              }
+                            },
                       child: const Center(
                         child: Text(
                           "Save",

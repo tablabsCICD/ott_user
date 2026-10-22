@@ -246,8 +246,8 @@ class _NavigationPageState extends State<NavigationPage> {
                         ),
                         child: CircleAvatar(
                           radius: 12,
-                          backgroundColor:
-                              selectedThemeData.primaryColor.withOpacity(0.5),
+                          backgroundColor: selectedThemeData.primaryColor
+                              .withValues(alpha: 0.5),
                           child: ClipOval(
                             child: profilePhotoUrl.isEmpty
                                 ? Image.asset(
@@ -360,7 +360,7 @@ class _NavigationPageState extends State<NavigationPage> {
           content: Text(
             'Are you sure you want to close the app?',
             style: TextStyle(
-              color: theme.canvasColor.withOpacity(0.75),
+              color: theme.canvasColor.withValues(alpha: 0.75),
             ),
           ),
           actions: [

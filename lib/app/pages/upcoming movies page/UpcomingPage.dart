@@ -227,7 +227,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.upcoming_outlined,
-              size: 80, color: theme.canvasColor.withOpacity(0.6)),
+              size: 80, color: theme.canvasColor.withValues(alpha: 0.6)),
           const SizedBox(height: 12),
           Text(
             "No upcoming content",

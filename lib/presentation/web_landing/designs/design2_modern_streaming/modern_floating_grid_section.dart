@@ -44,11 +44,7 @@ class _ModernFloatingGridSectionState extends State<ModernFloatingGridSection> {
     // Calculate grid columns dynamically
     final crossAxisCount = screenWidth > 1400
         ? 5
-        : (screenWidth > 1100
-            ? 4
-            : (screenWidth > 768
-                ? 3
-                : 2));
+        : (screenWidth > 1100 ? 4 : (screenWidth > 768 ? 3 : 2));
 
     final displayItems = _filterItems(widget.items, widget.selectedCategory);
 
@@ -109,19 +105,19 @@ class _ModernFloatingGridSectionState extends State<ModernFloatingGridSection> {
                     backgroundColor: colors.surface,
                     labelStyle: TextStyle(
                       color: isSelected ? Colors.white : colors.textSecondary,
-                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                      fontWeight:
+                          isSelected ? FontWeight.w800 : FontWeight.w600,
                       fontSize: 13,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
                       side: BorderSide(
-                        color: isSelected
-                            ? colors.primaryAccent
-                            : colors.border,
+                        color:
+                            isSelected ? colors.primaryAccent : colors.border,
                       ),
                     ),
                     elevation: isSelected ? 4 : 0,
-                    shadowColor: colors.primaryAccent.withOpacity(0.4),
+                    shadowColor: colors.primaryAccent.withValues(alpha: 0.4),
                   ),
                 );
               }).toList(),
@@ -180,9 +176,7 @@ class _ModernFloatingGridSectionState extends State<ModernFloatingGridSection> {
   List<Content> _filterItems(List<Content> all, String category) {
     if (category == 'All') return all;
     if (category == 'Movies') {
-      return all
-          .where((i) => (i.type ?? '').toUpperCase() == 'MOVIE')
-          .toList();
+      return all.where((i) => (i.type ?? '').toUpperCase() == 'MOVIE').toList();
     }
     if (category == 'Web Series') {
       return all

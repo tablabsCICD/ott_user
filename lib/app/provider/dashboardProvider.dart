@@ -331,7 +331,10 @@ class DashboardProvider extends BaseProvider {
         final continueWatchedResponse =
             ContinueWatchedResponse.fromJson(responseBody);
 
-        if (continueWatchedResponse.isSuccess == true) {
+        if (continueWatchedResponse.isSuccess == true ||
+            continueWatchedResponse.success == true ||
+            (response.statusCode == 200 &&
+                continueWatchedResponse.data != null)) {
           final items = continueWatchedResponse.data ?? const <Content>[];
           _continueWatchingCache[cacheKey] = items;
           _continueWatchingCacheTimes[cacheKey] = DateTime.now();

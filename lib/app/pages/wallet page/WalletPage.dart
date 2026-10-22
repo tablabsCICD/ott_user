@@ -222,7 +222,7 @@ class _WalletPageState extends State<WalletPage> {
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 6,
                             offset: const Offset(0, 3),
                           ),
@@ -265,8 +265,8 @@ class _WalletPageState extends State<WalletPage> {
                                       ),
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color:
-                                            theme.canvasColor.withOpacity(0.6),
+                                        color: theme.canvasColor
+                                            .withValues(alpha: 0.6),
                                       ),
                                     ),
                                     // Text(
@@ -343,7 +343,8 @@ class _WalletPageState extends State<WalletPage> {
                                         .toString(),
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: theme.canvasColor.withOpacity(0.6),
+                                      color: theme.canvasColor
+                                          .withValues(alpha: 0.6),
                                     ),
                                   ),
                                 ],
@@ -677,7 +678,7 @@ class _HistoryMetric extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 11,
-            color: theme.canvasColor.withOpacity(0.54),
+            color: theme.canvasColor.withValues(alpha: 0.54),
             fontWeight: FontWeight.w600,
           ),
         ),

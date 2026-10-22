@@ -51,15 +51,15 @@ class _LandingCommonHeaderState extends State<LandingCommonHeader> {
       decoration: BoxDecoration(
         color: widget.scrolled
             ? (isDark
-                ? const Color(0xFF08090D).withOpacity(0.92)
-                : Colors.white.withOpacity(0.95))
+                ? const Color(0xFF08090D).withValues(alpha: 0.92)
+                : Colors.white.withValues(alpha: 0.95))
             : Colors.transparent,
         border: Border(
           bottom: BorderSide(
             color: widget.scrolled
                 ? (isDark
-                    ? Colors.white.withOpacity(0.08)
-                    : Colors.black.withOpacity(0.06))
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.black.withValues(alpha: 0.06))
                 : Colors.transparent,
             width: 1.0,
           ),
@@ -67,7 +67,7 @@ class _LandingCommonHeaderState extends State<LandingCommonHeader> {
         boxShadow: [
           if (widget.scrolled)
             BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.45 : 0.06),
+              color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.06),
               blurRadius: 18,
               offset: const Offset(0, 4),
             ),
@@ -150,7 +150,7 @@ class _LandingCommonHeaderState extends State<LandingCommonHeader> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  shadowColor: colors.primaryAccent.withOpacity(0.5),
+                  shadowColor: colors.primaryAccent.withValues(alpha: 0.5),
                 ),
                 child: Text(
                   'Watch Now',

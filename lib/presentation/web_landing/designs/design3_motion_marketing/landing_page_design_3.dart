@@ -119,7 +119,8 @@ class _LandingPageDesign3State extends State<LandingPageDesign3> {
                     .where((item) => (item.type ?? '').toUpperCase() == 'MOVIE')
                     .toList();
                 final series = topTen
-                    .where((item) => (item.type ?? '').toUpperCase() == 'SERIES')
+                    .where(
+                        (item) => (item.type ?? '').toUpperCase() == 'SERIES')
                     .toList();
 
                 return CustomScrollView(
@@ -128,7 +129,8 @@ class _LandingPageDesign3State extends State<LandingPageDesign3> {
                     // High-Impact Marketing Hero Section
                     SliverToBoxAdapter(
                       child: MarketingHeroSection(
-                        onGetStarted: () => LandingActionHandler.openLogin(context),
+                        onGetStarted: () =>
+                            LandingActionHandler.openLogin(context),
                         onWatchTrailers: () {
                           if (topTen.isNotEmpty) {
                             _openTrailer(topTen.first);
@@ -197,8 +199,10 @@ class _LandingPageDesign3State extends State<LandingPageDesign3> {
                       child: ScrollRevealWrapper(
                         delay: const Duration(milliseconds: 450),
                         child: _MarketingVipCta(
-                          onGetStarted: () => LandingActionHandler.openLogin(context),
-                          onProductionHouse: () => LandingActionHandler.openExternal(
+                          onGetStarted: () =>
+                              LandingActionHandler.openLogin(context),
+                          onProductionHouse: () =>
+                              LandingActionHandler.openExternal(
                             context,
                             AppConstant.productionHouseUrl,
                           ),
@@ -270,7 +274,7 @@ class _MarketingVipCta extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: colors.primaryAccent.withOpacity(isDark ? 0.45 : 0.25),
+            color: colors.primaryAccent.withValues(alpha: isDark ? 0.45 : 0.25),
             blurRadius: 36,
             offset: const Offset(0, 12),
           ),
@@ -296,7 +300,7 @@ class _MarketingVipCta extends StatelessWidget {
               'Join thousands of viewers watching award-winning regional movies and series in 4K HDR. Start streaming today.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.85),
+                color: Colors.white.withValues(alpha: 0.85),
                 fontSize: isMobile ? 14 : 16,
                 height: 1.5,
               ),

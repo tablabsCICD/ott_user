@@ -266,7 +266,7 @@ class _LandingPosterCardState extends State<_LandingPosterCard> {
                           fontWeight: FontWeight.w900,
                           shadows: [
                             Shadow(
-                              color: Colors.white.withOpacity(0.70),
+                              color: Colors.white.withValues(alpha: 0.70),
                               blurRadius: 5,
                             ),
                           ],
@@ -283,7 +283,7 @@ class _LandingPosterCardState extends State<_LandingPosterCard> {
                             borderRadius: BorderRadius.circular(9),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.34),
+                                color: Colors.black.withValues(alpha: 0.34),
                                 blurRadius: 16,
                                 offset: const Offset(0, 13),
                               ),
@@ -341,7 +341,7 @@ class _LandingPosterCardState extends State<_LandingPosterCard> {
                         Text(
                           '${(widget.content.ratings ?? 0).toStringAsFixed(1)} rating',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.62),
+                            color: Colors.white.withValues(alpha: 0.62),
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
@@ -388,11 +388,11 @@ class _RentCardButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
-            color: theme.primaryColor.withOpacity(0.95),
+            color: theme.primaryColor.withValues(alpha: 0.95),
             borderRadius: BorderRadius.circular(999),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.36),
+                color: Colors.black.withValues(alpha: 0.36),
                 blurRadius: 12,
                 offset: const Offset(0, 6),
               ),
@@ -471,10 +471,10 @@ class _HoverDetailPreview extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.black,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.70),
+                color: Colors.black.withValues(alpha: 0.70),
                 blurRadius: 36,
                 offset: const Offset(0, 22),
               ),
@@ -509,8 +509,8 @@ class _HoverDetailPreview extends StatelessWidget {
                             end: Alignment.bottomCenter,
                             colors: [
                               Colors.transparent,
-                              Colors.black.withOpacity(0.12),
-                              Colors.black.withOpacity(0.88),
+                              Colors.black.withValues(alpha: 0.12),
+                              Colors.black.withValues(alpha: 0.88),
                             ],
                           ),
                         ),
@@ -587,8 +587,7 @@ class _HoverDetailPreview extends StatelessWidget {
                         runSpacing: 8,
                         children: [
                           _MetaPill(
-                            label:
-                                '${(content.ratings ?? 0).toStringAsFixed(1)}',
+                            label: (content.ratings ?? 0).toStringAsFixed(1),
                           ),
                           if ((content.ageRating ?? '').trim().isNotEmpty)
                             _MetaPill(label: content.ageRating!),
@@ -604,7 +603,7 @@ class _HoverDetailPreview extends StatelessWidget {
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.86),
+                          color: Colors.white.withValues(alpha: 0.86),
                           fontSize: 15,
                           height: 1.28,
                           fontWeight: FontWeight.w700,
@@ -643,7 +642,6 @@ class _HoverDetailPreview extends StatelessWidget {
     }
     return null;
   }
-
 }
 
 class _PriceBadge extends StatelessWidget {
@@ -664,7 +662,7 @@ class _PriceBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.32),
+            color: color.withValues(alpha: 0.32),
             blurRadius: 14,
             offset: const Offset(0, 7),
           ),
@@ -698,9 +696,9 @@ class _PreviewActionButton extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
       decoration: BoxDecoration(
-        color: color ?? Colors.white.withOpacity(0.12),
+        color: color ?? Colors.white.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -736,7 +734,7 @@ class _RoundAction extends StatelessWidget {
       height: 48,
       width: 48,
       decoration: BoxDecoration(
-        color: color ?? Colors.white.withOpacity(0.16),
+        color: color ?? Colors.white.withValues(alpha: 0.16),
         shape: BoxShape.circle,
       ),
       child: Icon(icon, color: Colors.white, size: 28),
@@ -754,7 +752,7 @@ class _MetaPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.13),
+        color: Colors.white.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
@@ -787,9 +785,9 @@ class _ArrowButton extends StatelessWidget {
         height: 38,
         width: 38,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.09),
+          color: Colors.white.withValues(alpha: 0.09),
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.12)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
         ),
         child: Icon(icon, color: Colors.white),
       ),
@@ -818,9 +816,9 @@ class _CarouselLoadingMore extends StatelessWidget {
           height: 226,
           width: 150,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.06),
+            color: Colors.white.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.10)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
           ),
           child: Center(
             child: isLoading
@@ -844,7 +842,7 @@ class _CarouselLoadingMore extends StatelessWidget {
                       Text(
                         AppLocalizations.of(context)!.loadMore,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.78),
+                          color: Colors.white.withValues(alpha: 0.78),
                           fontWeight: FontWeight.w900,
                         ),
                       ),

@@ -13,7 +13,6 @@ import 'package:ott/app/pages/onboarding pages/selectLanguagePage.dart';
 import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/route/routes/app_routes.dart';
 import 'package:ott/app/route/routes/web_navigation_routes.dart';
-import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/presentation/web_landing/screens/web_landing_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 

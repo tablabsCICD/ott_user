@@ -20,9 +20,9 @@ class StatisticsSection extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(56, 8, 56, 70),
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 34),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.055),
+        color: Colors.white.withValues(alpha: 0.055),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.09)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
       ),
       child: Column(
         children: [
@@ -94,7 +94,7 @@ class _CounterCard extends StatelessWidget {
               stat.label,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.68),
+                color: Colors.white.withValues(alpha: 0.68),
                 fontWeight: FontWeight.w800,
               ),
             ),

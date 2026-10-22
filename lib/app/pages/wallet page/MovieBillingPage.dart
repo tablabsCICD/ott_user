@@ -2,7 +2,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:ott/app/core/services/invoice_service.dart';
 import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
@@ -332,7 +332,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                         : ListView.separated(
                             itemCount: transactions.length,
                             separatorBuilder: (_, __) => Divider(
-                                color: theme.cardColor.withOpacity(0.2)),
+                                color: theme.cardColor.withValues(alpha: 0.2)),
                             itemBuilder: (context, index) {
                               final tx = transactions[index];
                               final isCredit =
@@ -400,7 +400,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                     child: Icon(
                       LucideIcons.gift,
                       size: 200,
-                      color: theme.canvasColor.withOpacity(0.1),
+                      color: theme.canvasColor.withValues(alpha: 0.1),
                     ),
                   ),
                   Column(
@@ -659,7 +659,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.18),
+                    color: Colors.black.withValues(alpha: 0.18),
                     blurRadius: 18,
                     offset: const Offset(0, 8),
                   ),

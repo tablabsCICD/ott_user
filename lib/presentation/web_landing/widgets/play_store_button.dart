@@ -91,13 +91,13 @@ class _PlayStoreButtonState extends State<PlayStoreButton> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: _hovered
-                      ? theme.primaryColor.withOpacity(0.52)
-                      : Colors.white.withOpacity(0.20),
+                      ? theme.primaryColor.withValues(alpha: 0.52)
+                      : Colors.white.withValues(alpha: 0.20),
                 ),
                 boxShadow: [
                   if (_hovered)
                     BoxShadow(
-                      color: theme.primaryColor.withOpacity(0.18),
+                      color: theme.primaryColor.withValues(alpha: 0.18),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -118,7 +118,7 @@ class _PlayStoreButtonState extends State<PlayStoreButton> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.78),
+                            color: Colors.white.withValues(alpha: 0.78),
                             fontSize: 9,
                             fontWeight: FontWeight.w500,
                             height: 1,
@@ -248,13 +248,13 @@ class _AppStoreButtonState extends State<AppStoreButton> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: _hovered
-                      ? theme.primaryColor.withOpacity(0.52)
-                      : Colors.white.withOpacity(0.20),
+                      ? theme.primaryColor.withValues(alpha: 0.52)
+                      : Colors.white.withValues(alpha: 0.20),
                 ),
                 boxShadow: [
                   if (_hovered)
                     BoxShadow(
-                      color: theme.primaryColor.withOpacity(0.18),
+                      color: theme.primaryColor.withValues(alpha: 0.18),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -275,7 +275,7 @@ class _AppStoreButtonState extends State<AppStoreButton> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.78),
+                            color: Colors.white.withValues(alpha: 0.78),
                             fontSize: 9,
                             fontWeight: FontWeight.w500,
                             height: 1,
@@ -394,13 +394,13 @@ class _AmazonFireTvButtonState extends State<AmazonFireTvButton> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: _hovered
-                      ? theme.primaryColor.withOpacity(0.52)
-                      : Colors.white.withOpacity(0.20),
+                      ? theme.primaryColor.withValues(alpha: 0.52)
+                      : Colors.white.withValues(alpha: 0.20),
                 ),
                 boxShadow: [
                   if (_hovered)
                     BoxShadow(
-                      color: theme.primaryColor.withOpacity(0.18),
+                      color: theme.primaryColor.withValues(alpha: 0.18),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -421,7 +421,7 @@ class _AmazonFireTvButtonState extends State<AmazonFireTvButton> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.78),
+                            color: Colors.white.withValues(alpha: 0.78),
                             fontSize: 9,
                             fontWeight: FontWeight.w500,
                             height: 1,
@@ -555,13 +555,13 @@ class _JioStoreButtonState extends State<JioStoreButton> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: _hovered
-                      ? theme.primaryColor.withOpacity(0.52)
-                      : Colors.white.withOpacity(0.20),
+                      ? theme.primaryColor.withValues(alpha: 0.52)
+                      : Colors.white.withValues(alpha: 0.20),
                 ),
                 boxShadow: [
                   if (_hovered)
                     BoxShadow(
-                      color: theme.primaryColor.withOpacity(0.18),
+                      color: theme.primaryColor.withValues(alpha: 0.18),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -583,8 +583,8 @@ class _JioStoreButtonState extends State<JioStoreButton> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: _hasUrl
-                                ? Colors.white.withOpacity(0.78)
-                                : theme.primaryColor.withOpacity(0.95),
+                                ? Colors.white.withValues(alpha: 0.78)
+                                : theme.primaryColor.withValues(alpha: 0.95),
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.4,
@@ -655,7 +655,7 @@ class _GooglePlayMarkPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1
-        ..color = Colors.white.withOpacity(0.42),
+        ..color = Colors.white.withValues(alpha: 0.42),
     );
   }
 
@@ -704,7 +704,7 @@ class _AmazonFireTvMarkPainter extends CustomPainter {
     );
 
     final borderPaint = Paint()
-      ..color = Colors.white.withOpacity(0.85)
+      ..color = Colors.white.withValues(alpha: 0.85)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.3;
     canvas.drawRRect(tvRect, borderPaint);
@@ -718,7 +718,7 @@ class _AmazonFireTvMarkPainter extends CustomPainter {
     canvas.drawPath(
       standPath,
       Paint()
-        ..color = Colors.white.withOpacity(0.85)
+        ..color = Colors.white.withValues(alpha: 0.85)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.3,
     );
@@ -779,7 +779,7 @@ class _JioStoreMarkPainter extends CustomPainter {
       center,
       radius,
       Paint()
-        ..color = Colors.white.withOpacity(0.35)
+        ..color = Colors.white.withValues(alpha: 0.35)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 0.8,
     );

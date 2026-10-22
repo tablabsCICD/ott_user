@@ -33,11 +33,11 @@ class MarketingAppEcosystemSection extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: colors.primaryAccent.withOpacity(isDark ? 0.3 : 0.15),
+          color: colors.primaryAccent.withValues(alpha: isDark ? 0.3 : 0.15),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.4 : 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.05),
             blurRadius: 30,
             offset: const Offset(0, 10),
           ),
@@ -80,7 +80,7 @@ class MarketingAppEcosystemSection extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: colors.primaryAccent.withOpacity(0.12),
+            color: colors.primaryAccent.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(
@@ -161,7 +161,7 @@ class MarketingAppEcosystemSection extends StatelessWidget {
         border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(colors.isDark ? 0.35 : 0.06),
+            color: Colors.black.withValues(alpha: colors.isDark ? 0.35 : 0.06),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -248,7 +248,7 @@ class _EcosystemStoreBtnState extends State<_EcosystemStoreBtn> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             color: _hovered
-                ? colors.primaryAccent.withOpacity(0.15)
+                ? colors.primaryAccent.withValues(alpha: 0.15)
                 : colors.cardBackground,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
@@ -280,7 +280,8 @@ class _EcosystemStoreBtnState extends State<_EcosystemStoreBtn> {
                   Text(
                     widget.label,
                     style: TextStyle(
-                      color: _hovered ? colors.primaryAccent : colors.textPrimary,
+                      color:
+                          _hovered ? colors.primaryAccent : colors.textPrimary,
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                     ),

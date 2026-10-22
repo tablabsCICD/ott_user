@@ -208,7 +208,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   bool _showForwardIndicator = false;
   bool _showBackwardIndicator = false;
   Timer? _seekIndicatorTimer;
-  bool _isMicMuted = false;
+  final bool _isMicMuted = false;
   double _playbackSpeed = 1.0;
   bool _controlsVisible = true;
   Timer? _hideControlsTimer;
@@ -1294,7 +1294,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     unawaited(_playNextEpisode());
   }
 
-  void _saveProgress() {
+  Future<void> _saveProgressAsync({bool force = false}) async {
     if (widget.content?.id == null) return;
 
     final nativeValue = _nativeNetworkPlayer?.value;
@@ -1315,20 +1315,30 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
     _lastSavedPosition = position;
 
-    context.read<PlayMediaProvider>().saveLocalResume(
-          contentId: widget.content!.id!,
-          seasonId: _isSeries ? widget.seasonIndex : null,
-          episodeId: _isSeries ? widget.episodeIndex : null,
-          seconds: position.inSeconds,
-        );
+    final playMediaProvider = context.read<PlayMediaProvider>();
+    await playMediaProvider.saveLocalResume(
+      contentId: widget.content!.id!,
+      seasonId: _isSeries ? widget.seasonIndex : null,
+      episodeId: _isSeries ? widget.episodeIndex : null,
+      seconds: position.inSeconds,
+    );
 
-    context.read<PlayMediaProvider>().saveContinueWatching(
-          contentId: widget.content!.id!,
-          seasonId: _isSeries ? widget.seasonIndex : null,
-          episodeId: _isSeries ? widget.episodeIndex : null,
-          position: position,
-          duration: duration,
-        );
+    try {
+      await playMediaProvider
+          .saveContinueWatching(
+            contentId: widget.content!.id!,
+            seasonId: _isSeries ? widget.seasonIndex : null,
+            episodeId: _isSeries ? widget.episodeIndex : null,
+            position: position,
+            duration: duration,
+            force: force,
+          )
+          .timeout(const Duration(seconds: 3));
+    } catch (_) {}
+  }
+
+  void _saveProgress() {
+    unawaited(_saveProgressAsync());
   }
 
   Future<void> _playNextEpisode() async {
@@ -1387,7 +1397,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
   Future<void> _disposePlayer({bool saveProgress = true}) async {
     if (saveProgress) {
-      _saveProgress();
+      await _saveProgressAsync(force: true);
     }
     _progressTimer?.cancel();
     _progressTimer = null;

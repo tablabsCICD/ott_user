@@ -70,7 +70,7 @@ class MarketingStatsShowcase extends StatelessWidget {
                           ? null
                           : Border(
                               right: BorderSide(
-                                color: colors.border.withOpacity(0.6),
+                                color: colors.border.withValues(alpha: 0.6),
                               ),
                             ),
                     ),

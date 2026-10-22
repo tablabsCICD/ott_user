@@ -89,8 +89,8 @@ class Content {
   });
 
   String? get teaserOrTrailerUrl {
-    final teaser = teaserUrl?.trim();
-    if (teaser != null && teaser.isNotEmpty) return teaser;
+    final teaser = teaserUrl;
+    if (teaser != null && teaser.trim().isNotEmpty) return teaser;
     return trailerUrl;
   }
 
@@ -126,7 +126,7 @@ class Content {
         posterUrlList:
             (json['posterUrlList'] as List?)?.map((e) => e.toString()).toList(),
 
-        teaserUrl: _firstStringValue(json, const [
+        teaserUrl: _firstDirectTrailerValue(json, const [
               'teaserUrl',
               'teaserFile',
               'teaserFileUrl',
@@ -143,7 +143,7 @@ class Content {
               'teaserUrlList',
               'teaser_url_list',
             ]),
-        trailerUrl: _firstStringValue(json, const [
+        trailerUrl: _firstDirectTrailerValue(json, const [
               'trailerUrl',
               'trailerFile',
               'trailerFileUrl',
@@ -190,8 +190,13 @@ class Content {
         rentlDuration: json['rentlDuration'],
         isRental: json['isRental'] == true,
 
-        watchedSeconds: _asInt(json['watchedSeconds']),
-        watchedPercentage: _asInt(json['watchedPercentage']),
+        watchedSeconds: _asInt(json['watchedSeconds'] ??
+            json['watched_seconds'] ??
+            json['watchedDuration']),
+        watchedPercentage: _asInt(json['watchedPercentage'] ??
+            json['contentPercentage'] ??
+            json['watched_percentage'] ??
+            json['percentage']),
 
         seasonId: _asInt(json['seasonId']),
         episodeId: _asInt(json['episodeId']),

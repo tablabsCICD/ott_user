@@ -71,7 +71,7 @@ class ProfileShimmer extends StatelessWidget {
       width: width,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.primaryColor.withOpacity(0.35),
+        color: theme.primaryColor.withValues(alpha: 0.35),
         borderRadius: isDesktop
             ? BorderRadius.circular(60)
             : const BorderRadius.only(
@@ -116,7 +116,7 @@ class ProfileShimmer extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: Card(
-          color: theme.cardColor.withOpacity(0.3),
+          color: theme.cardColor.withValues(alpha: 0.3),
           child: Padding(
             padding: const EdgeInsets.all(12.0),
             child: Column(
@@ -131,7 +131,8 @@ class ProfileShimmer extends StatelessWidget {
                   const SizedBox(height: 8),
                 ],
                 for (int i = 0; i < rows; i++)
-                  _buildOptionRow(context, showSubtitle: showSubtitle && i == 0),
+                  _buildOptionRow(context,
+                      showSubtitle: showSubtitle && i == 0),
               ],
             ),
           ),

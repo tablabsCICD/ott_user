@@ -55,8 +55,8 @@ class LandingCommonFooter extends StatelessWidget {
           const SizedBox(height: 48),
           Divider(
             color: isDark
-                ? Colors.white.withOpacity(0.08)
-                : Colors.white.withOpacity(0.12),
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.white.withValues(alpha: 0.12),
           ),
           const SizedBox(height: 24),
 
@@ -70,7 +70,7 @@ class LandingCommonFooter extends StatelessWidget {
               Text(
                 '© ${DateTime.now().year} Filmytell. All rights reserved.',
                 style: TextStyle(
-                  color: colors.textMuted.withOpacity(0.8),
+                  color: colors.textMuted.withValues(alpha: 0.8),
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
@@ -184,9 +184,12 @@ class LandingCommonFooter extends StatelessWidget {
         title: 'Explore',
         links: [
           _FooterLink('Movies', () => LandingActionHandler.openLogin(context)),
-          _FooterLink('Web Series', () => LandingActionHandler.openLogin(context)),
-          _FooterLink('Short Films', () => LandingActionHandler.openLogin(context)),
-          _FooterLink('Mini Series', () => LandingActionHandler.openLogin(context)),
+          _FooterLink(
+              'Web Series', () => LandingActionHandler.openLogin(context)),
+          _FooterLink(
+              'Short Films', () => LandingActionHandler.openLogin(context)),
+          _FooterLink(
+              'Mini Series', () => LandingActionHandler.openLogin(context)),
         ],
       ),
       _FooterColumnData(
@@ -373,9 +376,13 @@ class _SocialIconState extends State<_SocialIcon> {
           height: 36,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: _hovered ? const Color(0xFFE50914) : Colors.white.withOpacity(0.08),
+            color: _hovered
+                ? const Color(0xFFE50914)
+                : Colors.white.withValues(alpha: 0.08),
             border: Border.all(
-              color: _hovered ? const Color(0xFFE50914) : Colors.white.withOpacity(0.12),
+              color: _hovered
+                  ? const Color(0xFFE50914)
+                  : Colors.white.withValues(alpha: 0.12),
             ),
           ),
           child: Center(
@@ -421,10 +428,14 @@ class _StoreButtonState extends State<_StoreButton> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: _hovered ? const Color(0xFFE50914).withOpacity(0.15) : Colors.white.withOpacity(0.06),
+            color: _hovered
+                ? const Color(0xFFE50914).withValues(alpha: 0.15)
+                : Colors.white.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: _hovered ? const Color(0xFFE50914) : Colors.white.withOpacity(0.12),
+              color: _hovered
+                  ? const Color(0xFFE50914)
+                  : Colors.white.withValues(alpha: 0.12),
             ),
           ),
           child: Row(

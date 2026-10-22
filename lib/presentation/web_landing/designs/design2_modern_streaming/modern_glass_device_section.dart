@@ -21,22 +21,26 @@ class ModernGlassDeviceSection extends StatelessWidget {
       _FeatureData(
         icon: Icons.high_quality_rounded,
         title: '4K Ultra HD & HDR10',
-        desc: 'Experience razor-sharp clarity, vivid color dynamics, and deep contrast tuned for modern OLED & 4K displays.',
+        desc:
+            'Experience razor-sharp clarity, vivid color dynamics, and deep contrast tuned for modern OLED & 4K displays.',
       ),
       _FeatureData(
         icon: Icons.surround_sound_rounded,
         title: 'Dolby Atmos Spatial Audio',
-        desc: 'Immerse yourself in three-dimensional theater sound that moves around you with lifelike precision.',
+        desc:
+            'Immerse yourself in three-dimensional theater sound that moves around you with lifelike precision.',
       ),
       _FeatureData(
         icon: Icons.devices_other_rounded,
         title: 'Simultaneous Multi-Screen',
-        desc: 'Stream across TV, mobile, tablet, and desktop without interrupting family or friends on other devices.',
+        desc:
+            'Stream across TV, mobile, tablet, and desktop without interrupting family or friends on other devices.',
       ),
       _FeatureData(
         icon: Icons.download_for_offline_rounded,
         title: 'Smart Offline Downloads',
-        desc: 'Save your favorite movies and episodes to watch on flights, commutes, or remote getaways with zero data usage.',
+        desc:
+            'Save your favorite movies and episodes to watch on flights, commutes, or remote getaways with zero data usage.',
       ),
     ];
 
@@ -52,7 +56,7 @@ class ModernGlassDeviceSection extends StatelessWidget {
         border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(colors.isDark ? 0.35 : 0.04),
+            color: Colors.black.withValues(alpha: colors.isDark ? 0.35 : 0.04),
             blurRadius: 30,
             offset: const Offset(0, 10),
           ),
@@ -69,9 +73,10 @@ class ModernGlassDeviceSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: colors.primaryAccent.withOpacity(0.12),
+                        color: colors.primaryAccent.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -103,7 +108,8 @@ class ModernGlassDeviceSection extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colors.primaryAccent,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -136,7 +142,8 @@ class ModernGlassDeviceSection extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: colors.cardBackground,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: colors.border.withOpacity(0.6)),
+                  border:
+                      Border.all(color: colors.border.withValues(alpha: 0.6)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,11 +152,12 @@ class ModernGlassDeviceSection extends StatelessWidget {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: colors.primaryAccent.withOpacity(0.12),
+                        color: colors.primaryAccent.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Center(
-                        child: Icon(f.icon, color: colors.primaryAccent, size: 24),
+                        child:
+                            Icon(f.icon, color: colors.primaryAccent, size: 24),
                       ),
                     ),
                     const SizedBox(width: 16),

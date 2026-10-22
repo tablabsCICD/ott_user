@@ -241,8 +241,8 @@ class _NotificationPageState extends State<NotificationPage> {
                 : null,
             leading: CircleAvatar(
               backgroundColor: isPending
-                  ? Colors.orange.withOpacity(0.2)
-                  : theme.primaryColor.withOpacity(0.2),
+                  ? Colors.orange.withValues(alpha: 0.2)
+                  : theme.primaryColor.withValues(alpha: 0.2),
               child: Icon(
                 isPending ? Icons.schedule : Icons.notifications_active,
                 color: isPending ? Colors.orange : theme.primaryColor,
@@ -263,7 +263,8 @@ class _NotificationPageState extends State<NotificationPage> {
                 item.body,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: theme.canvasColor.withOpacity(0.7)),
+                style:
+                    TextStyle(color: theme.canvasColor.withValues(alpha: 0.7)),
               ),
             ),
             trailing: const Icon(Icons.chevron_right),

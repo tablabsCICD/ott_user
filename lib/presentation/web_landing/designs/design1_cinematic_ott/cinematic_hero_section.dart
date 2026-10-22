@@ -105,8 +105,10 @@ class _CinematicHeroSectionState extends State<CinematicHeroSection>
     final title = currentItem.title ?? 'Exclusive Premiere';
     final description = currentItem.description ??
         'Experience unmatched cinema streaming on Filmytell. Enjoy award-winning movies and viral web series in 4K Ultra HD.';
-    final type = (currentItem.type ?? 'MOVIE').toUpperCase().replaceAll('_', ' ');
-    final genres = currentItem.genreList?.take(3).toList() ?? ['Action', 'Drama'];
+    final type =
+        (currentItem.type ?? 'MOVIE').toUpperCase().replaceAll('_', ' ');
+    final genres =
+        currentItem.genreList?.take(3).toList() ?? ['Action', 'Drama'];
 
     return SizedBox(
       height: heroHeight,
@@ -125,7 +127,8 @@ class _CinematicHeroSectionState extends State<CinematicHeroSection>
                     width: double.infinity,
                     height: double.infinity,
                     placeholder: (_, __) => Container(color: colors.surface),
-                    errorWidget: (_, __, ___) => Container(color: colors.surface),
+                    errorWidget: (_, __, ___) =>
+                        Container(color: colors.surface),
                   )
                 : Container(
                     key: const ValueKey('placeholder'),
@@ -141,8 +144,8 @@ class _CinematicHeroSectionState extends State<CinematicHeroSection>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    colors.background.withOpacity(isDark ? 0.35 : 0.2),
-                    colors.background.withOpacity(isDark ? 0.65 : 0.5),
+                    colors.background.withValues(alpha: isDark ? 0.35 : 0.2),
+                    colors.background.withValues(alpha: isDark ? 0.65 : 0.5),
                     colors.background,
                   ],
                   stops: const [0.0, 0.55, 1.0],
@@ -158,8 +161,8 @@ class _CinematicHeroSectionState extends State<CinematicHeroSection>
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                   colors: [
-                    colors.background.withOpacity(isDark ? 0.95 : 0.90),
-                    colors.background.withOpacity(isDark ? 0.65 : 0.50),
+                    colors.background.withValues(alpha: isDark ? 0.95 : 0.90),
+                    colors.background.withValues(alpha: isDark ? 0.65 : 0.50),
                     Colors.transparent,
                   ],
                   stops: [0.0, isMobile ? 0.75 : 0.50, 1.0],
@@ -180,7 +183,8 @@ class _CinematicHeroSectionState extends State<CinematicHeroSection>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      colors.primaryAccent.withOpacity(isDark ? 0.25 : 0.15),
+                      colors.primaryAccent
+                          .withValues(alpha: isDark ? 0.25 : 0.15),
                       Colors.transparent,
                     ],
                   ),
@@ -192,7 +196,11 @@ class _CinematicHeroSectionState extends State<CinematicHeroSection>
           // Hero Content Details
           Positioned(
             left: isMobile ? 20 : 64,
-            right: isMobile ? 20 : (screenWidth > 1200 ? screenWidth * 0.42 : screenWidth * 0.25),
+            right: isMobile
+                ? 20
+                : (screenWidth > 1200
+                    ? screenWidth * 0.42
+                    : screenWidth * 0.25),
             bottom: isMobile ? 40 : 80,
             child: AnimatedBuilder(
               animation: _animController,
@@ -221,7 +229,8 @@ class _CinematicHeroSectionState extends State<CinematicHeroSection>
                                 borderRadius: BorderRadius.circular(6),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: colors.primaryAccent.withOpacity(0.5),
+                                    color: colors.primaryAccent
+                                        .withValues(alpha: 0.5),
                                     blurRadius: 10,
                                   ),
                                 ],
@@ -242,7 +251,7 @@ class _CinematicHeroSectionState extends State<CinematicHeroSection>
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: colors.surface.withOpacity(0.8),
+                                color: colors.surface.withValues(alpha: 0.8),
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(color: colors.border),
                               ),
@@ -261,10 +270,12 @@ class _CinematicHeroSectionState extends State<CinematicHeroSection>
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: colors.goldAccent.withOpacity(0.15),
+                                color:
+                                    colors.goldAccent.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
-                                  color: colors.goldAccent.withOpacity(0.5),
+                                  color:
+                                      colors.goldAccent.withValues(alpha: 0.5),
                                 ),
                               ),
                               child: Text(
@@ -288,7 +299,8 @@ class _CinematicHeroSectionState extends State<CinematicHeroSection>
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: colors.textPrimary,
-                            fontSize: isMobile ? 28 : (screenWidth < 1200 ? 42 : 52),
+                            fontSize:
+                                isMobile ? 28 : (screenWidth < 1200 ? 42 : 52),
                             fontWeight: FontWeight.w900,
                             letterSpacing: -0.5,
                             height: 1.1,
@@ -336,7 +348,8 @@ class _CinematicHeroSectionState extends State<CinematicHeroSection>
                           children: [
                             ElevatedButton.icon(
                               onPressed: () => widget.onWatchNow(currentItem),
-                              icon: const Icon(Icons.play_arrow_rounded, size: 24),
+                              icon: const Icon(Icons.play_arrow_rounded,
+                                  size: 24),
                               label: const Text('Watch Now'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: colors.primaryAccent,
@@ -354,20 +367,25 @@ class _CinematicHeroSectionState extends State<CinematicHeroSection>
                                   letterSpacing: 0.3,
                                 ),
                                 elevation: 8,
-                                shadowColor: colors.primaryAccent.withOpacity(0.55),
+                                shadowColor: colors.primaryAccent
+                                    .withValues(alpha: 0.55),
                               ),
                             ),
                             OutlinedButton.icon(
-                              onPressed: () => widget.onPlayTrailer(currentItem),
-                              icon: const Icon(Icons.videocam_outlined, size: 20),
+                              onPressed: () =>
+                                  widget.onPlayTrailer(currentItem),
+                              icon:
+                                  const Icon(Icons.videocam_outlined, size: 20),
                               label: const Text('Watch Trailer'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: colors.textPrimary,
                                 side: BorderSide(
-                                  color: colors.textPrimary.withOpacity(0.35),
+                                  color: colors.textPrimary
+                                      .withValues(alpha: 0.35),
                                   width: 1.4,
                                 ),
-                                backgroundColor: colors.surface.withOpacity(0.45),
+                                backgroundColor:
+                                    colors.surface.withValues(alpha: 0.45),
                                 padding: EdgeInsets.symmetric(
                                   horizontal: isMobile ? 18 : 24,
                                   vertical: isMobile ? 12 : 16,
@@ -410,7 +428,7 @@ class _CinematicHeroSectionState extends State<CinematicHeroSection>
                       decoration: BoxDecoration(
                         color: _currentIndex == index
                             ? colors.primaryAccent
-                            : colors.textMuted.withOpacity(0.35),
+                            : colors.textMuted.withValues(alpha: 0.35),
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),

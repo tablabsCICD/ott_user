@@ -4,7 +4,7 @@ import 'dart:core';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/services/legal_document_service.dart';
@@ -742,7 +742,7 @@ class _ProfileOptionState extends State<ProfileOption> {
             ? Text(
                 '₹ ${widget.balance!.toStringAsFixed(2)}',
                 style: TextStyle(
-                  color: theme.canvasColor.withOpacity(0.6),
+                  color: theme.canvasColor.withValues(alpha: 0.6),
                   fontWeight: FontWeight.normal,
                   fontSize: 12,
                 ),

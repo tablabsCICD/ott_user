@@ -129,7 +129,7 @@ class FaqScreen extends StatelessWidget {
                           Text(
                             'Find quick answers about watching content, pay-per-movie access, gifting, downloads, devices, and Filmytell partner portals.',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.68),
+                              color: Colors.white.withValues(alpha: 0.68),
                               fontSize: 17,
                               height: 1.55,
                               fontWeight: FontWeight.w600,
@@ -184,22 +184,22 @@ class _FaqTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.055),
+        color: Colors.white.withValues(alpha: 0.055),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withOpacity(0.09)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
       ),
       child: Theme(
         data: theme.copyWith(
           dividerColor: Colors.transparent,
-          splashColor: Colors.white.withOpacity(0.04),
-          highlightColor: Colors.white.withOpacity(0.03),
+          splashColor: Colors.white.withValues(alpha: 0.04),
+          highlightColor: Colors.white.withValues(alpha: 0.03),
         ),
         child: ExpansionTile(
           initiallyExpanded: initiallyExpanded,
           tilePadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
           childrenPadding: const EdgeInsets.fromLTRB(22, 0, 22, 22),
           iconColor: theme.primaryColor,
-          collapsedIconColor: Colors.white.withOpacity(0.70),
+          collapsedIconColor: Colors.white.withValues(alpha: 0.70),
           title: Text(
             item.question,
             style: const TextStyle(
@@ -214,7 +214,7 @@ class _FaqTile extends StatelessWidget {
               child: Text(
                 item.answer,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.66),
+                  color: Colors.white.withValues(alpha: 0.66),
                   fontSize: 14,
                   height: 1.65,
                   fontWeight: FontWeight.w600,

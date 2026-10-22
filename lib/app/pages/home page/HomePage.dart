@@ -23,6 +23,7 @@ import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/continueWatchMovieCard.dart';
+import 'package:ott/app/widgets/ios_continue_watch_banner.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/feature_tour.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
@@ -386,9 +387,7 @@ class _HomePageState extends State<HomePage>
 
       if (bestIndex == null ||
           visibility > bestVisibility ||
-          (visibility == bestVisibility &&
-              bestIndex != null &&
-              candidate > bestIndex)) {
+          (visibility == bestVisibility && candidate > bestIndex)) {
         bestVisibility = visibility;
         bestIndex = candidate;
       }
@@ -554,6 +553,9 @@ class _HomePageState extends State<HomePage>
                       final showContentLoader = dashboardProvider.isLoading &&
                           (ContentType.isMovieLike(selectedType) ||
                               ContentType.isSeries(selectedType));
+                      final showContinueWatchLoader =
+                          dashboardProvider.isLoadingContinueWatching &&
+                              dashboardProvider.continueWatchedMovies.isEmpty;
 
                       return Column(
                         mainAxisSize: MainAxisSize.min,
@@ -571,13 +573,19 @@ class _HomePageState extends State<HomePage>
                               dashboardProvider,
                             ),
                           if (!widget.lockContentType)
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: _buildFilterButtons(
-                                  context, dashboardProvider),
-                            ),
+                            Theme.of(context).platform == TargetPlatform.iOS
+                                ? _buildIosCategoryTabs(
+                                    context, dashboardProvider)
+                                : SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: _buildFilterButtons(
+                                        context, dashboardProvider),
+                                  ),
                           SizedBox(
-                            height: 20,
+                            height:
+                                Theme.of(context).platform == TargetPlatform.iOS
+                                    ? 14
+                                    : 20,
                           ),
                           showContentLoader
                               ? _buildDashboardSectionLoader(
@@ -592,10 +600,12 @@ class _HomePageState extends State<HomePage>
                                         ? SizedBox.shrink()
                                         : _isOffline
                                             ? _continueWatchShimmerWidget()
-                                            : continueWatchWidget(
-                                                continueWatchList:
-                                                    dashboardProvider
-                                                        .continueWatchedMovies),
+                                            : showContinueWatchLoader
+                                                ? _continueWatchShimmerWidget()
+                                                : continueWatchWidget(
+                                                    continueWatchList:
+                                                        dashboardProvider
+                                                            .continueWatchedMovies),
                                     selectedType == 'MINI SERIES'
                                         ? ShortsLibraryPage(
                                             useParentScroll: true)
@@ -717,16 +727,47 @@ class _HomePageState extends State<HomePage>
                                                                         ),
                                                                       ),
                                                                     ),
-                                                                    Icon(
-                                                                      Icons
-                                                                          .arrow_forward_ios,
-                                                                      size: 18,
-                                                                      color: selectedThemeData
-                                                                          .primaryColor,
-                                                                    ),
-                                                                    SizedBox(
-                                                                      width: 3,
-                                                                    )
+                                                                    if (Theme.of(context)
+                                                                            .platform ==
+                                                                        TargetPlatform
+                                                                            .iOS) ...[
+                                                                      Text(
+                                                                        "See All",
+                                                                        style:
+                                                                            TextStyle(
+                                                                          fontSize:
+                                                                              14,
+                                                                          fontWeight:
+                                                                              FontWeight.bold,
+                                                                          color:
+                                                                              selectedThemeData.primaryColor,
+                                                                        ),
+                                                                      ),
+                                                                      const SizedBox(
+                                                                          width:
+                                                                              4),
+                                                                      Icon(
+                                                                        Icons
+                                                                            .arrow_forward_ios,
+                                                                        size:
+                                                                            13,
+                                                                        color: selectedThemeData
+                                                                            .primaryColor,
+                                                                      ),
+                                                                    ] else ...[
+                                                                      Icon(
+                                                                        Icons
+                                                                            .arrow_forward_ios,
+                                                                        size:
+                                                                            18,
+                                                                        color: selectedThemeData
+                                                                            .primaryColor,
+                                                                      ),
+                                                                      SizedBox(
+                                                                        width:
+                                                                            3,
+                                                                      )
+                                                                    ],
                                                                   ],
                                                                 ),
                                                               ),
@@ -736,61 +777,87 @@ class _HomePageState extends State<HomePage>
                                                                     .movies!
                                                                     .isEmpty)
                                                             ? SizedBox.shrink()
-                                                            : SizedBox(
-                                                                height: 270,
-                                                                child: ListView
-                                                                    .builder(
-                                                                  controller:
-                                                                      controller,
-                                                                  scrollDirection:
-                                                                      Axis.horizontal,
-                                                                  //padding: EdgeInsets.zero,
-                                                                  itemCount: dashboardData
-                                                                          .movies!
-                                                                          .length +
-                                                                      (dashboardData
-                                                                              .isRowLoading
-                                                                          ? 1
-                                                                          : 0),
-                                                                  itemBuilder:
-                                                                      (context,
-                                                                          i) {
-                                                                    if (i <
-                                                                        dashboardData
-                                                                            .movies!
-                                                                            .length) {
-                                                                      return MovieCard(
-                                                                          movie: dashboardData.movies![
-                                                                              i],
-                                                                          index:
-                                                                              i,
-                                                                          isShortFilmTab: ContentType.normalize(selectedType) ==
-                                                                              ContentType
-                                                                                  .shortFilm,
-                                                                          activeIndexListenable:
-                                                                              activeIndex);
-                                                                    } else if (dashboardData
-                                                                        .isRowLoading) {
-                                                                      return Padding(
-                                                                        padding: const EdgeInsets
-                                                                            .all(
-                                                                            12),
-                                                                        child:
-                                                                            SizedBox(
-                                                                          width:
-                                                                              40,
-                                                                          height:
-                                                                              40,
-                                                                          child:
-                                                                              CircularProgressIndicator(strokeWidth: 2),
-                                                                        ),
-                                                                      );
-                                                                    } else {
-                                                                      return const SizedBox
-                                                                          .shrink();
-                                                                    }
-                                                                  },
-                                                                ),
+                                                            : Builder(
+                                                                builder:
+                                                                    (context) {
+                                                                  final isIOS = Theme.of(
+                                                                              context)
+                                                                          .platform ==
+                                                                      TargetPlatform
+                                                                          .iOS;
+                                                                  final screenWidth =
+                                                                      MediaQuery.of(
+                                                                              context)
+                                                                          .size
+                                                                          .width;
+                                                                  final iosCardWidth =
+                                                                      (screenWidth -
+                                                                              16) *
+                                                                          0.62;
+                                                                  final iosRowHeight =
+                                                                      (iosCardWidth *
+                                                                              9 /
+                                                                              16) +
+                                                                          72;
+
+                                                                  return SizedBox(
+                                                                    height: isIOS
+                                                                        ? iosRowHeight
+                                                                        : 270,
+                                                                    child: ListView
+                                                                        .builder(
+                                                                      controller:
+                                                                          controller,
+                                                                      scrollDirection:
+                                                                          Axis.horizontal,
+                                                                      itemCount: dashboardData
+                                                                              .movies!
+                                                                              .length +
+                                                                          (dashboardData.isRowLoading
+                                                                              ? 1
+                                                                              : 0),
+                                                                      itemBuilder:
+                                                                          (context,
+                                                                              i) {
+                                                                        if (i <
+                                                                            dashboardData
+                                                                                .movies!.length) {
+                                                                          return MovieCard(
+                                                                            movie:
+                                                                                dashboardData.movies![i],
+                                                                            index:
+                                                                                i,
+                                                                            cardWidth: isIOS
+                                                                                ? iosCardWidth
+                                                                                : null,
+                                                                            cardMargin: isIOS
+                                                                                ? 4.0
+                                                                                : null,
+                                                                            isShortFilmTab:
+                                                                                ContentType.normalize(selectedType) == ContentType.shortFilm,
+                                                                            activeIndexListenable:
+                                                                                activeIndex,
+                                                                          );
+                                                                        } else if (dashboardData
+                                                                            .isRowLoading) {
+                                                                          return Padding(
+                                                                            padding:
+                                                                                const EdgeInsets.all(12),
+                                                                            child:
+                                                                                SizedBox(
+                                                                              width: 40,
+                                                                              height: 40,
+                                                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                                                            ),
+                                                                          );
+                                                                        } else {
+                                                                          return const SizedBox
+                                                                              .shrink();
+                                                                        }
+                                                                      },
+                                                                    ),
+                                                                  );
+                                                                },
                                                               ),
                                                         (dashboardData.movies ==
                                                                     null ||
@@ -885,7 +952,7 @@ class _HomePageState extends State<HomePage>
                             alignment: Alignment.center,
                             child: Icon(
                               Icons.movie_creation_outlined,
-                              color: theme.canvasColor.withOpacity(0.5),
+                              color: theme.canvasColor.withValues(alpha: 0.5),
                               size: 72,
                             ),
                           ),
@@ -972,7 +1039,7 @@ class _HomePageState extends State<HomePage>
                           decoration: BoxDecoration(
                             color: active
                                 ? Colors.white
-                                : Colors.white.withOpacity(0.35),
+                                : Colors.white.withValues(alpha: 0.35),
                             borderRadius: BorderRadius.circular(999),
                           ),
                         );
@@ -998,7 +1065,7 @@ class _HomePageState extends State<HomePage>
       borderRadius: 999,
       scale: 1.1,
       child: Material(
-        color: Colors.black.withOpacity(0.42),
+        color: Colors.black.withValues(alpha: 0.42),
         shape: const CircleBorder(),
         child: InkWell(
           customBorder: const CircleBorder(),
@@ -1125,7 +1192,7 @@ class _HomePageState extends State<HomePage>
             const SizedBox(width: 12),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.14),
+                backgroundColor: Colors.white.withValues(alpha: 0.14),
                 foregroundColor: Colors.white,
                 minimumSize: const Size(118, 48),
                 shape: RoundedRectangleBorder(
@@ -1172,6 +1239,9 @@ class _HomePageState extends State<HomePage>
 
     if (items.isEmpty) {
       return const SizedBox.shrink();
+    }
+    if (Theme.of(context).platform == TargetPlatform.iOS) {
+      return IosContinueWatchBanner(items: items);
     }
     var theme = Theme.of(context);
 
@@ -1412,8 +1482,8 @@ class _HomePageState extends State<HomePage>
             tooltip: lang.search,
             style: IconButton.styleFrom(
                 backgroundColor: useTransparentAppBar
-                    ? Colors.white.withOpacity(0.3)
-                    : Colors.black.withOpacity(0.2)),
+                    ? Colors.white.withValues(alpha: 0.3)
+                    : Colors.black.withValues(alpha: 0.2)),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => SearchPage()),
@@ -1433,8 +1503,8 @@ class _HomePageState extends State<HomePage>
             tooltip: lang.notification,
             style: IconButton.styleFrom(
                 backgroundColor: useTransparentAppBar
-                    ? Colors.white.withOpacity(0.3)
-                    : Colors.black.withOpacity(0.2)),
+                    ? Colors.white.withValues(alpha: 0.3)
+                    : Colors.black.withValues(alpha: 0.2)),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => NotificationPage()),
@@ -1450,8 +1520,8 @@ class _HomePageState extends State<HomePage>
             tooltip: lang.selectPreferredLanguage,
             style: IconButton.styleFrom(
               backgroundColor: useTransparentAppBar
-                  ? Colors.white.withOpacity(0.3)
-                  : Colors.black.withOpacity(0.2),
+                  ? Colors.white.withValues(alpha: 0.3)
+                  : Colors.black.withValues(alpha: 0.2),
             ),
             icon: Icon(Icons.language_sharp,
                 color: useTransparentAppBar
@@ -1487,8 +1557,8 @@ class _HomePageState extends State<HomePage>
                       "₹ ${walletProvider.walletBalance.toStringAsFixed(2)}",
                   style: IconButton.styleFrom(
                       backgroundColor: useTransparentAppBar
-                          ? Colors.white.withOpacity(0.3)
-                          : Colors.black.withOpacity(0.2)),
+                          ? Colors.white.withValues(alpha: 0.3)
+                          : Colors.black.withValues(alpha: 0.2)),
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => WalletPage()),
@@ -1831,6 +1901,89 @@ class _HomePageState extends State<HomePage>
     );
   }
 
+  Widget _buildIosCategoryTabs(
+      BuildContext context, DashboardProvider dashboardProvider) {
+    var themeProvider = Provider.of<ThemeProvider>(context, listen: true);
+    var selectedThemeData = themeProvider.getTheme;
+
+    const tabs = [
+      (ContentType.movie, 'Movies'),
+      (ContentType.shortFilm, 'Short Film'),
+      (ContentType.series, 'Series'),
+      (ContentType.miniSeries, 'Mini Series'),
+    ];
+
+    return Row(
+      children: tabs.map((tab) {
+        final type = tab.$1;
+        final label = tab.$2;
+        final isSelected =
+            ContentType.normalize(selectedType) == ContentType.normalize(type);
+
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2.5),
+            child: GestureDetector(
+              onTap: () async {
+                setState(() {
+                  selectedType = type;
+                });
+                final selectedLanguages =
+                    Provider.of<UserProvider>(context, listen: false)
+                            .userObject
+                            .selectedLanguages ??
+                        [];
+
+                if (selectedType == 'MINI SERIES' || selectedType == 'MADIOO') {
+                  return;
+                }
+                if (selectedLanguages.isEmpty || selectedLanguages == []) {
+                  await getMovieList(
+                      dashboardProvider, selectedType, ["Hindi", "English"]);
+                } else {
+                  await getMovieList(
+                      dashboardProvider, selectedType, selectedLanguages);
+                }
+              },
+              child: Container(
+                height: 36,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? selectedThemeData.primaryColor
+                      : Colors.black,
+                  border: Border.all(
+                    color: isSelected
+                        ? selectedThemeData.primaryColor
+                        : Colors.white24,
+                    width: 1,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                alignment: Alignment.center,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.w500,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   Widget _buildFilterButtons(
       BuildContext context, DashboardProvider dashboardProvider) {
     final lang = AppLocalizations.of(context)!;
@@ -1876,7 +2029,7 @@ class _HomePageState extends State<HomePage>
                 border: Border.all(
                   color: selectedType == type
                       ? selectedThemeData.primaryColor
-                      : selectedThemeData.canvasColor.withOpacity(0.6),
+                      : selectedThemeData.canvasColor.withValues(alpha: 0.6),
                 ),
                 borderRadius: BorderRadius.circular(
                   10,
@@ -2008,11 +2161,17 @@ class _HomePageState extends State<HomePage>
       String selectedType, List<String> langList) async {
     final localSharePreferences = LocalSharePreferences();
     final user = await localSharePreferences.getUser();
-    log('User in getMovieList method ${user!.firstName} ');
-    unawaited(dashBoardProvider.getContinueWatchedMovieList(selectedType));
-
-    await dashBoardProvider.getDashboardData(selectedType, langList, user.id!);
+    if (user != null) {
+      log('User in getMovieList method ${user.firstName} ');
+      unawaited(dashBoardProvider.getContinueWatchedMovieList(selectedType));
+      await dashBoardProvider.getDashboardData(
+          selectedType, langList, user.id!);
+    } else {
+      unawaited(dashBoardProvider.getContinueWatchedMovieList(selectedType));
+      await dashBoardProvider.getDashboardData(selectedType, langList, 1);
+    }
   }
+
 // Compatibility alias
   Future<void> userDetailsPopUp(BuildContext context) async {
     confirmDetails(context);
@@ -2025,8 +2184,7 @@ class _HomePageState extends State<HomePage>
     final userProvider = Provider.of<UserProvider>(context, listen: false);
 
     if (userProvider.emailController.text.trim().isEmpty) {
-      userProvider.emailController.text =
-          userProvider.userObject.emailId ?? "";
+      userProvider.emailController.text = userProvider.userObject.emailId ?? "";
     }
     if (userProvider.dobController.text.trim().isEmpty) {
       userProvider.dobController.text = userProvider.userObject.dob ?? "";
@@ -2349,7 +2507,8 @@ class _HomePageState extends State<HomePage>
                       color: selectedThemeData.cardColor,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: selectedThemeData.primaryColor.withValues(alpha: 0.2),
+                        color: selectedThemeData.primaryColor
+                            .withValues(alpha: 0.2),
                       ),
                     ),
                     child: Column(
@@ -2372,7 +2531,8 @@ class _HomePageState extends State<HomePage>
                                     ? null
                                     : () async {
                                         final confirmed =
-                                            await _showLocationConfirmationPrompt(ctx);
+                                            await _showLocationConfirmationPrompt(
+                                                ctx);
                                         if (!ctx.mounted) return;
                                         if (confirmed != true) return;
 
@@ -2397,7 +2557,8 @@ class _HomePageState extends State<HomePage>
                                   backgroundColor:
                                       selectedThemeData.primaryColor,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 10),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(6),
                                   ),
@@ -2416,7 +2577,8 @@ class _HomePageState extends State<HomePage>
                                   provider.isFetchingCurrentLocation
                                       ? 'Detecting...'
                                       : 'YES',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ),
@@ -2427,12 +2589,14 @@ class _HomePageState extends State<HomePage>
                                   // Manual entry selected
                                 },
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: selectedThemeData.canvasColor,
+                                  foregroundColor:
+                                      selectedThemeData.canvasColor,
                                   side: BorderSide(
                                     color: selectedThemeData.canvasColor
                                         .withValues(alpha: 0.3),
                                   ),
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 10),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(6),
                                   ),
@@ -2524,8 +2688,7 @@ class _HomePageState extends State<HomePage>
                               .withValues(alpha: 0.08),
                         ),
                         itemBuilder: (context, index) {
-                          final suggestion =
-                              provider.addressSuggestions[index];
+                          final suggestion = provider.addressSuggestions[index];
                           return ListTile(
                             dense: true,
                             leading: Icon(

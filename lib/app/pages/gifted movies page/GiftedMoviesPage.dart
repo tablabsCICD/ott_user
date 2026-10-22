@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/pages/gifted%20movies%20page/GiftDetailsPage.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
@@ -95,7 +95,7 @@ Gift code: $couponCode
                   Icon(
                     Icons.movie_outlined,
                     size: 90,
-                    color: theme.canvasColor.withOpacity(0.5),
+                    color: theme.canvasColor.withValues(alpha: 0.5),
                   ),
                   const SizedBox(height: 20),
                   const Text(
@@ -226,7 +226,7 @@ class GiftCard extends StatelessWidget {
                   Text(
                     date,
                     style: TextStyle(
-                      color: theme.canvasColor.withOpacity(0.8),
+                      color: theme.canvasColor.withValues(alpha: 0.8),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -274,7 +274,8 @@ class GiftCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     border: Border.all(
-                        color: theme.primaryColor.withOpacity(0.3), width: 1),
+                        color: theme.primaryColor.withValues(alpha: 0.3),
+                        width: 1),
                     color: theme.cardColor,
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -378,7 +379,7 @@ class GiftCard extends StatelessWidget {
               TextSpan(
                 text: label1,
                 style: TextStyle(
-                  color: theme.canvasColor.withOpacity(0.8),
+                  color: theme.canvasColor.withValues(alpha: 0.8),
                   fontWeight: FontWeight.w400,
                 ),
               ),

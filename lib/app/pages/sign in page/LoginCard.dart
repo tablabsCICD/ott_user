@@ -265,11 +265,12 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                     vertical: 6,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: theme.primaryColor.withOpacity(0.12),
+                                    color: theme.primaryColor
+                                        .withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: theme.primaryColor.withOpacity(
-                                        0.3,
+                                      color: theme.primaryColor.withValues(
+                                        alpha: 0.3,
                                       ),
                                     ),
                                   ),
@@ -487,8 +488,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                         fieldHeight: 50,
                                         fieldWidth:
                                             ResponsiveWidget.isMobile(context)
-                                            ? 40
-                                            : 45,
+                                                ? 40
+                                                : 45,
                                         activeFillColor: theme.cardColor,
                                         selectedFillColor: theme.cardColor,
                                         inactiveFillColor: theme.cardColor,
@@ -519,8 +520,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                       style: TextStyle(
                                         color: _otpAutoFilled
                                             ? Colors.green
-                                            : theme.canvasColor.withOpacity(
-                                                0.65,
+                                            : theme.canvasColor.withValues(
+                                                alpha: 0.65,
                                               ),
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
@@ -532,8 +533,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                 Align(
                                   alignment: Alignment.centerRight,
                                   child: TextButton(
-                                    onPressed:
-                                        isLoading ||
+                                    onPressed: isLoading ||
                                             _authRequestInFlight ||
                                             _resendSecondsRemaining > 0
                                         ? null
@@ -571,8 +571,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                       focusNode: _submitFocusNode,
                                       onPressed:
                                           isLoading || _authRequestInFlight
-                                          ? null
-                                          : _handleLoginOrOtp,
+                                              ? null
+                                              : _handleLoginOrOtp,
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: theme.primaryColor,
                                         padding: const EdgeInsets.symmetric(
@@ -908,10 +908,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
   String _formatResendTime(int seconds) {
     final duration = Duration(seconds: seconds);
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final remainingSeconds = duration.inSeconds
-        .remainder(60)
-        .toString()
-        .padLeft(2, '0');
+    final remainingSeconds =
+        duration.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$minutes:$remainingSeconds';
   }
 
@@ -925,9 +923,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
   }
 
   void _appendTvDigit(String digit) {
-    final controller = otpSent && _editingOtp
-        ? _otpController
-        : _mobileController;
+    final controller =
+        otpSent && _editingOtp ? _otpController : _mobileController;
     final maxLength = otpSent && _editingOtp ? 6 : 10;
     final current = controller.text;
     if (current.length >= maxLength) return;
@@ -940,9 +937,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
   }
 
   void _removeTvDigit() {
-    final controller = otpSent && _editingOtp
-        ? _otpController
-        : _mobileController;
+    final controller =
+        otpSent && _editingOtp ? _otpController : _mobileController;
     final current = controller.text;
     if (current.isEmpty) return;
 
@@ -1014,7 +1010,7 @@ class _TvFocusFrame extends StatelessWidget {
               boxShadow: focused
                   ? [
                       BoxShadow(
-                        color: theme.primaryColor.withOpacity(0.32),
+                        color: theme.primaryColor.withValues(alpha: 0.32),
                         blurRadius: 18,
                         offset: const Offset(0, 8),
                       ),
@@ -1078,7 +1074,8 @@ class _TvNumberPad extends StatelessWidget {
               decoration: BoxDecoration(
                 color: theme.cardColor,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: theme.primaryColor.withOpacity(0.55)),
+                border: Border.all(
+                    color: theme.primaryColor.withValues(alpha: 0.55)),
               ),
               child: Center(
                 child: key.icon == null

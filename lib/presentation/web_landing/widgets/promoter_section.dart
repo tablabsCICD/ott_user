@@ -43,7 +43,7 @@ class PromoterSection extends StatelessWidget {
           Text(
             'Earn by promoting content and subscriptions.',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.68),
+              color: Colors.white.withValues(alpha: 0.68),
               fontSize: 17,
               fontWeight: FontWeight.w600,
             ),
@@ -127,14 +127,14 @@ class _PromoterCardState extends State<_PromoterCard> {
         height: 70,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(_hovered ? 0.10 : 0.065),
+          color: Colors.white.withValues(alpha: _hovered ? 0.10 : 0.065),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-              color: Colors.white.withOpacity(_hovered ? 0.20 : 0.08)),
+              color: Colors.white.withValues(alpha: _hovered ? 0.20 : 0.08)),
           boxShadow: [
             if (_hovered)
               BoxShadow(
-                color: widget.color.withOpacity(0.22),
+                color: widget.color.withValues(alpha: 0.22),
                 blurRadius: 28,
                 offset: const Offset(0, 14),
               ),
@@ -180,7 +180,7 @@ class _SmallFeature extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(

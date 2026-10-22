@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
@@ -241,7 +241,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                         Text(
                           'No seasons available yet',
                           style: TextStyle(
-                            color: theme.canvasColor.withOpacity(0.7),
+                            color: theme.canvasColor.withValues(alpha: 0.7),
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -497,7 +497,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                     maxLines: 4,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.82),
+                      color: Colors.white.withValues(alpha: 0.82),
                       fontSize: 17,
                       height: 1.42,
                       fontWeight: FontWeight.w500,
@@ -518,7 +518,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white.withOpacity(0.14)),
+                    border:
+                        Border.all(color: Colors.white.withValues(alpha: 0.14)),
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
@@ -580,9 +581,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.09),
+        color: Colors.white.withValues(alpha: 0.09),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
       child: Text(
         text,
@@ -732,14 +733,14 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
         style: ElevatedButton.styleFrom(
           backgroundColor: emphasized
               ? theme.primaryColor
-              : theme.primaryColor.withOpacity(0.82),
+              : theme.primaryColor.withValues(alpha: 0.82),
           foregroundColor: Colors.white,
-          disabledBackgroundColor: Colors.white.withOpacity(0.08),
+          disabledBackgroundColor: Colors.white.withValues(alpha: 0.08),
           disabledForegroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
           minimumSize: const Size(0, 56),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-          shadowColor: theme.primaryColor.withOpacity(0.45),
+          shadowColor: theme.primaryColor.withValues(alpha: 0.45),
           elevation: emphasized ? 12 : 4,
         ),
       ),
@@ -764,14 +765,16 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
               selected: selected,
               label: Text('Season ${seasons[index].seasonNumber}'),
               selectedColor: theme.primaryColor,
-              backgroundColor: Colors.red.withOpacity(0.1),
+              backgroundColor: Colors.red.withValues(alpha: 0.1),
               labelStyle: TextStyle(
-                color: selected ? Colors.white : Colors.white.withOpacity(0.82),
+                color: selected
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.82),
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-              side: BorderSide(color: Colors.white.withOpacity(0.14)),
+              side: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
               onSelected: (_) {
                 setState(() => _selectedSeasonIndex = index);
                 _loadSeasonCast(seasons[index].seasonId);
@@ -815,7 +818,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.68),
+                  color: Colors.white.withValues(alpha: 0.68),
                   fontSize: 15,
                   height: 1.35,
                 ),
@@ -843,7 +846,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
     if (season.episodes.isEmpty) {
       return Text(
         'No episodes available yet',
-        style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 16),
+        style:
+            TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 16),
       );
     }
 
@@ -888,9 +892,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
       child: Container(
         width: 360,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.075),
+          color: Colors.white.withValues(alpha: 0.075),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -921,7 +925,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                           end: Alignment.bottomCenter,
                           colors: [
                             Colors.transparent,
-                            Colors.black.withOpacity(0.68),
+                            Colors.black.withValues(alpha: 0.68),
                           ],
                         ),
                       ),
@@ -973,7 +977,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                       Text(
                         '${episode.runtime} min',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.65),
+                          color: Colors.white.withValues(alpha: 0.65),
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
@@ -988,7 +992,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                     style: TextStyle(
                       color: hasProgress
                           ? theme.primaryColor
-                          : Colors.white.withOpacity(0.62),
+                          : Colors.white.withValues(alpha: 0.62),
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                     ),
@@ -999,7 +1003,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.64),
+                      color: Colors.white.withValues(alpha: 0.64),
                       height: 1.25,
                     ),
                   ),
@@ -1121,7 +1125,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
               ].whereType<String>().join('  |  '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.white.withOpacity(0.58)),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.58)),
             ),
           ],
         ),
@@ -1239,7 +1243,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
     );
 
     if (shouldRefresh == true && context.mounted) {
-      context.read<DashboardProvider>().getContinueWatchedMovieList("SERIES");
+      context
+          .read<DashboardProvider>()
+          .getContinueWatchedMovieList("SERIES", forceRefresh: true);
     }
   }
 
@@ -1505,7 +1511,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(15),
           border: Border.all(
-            color: Colors.grey.withOpacity(0.4),
+            color: Colors.grey.withValues(alpha: 0.4),
             width: 0.5,
           ),
         ),
@@ -1552,7 +1558,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
               maxLines: 5,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                  color: theme.canvasColor.withOpacity(0.7), height: 1.4),
+                  color: theme.canvasColor.withValues(alpha: 0.7), height: 1.4),
             ),
           ],
         ),
@@ -1561,8 +1567,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
           series.description,
           maxLines: 5,
           overflow: TextOverflow.ellipsis,
-          style:
-              TextStyle(color: theme.canvasColor.withOpacity(0.7), height: 1.4),
+          style: TextStyle(
+              color: theme.canvasColor.withValues(alpha: 0.7), height: 1.4),
         ),
         const SizedBox(height: 14),
         Wrap(
@@ -1620,7 +1626,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                         child: Icon(
                           LucideIcons.gift,
                           size: 200,
-                          color: theme.canvasColor.withOpacity(0.1),
+                          color: theme.canvasColor.withValues(alpha: 0.1),
                         ),
                       ),
                       Column(
@@ -1752,7 +1758,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                 style: TextStyle(
                   color: selected
                       ? Colors.white
-                      : theme.canvasColor.withOpacity(0.7),
+                      : theme.canvasColor.withValues(alpha: 0.7),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1792,7 +1798,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                 season.description,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: theme.canvasColor.withOpacity(0.7)),
+                style:
+                    TextStyle(color: theme.canvasColor.withValues(alpha: 0.7)),
               ),
               const SizedBox(height: 6),
               widget.content.isFeatured == true
@@ -1805,9 +1812,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: theme.primaryColor,
                                 disabledBackgroundColor:
-                                    theme.canvasColor.withOpacity(0.2),
+                                    theme.canvasColor.withValues(alpha: 0.2),
                                 disabledForegroundColor:
-                                    theme.canvasColor.withOpacity(0.6),
+                                    theme.canvasColor.withValues(alpha: 0.6),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -1871,10 +1878,10 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
     final child = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: theme.primaryColor.withOpacity(0.18),
+        color: theme.primaryColor.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.primaryColor.withOpacity(0.65),
+          color: theme.primaryColor.withValues(alpha: 0.65),
         ),
       ),
       child: Text(
@@ -2069,7 +2076,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
         if (shouldRefresh == true && context.mounted) {
           context
               .read<DashboardProvider>()
-              .getContinueWatchedMovieList("SERIES");
+              .getContinueWatchedMovieList("SERIES", forceRefresh: true);
         }
       },
       child: Container(
@@ -2138,7 +2145,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                           "Ep. ${ep.episodeNumber} • ${ep.runtime} min",
                           style: TextStyle(
                             fontSize: 12,
-                            color: theme.canvasColor.withOpacity(0.7),
+                            color: theme.canvasColor.withValues(alpha: 0.7),
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -2148,7 +2155,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
-                            color: theme.canvasColor.withOpacity(0.7),
+                            color: theme.canvasColor.withValues(alpha: 0.7),
                           ),
                         ),
                       ],
@@ -2216,7 +2223,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                 child: LinearProgressIndicator(
                   value: progress,
                   minHeight: 3,
-                  backgroundColor: Colors.grey.withOpacity(0.3),
+                  backgroundColor: Colors.grey.withValues(alpha: 0.3),
                   valueColor: AlwaysStoppedAnimation(theme.primaryColor),
                 ),
               ),
@@ -2234,7 +2241,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
       fontWeight: FontWeight.bold,
     );
     TextStyle contentStyle = TextStyle(
-      color: theme.canvasColor.withOpacity(0.7),
+      color: theme.canvasColor.withValues(alpha: 0.7),
     );
 
     return Container(
@@ -2566,7 +2573,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                     color: Colors.black26,
                     child: Icon(
                       Icons.broken_image,
-                      color: theme.canvasColor.withOpacity(0.5),
+                      color: theme.canvasColor.withValues(alpha: 0.5),
                     ),
                   ),
                 ),

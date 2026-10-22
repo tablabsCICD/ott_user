@@ -568,8 +568,8 @@ class _TrailerPreviewState extends State<TrailerPreview>
   bool _wasPlayingBeforeLifecyclePause = false;
   int _initToken = 0;
   Future<void>? _initializationFuture;
-  bool _manuallyPaused = false;
-  bool _appIsActive = true;
+  final bool _manuallyPaused = false;
+  final bool _appIsActive = true;
   bool _isMuted = false;
 
   String get _trailerUrl =>
@@ -982,7 +982,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
         child: Center(
           child: Text(
             "Trailer unavailable",
-            style: TextStyle(color: Colors.white.withOpacity(0.7)),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
           ),
         ),
       );
@@ -1027,7 +1027,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
               ),
               if (_showControls) ...[
                 Positioned.fill(
-                  child: Container(color: Colors.black.withOpacity(0.35)),
+                  child: Container(color: Colors.black.withValues(alpha: 0.35)),
                 ),
                 Center(
                   child: IconButton(
@@ -1142,7 +1142,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
               ),
               if (_showControls) ...[
                 Positioned.fill(
-                  child: Container(color: Colors.black.withOpacity(0.35)),
+                  child: Container(color: Colors.black.withValues(alpha: 0.35)),
                 ),
                 Center(
                   child: IconButton(

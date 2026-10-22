@@ -60,7 +60,8 @@ class ModernHeroSection extends StatelessWidget {
                 const SizedBox(width: 48),
                 Expanded(
                   flex: 5,
-                  child: _buildFloatingCardStack(context, colors, isMobile: false),
+                  child:
+                      _buildFloatingCardStack(context, colors, isMobile: false),
                 ),
               ],
             ),
@@ -80,10 +81,10 @@ class ModernHeroSection extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: colors.primaryAccent.withOpacity(0.12),
+            color: colors.primaryAccent.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(30),
             border: Border.all(
-              color: colors.primaryAccent.withOpacity(0.4),
+              color: colors.primaryAccent.withValues(alpha: 0.4),
             ),
           ),
           child: Row(
@@ -173,7 +174,7 @@ class ModernHeroSection extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 10,
-                shadowColor: colors.primaryAccent.withOpacity(0.5),
+                shadowColor: colors.primaryAccent.withValues(alpha: 0.5),
               ),
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
@@ -284,7 +285,7 @@ class ModernHeroSection extends StatelessWidget {
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
-                      color: colors.primaryAccent.withOpacity(0.35),
+                      color: colors.primaryAccent.withValues(alpha: 0.35),
                       blurRadius: 36,
                       offset: const Offset(0, 14),
                     ),
@@ -323,8 +324,8 @@ class ModernHeroSection extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isCenter
-                ? colors.primaryAccent.withOpacity(0.8)
-                : colors.border.withOpacity(0.5),
+                ? colors.primaryAccent.withValues(alpha: 0.8)
+                : colors.border.withValues(alpha: 0.5),
             width: isCenter ? 2.0 : 1.0,
           ),
           color: colors.surface,
@@ -348,9 +349,10 @@ class ModernHeroSection extends StatelessWidget {
                   left: 10,
                   right: 10,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.8),
+                      color: Colors.black.withValues(alpha: 0.8),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(

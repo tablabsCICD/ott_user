@@ -103,7 +103,7 @@ class _SearchPageState extends State<SearchPage> {
                 padding: const EdgeInsets.only(right: 8.0),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: selectedThemeData.cardColor.withOpacity(0.3),
+                    color: selectedThemeData.cardColor.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(
                       22,
                     ),
@@ -364,8 +364,6 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                   .toList();
         });
       }
-    } catch (error) {
-
     } finally {
       if (mounted) {
         setState(() => _isLoadingCast = false);
@@ -489,7 +487,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                           overflow: TextOverflow.ellipsis,
                           TextSpan(
                               style: TextStyle(
-                                color: theme.canvasColor.withOpacity(0.7),
+                                color: theme.canvasColor.withValues(alpha: 0.7),
                                 fontSize: 12,
                               ),
                               children: [
@@ -502,7 +500,8 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                                 TextSpan(
                                   text: ' | ',
                                   style: TextStyle(
-                                    color: theme.canvasColor.withOpacity(0.7),
+                                    color: theme.canvasColor
+                                        .withValues(alpha: 0.7),
                                     fontSize: 14,
                                   ),
                                 ),
@@ -531,7 +530,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                           overflow: TextOverflow.ellipsis,
                           TextSpan(
                               style: TextStyle(
-                                color: theme.canvasColor.withOpacity(0.7),
+                                color: theme.canvasColor.withValues(alpha: 0.7),
                                 fontSize: 12,
                               ),
                               children: [
@@ -551,7 +550,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                           overflow: TextOverflow.ellipsis,
                           TextSpan(
                               style: TextStyle(
-                                color: theme.canvasColor.withOpacity(0.7),
+                                color: theme.canvasColor.withValues(alpha: 0.7),
                                 fontSize: 12,
                               ),
                               children: [
@@ -571,7 +570,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                           overflow: TextOverflow.ellipsis,
                           TextSpan(
                               style: TextStyle(
-                                color: theme.canvasColor.withOpacity(0.7),
+                                color: theme.canvasColor.withValues(alpha: 0.7),
                                 fontSize: 12,
                               ),
                               children: [
@@ -586,7 +585,8 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                                 TextSpan(
                                   text: ' | ',
                                   style: TextStyle(
-                                    color: theme.canvasColor.withOpacity(0.7),
+                                    color: theme.canvasColor
+                                        .withValues(alpha: 0.7),
                                     fontSize: 14,
                                   ),
                                 ),
@@ -595,7 +595,8 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                                   style: TextStyle(
                                     overflow: TextOverflow.ellipsis,
                                     fontSize: 12,
-                                    color: theme.canvasColor.withOpacity(0.7),
+                                    color: theme.canvasColor
+                                        .withValues(alpha: 0.7),
                                   ),
                                 )
                               ]),
@@ -701,16 +702,16 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
       constraints: const BoxConstraints(maxWidth: 140),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: theme.cardColor.withOpacity(0.75),
+        color: theme.cardColor.withValues(alpha: 0.75),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: theme.canvasColor.withOpacity(0.12)),
+        border: Border.all(color: theme.canvasColor.withValues(alpha: 0.12)),
       ),
       child: Text(
         role.isEmpty ? name : '$name ($role)',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          color: theme.canvasColor.withOpacity(0.78),
+          color: theme.canvasColor.withValues(alpha: 0.78),
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),

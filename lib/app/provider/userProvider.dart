@@ -218,7 +218,7 @@ class UserProvider extends BaseProvider {
     //log("API=====$apiUrl");
     ApiHelper apiHelper = ApiHelper();
     Map<String, dynamic> data = {
-      "id": user!.id,
+      "id": user.id,
       "emailId": emailController.text.trim(),
       "firstName": firstNameController.text.trim(),
       "lastName": lastNameController.text.trim(),
@@ -303,7 +303,7 @@ class UserProvider extends BaseProvider {
     //log("API=====$apiUrl");
     ApiHelper apiHelper = ApiHelper();
     Map<String, dynamic> data = {
-      "id": user!.id,
+      "id": user.id,
       "emailId": emailController.text.trim().isNotEmpty
           ? emailController.text.trim()
           : (user.emailId ?? ""),
@@ -394,7 +394,7 @@ class UserProvider extends BaseProvider {
     log("API=====$apiUrl");
     ApiHelper apiHelper = ApiHelper();
     Map<String, dynamic> data = {
-      "id": user!.id,
+      "id": user.id,
       "emailId": user.emailId,
       //  "mobileNumber": user.mobileNumber,
       "country": countryController.text,

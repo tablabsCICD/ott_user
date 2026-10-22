@@ -47,12 +47,12 @@ class CinematicSpotlightSection extends StatelessWidget {
         color: colors.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: colors.primaryAccent.withOpacity(isDark ? 0.35 : 0.2),
+          color: colors.primaryAccent.withValues(alpha: isDark ? 0.35 : 0.2),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: colors.primaryAccent.withOpacity(isDark ? 0.15 : 0.08),
+            color: colors.primaryAccent.withValues(alpha: isDark ? 0.15 : 0.08),
             blurRadius: 32,
             offset: const Offset(0, 10),
           ),
@@ -74,14 +74,16 @@ class CinematicSpotlightSection extends StatelessWidget {
                     ),
                   ),
                 const SizedBox(height: 20),
-                _buildSpotlightDetails(context, colors, title, desc, isMobile: true),
+                _buildSpotlightDetails(context, colors, title, desc,
+                    isMobile: true),
               ],
             )
           : Row(
               children: [
                 Expanded(
                   flex: 5,
-                  child: _buildSpotlightDetails(context, colors, title, desc, isMobile: false),
+                  child: _buildSpotlightDetails(context, colors, title, desc,
+                      isMobile: false),
                 ),
                 const SizedBox(width: 36),
                 if (poster != null)
@@ -109,7 +111,8 @@ class CinematicSpotlightSection extends StatelessWidget {
                                     color: colors.primaryAccent,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: colors.primaryAccent.withOpacity(0.6),
+                                        color: colors.primaryAccent
+                                            .withValues(alpha: 0.6),
                                         blurRadius: 20,
                                       ),
                                     ],
@@ -148,9 +151,10 @@ class CinematicSpotlightSection extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: colors.primaryAccent.withOpacity(0.15),
+                color: colors.primaryAccent.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: colors.primaryAccent.withOpacity(0.5)),
+                border: Border.all(
+                    color: colors.primaryAccent.withValues(alpha: 0.5)),
               ),
               child: Text(
                 'SPOTLIGHT PREMIERE',
@@ -166,7 +170,7 @@ class CinematicSpotlightSection extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: colors.goldAccent.withOpacity(0.15),
+                color: colors.goldAccent.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
@@ -213,7 +217,8 @@ class CinematicSpotlightSection extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: colors.primaryAccent,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -227,7 +232,8 @@ class CinematicSpotlightSection extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 foregroundColor: colors.textPrimary,
                 side: BorderSide(color: colors.border, width: 1.2),
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),

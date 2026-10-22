@@ -602,7 +602,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                         Shadow(
                           offset: Offset(2, 2), // x, y
                           blurRadius: 4,
-                          color: Colors.black.withOpacity(0.4),
+                          color: Colors.black.withValues(alpha: 0.4),
                         ),
                       ],
                     ),
@@ -635,7 +635,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                             Shadow(
                               offset: Offset(2, 2), // x, y
                               blurRadius: 4,
-                              color: Colors.black.withOpacity(0.2),
+                              color: Colors.black.withValues(alpha: 0.2),
                             ),
                           ],
                         ),
@@ -654,7 +654,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                               Shadow(
                                 offset: Offset(2, 2), // x, y
                                 blurRadius: 4,
-                                color: Colors.black.withOpacity(0.2),
+                                color: Colors.black.withValues(alpha: 0.2),
                               ),
                             ],
                           ),
@@ -675,7 +675,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                                   Shadow(
                                     offset: Offset(2, 2), // x, y
                                     blurRadius: 4,
-                                    color: Colors.black.withOpacity(0.2),
+                                    color: Colors.black.withValues(alpha: 0.2),
                                   ),
                                 ],
                               ),
@@ -689,7 +689,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                                 Shadow(
                                   offset: Offset(2, 2), // x, y
                                   blurRadius: 4,
-                                  color: Colors.black.withOpacity(0.2),
+                                  color: Colors.black.withValues(alpha: 0.2),
                                 ),
                               ],
                             ),
@@ -711,7 +711,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                                   Shadow(
                                     offset: Offset(2, 2), // x, y
                                     blurRadius: 4,
-                                    color: Colors.black.withOpacity(0.2),
+                                    color: Colors.black.withValues(alpha: 0.2),
                                   ),
                                 ],
                               ),
@@ -725,7 +725,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                                 Shadow(
                                   offset: Offset(2, 2), // x, y
                                   blurRadius: 4,
-                                  color: Colors.black.withOpacity(0.2),
+                                  color: Colors.black.withValues(alpha: 0.2),
                                 ),
                               ],
                             ),
@@ -753,7 +753,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                       Shadow(
                         offset: Offset(2, 2), // x, y
                         blurRadius: 4,
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withValues(alpha: 0.3),
                       ),
                     ],
                   ),
@@ -830,7 +830,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                 Shadow(
                   offset: Offset(2, 2), // x, y
                   blurRadius: 4,
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                 ),
               ],
             ),
@@ -909,7 +909,7 @@ ${short.durationSec ?? ''}
                         Shadow(
                           offset: Offset(2, 2), // x, y
                           blurRadius: 4,
-                          color: Colors.black.withOpacity(0.3),
+                          color: Colors.black.withValues(alpha: 0.3),
                         ),
                       ],
                     ),
@@ -921,7 +921,7 @@ ${short.durationSec ?? ''}
                       Shadow(
                         offset: Offset(2, 2), // x, y
                         blurRadius: 4,
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withValues(alpha: 0.3),
                       ),
                     ],
                   ),
@@ -1047,7 +1047,7 @@ ${short.durationSec ?? ''}
                         color: active ? theme.primaryColor : theme.cardColor,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                            color: theme.canvasColor.withOpacity(.7)),
+                            color: theme.canvasColor.withValues(alpha: .7)),
                       ),
                       child: Center(
                         child: Text(
@@ -1059,7 +1059,7 @@ ${short.durationSec ?? ''}
                               Shadow(
                                 offset: Offset(2, 2), // x, y
                                 blurRadius: 4,
-                                color: Colors.black.withOpacity(0.2),
+                                color: Colors.black.withValues(alpha: 0.2),
                               ),
                             ],
                           ),

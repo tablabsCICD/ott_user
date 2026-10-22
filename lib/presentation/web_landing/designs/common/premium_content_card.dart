@@ -50,7 +50,8 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
     final title = widget.content.title ?? 'Featured Title';
     final releaseDate = widget.content.releaseDate?.toString() ?? '';
     final year = releaseDate.length >= 4 ? releaseDate.substring(0, 4) : '';
-    final type = (widget.content.type ?? 'MOVIE').toUpperCase().replaceAll('_', ' ');
+    final type =
+        (widget.content.type ?? 'MOVIE').toUpperCase().replaceAll('_', ' ');
     final poster = _posterUrl;
 
     return MouseRegion(
@@ -72,15 +73,16 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
             color: colors.cardBackground,
             border: Border.all(
               color: _hovered
-                  ? colors.primaryAccent.withOpacity(0.85)
-                  : colors.border.withOpacity(isDark ? 0.6 : 0.9),
+                  ? colors.primaryAccent.withValues(alpha: 0.85)
+                  : colors.border.withValues(alpha: isDark ? 0.6 : 0.9),
               width: _hovered ? 1.8 : 1.0,
             ),
             boxShadow: [
               BoxShadow(
                 color: _hovered
-                    ? colors.primaryAccent.withOpacity(isDark ? 0.35 : 0.20)
-                    : Colors.black.withOpacity(isDark ? 0.35 : 0.06),
+                    ? colors.primaryAccent
+                        .withValues(alpha: isDark ? 0.35 : 0.20)
+                    : Colors.black.withValues(alpha: isDark ? 0.35 : 0.06),
                 blurRadius: _hovered ? 24 : 10,
                 offset: Offset(0, _hovered ? 12 : 4),
               ),
@@ -97,8 +99,12 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
                     imageUrl: poster,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Shimmer.fromColors(
-                      baseColor: isDark ? const Color(0xFF1E2230) : const Color(0xFFE2E8F0),
-                      highlightColor: isDark ? const Color(0xFF2A3045) : const Color(0xFFF1F5F9),
+                      baseColor: isDark
+                          ? const Color(0xFF1E2230)
+                          : const Color(0xFFE2E8F0),
+                      highlightColor: isDark
+                          ? const Color(0xFF2A3045)
+                          : const Color(0xFFF1F5F9),
                       child: Container(color: colors.surface),
                     ),
                     errorWidget: (context, url, error) => Container(
@@ -107,7 +113,7 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
                         child: Icon(
                           Icons.movie_filter_rounded,
                           size: 40,
-                          color: colors.textMuted.withOpacity(0.5),
+                          color: colors.textMuted.withValues(alpha: 0.5),
                         ),
                       ),
                     ),
@@ -119,7 +125,7 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
                       child: Icon(
                         Icons.movie_filter_rounded,
                         size: 40,
-                        color: colors.textMuted.withOpacity(0.5),
+                        color: colors.textMuted.withValues(alpha: 0.5),
                       ),
                     ),
                   ),
@@ -133,8 +139,9 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          Colors.black.withOpacity(_hovered ? 0.4 : 0.1),
-                          Colors.black.withOpacity(_hovered ? 0.92 : 0.75),
+                          Colors.black.withValues(alpha: _hovered ? 0.4 : 0.1),
+                          Colors.black
+                              .withValues(alpha: _hovered ? 0.92 : 0.75),
                         ],
                         stops: const [0.35, 0.65, 1.0],
                       ),
@@ -151,7 +158,8 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
                     children: [
                       if (widget.rankNumber != null)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
                               colors: [Color(0xFFE50914), Color(0xFFFF334B)],
@@ -159,7 +167,8 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
                             borderRadius: BorderRadius.circular(6),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFE50914).withOpacity(0.5),
+                                color: const Color(0xFFE50914)
+                                    .withValues(alpha: 0.5),
                                 blurRadius: 6,
                               ),
                             ],
@@ -176,11 +185,13 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
                         )
                       else
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.65),
+                            color: Colors.black.withValues(alpha: 0.65),
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.white.withOpacity(0.2)),
+                            border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.2)),
                           ),
                           child: Text(
                             type,
@@ -201,11 +212,14 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
                   top: 10,
                   right: 10,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.65),
+                      color: Colors.black.withValues(alpha: 0.65),
                       borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: const Color(0xFFFFB800).withOpacity(0.6)),
+                      border: Border.all(
+                          color:
+                              const Color(0xFFFFB800).withValues(alpha: 0.6)),
                     ),
                     child: const Text(
                       '4K ULTRA HD',
@@ -223,7 +237,8 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
                 AnimatedPositioned(
                   duration: const Duration(milliseconds: 220),
                   curve: Curves.easeOut,
-                  top: _hovered ? (widget.height * 0.35) : (widget.height * 0.4),
+                  top:
+                      _hovered ? (widget.height * 0.35) : (widget.height * 0.4),
                   left: 0,
                   right: 0,
                   child: AnimatedOpacity(
@@ -238,7 +253,8 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
                           color: colors.primaryAccent,
                           boxShadow: [
                             BoxShadow(
-                              color: colors.primaryAccent.withOpacity(0.6),
+                              color:
+                                  colors.primaryAccent.withValues(alpha: 0.6),
                               blurRadius: 16,
                               offset: const Offset(0, 4),
                             ),
@@ -286,7 +302,7 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
                             Text(
                               year,
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.white.withValues(alpha: 0.8),
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -297,7 +313,7 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
                               height: 3,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: Colors.white.withOpacity(0.6),
+                                color: Colors.white.withValues(alpha: 0.6),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -305,7 +321,7 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
                           Text(
                             'U/A 13+',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
+                              color: Colors.white.withValues(alpha: 0.8),
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                             ),
@@ -315,9 +331,10 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
                             GestureDetector(
                               onTap: widget.onPlayTrailer,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
+                                  color: Colors.white.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: const Row(

@@ -10,7 +10,11 @@ class HomeShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     final isMobile = ResponsiveWidget.isMobile(context);
     final isDesktop = ResponsiveWidget.isDesktop(context);
-    final cardCount = isMobile ? 3 : isDesktop ? 6 : 4;
+    final cardCount = isMobile
+        ? 3
+        : isDesktop
+            ? 6
+            : 4;
 
     return SafeArea(
       bottom: false,
@@ -152,7 +156,7 @@ class HomeShimmer extends StatelessWidget {
       width: MovieCard.itemWidth,
       margin: const EdgeInsets.all(MovieCard.itemMargin),
       decoration: BoxDecoration(
-        color: theme.cardColor.withOpacity(0.3),
+        color: theme.cardColor.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(

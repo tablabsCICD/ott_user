@@ -494,7 +494,8 @@ class _SeriesListViewState extends State<_SeriesListView>
                         ? selectedThemeData.canvasColor
                         : Colors.white,
                   ),
-                  tooltip: '₹ ${walletProvider.walletBalance.toStringAsFixed(2)}',
+                  tooltip:
+                      '₹ ${walletProvider.walletBalance.toStringAsFixed(2)}',
                   style: _appBarIconStyle(context),
                   onPressed: () => Navigator.push(
                     context,
@@ -576,8 +577,8 @@ class _SeriesListViewState extends State<_SeriesListView>
 
     return IconButton.styleFrom(
       backgroundColor: useTransparentAppBar
-          ? Colors.white.withOpacity(0.3)
-          : Colors.black.withOpacity(0.2),
+          ? Colors.white.withValues(alpha: 0.3)
+          : Colors.black.withValues(alpha: 0.2),
     );
   }
 

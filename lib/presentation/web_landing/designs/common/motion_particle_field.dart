@@ -118,8 +118,8 @@ class _ParticlePainter extends CustomPainter {
     final glowPaint1 = Paint()
       ..shader = RadialGradient(
         colors: [
-          primaryColor.withOpacity(0.08),
-          primaryColor.withOpacity(0.0),
+          primaryColor.withValues(alpha: 0.08),
+          primaryColor.withValues(alpha: 0.0),
         ],
       ).createShader(
         Rect.fromCircle(
@@ -142,8 +142,8 @@ class _ParticlePainter extends CustomPainter {
     final glowPaint2 = Paint()
       ..shader = RadialGradient(
         colors: [
-          secondaryColor.withOpacity(0.06),
-          secondaryColor.withOpacity(0.0),
+          secondaryColor.withValues(alpha: 0.06),
+          secondaryColor.withValues(alpha: 0.0),
         ],
       ).createShader(
         Rect.fromCircle(
@@ -170,10 +170,11 @@ class _ParticlePainter extends CustomPainter {
       final posX = (currentX < 0 ? currentX + 1.0 : currentX) * size.width;
       final posY = (currentY < 0 ? currentY + 1.0 : currentY) * size.height;
 
-      final pulse = (math.sin(progress * math.pi * 2 * p.pulseSpeed) + 1.0) / 2.0;
+      final pulse =
+          (math.sin(progress * math.pi * 2 * p.pulseSpeed) + 1.0) / 2.0;
       final currentOpacity = (p.opacity * (0.6 + 0.4 * pulse)).clamp(0.0, 1.0);
 
-      paint.color = primaryColor.withOpacity(currentOpacity);
+      paint.color = primaryColor.withValues(alpha: currentOpacity);
       canvas.drawCircle(Offset(posX, posY), p.radius, paint);
     }
   }

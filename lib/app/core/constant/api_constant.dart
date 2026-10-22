@@ -17,7 +17,7 @@ class ApiConstant {
   static String playbackPiracyEvent = "${baseUrl}api/playback/security/event";
   static String antiPiracyDevices = "${baseUrl}anti-piracy/devices";
   static String antiPiracyDevice(String deviceId) =>
-      "${antiPiracyDevices}/${Uri.encodeComponent(deviceId)}";
+      "$antiPiracyDevices/${Uri.encodeComponent(deviceId)}";
   static const String signedPlaybackUrl =
       "${baseUrl}anti-piracy/playback/signed-url";
   static String playbackAnalytics = "${baseUrl}anti-piracy/playback/analytics";

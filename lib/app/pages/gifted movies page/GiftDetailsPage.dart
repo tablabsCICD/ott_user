@@ -287,7 +287,8 @@ Gift code: $couponCode
                         margin: const EdgeInsets.symmetric(vertical: 6),
                         child: ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: theme.canvasColor.withOpacity(0.3),
+                            backgroundColor:
+                                theme.canvasColor.withValues(alpha: 0.3),
                             backgroundImage:
                                 (user.image != null && user.image!.isNotEmpty)
                                     ? NetworkImage(user.image!)
@@ -295,7 +296,8 @@ Gift code: $couponCode
                             child: (user.image == null || user.image!.isEmpty)
                                 ? Icon(
                                     Icons.person,
-                                    color: theme.canvasColor.withOpacity(0.7),
+                                    color: theme.canvasColor
+                                        .withValues(alpha: 0.7),
                                   )
                                 : null,
                           ),

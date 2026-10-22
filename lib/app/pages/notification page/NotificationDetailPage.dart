@@ -57,7 +57,7 @@ class NotificationDetailPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.primaryColor.withOpacity(0.18)),
+        border: Border.all(color: theme.primaryColor.withValues(alpha: 0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,7 +69,7 @@ class NotificationDetailPage extends StatelessWidget {
                 height: 44,
                 width: 44,
                 decoration: BoxDecoration(
-                  color: theme.primaryColor.withOpacity(0.14),
+                  color: theme.primaryColor.withValues(alpha: 0.14),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -99,7 +99,7 @@ class NotificationDetailPage extends StatelessWidget {
                           Icon(
                             Icons.event_outlined,
                             size: 15,
-                            color: theme.canvasColor.withOpacity(0.62),
+                            color: theme.canvasColor.withValues(alpha: 0.62),
                           ),
                           const SizedBox(width: 6),
                           Expanded(
@@ -108,7 +108,8 @@ class NotificationDetailPage extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: theme.canvasColor.withOpacity(0.68),
+                                color:
+                                    theme.canvasColor.withValues(alpha: 0.68),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -143,7 +144,7 @@ class NotificationDetailPage extends StatelessWidget {
           child: Text(
             notification.body,
             style: TextStyle(
-              color: theme.canvasColor.withOpacity(0.86),
+              color: theme.canvasColor.withValues(alpha: 0.86),
               fontSize: 15,
               height: 1.5,
               fontWeight: FontWeight.w500,
@@ -182,7 +183,7 @@ class NotificationDetailPage extends StatelessWidget {
                 if (i != rows.length - 1)
                   Divider(
                     height: 1,
-                    color: theme.canvasColor.withOpacity(0.08),
+                    color: theme.canvasColor.withValues(alpha: 0.08),
                   ),
               ],
             ],
@@ -239,9 +240,9 @@ class NotificationDetailPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: theme.primaryColor.withOpacity(0.12),
+        color: theme.primaryColor.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.primaryColor.withOpacity(0.2)),
+        border: Border.all(color: theme.primaryColor.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -273,7 +274,7 @@ class NotificationDetailPage extends StatelessWidget {
             height: 30,
             width: 30,
             decoration: BoxDecoration(
-              color: theme.primaryColor.withOpacity(0.1),
+              color: theme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(item.icon, color: theme.primaryColor, size: 16),
@@ -286,7 +287,7 @@ class NotificationDetailPage extends StatelessWidget {
                 Text(
                   item.label,
                   style: TextStyle(
-                    color: theme.canvasColor.withOpacity(0.58),
+                    color: theme.canvasColor.withValues(alpha: 0.58),
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -328,7 +329,7 @@ class NotificationDetailPage extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.cardColor,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: theme.canvasColor.withOpacity(0.08)),
+          border: Border.all(color: theme.canvasColor.withValues(alpha: 0.08)),
         ),
         child: Row(
           children: [
@@ -337,7 +338,7 @@ class NotificationDetailPage extends StatelessWidget {
               width: 54,
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: theme.primaryColor.withOpacity(0.1),
+                color: theme.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: image
@@ -375,7 +376,7 @@ class NotificationDetailPage extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: theme.canvasColor.withOpacity(0.58),
+                      color: theme.canvasColor.withValues(alpha: 0.58),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -399,7 +400,7 @@ class NotificationDetailPage extends StatelessWidget {
             const SizedBox(width: 8),
             Icon(
               Icons.open_in_new_rounded,
-              color: theme.canvasColor.withOpacity(0.62),
+              color: theme.canvasColor.withValues(alpha: 0.62),
               size: 20,
             ),
           ],

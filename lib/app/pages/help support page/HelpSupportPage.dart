@@ -143,13 +143,13 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
         borderRadius: BorderRadius.circular(18),
         gradient: LinearGradient(
           colors: [
-            theme.primaryColor.withOpacity(0.92),
-            theme.primaryColor.withOpacity(0.65),
+            theme.primaryColor.withValues(alpha: 0.92),
+            theme.primaryColor.withValues(alpha: 0.65),
           ],
         ),
         boxShadow: [
           BoxShadow(
-            color: theme.primaryColor.withOpacity(0.25),
+            color: theme.primaryColor.withValues(alpha: 0.25),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -161,7 +161,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
+              color: Colors.white.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
@@ -207,7 +207,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
-          backgroundColor: theme.primaryColor.withOpacity(0.14),
+          backgroundColor: theme.primaryColor.withValues(alpha: 0.14),
           child: Icon(Icons.tour_rounded, color: theme.primaryColor),
         ),
         title: Text(
@@ -219,10 +219,10 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
         ),
         subtitle: Text(
           'Replay the quick guide to important app features.',
-          style: TextStyle(color: theme.canvasColor.withOpacity(0.68)),
+          style: TextStyle(color: theme.canvasColor.withValues(alpha: 0.68)),
         ),
         trailing: Icon(Icons.arrow_forward_ios_rounded,
-            size: 16, color: theme.canvasColor.withOpacity(0.7)),
+            size: 16, color: theme.canvasColor.withValues(alpha: 0.7)),
         onTap: () {
           context.read<OnboardingTourProvider>().replayTour(context: context);
         },
@@ -456,7 +456,8 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
           decoration: BoxDecoration(
             color: theme.cardColor,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: theme.primaryColor.withOpacity(0.2)),
+            border:
+                Border.all(color: theme.primaryColor.withValues(alpha: 0.2)),
           ),
           child: Row(
             children: [
@@ -485,7 +486,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: theme.primaryColor.withOpacity(0.12)),
+        border: Border.all(color: theme.primaryColor.withValues(alpha: 0.12)),
       ),
       child: Column(
         children: [
@@ -508,7 +509,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
             'Your submitted support requests will appear here.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: theme.canvasColor.withOpacity(0.65),
+              color: theme.canvasColor.withValues(alpha: 0.65),
               fontSize: 13,
             ),
           ),
@@ -550,7 +551,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                         width: 64,
                         height: 64,
                         decoration: BoxDecoration(
-                          color: theme.primaryColor.withOpacity(0.08),
+                          color: theme.primaryColor.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child:
@@ -562,7 +563,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: theme.primaryColor.withOpacity(0.08),
+                      color: theme.primaryColor.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(Icons.help_outline, color: theme.primaryColor),
@@ -584,7 +585,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                   Text(
                     feedback,
                     style: TextStyle(
-                      color: theme.canvasColor.withOpacity(0.7),
+                      color: theme.canvasColor.withValues(alpha: 0.7),
                       fontSize: 13,
                       height: 1.3,
                     ),
@@ -660,7 +661,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
           content: Text(
             'This support ticket will be removed from your sent requests.',
             style: TextStyle(
-              color: theme.canvasColor.withOpacity(0.75),
+              color: theme.canvasColor.withValues(alpha: 0.75),
             ),
           ),
           actions: [

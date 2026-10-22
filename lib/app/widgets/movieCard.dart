@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:video_player/video_player.dart' as native_video;
@@ -23,6 +23,7 @@ import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/onboarding_tour_provider.dart';
 import 'package:ott/app/provider/userProvider.dart';
+import 'package:ott/app/provider/playMediaProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/feature_tour.dart';
@@ -368,8 +369,7 @@ class _MovieCardState extends State<MovieCard> {
 
   void _handleActiveIndexChanged() {
     final activeIndex = widget.activeIndexListenable?.value;
-    final shouldAutoPlay =
-        _isAutoPlayDevice &&
+    final shouldAutoPlay = _isAutoPlayDevice &&
         widget.index != null &&
         activeIndex != null &&
         activeIndex == widget.index;
@@ -548,11 +548,16 @@ class _MovieCardState extends State<MovieCard> {
         ? widget.movie.posterUrlList!.first
         : null;
     final showPreview = _isPreviewPlaying;
-    final cardWidth = widget.cardWidth ?? MovieCard.itemWidth;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final defaultWidth =
+        screenWidth < 340 ? (screenWidth - 24) : MovieCard.itemWidth;
+    final cardWidth = widget.cardWidth ?? defaultWidth;
     final cardMargin = widget.cardMargin ?? MovieCard.itemMargin;
     final highlightColor = theme.brightness == Brightness.light
         ? const Color.fromARGB(255, 185, 169, 169)
         : const Color.fromARGB(255, 58, 49, 49);
+
+    final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
 
     return Stack(
       children: [
@@ -592,7 +597,6 @@ class _MovieCardState extends State<MovieCard> {
                       ? 4
                       : 12, // 👈 selected card moves slightly up
                 ),
-                //    margin: EdgeInsets.all(cardMargin),
                 decoration: BoxDecoration(
                   color: theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
@@ -602,47 +606,60 @@ class _MovieCardState extends State<MovieCard> {
                         : theme.canvasColor.withValues(alpha: 0.2),
                     width: showPreview ? 2.5 : 1,
                   ),
-                  /*  boxShadow: showPreview
-                    ? [
-                        BoxShadow(
-                          color: highlightColor.withValues(alpha: 0.12),
-                          blurRadius: 3,
-                          spreadRadius: 0.5,
-                          offset: const Offset(0, 3),
-                        ),
-                      ]
-                    : null, */
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: isIOS ? MainAxisSize.min : MainAxisSize.max,
                   children: [
                     /// 🎬 POSTER + PROGRESS BAR STACK
-                    Expanded(
-                      flex: 8,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border(
-                            top: BorderSide(color: theme.cardColor, width: 1),
-                            left: BorderSide(color: theme.cardColor, width: 1),
-                            right: BorderSide(color: theme.cardColor, width: 1),
+                    if (isIOS)
+                      AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(11),
+                            ),
                           ),
-                          borderRadius: BorderRadius.circular(12),
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(11),
+                            ),
+                            child: _buildMediaPreview(
+                              posterUrl,
+                              theme,
+                              widget.movie,
+                              showPreview,
+                            ),
+                          ),
                         ),
-                        child: ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(12),
+                      )
+                    else
+                      Expanded(
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(11),
+                            ),
                           ),
-                          child: _buildMediaPreview(
-                            posterUrl,
-                            theme,
-                            widget.movie,
-                            showPreview,
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(11),
+                            ),
+                            child: _buildMediaPreview(
+                              posterUrl,
+                              theme,
+                              widget.movie,
+                              showPreview,
+                            ),
                           ),
                         ),
                       ),
-                    ),
 
                     /// 📄 DETAILS SECTION
-                    Expanded(flex: 3, child: _buildContentSection(theme, lang)),
+                    _buildContentSection(theme, lang),
                   ],
                 ),
               ),
@@ -657,12 +674,20 @@ class _MovieCardState extends State<MovieCard> {
   }
 
   Widget _muteToggleButton() {
-    return IconButton(
-      icon: Icon(
-        _isMuted ? Icons.volume_off : Icons.volume_up,
-        color: Colors.white.withOpacity(0.7),
+    return GestureDetector(
+      onTap: _toggleMute,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.5),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          _isMuted ? Icons.volume_off : Icons.volume_up,
+          size: 16,
+          color: Colors.white.withValues(alpha: 0.9),
+        ),
       ),
-      onPressed: _toggleMute,
     );
   }
 
@@ -677,83 +702,217 @@ class _MovieCardState extends State<MovieCard> {
         _isVideoInitialized &&
         nativeController != null &&
         nativeController.value.isInitialized) {
-      return Stack(
-        children: [
-          Positioned.fill(child: native_video.VideoPlayer(nativeController)),
-          Positioned(right: 5, bottom: 5, child: _muteToggleButton()),
-        ],
+      return Container(
+        color: Colors.black,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: SizedBox(
+                  width: nativeController.value.size.width,
+                  height: nativeController.value.size.height,
+                  child: native_video.VideoPlayer(nativeController),
+                ),
+              ),
+            ),
+            Positioned(right: 6, bottom: 6, child: _muteToggleButton()),
+          ],
+        ),
       );
     }
     if (showPreview && _isVideoInitialized && _videoController != null) {
-      return Stack(
-        children: [
-          Positioned.fill(
-            child: Video(
-              controller: _videoController!,
-              fit: BoxFit.fill,
-              controls: null,
+      return Container(
+        color: Colors.black,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Video(
+                controller: _videoController!,
+                fit: BoxFit.contain,
+                controls: null,
+              ),
             ),
-          ),
-          Positioned(bottom: 0, left: 0, right: 0, child: _previewProgress()),
-          Positioned(right: 5, bottom: 5, child: _muteToggleButton()),
-        ],
+            Positioned(bottom: 0, left: 0, right: 0, child: _previewProgress()),
+            Positioned(right: 6, bottom: 6, child: _muteToggleButton()),
+          ],
+        ),
       );
     }
 
-    return Stack(
-      children: [
-        posterUrl != null
-            ? Image.network(
-                posterUrl,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (_, __, ___) => Center(
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: Colors.black,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          posterUrl != null && posterUrl.isNotEmpty
+              ? Image.network(
+                  posterUrl,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.center,
+                  width: double.infinity,
+                  height: double.infinity,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                            : null,
+                        color: theme.primaryColor,
+                      ),
+                    );
+                  },
+                  errorBuilder: (_, __, ___) => Center(
+                    child: Icon(
+                      Icons.broken_image,
+                      color: theme.canvasColor.withValues(alpha: 0.3),
+                      size: 48,
+                    ),
+                  ),
+                )
+              : Center(
                   child: Icon(
                     Icons.broken_image,
-                    color: theme.canvasColor.withOpacity(0.3),
-                    size: 60,
+                    color: theme.canvasColor.withValues(alpha: 0.3),
+                    size: 48,
                   ),
                 ),
-              )
-            : Icon(
-                Icons.broken_image,
-                color: theme.canvasColor.withOpacity(0.3),
-                size: 60,
-              ),
 
-        /// 🔥 CONTINUE WATCHING BAR
-        if ((widget.movie.watchedPercentage ?? 0) > 0) _watchProgressBar(theme),
-      ],
+          /// 🔥 CONTINUE WATCHING BAR
+          if ((widget.movie.watchedPercentage ?? 0) > 0)
+            _watchProgressBar(theme),
+
+          if (Theme.of(context).platform == TargetPlatform.iOS &&
+              widget.index == 0)
+            Positioned(
+              right: 6,
+              bottom: 6,
+              child: _muteToggleButton(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIosContentSection(ThemeData theme, AppLocalizations lang) {
+    final movie = widget.movie;
+    final isRental = movie.isRental ?? false;
+
+    final genreText = (movie.genreList?.isNotEmpty ?? false)
+        ? movie.genreList!.first
+        : 'Drama';
+    final dateText = formatReleaseDate(movie.releaseDate);
+    final subtitleText = '$dateText | $genreText';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  movie.title ?? 'No Title',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitleText,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade400,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => movie.type?.toLowerCase() == 'series'
+                ? _openDetails()
+                : isRental
+                    ? _playMovie()
+                    : _showCupertinoDialog(context, movie),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: theme.primaryColor,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                movie.isFeatured == true ? 'Watch Trailer' : 'Watch Now',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildContentSection(ThemeData theme, AppLocalizations lang) {
+    if (Theme.of(context).platform == TargetPlatform.iOS) {
+      return _buildIosContentSection(theme, lang);
+    }
     final movie = widget.movie;
 
     final rating = movie.ratings ?? 0.0;
     final price = movie.price ?? 0;
 
-    return Row(
-      children: [
-        Flexible(
-          flex: 7,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
-                    StarRatingWidget(rating: rating),
-                    Text(
-                      " (${movie.ratingCount ?? 0})",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.canvasColor.withOpacity(0.7),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            StarRatingWidget(
+                              rating: rating,
+                            ),
+                            Text(
+                              " (${movie.ratingCount ?? 0})",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: theme.canvasColor.withValues(alpha: 0.7),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -761,7 +920,7 @@ class _MovieCardState extends State<MovieCard> {
                 Text(
                   movie.title ?? 'No Title',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: theme.canvasColor,
                   ),
@@ -774,53 +933,47 @@ class _MovieCardState extends State<MovieCard> {
                   overflow: TextOverflow.ellipsis,
                   TextSpan(
                     style: TextStyle(
-                      color: theme.canvasColor.withOpacity(0.7),
+                      color: theme.canvasColor.withValues(alpha: 0.7),
                       fontSize: 12,
                     ),
                     children: [
                       TextSpan(text: formatReleaseDate(movie.releaseDate)),
                       const TextSpan(text: ' | '),
-                      TextSpan(text: movie.genreList?.join(', ') ?? 'N/A'),
+                      TextSpan(
+                        text: (movie.genreList?.isNotEmpty ?? false)
+                            ? movie.genreList!.join(', ')
+                            : 'Movie',
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
           ),
-        ),
-        Row(
-          children: [
-            // _optionButton(context, movie),
-            // SizedBox(
-            //   width: 5,
-            // ),
-            movie.isFeatured == true
-                ? Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 6,
-                      horizontal: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      color: theme.primaryColor.withOpacity(0.9),
-                    ),
-                    child: Text(
-                      "Watch Trailer",
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  )
-                : _tourWrapDownloadTarget(
-                    _buildPriceButton(theme, lang, price),
-                    movie,
+          const SizedBox(width: 6),
+          movie.isFeatured == true
+              ? Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: theme.primaryColor.withValues(alpha: 0.9),
                   ),
-            SizedBox(width: 5),
-          ],
-        ),
-      ],
+                  child: const Text(
+                    "Watch Trailer",
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                )
+              : _tourWrapDownloadTarget(
+                  _buildPriceButton(theme, lang, price),
+                  movie,
+                ),
+        ],
+      ),
     );
   }
 
@@ -831,34 +984,33 @@ class _MovieCardState extends State<MovieCard> {
   ) {
     final movie = widget.movie;
     final isRental = movie.isRental ?? false;
-    final isShortFilm =
-        widget.isShortFilmTab ||
+    final isShortFilm = widget.isShortFilmTab ||
         ContentType.normalize(movie.type) == ContentType.shortFilm;
 
     return GestureDetector(
       onTap: () => movie.type!.toLowerCase() == 'series'
           ? _openDetails()
           : isRental
-          ? _playMovie()
-          : _showCupertinoDialog(context, movie),
+              ? _playMovie()
+              : _showCupertinoDialog(context, movie),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(7),
-          color: theme.primaryColor.withOpacity(0.9),
+          color: theme.primaryColor.withValues(alpha: 0.9),
         ),
         child: Text(
           movie.type!.toLowerCase() == 'series'
               ? isRental
-                    ? (isShortFilm ? 'Watch Now' : 'Watch Series')
-                    : '₹ $price'
+                  ? (isShortFilm ? 'Watch Now' : 'Watch Series')
+                  : '₹ $price'
               : isRental
-              ? isShortFilm
-                    ? 'Watch Now'
-                    : movie.type?.toLowerCase() == "movie"
-                    ? lang.watchMovie
-                    : lang.watchSeries
-              : "₹ $price",
+                  ? isShortFilm
+                      ? 'Watch Now'
+                      : movie.type?.toLowerCase() == "movie"
+                          ? lang.watchMovie
+                          : lang.watchSeries
+                  : "₹ $price",
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
@@ -870,8 +1022,7 @@ class _MovieCardState extends State<MovieCard> {
   }
 
   Widget _tourWrapDownloadTarget(Widget child, Content movie) {
-    final canDownload =
-        widget.index == 0 &&
+    final canDownload = widget.index == 0 &&
         movie.isDownloadable == true &&
         (movie.contentUrl?.trim().isNotEmpty ?? false);
     if (!canDownload) return child;
@@ -893,11 +1044,20 @@ class _MovieCardState extends State<MovieCard> {
                 trailerUrl: movie.teaserOrTrailerUrl ?? "",
                 isTrailerUrl: true,
                 content: movie)
-            :  */ ContentType.isMovieLike(movie.type)
-            ? MovieDetailsPage(movieId: movie.id!, contentType: movie.type)
-            : SeriesDetailsPage(seriesId: movie.id!, content: movie),
+            :  */
+                ContentType.isMovieLike(movie.type)
+                    ? MovieDetailsPage(
+                        movieId: movie.id!, contentType: movie.type)
+                    : SeriesDetailsPage(seriesId: movie.id!, content: movie),
       ),
-    ).then((_) => _refreshSingleContent());
+    ).then((_) {
+      if (!mounted) return;
+      _refreshSingleContent();
+      context.read<DashboardProvider>().getContinueWatchedMovieList(
+            widget.movie.type ?? "MOVIE",
+            forceRefresh: true,
+          );
+    });
   }
 
   Future<void> _playMovie() async {
@@ -914,23 +1074,38 @@ class _MovieCardState extends State<MovieCard> {
     Content contentToPlay = movie;
     var contentUrl = contentToPlay.contentUrl;
 
+    final localResumeSeconds = context.read<PlayMediaProvider>().getLocalResume(
+          contentId: movie.id!,
+          seasonId: movie.seasonId,
+          episodeId: movie.episodeId,
+        );
+    final latestResumeSeconds = (movie.watchedSeconds ?? 0) > localResumeSeconds
+        ? movie.watchedSeconds ?? 0
+        : localResumeSeconds;
+
     if (contentUrl == null || contentUrl.trim().isEmpty) {
       SecurityDebugLog.event(
         'ROUTE',
         'Card has no media source; refreshing content details.',
       );
-      final fetchedContent = await context
-          .read<DashboardProvider>()
-          .getContentById(movie.id!);
+      final fetchedContent =
+          await context.read<DashboardProvider>().getContentById(movie.id!);
       if (!mounted) return;
 
       if (fetchedContent != null) {
-        fetchedContent.watchedSeconds ??= movie.watchedSeconds;
+        if ((fetchedContent.watchedSeconds ?? 0) < latestResumeSeconds) {
+          fetchedContent.watchedSeconds = latestResumeSeconds;
+        }
         fetchedContent.watchedPercentage ??= movie.watchedPercentage;
         contentToPlay = fetchedContent;
         contentUrl = contentToPlay.contentUrl;
       }
     }
+
+    if ((contentToPlay.watchedSeconds ?? 0) < latestResumeSeconds) {
+      contentToPlay.watchedSeconds = latestResumeSeconds;
+    }
+    contentToPlay.watchedPercentage ??= movie.watchedPercentage;
 
     if (contentUrl == null || contentUrl.trim().isEmpty) {
       SecurityDebugLog.event(
@@ -961,8 +1136,9 @@ class _MovieCardState extends State<MovieCard> {
     ).then((_) {
       if (!mounted) return;
       context.read<DashboardProvider>().getContinueWatchedMovieList(
-        contentToPlay.type ?? "MOVIE",
-      );
+            contentToPlay.type ?? "MOVIE",
+            forceRefresh: true,
+          );
     });
   }
 
@@ -1070,9 +1246,8 @@ class _MovieCardState extends State<MovieCard> {
     final contentId = widget.movie.id;
     if (contentId == null || !mounted) return;
 
-    final refreshedContent = await context
-        .read<DashboardProvider>()
-        .getContentById(contentId);
+    final refreshedContent =
+        await context.read<DashboardProvider>().getContentById(contentId);
     if (!mounted || refreshedContent == null) return;
 
     widget.onContentUpdated?.call(refreshedContent);
@@ -1131,8 +1306,8 @@ class _MovieCardState extends State<MovieCard> {
                     ),
                     backgroundColor: theme.primaryColor,
                     onTap: () async {
-                      final bool wasBookmarked = bookmarkProvider
-                          .isBookmarkedLocally(movie.id ?? 0);
+                      final bool wasBookmarked =
+                          bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
 
                       await bookmarkProvider.toggleBookmark(movie);
 
@@ -1242,7 +1417,7 @@ class _MovieCardState extends State<MovieCard> {
                     "How many people do you want to gift this movie to?",
                     style: TextStyle(
                       fontSize: 13,
-                      color: theme.canvasColor.withOpacity(0.7),
+                      color: theme.canvasColor.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 10),

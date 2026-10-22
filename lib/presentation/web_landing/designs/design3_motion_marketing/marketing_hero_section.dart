@@ -37,17 +37,17 @@ class MarketingHeroSection extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  colors.primaryAccent.withOpacity(0.18),
-                  colors.secondaryAccent.withOpacity(0.08),
+                  colors.primaryAccent.withValues(alpha: 0.18),
+                  colors.secondaryAccent.withValues(alpha: 0.08),
                 ],
               ),
               borderRadius: BorderRadius.circular(30),
               border: Border.all(
-                color: colors.primaryAccent.withOpacity(0.5),
+                color: colors.primaryAccent.withValues(alpha: 0.5),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: colors.primaryAccent.withOpacity(0.2),
+                  color: colors.primaryAccent.withValues(alpha: 0.2),
                   blurRadius: 16,
                 ),
               ],
@@ -149,7 +149,7 @@ class MarketingHeroSection extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   elevation: 12,
-                  shadowColor: colors.primaryAccent.withOpacity(0.6),
+                  shadowColor: colors.primaryAccent.withValues(alpha: 0.6),
                   textStyle: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
@@ -164,10 +164,12 @@ class MarketingHeroSection extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: colors.textPrimary,
                   side: BorderSide(
-                    color: isDark ? Colors.white.withOpacity(0.3) : colors.border,
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.3)
+                        : colors.border,
                     width: 1.6,
                   ),
-                  backgroundColor: colors.surface.withOpacity(0.6),
+                  backgroundColor: colors.surface.withValues(alpha: 0.6),
                   padding: EdgeInsets.symmetric(
                     horizontal: isMobile ? 22 : 30,
                     vertical: isMobile ? 16 : 20,
@@ -190,7 +192,8 @@ class MarketingHeroSection extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.check_circle_rounded, size: 16, color: colors.goldAccent),
+              Icon(Icons.check_circle_rounded,
+                  size: 16, color: colors.goldAccent),
               const SizedBox(width: 6),
               Text(
                 'No credit card required for free catalog • Instant access on any device',

@@ -118,8 +118,8 @@ class _AutoScrollingPostersState extends State<AutoScrollingPosters> {
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                                 colors: [
-                                  Colors.black.withOpacity(0.2),
-                                  Colors.black.withOpacity(0.7),
+                                  Colors.black.withValues(alpha: 0.2),
+                                  Colors.black.withValues(alpha: 0.7),
                                 ],
                               ),
                             ),

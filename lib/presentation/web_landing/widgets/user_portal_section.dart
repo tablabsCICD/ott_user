@@ -42,12 +42,12 @@ class UserPortalSection extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         gradient: LinearGradient(
           colors: [
-            Colors.white.withOpacity(0.075),
-            theme.primaryColor.withOpacity(0.12),
-            Colors.white.withOpacity(0.045),
+            Colors.white.withValues(alpha: 0.075),
+            theme.primaryColor.withValues(alpha: 0.12),
+            Colors.white.withValues(alpha: 0.045),
           ],
         ),
-        border: Border.all(color: Colors.white.withOpacity(0.10)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -79,7 +79,7 @@ class UserPortalSection extends StatelessWidget {
                 Text(
                   lang.viewersEntertainmentDescription,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.68),
+                    color: Colors.white.withValues(alpha: 0.68),
                     fontSize: 17,
                     fontWeight: FontWeight.w600,
                   ),
@@ -121,7 +121,8 @@ class UserPortalSection extends StatelessWidget {
                       onPressed: onExplorePlans,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        side: BorderSide(color: Colors.white.withOpacity(0.30)),
+                        side: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.30)),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
                           vertical: 17,
@@ -225,7 +226,7 @@ class _UserTimelineRowState extends State<_UserTimelineRow> {
                       : Container(
                           height: rowGap,
                           width: 1,
-                          color: Colors.white.withOpacity(0.14),
+                          color: Colors.white.withValues(alpha: 0.14),
                         ),
                 ),
                 Positioned(
@@ -237,9 +238,10 @@ class _UserTimelineRowState extends State<_UserTimelineRow> {
                     decoration: BoxDecoration(
                       color: _hovered
                           ? widget.color
-                          : Colors.white.withOpacity(0.10),
+                          : Colors.white.withValues(alpha: 0.10),
                       shape: BoxShape.circle,
-                      border: Border.all(color: widget.color.withOpacity(0.55)),
+                      border: Border.all(
+                          color: widget.color.withValues(alpha: 0.55)),
                     ),
                     child: Center(
                       child: Text(
@@ -263,10 +265,10 @@ class _UserTimelineRowState extends State<_UserTimelineRow> {
               margin: EdgeInsets.only(bottom: widget.isLast ? 0 : rowGap),
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(_hovered ? 0.42 : 0.26),
+                color: Colors.black.withValues(alpha: _hovered ? 0.42 : 0.26),
                 borderRadius: BorderRadius.circular(9),
                 border: Border.all(
-                  color: Colors.white.withOpacity(_hovered ? 0.18 : 0.08),
+                  color: Colors.white.withValues(alpha: _hovered ? 0.18 : 0.08),
                 ),
               ),
               child: Text(
@@ -298,14 +300,14 @@ class _UserFeatureBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.30),
+        color: Colors.black.withValues(alpha: 0.30),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.28)),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: Colors.white.withOpacity(0.82),
+          color: Colors.white.withValues(alpha: 0.82),
           fontSize: 12,
           fontWeight: FontWeight.w800,
         ),

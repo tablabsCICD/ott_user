@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/core/utils/content_type.dart';
@@ -235,7 +235,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
       if (!mounted) return;
       context
           .read<DashboardProvider>()
-          .getContinueWatchedMovieList(_contentType);
+          .getContinueWatchedMovieList(_contentType, forceRefresh: true);
     });
   }
 
@@ -347,7 +347,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                 "This content is currently unavailable. Please try again later.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: selectedThemeData.canvasColor.withOpacity(0.7),
+                  color: selectedThemeData.canvasColor.withValues(alpha: 0.7),
                   fontSize: ResponsiveWidget.isMobile(context) ? 14 : 16,
                 ),
               ),
@@ -534,9 +534,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
       opacity: _isHeroTrailerPlaying ? 1 : 0.76,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.08),
+          color: Colors.white.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white.withOpacity(0.16)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
@@ -593,9 +593,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.09),
+        color: Colors.white.withValues(alpha: 0.09),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
       child: Text(
         text,
@@ -768,14 +768,14 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
         style: ElevatedButton.styleFrom(
           backgroundColor: emphasized
               ? theme.primaryColor
-              : theme.primaryColor.withOpacity(0.82),
+              : theme.primaryColor.withValues(alpha: 0.82),
           foregroundColor: Colors.white,
-          disabledBackgroundColor: Colors.white.withOpacity(0.08),
+          disabledBackgroundColor: Colors.white.withValues(alpha: 0.08),
           disabledForegroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
           minimumSize: const Size(0, 56),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-          shadowColor: theme.primaryColor.withOpacity(0.45),
+          shadowColor: theme.primaryColor.withValues(alpha: 0.45),
           elevation: emphasized ? 12 : 4,
         ),
       ),
@@ -845,8 +845,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
               width: 104,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.08),
-                border: Border.all(color: Colors.white.withOpacity(0.14)),
+                color: Colors.white.withValues(alpha: 0.08),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
               ),
               child: ClipOval(
                 child: imageUrl.isNotEmpty
@@ -877,7 +877,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.58),
+                  color: Colors.white.withValues(alpha: 0.58),
                   fontSize: 12,
                 ),
               ),
@@ -1019,7 +1019,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
               ].whereType<String>().join('  |  '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.white.withOpacity(0.58)),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.58)),
             ),
           ],
         ),
@@ -1241,8 +1241,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.black.withOpacity(0.8),
-                Colors.black.withOpacity(0.9),
+                Colors.black.withValues(alpha: 0.8),
+                Colors.black.withValues(alpha: 0.9),
               ],
             ),
           ),
@@ -1264,7 +1264,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                           decoration: BoxDecoration(
                             border: Border.all(
                               width: 1,
-                              color: Colors.white.withOpacity(0.5),
+                              color: Colors.white.withValues(alpha: 0.5),
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -1333,7 +1333,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                       "  ${content.description ?? 'N/A'}",
                       textAlign: TextAlign.left,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1428,8 +1428,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.black.withOpacity(0.8),
-                Colors.black.withOpacity(0.9),
+                Colors.black.withValues(alpha: 0.8),
+                Colors.black.withValues(alpha: 0.9),
               ],
             ),
           ),
@@ -1469,7 +1469,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 10,
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -1595,7 +1595,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                     color: Colors.black26,
                     child: Icon(
                       Icons.broken_image,
-                      color: theme.canvasColor.withOpacity(0.5),
+                      color: theme.canvasColor.withValues(alpha: 0.5),
                     ),
                   ),
                 ),
@@ -1628,10 +1628,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
     final child = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: theme.primaryColor.withOpacity(0.18),
+        color: theme.primaryColor.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.primaryColor.withOpacity(0.65),
+          color: theme.primaryColor.withValues(alpha: 0.65),
         ),
       ),
       child: Text(
@@ -1720,7 +1720,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                           child: Icon(
                             LucideIcons.gift,
                             size: 200,
-                            color: theme.canvasColor.withOpacity(0.1),
+                            color: theme.canvasColor.withValues(alpha: 0.1),
                           ),
                         ),
                         Column(
@@ -2118,7 +2118,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
       return Text(
         'N/A',
         style: TextStyle(
-          color: Colors.white.withOpacity(0.7),
+          color: Colors.white.withValues(alpha: 0.7),
           fontWeight: FontWeight.normal,
         ),
       );
@@ -2137,7 +2137,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
               ? TextOverflow.visible
               : TextOverflow.ellipsis,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.75),
+            color: Colors.white.withValues(alpha: 0.75),
             fontWeight: FontWeight.normal,
             fontSize: 14,
             height: 1.4,

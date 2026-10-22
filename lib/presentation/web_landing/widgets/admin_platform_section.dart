@@ -59,7 +59,7 @@ class AdminPlatformSection extends StatelessWidget {
                 Text(
                   'Manage the complete OTT ecosystem from one place.',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.68),
+                    color: Colors.white.withValues(alpha: 0.68),
                     fontSize: 17,
                     height: 1.5,
                     fontWeight: FontWeight.w600,
@@ -79,9 +79,12 @@ class AdminPlatformSection extends StatelessWidget {
                   onPressed: onLearnMore,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    side: BorderSide(color: theme.primaryColor.withOpacity(0.75)),
-                    padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 17),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    side: BorderSide(
+                        color: theme.primaryColor.withValues(alpha: 0.75)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 26, vertical: 17),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                   child: const Text('Learn More'),
                 ),
@@ -104,12 +107,12 @@ class _AdminMockup extends StatelessWidget {
       height: 390,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.065),
+        color: Colors.white.withValues(alpha: 0.065),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.10)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.18),
+            color: color.withValues(alpha: 0.18),
             blurRadius: 44,
             offset: const Offset(0, 24),
           ),
@@ -127,7 +130,7 @@ class _AdminMockup extends StatelessWidget {
                   height: 28,
                   width: 28,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(opacity),
+                    color: Colors.white.withValues(alpha: opacity),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -140,7 +143,7 @@ class _AdminMockup extends StatelessWidget {
                 Container(
                   width: 118,
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.32),
+                    color: Colors.black.withValues(alpha: 0.32),
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
@@ -162,7 +165,7 @@ class _AdminMockup extends StatelessWidget {
                         flex: 2,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.28),
+                            color: Colors.black.withValues(alpha: 0.28),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Align(
@@ -170,14 +173,24 @@ class _AdminMockup extends StatelessWidget {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                for (final height in [68.0, 105.0, 82.0, 138.0, 118.0, 156.0])
+                                for (final height in [
+                                  68.0,
+                                  105.0,
+                                  82.0,
+                                  138.0,
+                                  118.0,
+                                  156.0
+                                ])
                                   Expanded(
                                     child: Container(
-                                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                                      margin: const EdgeInsets.symmetric(
+                                          horizontal: 8),
                                       height: height,
                                       decoration: BoxDecoration(
-                                        color: color.withOpacity(0.65),
-                                        borderRadius: const BorderRadius.vertical(top: Radius.circular(7)),
+                                        color: color.withValues(alpha: 0.65),
+                                        borderRadius:
+                                            const BorderRadius.vertical(
+                                                top: Radius.circular(7)),
                                       ),
                                     ),
                                   ),
@@ -206,7 +219,7 @@ class _MetricBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.28),
+        color: Colors.black.withValues(alpha: 0.28),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Center(
@@ -214,7 +227,7 @@ class _MetricBox extends StatelessWidget {
           height: 58,
           width: 58,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.24),
+            color: color.withValues(alpha: 0.24),
             shape: BoxShape.circle,
           ),
         ),
@@ -233,14 +246,14 @@ class _AdminModule extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.07),
+        color: Colors.white.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.18)),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: Colors.white.withOpacity(0.82),
+          color: Colors.white.withValues(alpha: 0.82),
           fontSize: 12,
           fontWeight: FontWeight.w800,
         ),

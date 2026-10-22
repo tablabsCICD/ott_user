@@ -79,7 +79,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                 Text(
                   provider.errorMessage ?? "No Mini Series available",
                   style: TextStyle(
-                    color: theme.canvasColor.withOpacity(0.6),
+                    color: theme.canvasColor.withValues(alpha: 0.6),
                   ),
                 ),
                 if (provider.errorMessage != null)
@@ -106,7 +106,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                 Text(
                   "No Mini Series available",
                   style: TextStyle(
-                    color: theme.canvasColor.withOpacity(0.6),
+                    color: theme.canvasColor.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -213,7 +213,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.black.withOpacity(0.55),
+                    Colors.black.withValues(alpha: 0.55),
                     Colors.transparent,
                   ],
                   begin: Alignment.bottomCenter,
@@ -265,7 +265,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                     ),

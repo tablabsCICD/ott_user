@@ -251,7 +251,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
               child: Text(
                 "Delete your Filmytell account and personal profile data. Purchases, wallet activity, support tickets, and records required for legal, tax, security, or fraud-prevention purposes may be retained as required by law.",
                 style: TextStyle(
-                  color: theme.canvasColor.withOpacity(0.74),
+                  color: theme.canvasColor.withValues(alpha: 0.74),
                   height: 1.45,
                   fontSize: 13,
                 ),
@@ -269,7 +269,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                 label: const Text("Deletion Info"),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: theme.primaryColor,
-                  side: BorderSide(color: theme.primaryColor.withOpacity(0.45)),
+                  side: BorderSide(
+                      color: theme.primaryColor.withValues(alpha: 0.45)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -346,7 +347,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           title: const Text("Delete account?"),
           content: Text(
             "This will permanently delete your Filmytell account. You will be logged out after the request is completed.",
-            style: TextStyle(color: theme.canvasColor.withOpacity(0.78)),
+            style: TextStyle(color: theme.canvasColor.withValues(alpha: 0.78)),
           ),
           actions: [
             TextButton(
@@ -565,7 +566,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: selectedThemeData.primaryColor
-                                  .withOpacity(0.25),
+                                  .withValues(alpha: 0.25),
                             ),
                           ),
                           child: ListView.separated(
@@ -575,7 +576,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                             separatorBuilder: (_, __) => Divider(
                               height: 1,
                               color: selectedThemeData.canvasColor
-                                  .withOpacity(0.08),
+                                  .withValues(alpha: 0.08),
                             ),
                             itemBuilder: (context, index) {
                               final suggestion =
@@ -804,8 +805,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                         child: Text(
                           'No options available',
                           style: TextStyle(
-                            color:
-                                selectedThemeData.canvasColor.withOpacity(0.7),
+                            color: selectedThemeData.canvasColor
+                                .withValues(alpha: 0.7),
                           ),
                         ),
                       ),
@@ -853,14 +854,15 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
         Text(
           label,
           style: TextStyle(
-              fontSize: 12, color: theme.canvasColor.withOpacity(0.7)),
+              fontSize: 12, color: theme.canvasColor.withValues(alpha: 0.7)),
         ),
         const SizedBox(height: 6),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
+            border:
+                Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
           ),
           child: Row(
             children: [
@@ -890,7 +892,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
       children: [
         Text(title,
             style: TextStyle(
-                fontSize: 12, color: theme.canvasColor.withOpacity(0.7))),
+                fontSize: 12, color: theme.canvasColor.withValues(alpha: 0.7))),
         const SizedBox(height: 8),
         Row(
           children: options.map((e) {
@@ -905,9 +907,9 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                   border: Border.all(
                       color: isSelected
                           ? theme.primaryColor
-                          : theme.dividerColor.withOpacity(0.5)),
+                          : theme.dividerColor.withValues(alpha: 0.5)),
                   color: isSelected
-                      ? theme.primaryColor.withOpacity(0.08)
+                      ? theme.primaryColor.withValues(alpha: 0.08)
                       : theme.cardColor,
                 ),
                 child: Text(

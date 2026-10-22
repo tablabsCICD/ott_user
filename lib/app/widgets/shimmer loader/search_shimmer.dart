@@ -32,7 +32,7 @@ class SearchShimmer extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
-      color: theme.cardColor.withOpacity(0.3),
+      color: theme.cardColor.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),

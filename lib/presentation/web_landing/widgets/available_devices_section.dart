@@ -30,10 +30,10 @@ class AvailableDevicesSection extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFF0B0B0B),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           boxShadow: [
             BoxShadow(
-              color: theme.primaryColor.withOpacity(0.10),
+              color: theme.primaryColor.withValues(alpha: 0.10),
               blurRadius: 34,
               offset: const Offset(0, 18),
             ),
@@ -118,7 +118,7 @@ class _StripTitle extends StatelessWidget {
         Text(
           lang.availableDevicesDescription,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.58),
+            color: Colors.white.withValues(alpha: 0.58),
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
@@ -144,9 +144,9 @@ class _DeviceBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withOpacity(0.10)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -204,7 +204,7 @@ class _StartButtonState extends State<_StartButton> {
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: widget.color.withOpacity(_hovered ? 0.38 : 0.18),
+                color: widget.color.withValues(alpha: _hovered ? 0.38 : 0.18),
                 blurRadius: _hovered ? 22 : 12,
                 offset: const Offset(0, 8),
               ),
