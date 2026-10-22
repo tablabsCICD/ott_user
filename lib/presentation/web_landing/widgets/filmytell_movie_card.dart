@@ -31,7 +31,7 @@ class _FilmytellMovieCardState extends State<FilmytellMovieCard> {
 
   @override
   Widget build(BuildContext context) {
-    final lang = AppLocalizations.of(context)!;
+    final lang = AppLocalizations.of(context);
     final poster = _posterFor(widget.content);
     final hasRank = widget.rank != null;
     final isMobile = widget.width < 200;
@@ -42,6 +42,7 @@ class _FilmytellMovieCardState extends State<FilmytellMovieCard> {
             : (isSmallMobile ? 18.0 : (isMobile ? 22.0 : (widget.width >= 260 ? 32.0 : 26.0))))
         : 0.0;
     final price = widget.content.price;
+    final rentPrefix = lang?.rent ?? 'Rent';
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -123,7 +124,7 @@ class _FilmytellMovieCardState extends State<FilmytellMovieCard> {
                               bottom: isMobile ? 4 : 6,
                               child: _RentCardButton(
                                 label:
-                                    '${lang.rent} Rs ${price.toStringAsFixed(0)}',
+                                    '$rentPrefix Rs ${price.toStringAsFixed(0)}',
                                 onTap: widget.onTap,
                                 isCompact: isMobile,
                               ),
