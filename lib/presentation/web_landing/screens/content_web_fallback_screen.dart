@@ -66,8 +66,7 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
     });
 
     try {
-      if (widget.contentType == DeepLinkContentType.short ||
-          widget.contentType == DeepLinkContentType.miniSeries) {
+      if (widget.contentType == DeepLinkContentType.short) {
         final shortProvider =
             Provider.of<ShortProvider>(context, listen: false);
         await shortProvider.fetchShortDetail(widget.contentId, 1);
@@ -200,8 +199,7 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
           ),
         ),
       );
-    } else if (widget.contentType == DeepLinkContentType.short ||
-        widget.contentType == DeepLinkContentType.miniSeries) {
+    } else if (widget.contentType == DeepLinkContentType.short) {
       if (_shortDetail != null) {
         Navigator.of(context).push(
           MaterialPageRoute<void>(

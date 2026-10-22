@@ -624,19 +624,15 @@ class _MovieCardState extends State<MovieCard> {
                           borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(11),
                           ),
-                          child: ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(11),
-                            ),
-                            child: _buildMediaPreview(
-                              posterUrl,
-                              theme,
-                              widget.movie,
-                              showPreview,
-                            ),
+                          child: _buildMediaPreview(
+                            posterUrl,
+                            theme,
+                            widget.movie,
+                            showPreview,
                           ),
                         ),
                       ),
+                    ),
 
                     /// 📄 DETAILS SECTION
                     _buildContentSection(theme, lang),
@@ -850,7 +846,8 @@ class _MovieCardState extends State<MovieCard> {
             ),
           ),
           const SizedBox(width: 8),
-          movie.isFeatured == true
+          (Theme.of(context).platform == TargetPlatform.iOS ||
+                  movie.isFeatured == true)
               ? Container(
                   padding:
                       const EdgeInsets.symmetric(vertical: 5, horizontal: 10),

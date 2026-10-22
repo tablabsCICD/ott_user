@@ -11,6 +11,7 @@ import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/utils/direct_trailer_source.dart';
 import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
@@ -548,16 +549,18 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
 
                   /// 📄 MOVIE TITLE & INFO BELOW POSTER
                   _buildContentSection(theme, lang),
-                ],              ),
+                ],
+              ),
             ),
           ),
         ),
-      ],
-    );
+      ),
+    ],
+  );
 
-    /*/// ⋮ OPTIONS BUTTON
-        _optionButton(context, widget.movie),*/
-  }
+  /*/// ⋮ OPTIONS BUTTON
+      _optionButton(context, widget.movie),*/
+}
 
   Widget _buildMediaPreview(
     String? posterUrl,
@@ -604,8 +607,8 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                     ),
                     onPressed: _toggleMute,
                   ),
-                ),              ),
-              onPressed: _toggleMute,
+                ),
+              ),
             ),
           ],
         ),

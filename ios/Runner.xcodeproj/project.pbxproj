@@ -90,11 +90,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */,
-<<<<<<< HEAD
 				6A4058141AAEECC1F07B3330 /* Pods_Runner.framework in Frameworks */,
-=======
-				EA24B04C817CCD33D8F45D8B /* Pods_Runner.framework in Frameworks */,
->>>>>>> 3d1759d (feat: bump version to 1.0.22+55, migrate lucide icons, and improve responsive movie cards)
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -531,13 +527,9 @@
 				DEVELOPMENT_TEAM = 2KXZ4D5XSK;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-<<<<<<< HEAD
 				INFOPLIST_KEY_CFBundleDisplayName = Filmytell;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
-=======
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
->>>>>>> 3d1759d (feat: bump version to 1.0.22+55, migrate lucide icons, and improve responsive movie cards)
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -723,13 +715,9 @@
 				DEVELOPMENT_TEAM = 2KXZ4D5XSK;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-<<<<<<< HEAD
 				INFOPLIST_KEY_CFBundleDisplayName = Filmytell;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
-=======
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
->>>>>>> 3d1759d (feat: bump version to 1.0.22+55, migrate lucide icons, and improve responsive movie cards)
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -755,13 +743,9 @@
 				DEVELOPMENT_TEAM = 2KXZ4D5XSK;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-<<<<<<< HEAD
 				INFOPLIST_KEY_CFBundleDisplayName = Filmytell;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
-=======
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
->>>>>>> 3d1759d (feat: bump version to 1.0.22+55, migrate lucide icons, and improve responsive movie cards)
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -809,22 +793,12 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-<<<<<<< HEAD
-
-/* Begin XCLocalSwiftPackageReference section */
-		781AD8BC2B33823900A9FFBB /* XCLocalSwiftPackageReference "FlutterGeneratedPluginSwiftPackage" */ = {
-=======
 /* Begin XCLocalSwiftPackageReference section */
 		781AD8BC2B33823900A9FFBB /* XCLocalSwiftPackageReference "Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage" */ = {
->>>>>>> 3d1759d (feat: bump version to 1.0.22+55, migrate lucide icons, and improve responsive movie cards)
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage;
 		};
 /* End XCLocalSwiftPackageReference section */
-<<<<<<< HEAD
-
-=======
->>>>>>> 3d1759d (feat: bump version to 1.0.22+55, migrate lucide icons, and improve responsive movie cards)
 /* Begin XCSwiftPackageProductDependency section */
 		78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */ = {
 			isa = XCSwiftPackageProductDependency;

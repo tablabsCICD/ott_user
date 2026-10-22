@@ -59,21 +59,14 @@ class DashboardProvider extends BaseProvider {
     _dashboardData = [];
     _isLoadingDashboard = true;
     notifyListeners();
-<<<<<<< HEAD
-=======
 
->>>>>>> 1739425 (feat: add HomePage view and related constants, providers, and tests)
     List<DashboardData> finalDashboardData = [];
 
     debugPrint("Languages: $languages");
 
     for (final lang in languages) {
-<<<<<<< HEAD
-      debugPrint("➡ Loading dashboard for: $lang");
-
-=======
       if (requestId != _activeDashboardRequestId) return;
->>>>>>> 1739425 (feat: add HomePage view and related constants, providers, and tests)
+      debugPrint("➡ Loading dashboard for: $lang");
       try {
         final dashboardRows = await Future.wait([
           getDashboardLatestData(type, [lang], userId),
@@ -311,31 +304,19 @@ class DashboardProvider extends BaseProvider {
     }
   }
 
-<<<<<<< HEAD
   Future<void> getContinueWatchedMovieList(
     String type, {
     bool forceRefresh = false,
   }) async {
-    final user = await LocalSharePreferences.localSharePreferences.getUser();
-    final userId = user?.id;
-    if (userId == null) {
-      _setActiveContinueWatchingData(null, const <Content>[]);
-=======
-  Future<void> getContinueWatchedMovieList(String type) async {
     final cwRequestId = ++_activeContinueWatchRequestId;
     _activeContinueWatchType = type;
 
-    _continueWatchedMovies.clear();
-    notifyListeners();
-
-    final localSharePreferences = LocalSharePreferences();
-    final user = await localSharePreferences.getUser();
-    if (user?.id == null) {
+    final user = await LocalSharePreferences.localSharePreferences.getUser();
+    final userId = user?.id;
+    if (userId == null) {
       if (cwRequestId == _activeContinueWatchRequestId) {
-        _continueWatchedMovies.clear();
-        notifyListeners();
+        _setActiveContinueWatchingData(null, const <Content>[]);
       }
->>>>>>> 1739425 (feat: add HomePage view and related constants, providers, and tests)
       return;
     }
 
@@ -368,6 +349,8 @@ class DashboardProvider extends BaseProvider {
     final request = _fetchContinueWatching(
       apiUrl: ApiConstant.continueWatchedMoviesByUser(userId, normalizedType),
       cacheKey: cacheKey,
+      cwRequestId: cwRequestId,
+      type: type,
     );
     _continueWatchingRequests[cacheKey] = request;
 
@@ -385,6 +368,8 @@ class DashboardProvider extends BaseProvider {
   Future<void> _fetchContinueWatching({
     required String apiUrl,
     required String cacheKey,
+    required int cwRequestId,
+    required String type,
   }) async {
     final watch = Stopwatch()..start();
     try {
@@ -403,12 +388,17 @@ class DashboardProvider extends BaseProvider {
         final continueWatchedResponse =
             ContinueWatchedResponse.fromJson(responseBody);
 
-<<<<<<< HEAD
         if (continueWatchedResponse.isSuccess == true ||
             continueWatchedResponse.success == true ||
             (response.statusCode == 200 &&
                 continueWatchedResponse.data != null)) {
-          final items = continueWatchedResponse.data ?? const <Content>[];
+          final rawItems = continueWatchedResponse.data ?? const <Content>[];
+          final normalizedType = type.trim().toUpperCase();
+          final items = rawItems.where((item) {
+            final itemType = item.type?.trim().toUpperCase();
+            return itemType == normalizedType;
+          }).toList();
+
           _continueWatchingCache[cacheKey] = items;
           _continueWatchingCacheTimes[cacheKey] = DateTime.now();
           debugPrint(
@@ -417,17 +407,8 @@ class DashboardProvider extends BaseProvider {
           );
           _setActiveContinueWatchingData(cacheKey, items);
           return;
-=======
-        if (continueWatchedResponse.isSuccess == true &&
-            continueWatchedResponse.data != null) {
-          final normalizedType = type.trim().toUpperCase();
-          _continueWatchedMovies = continueWatchedResponse.data!.where((item) {
-            final itemType = item.type?.trim().toUpperCase();
-            return itemType == normalizedType;
-          }).toList();
         } else {
-          _continueWatchedMovies.clear();
->>>>>>> 1739425 (feat: add HomePage view and related constants, providers, and tests)
+          _setActiveContinueWatchingData(cacheKey, const <Content>[]);
         }
       }
 
@@ -435,18 +416,15 @@ class DashboardProvider extends BaseProvider {
         _setActiveContinueWatchingData(cacheKey, const <Content>[]);
       }
     } catch (error) {
-<<<<<<< HEAD
       debugPrint("❌ continue watching error: $error");
       if (!_continueWatchingCache.containsKey(cacheKey)) {
         _setActiveContinueWatchingData(cacheKey, const <Content>[]);
-=======
-      if (cwRequestId == _activeContinueWatchRequestId) {
-        _continueWatchedMovies.clear();
       }
     } finally {
       if (cwRequestId == _activeContinueWatchRequestId) {
+        _continueWatchingRequests.remove(cacheKey);
+        _isLoadingContinueWatching = false;
         notifyListeners();
->>>>>>> 1739425 (feat: add HomePage view and related constants, providers, and tests)
       }
     }
   }
