@@ -211,13 +211,57 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
             );
           }
 
-          if (provider.error != null) {
-            return Center(child: Text(provider.error!));
+          if (provider.error != null || provider.series == null) {
+            return Scaffold(
+              backgroundColor: theme.scaffoldBackgroundColor,
+              appBar: AppBar(
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                  color: Colors.white,
+                  onPressed: () => Navigator.of(context).maybePop(),
+                ),
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+              ),
+              body: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        LucideIcons.alertCircle,
+                        color: theme.primaryColor,
+                        size: 46,
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Content Unavailable',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: theme.canvasColor,
+                          fontSize: ResponsiveWidget.isMobile(context) ? 18 : 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        provider.error ??
+                            'This content is currently unavailable. Please try again later.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: theme.canvasColor.withValues(alpha: 0.7),
+                          fontSize: ResponsiveWidget.isMobile(context) ? 14 : 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
           }
 
-          SeriesEntity? series = provider.series;
-          if (series == null) return const SizedBox();
-
+          final series = provider.series!;
           List<SeasonEntity> seasons = series.seasons;
           if (!ResponsiveWidget.isMobile(context)) {
             return _buildCinematicTvDetails(context, series, seasons, theme);

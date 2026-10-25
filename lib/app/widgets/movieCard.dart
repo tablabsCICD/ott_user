@@ -25,7 +25,6 @@ import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/provider/onboarding_tour_provider.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/provider/playMediaProvider.dart';
-import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/feature_tour.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -192,6 +191,12 @@ class _MovieCardState extends State<MovieCard> {
     if (_isNativePreviewPlatform) {
       final nativeReady = await _initNativePreview(trailerUrl, generation);
       if (nativeReady) return true;
+      if (!mounted ||
+          generation != _previewGeneration ||
+          !_isPlayTriggerActive ||
+          _activePreviewState != this) {
+        return false;
+      }
       // Android has no media_kit fallback; the native player is the only
       // engine used for its trailer preview. iOS falls back to media_kit
       // below when the native AVPlayer path fails to initialize.
@@ -282,12 +287,18 @@ class _MovieCardState extends State<MovieCard> {
     _isVideoInitialized = false;
     _isPreviewPlaying = false;
     if (player != null) {
+      try {
+        player.pause();
+      } catch (_) {}
       unawaited(player.dispose());
       _logPreview('Video Disposed');
     }
     if (nativeController != null) {
-      unawaited(nativeController.dispose());
-      _logPreview('Android ExoPlayer trailer disposed');
+      try {
+        nativeController.pause();
+      } catch (_) {}
+      unawaited(nativeController.dispose().catchError((_) {}));
+      _logPreview('Native trailer preview disposed');
     }
   }
 
@@ -518,10 +529,10 @@ class _MovieCardState extends State<MovieCard> {
 
     try {
       player?.pause();
-      player?.seek(Duration.zero);
       nativeController?.pause();
-      nativeController?.seekTo(Duration.zero);
-    } catch (e) {}
+    } catch (e) {
+      // Ignored: pausing a controller that might already be inactive
+    }
 
     if (!mounted) return;
     setState(() {
@@ -544,7 +555,7 @@ class _MovieCardState extends State<MovieCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lang = AppLocalizations.of(context)!;
+    final lang = AppLocalizations.of(context);
     final posterUrl = widget.movie.posterUrlList?.isNotEmpty == true
         ? widget.movie.posterUrlList!.first
         : null;
@@ -558,7 +569,6 @@ class _MovieCardState extends State<MovieCard> {
         ? const Color.fromARGB(255, 185, 169, 169)
         : const Color.fromARGB(255, 58, 49, 49);
 
-    final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
 
     return Stack(
       children: [
@@ -796,7 +806,7 @@ class _MovieCardState extends State<MovieCard> {
     );
   }
 
-  Widget _buildContentSection(ThemeData theme, AppLocalizations lang) {
+  Widget _buildContentSection(ThemeData theme, AppLocalizations? lang) {
     final movie = widget.movie;
     final price = movie.price ?? 0;
     final dateStr = formatReleaseDate(movie.releaseDate);
@@ -875,16 +885,17 @@ class _MovieCardState extends State<MovieCard> {
 
   Widget _buildPriceButton(
     ThemeData theme,
-    AppLocalizations lang,
+    AppLocalizations? lang,
     double price,
   ) {
     final movie = widget.movie;
     final isRental = movie.isRental ?? false;
     final isShortFilm = widget.isShortFilmTab ||
         ContentType.normalize(movie.type) == ContentType.shortFilm;
+    final isSeries = ContentType.isSeries(movie.type);
 
     return GestureDetector(
-      onTap: () => movie.type!.toLowerCase() == 'series'
+      onTap: () => isSeries
           ? _openDetails()
           : isRental
               ? _playMovie()
@@ -896,16 +907,16 @@ class _MovieCardState extends State<MovieCard> {
           color: theme.primaryColor.withValues(alpha: 0.9),
         ),
         child: Text(
-          movie.type!.toLowerCase() == 'series'
+          isSeries
               ? isRental
                   ? (isShortFilm ? 'Watch Now' : 'Watch Series')
                   : '₹ $price'
               : isRental
                   ? isShortFilm
                       ? 'Watch Now'
-                      : movie.type?.toLowerCase() == "movie"
-                          ? lang.watchMovie
-                          : lang.watchSeries
+                      : !ContentType.isSeries(movie.type)
+                          ? (lang?.watchMovie ?? 'Watch Movie')
+                          : (lang?.watchSeries ?? 'Watch Series')
                   : "₹ $price",
           style: const TextStyle(
             fontSize: 12,
@@ -929,21 +940,20 @@ class _MovieCardState extends State<MovieCard> {
   void _openDetails() {
     final movie = widget.movie;
 
-    if (movie.id == null || movie.type == null) return;
+    if (movie.id == null) return;
+
+    _stopAndDisposePreview('opening details');
+
+    final type = movie.type ?? (widget.isShortFilmTab ? 'SHORT_FILM' : 'MOVIE');
 
     Navigator.push(
       context,
       MaterialPageRoute(
         builder:
-            (_) => /* movie.isFeatured == true
-            ? TrailerPage(
-                trailerUrl: movie.teaserOrTrailerUrl ?? "",
-                isTrailerUrl: true,
-                content: movie)
-            :  */
-                ContentType.isMovieLike(movie.type)
+            (_) =>
+                ContentType.isMovieLike(type)
                     ? MovieDetailsPage(
-                        movieId: movie.id!, contentType: movie.type)
+                        movieId: movie.id!, contentType: type)
                     : SeriesDetailsPage(seriesId: movie.id!, content: movie),
       ),
     ).then((_) {
@@ -1059,7 +1069,8 @@ class _MovieCardState extends State<MovieCard> {
 
   void _showCupertinoDialog(BuildContext context, Content movie) {
     final theme = Theme.of(context);
-    final lang = AppLocalizations.of(context)!;
+    final lang = AppLocalizations.of(context);
+    final rentDurationLabel = lang?.rentDuration ?? 'Rent Duration';
 
     showCupertinoDialog(
       context: context,
@@ -1070,7 +1081,7 @@ class _MovieCardState extends State<MovieCard> {
           children: [
             const SizedBox(height: 10),
             Text(
-              '${lang.rentDuration}: ${movie.rentlDuration ?? 'NA'}',
+              '$rentDurationLabel: ${movie.rentlDuration ?? 'NA'}',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,

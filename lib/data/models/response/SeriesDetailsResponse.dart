@@ -1,13 +1,26 @@
 import 'package:ott/data/models/seriesModel.dart';
 
+int _asInt(dynamic val, [int fallback = 0]) {
+  if (val is int) return val;
+  if (val is num) return val.toInt();
+  if (val is String) return int.tryParse(val) ?? fallback;
+  return fallback;
+}
+
 class SeriesDetailsResponse {
   final SeriesUserData data;
 
   SeriesDetailsResponse({required this.data});
 
   factory SeriesDetailsResponse.fromJson(Map<String, dynamic> json) {
+    final rawData = json['data'];
+    final dataMap = rawData is Map<String, dynamic>
+        ? rawData
+        : rawData is Map
+            ? Map<String, dynamic>.from(rawData)
+            : <String, dynamic>{};
     return SeriesDetailsResponse(
-      data: SeriesUserData.fromJson(json['data']),
+      data: SeriesUserData.fromJson(dataMap),
     );
   }
 
@@ -30,13 +43,16 @@ class SeriesUserData {
   });
 
   factory SeriesUserData.fromJson(Map<String, dynamic> json) {
+    final rawSeasons = json['seasons'];
+    final seasonsList = rawSeasons is List ? rawSeasons : const [];
     return SeriesUserData(
-      seriesId: json['seriesId'],
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      posterUrl: json['posterUrl'] ?? '',
-      seasons: (json['seasons'] as List)
-          .map((e) => SeasonResponse.fromJson(e))
+      seriesId: _asInt(json['seriesId']),
+      title: json['title']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      posterUrl: json['posterUrl']?.toString() ?? '',
+      seasons: seasonsList
+          .whereType<Map>()
+          .map((e) => SeasonResponse.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
     );
   }
@@ -74,16 +90,19 @@ class SeasonResponse {
   });
 
   factory SeasonResponse.fromJson(Map<String, dynamic> json) {
+    final rawEpisodes = json['episodes'];
+    final episodesList = rawEpisodes is List ? rawEpisodes : const [];
     return SeasonResponse(
-      seasonId: json['seasonId'],
-      seasonNumber: json['seasonNumber'],
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      releaseDate: json['releaseDate'],
-      isSeasonPurchased: json['isSeasonPurchased'] ?? false,
-      price: json['price'],
-      episodes: (json['episodes'] as List)
-          .map((e) => EpisodeResponse.fromJson(e))
+      seasonId: _asInt(json['seasonId']),
+      seasonNumber: _asInt(json['seasonNumber'], 1),
+      title: json['title']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      releaseDate: _asInt(json['releaseDate']),
+      isSeasonPurchased: json['isSeasonPurchased'] == true,
+      price: json['price'] is num ? json['price'] as num : num.tryParse('${json['price']}'),
+      episodes: episodesList
+          .whereType<Map>()
+          .map((e) => EpisodeResponse.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
     );
   }
@@ -133,18 +152,18 @@ class EpisodeResponse {
 
   factory EpisodeResponse.fromJson(Map<String, dynamic> json) {
     return EpisodeResponse(
-      episodeId: json['episodeId'],
-      episodeNumber: json['episodeNumber'],
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      runtime: json['runtime'],
-      releaseDate: json['releaseDate'],
-      isFree: json['isFree'] ?? json['free'] ?? false,
-      posterUrl: json['posterUrl'] ?? '',
-      videoUrl: json['videoUrl'],
-      isPurchased: json['isPurchased'] ?? json['episodePurchased'] ?? false,
-      isLocked: json['isLocked'] ?? json['locked'] ?? true,
-      price: json['price'],
+      episodeId: _asInt(json['episodeId']),
+      episodeNumber: _asInt(json['episodeNumber'], 1),
+      title: json['title']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      runtime: _asInt(json['runtime']),
+      releaseDate: _asInt(json['releaseDate']),
+      isFree: json['isFree'] == true || json['free'] == true,
+      posterUrl: json['posterUrl']?.toString() ?? '',
+      videoUrl: json['videoUrl']?.toString(),
+      isPurchased: json['isPurchased'] == true || json['episodePurchased'] == true,
+      isLocked: json['isLocked'] == true || json['locked'] == true,
+      price: json['price'] is num ? json['price'] as num : num.tryParse('${json['price']}'),
     );
   }
 

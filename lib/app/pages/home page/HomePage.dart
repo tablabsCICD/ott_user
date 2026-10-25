@@ -339,6 +339,25 @@ class _HomePageState extends State<HomePage>
     }
   }
 
+  double _itemExtent(BuildContext context) {
+    if (!mounted) return MovieCard.itemExtent;
+    if (Theme.of(context).platform == TargetPlatform.iOS) {
+      final screenWidth = MediaQuery.of(context).size.width;
+      final iosCardWidth = (screenWidth - 16) * 0.62;
+      return iosCardWidth + 8.0;
+    }
+    return MovieCard.itemExtent;
+  }
+
+  double _itemWidth(BuildContext context) {
+    if (!mounted) return MovieCard.itemWidth;
+    if (Theme.of(context).platform == TargetPlatform.iOS) {
+      final screenWidth = MediaQuery.of(context).size.width;
+      return (screenWidth - 16) * 0.62;
+    }
+    return MovieCard.itemWidth;
+  }
+
   int? _primaryVisibleIndexForRow(
     ScrollController controller,
     int itemCount,
@@ -356,17 +375,20 @@ class _HomePageState extends State<HomePage>
     final realItemCount = items?.length ?? itemCount;
     if (realItemCount <= 0) return null;
 
+    final extent = _itemExtent(context);
+    final width = _itemWidth(context);
+
     final viewStart = controller.offset;
     final viewEnd = viewStart + viewport;
     final firstCandidate = math.max(
       0,
-      (viewStart / MovieCard.itemExtent).floor(),
+      (viewStart / extent).floor(),
     );
     final lastCandidate = math.min(
       realItemCount - 1,
       math.max(
         firstCandidate,
-        ((viewEnd - 0.001) / MovieCard.itemExtent).floor(),
+        ((viewEnd - 0.001) / extent).floor(),
       ),
     );
     final isAtEnd =
@@ -378,7 +400,7 @@ class _HomePageState extends State<HomePage>
     for (int candidate = firstCandidate;
         candidate <= lastCandidate;
         candidate++) {
-      final overlap = _visibleOverlap(viewStart, viewEnd, candidate);
+      final overlap = _visibleOverlap(viewStart, viewEnd, candidate, extent);
       if (overlap <= 0) continue;
 
       final hasTrailer = items != null &&
@@ -389,7 +411,7 @@ class _HomePageState extends State<HomePage>
       }
 
       final visibility =
-          (overlap / MovieCard.itemWidth).clamp(0.0, 1.0).toDouble();
+          (overlap / width).clamp(0.0, 1.0).toDouble();
       _logHomeAutoPlay(
         'Visibility Percentage index=$candidate '
         '${(visibility * 100).toStringAsFixed(0)}%',
@@ -409,9 +431,9 @@ class _HomePageState extends State<HomePage>
     if (bestIndex == null && isAtEnd) {
       final lastPlayableIndex = _lastPlayableIndex(items);
       if (lastPlayableIndex != null) {
-        final overlap = _visibleOverlap(viewStart, viewEnd, lastPlayableIndex);
+        final overlap = _visibleOverlap(viewStart, viewEnd, lastPlayableIndex, extent);
         final visibility =
-            (overlap / MovieCard.itemWidth).clamp(0.0, 1.0).toDouble();
+            (overlap / width).clamp(0.0, 1.0).toDouble();
         _logHomeAutoPlay(
           'End-of-list visibility index=$lastPlayableIndex '
           '${(visibility * 100).toStringAsFixed(0)}%',
@@ -435,9 +457,10 @@ class _HomePageState extends State<HomePage>
     return null;
   }
 
-  double _visibleOverlap(double viewStart, double viewEnd, int index) {
-    final itemStart = index * MovieCard.itemExtent;
-    final itemEnd = itemStart + MovieCard.itemExtent;
+  double _visibleOverlap(double viewStart, double viewEnd, int index, [double? customExtent]) {
+    final extent = customExtent ?? MovieCard.itemExtent;
+    final itemStart = index * extent;
+    final itemEnd = itemStart + extent;
     final overlap = math.min(viewEnd, itemEnd) - math.max(viewStart, itemStart);
     return overlap <= 0 ? 0 : overlap;
   }
@@ -1228,13 +1251,15 @@ class _HomePageState extends State<HomePage>
   }
 
   void _openContentDetails(Content item) {
+    if (item.id == null) return;
+    _clearHomeAutoPlay('open hero details');
     final type = item.type?.toLowerCase();
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => type == 'series'
             ? SeriesDetailsPage(
-                seriesId: item.id ?? 0,
+                seriesId: item.id!,
                 content: item,
               )
             : MovieDetailsPage(
@@ -1940,8 +1965,13 @@ class _HomePageState extends State<HomePage>
             padding: const EdgeInsets.symmetric(horizontal: 2.5),
             child: GestureDetector(
               onTap: () async {
+                if (ContentType.normalize(selectedType) ==
+                    ContentType.normalize(type)) {
+                  return;
+                }
                 setState(() {
                   selectedType = type;
+                  _resetRowState();
                 });
                 final selectedLanguages =
                     Provider.of<UserProvider>(context, listen: false)
@@ -1958,6 +1988,9 @@ class _HomePageState extends State<HomePage>
                 } else {
                   await getMovieList(
                       dashboardProvider, selectedType, selectedLanguages);
+                }
+                if (mounted) {
+                  _scheduleVisibleUpdate();
                 }
               },
               child: Container(

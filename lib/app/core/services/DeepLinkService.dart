@@ -255,13 +255,7 @@ class DeepLinkService {
           ? _typeFromString(normalizedPathSegments.first)
           : null;
 
-      if (pathType == DeepLinkContentType.register) {
-        final referralCode = _extractReferral(uri);
-        return DeepLinkTarget(
-          type: DeepLinkContentType.register,
-          referralCode: referralCode,
-        );
-      } else if (pathType == DeepLinkContentType.gift) {
+      if (pathType == DeepLinkContentType.gift) {
         final couponCode = normalizedPathSegments.length >= 2
             ? _parseCouponCode(normalizedPathSegments[1])
             : _parseCouponCode(

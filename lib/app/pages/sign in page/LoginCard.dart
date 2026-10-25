@@ -7,12 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:intl_phone_field/country_picker_dialog.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
-import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/provider/language_provider.dart';
-import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/userProvider.dart';
-import 'package:ott/app/route/routes/app_routes.dart';
 import 'package:ott/app/widgets/LanguageDropdown.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -186,37 +183,64 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
           ),
         ],
       ),
-      body: Focus(
-        onKeyEvent: useTvKeypad ? _handleTvCredentialKey : null,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  height: ResponsiveWidget.isMobile(context) ? 90 : 130,
-                  child: Hero(
-                    tag: "logo",
-                    child: ClipRRect(
-                      borderRadius: BorderRadiusGeometry.circular(25),
-                      child: Image.asset(
-                        ImageConstant.logo,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
+      body: SafeArea(
+        child: Focus(
+          onKeyEvent: useTvKeypad ? _handleTvCredentialKey : null,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
                 ),
-                SizedBox(height: ResponsiveWidget.isMobile(context) ? 24 : 24),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 400),
-                  child: Card(
-                    elevation: 6,
-                    color: theme.cardColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight,
+                    minWidth: constraints.maxWidth,
+                  ),
+                  child: IntrinsicHeight(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 24,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              height: ResponsiveWidget.isMobile(context)
+                                  ? 90
+                                  : 130,
+                              child: Hero(
+                                tag: "logo",
+                                child: ClipRRect(
+                                  borderRadius:
+                                      BorderRadiusGeometry.circular(25),
+                                  child: Image.asset(
+                                    ImageConstant.logo,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              height: ResponsiveWidget.isMobile(context)
+                                  ? 20
+                                  : 24,
+                            ),
+                            ConstrainedBox(
+                              constraints:
+                                  const BoxConstraints(maxWidth: 400),
+                              child: Card(
+                                elevation: 6,
+                                color: theme.cardColor,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
@@ -614,12 +638,18 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                     ),
                   ),
                 ),
-              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   // Dropdown styled like CustomTextField

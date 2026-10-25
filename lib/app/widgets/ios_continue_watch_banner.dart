@@ -7,6 +7,7 @@ import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/playMediaProvider.dart';
 import 'package:ott/app/pages/watchlist page/component/playMoviePage.dart';
 import 'package:ott/app/pages/series details page/seriesdetailspage.dart';
+import 'package:ott/app/widgets/movieCard.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 
 class IosContinueWatchBanner extends StatefulWidget {
@@ -39,6 +40,7 @@ class _IosContinueWatchBannerState extends State<IosContinueWatchBanner> {
 
   Future<void> _resumePlayback(BuildContext context, Content movie) async {
     if (movie.id == null) return;
+    MovieCard.stopActiveTrailerPreview('resume playback from continue watching');
 
     if (!ContentType.isMovieLike(movie.type)) {
       Navigator.push(

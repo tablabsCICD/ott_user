@@ -209,6 +209,9 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       unawaited(subscription.cancel());
     }
     _previewSubscriptions.clear();
+    try {
+      _previewPlayer?.pause();
+    } catch (_) {}
     _previewPlayer?.dispose();
     _previewPlayer = null;
     _videoController = null;
@@ -437,8 +440,9 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
 
     try {
       player.pause();
-      player.seek(Duration.zero);
-    } catch (e) {}
+    } catch (e) {
+      // Ignored: pausing preview player that might already be inactive
+    }
 
     if (!mounted) return;
     setState(() {

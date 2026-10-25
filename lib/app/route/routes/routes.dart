@@ -133,6 +133,19 @@ class RouteGenerator {
           settings: settings,
         );
 
+      case AppRoutes.seriesDetails:
+        final seriesId = _parseMovieId(settings.arguments);
+        if (seriesId == null || seriesId <= 0) {
+          return _invalidMovieRoute(settings);
+        }
+        return buildRoute(
+          SeriesDetailsPage(
+            seriesId: seriesId,
+            content: Content(id: seriesId, type: 'SERIES'),
+          ),
+          settings: settings,
+        );
+
       case AppRoutes.notificationPage:
         _logRouteDecision(
           'Protected notification route requested name=${settings.name}',

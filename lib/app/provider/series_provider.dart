@@ -85,14 +85,31 @@ class SeriesProvider extends BaseProvider {
       final response = await _apiHelper.getApi(url);
       log('Fetch Series Raw Response: ${response.body}');
 
-      final Map<String, dynamic> json =
-          jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode != 200) {
+        _error = 'Content currently unavailable';
+        _series = null;
+        return;
+      }
 
-      final data = SeriesDetailsResponse.fromJson(json);
+      final dynamic decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        _error = 'Content currently unavailable';
+        _series = null;
+        return;
+      }
+
+      if (decoded['data'] == null || decoded['success'] == false) {
+        _error = decoded['message']?.toString() ?? 'Content currently unavailable';
+        _series = null;
+        return;
+      }
+
+      final data = SeriesDetailsResponse.fromJson(decoded);
       _series = data.toEntity();
     } catch (e, st) {
       log('SeriesProvider.fetchSeriesDetails error: $e', stackTrace: st);
-      _error = e.toString();
+      _error = 'Content currently unavailable';
+      _series = null;
     } finally {
       _isLoading = false;
       notifyListeners();
