@@ -9,6 +9,7 @@ import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
+import 'package:ott/app/widgets/responsive_poster_image.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/shorts.dart';
@@ -75,39 +76,17 @@ class BookmarkPosterCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
-                child: posterUrl.isNotEmpty
-                    ? Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Image.network(
-                            posterUrl,
-                            fit: BoxFit.cover,
-                            alignment: Alignment.topCenter,
-                            cacheWidth: 600,
-                            errorBuilder: (_, __, ___) =>
-                                const SizedBox.shrink(),
-                          ),
-                          Container(
-                            color: Colors.black.withValues(alpha: 0.55),
-                          ),
-                          Center(
-                            child: Image.network(
-                              posterUrl,
-                              fit: BoxFit.contain,
-                              alignment: Alignment.topCenter,
-                              cacheWidth: 600,
-                              errorBuilder: (_, __, ___) => Container(
-                                color: theme.dividerColor,
-                                child: const Icon(Icons.movie, size: 40),
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    : Container(
-                        color: theme.dividerColor,
-                        child: const Icon(Icons.movie, size: 40),
-                      ),
+                child: ResponsivePosterImage(
+                  imageUrl: posterUrl,
+                  imageUrls: movie.posterUrlList,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.center,
+                  backgroundColor: Colors.black,
+                  fallbackBuilder: () => Container(
+                    color: theme.dividerColor,
+                    child: const Icon(Icons.movie, size: 40),
+                  ),
+                ),
               ),
             ),
 
@@ -230,10 +209,12 @@ class ShortBookmarkPosterCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               child: AspectRatio(
                 aspectRatio: 9 / 16,
-                child: Image.network(
-                  short.posterUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
+                child: ResponsivePosterImage(
+                  imageUrl: short.posterUrl,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.center,
+                  backgroundColor: Colors.black,
+                  fallbackBuilder: () => Container(
                     color: theme.dividerColor,
                     child: const Icon(Icons.movie, size: 40),
                   ),

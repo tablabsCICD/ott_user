@@ -378,6 +378,9 @@ List<String> _posterUrlsFromJson(Map<String, dynamic> json) {
   final posters = <String>[];
   final posterList = json['posterUrlList'] ??
       json['poster_url_list'] ??
+      json['backdropUrlList'] ??
+      json['backdrop_url_list'] ??
+      json['backdrops'] ??
       json['posters'] ??
       json['posterList'] ??
       json['thumbnails'] ??
@@ -394,6 +397,22 @@ List<String> _posterUrlsFromJson(Map<String, dynamic> json) {
   }
 
   for (final key in const [
+    'backdropUrl',
+    'backdrop_url',
+    'backdrop',
+    'landscapePoster',
+    'landscape_poster',
+    'landscapeUrl',
+    'landscape_url',
+    'landscape',
+    'horizontalPoster',
+    'horizontal_poster',
+    'horizontalUrl',
+    'horizontal_url',
+    'widePoster',
+    'wide_poster',
+    'wideUrl',
+    'wide_url',
     'posterUrl',
     'poster_url',
     'poster',

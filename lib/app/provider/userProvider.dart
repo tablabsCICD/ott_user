@@ -27,7 +27,6 @@ import '../core/services/device_type_helper.dart';
 import '../core/services/notification_service.dart';
 import '../core/services/referral_service.dart';
 import '../core/services/session_manager.dart';
-import '../core/services/referral_service.dart';
 import '../core/utils/sharepreferences.dart';
 import 'baseProvider.dart';
 
@@ -35,6 +34,7 @@ class UserProvider extends BaseProvider {
   UserProvider() : super('Ideal');
 
   TextEditingController firstNameController = TextEditingController();
+  TextEditingController nameController = TextEditingController();
   TextEditingController lastNameController = TextEditingController();
   TextEditingController emailController = TextEditingController();
   TextEditingController mobileController = TextEditingController();
@@ -44,6 +44,7 @@ class UserProvider extends BaseProvider {
   TextEditingController districtController = TextEditingController();
   TextEditingController talukaController = TextEditingController();
   TextEditingController dobController = TextEditingController();
+  TextEditingController ageController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   TextEditingController confirmPasswordController = TextEditingController();
   TextEditingController officeBuildingController = TextEditingController();
@@ -73,9 +74,13 @@ class UserProvider extends BaseProvider {
 
     firstNameController.text = currentUser.firstName ?? "";
     lastNameController.text = currentUser.lastName ?? "";
+    final currentFirst = (currentUser.firstName ?? "").trim();
+    final currentLast = (currentUser.lastName ?? "").trim();
+    nameController.text = '$currentFirst $currentLast'.trim();
     mobileController.text = currentUser.mobileNumber ?? "";
     emailController.text = currentUser.emailId ?? "";
     dobController.text = currentUser.dob ?? "";
+    ageController.text = currentUser.age ?? "";
     profileController.text = currentUser.profilePhoto ?? "";
     notifyListeners();
   }
@@ -107,9 +112,13 @@ class UserProvider extends BaseProvider {
     userObject = cachedUser;
     firstNameController.text = cachedUser.firstName ?? "";
     lastNameController.text = cachedUser.lastName ?? "";
+    final cachedFirst = (cachedUser.firstName ?? "").trim();
+    final cachedLast = (cachedUser.lastName ?? "").trim();
+    nameController.text = '$cachedFirst $cachedLast'.trim();
     mobileController.text = cachedUser.mobileNumber ?? "";
     emailController.text = cachedUser.emailId ?? "";
     dobController.text = cachedUser.dob ?? "";
+    ageController.text = cachedUser.age ?? "";
     profileController.text = cachedUser.profilePhoto ?? "";
     notifyListeners();
   }
@@ -128,7 +137,9 @@ class UserProvider extends BaseProvider {
     userRequest.deviceToken = '';
     userRequest.district = districtController.text;
     userRequest.dob = dobController.text;
-    userRequest.emailId = emailController.text;
+    userRequest.emailId = emailController.text.trim().isNotEmpty
+        ? emailController.text.trim()
+        : null;
     userRequest.firstName = firstNameController.text;
     userRequest.gender = selectedGender;
     userRequest.joinDate = '';
@@ -210,26 +221,176 @@ class UserProvider extends BaseProvider {
   // Update user data
   Future<Map<String, Object>> updateUser() async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
-    if (user?.id == null) {
+    if (user == null || user.id == null) {
+      print("UPDATE USER: User not found");
       return {'success': false, 'message': 'User not found'};
     }
-    String apiUrl = ApiConstant.editUserById(user!.id);
-    //log("API=====$apiUrl");
+    final userId = user.id!;
+    String apiUrl = ApiConstant.editUserById(userId);
+
+    final fullName = nameController.text.trim();
+    if (fullName.isNotEmpty) {
+      final parts = fullName.split(RegExp(r'\s+'));
+      firstNameController.text = parts.first;
+      lastNameController.text =
+          parts.length > 1 ? parts.sublist(1).join(' ') : '';
+    } else if (firstNameController.text.trim().isEmpty &&
+        lastNameController.text.trim().isEmpty) {
+      firstNameController.text = '';
+      lastNameController.text = '';
+    }
+
+    final trimmedEmail = emailController.text.trim();
+    final String? emailToSend = trimmedEmail.isNotEmpty
+        ? trimmedEmail
+        : (user.emailId != null && user.emailId!.trim().isNotEmpty
+            ? user.emailId!.trim()
+            : null);
+
     ApiHelper apiHelper = ApiHelper();
     Map<String, dynamic> data = {
-      "id": user.id,
-      "emailId": emailController.text.trim(),
+      "id": userId,
+      "emailId": emailToSend,
       "firstName": firstNameController.text.trim(),
       "lastName": lastNameController.text.trim(),
-      "dob": dobController.text.trim(),
+      "dob": dobController.text.trim().isNotEmpty
+          ? dobController.text.trim()
+          : (user.dob ?? ""),
+      "age": ageController.text.trim().isNotEmpty
+          ? ageController.text.trim()
+          : (user.age ?? ""),
       //  "mobileNumber": mobileController.text.trim(),
       "profilePhoto": profileController.text,
       //"refferedBy": refferedByController.text,
     };
-    //log("data=====$data");
+    print("==================================================");
+    print("UPDATE USER API URL: $apiUrl");
+    print("UPDATE USER REQUEST DATA: ${jsonEncode(data)}");
+    print("==================================================");
 
     try {
       var response = await apiHelper.putApiWithBody(apiUrl, data);
+      print("==================================================");
+      print("UPDATE USER STATUS CODE: ${response.statusCode}");
+      print("UPDATE USER RESPONSE BODY: ${response.body}");
+      print("==================================================");
+      log('Update User response === ${response.body}');
+      if (response.statusCode == 200) {
+        Map<String, dynamic> responseBody = json.decode(response.body);
+
+        UpdateUserResponse updateUserResponse =
+            UpdateUserResponse.fromJson(responseBody);
+        log('Update User response === $updateUserResponse');
+
+        if (updateUserResponse.success == true) {
+          if (updateUserResponse.data != null) {
+            userObject = updateUserResponse.data!.user!;
+            firstNameController.text = userObject.firstName ?? "";
+            lastNameController.text = userObject.lastName ?? "";
+            final updatedFirst = (userObject.firstName ?? "").trim();
+            final updatedLast = (userObject.lastName ?? "").trim();
+            nameController.text = '$updatedFirst $updatedLast'.trim();
+            emailController.text = userObject.emailId ?? "";
+            mobileController.text = userObject.mobileNumber ?? "";
+            dobController.text = userObject.dob ?? "";
+            ageController.text = userObject.age ?? "";
+            profileController.text = userObject.profilePhoto ?? "";
+
+            LocalSharePreferences localSharePreferences =
+                LocalSharePreferences();
+            localSharePreferences.setString(
+                SharedPreferencesConstant.currentUser,
+                jsonEncode(updateUserResponse.data!.user));
+
+            notifyListeners();
+            return {
+              'success': true,
+              'message': updateUserResponse.message ?? ""
+            };
+          } else {
+            return {
+              'success': false,
+              'message': updateUserResponse.message ?? 'No data returned'
+            };
+          }
+        } else {
+          return {
+            'success': false,
+            'message': updateUserResponse.message ?? 'Error in response'
+          };
+        }
+      } else if (response.statusCode == 401 || response.statusCode == 500) {
+        Map<String, dynamic> responseBody = json.decode(response.body);
+        AddUserResponse addUserResponse =
+            AddUserResponse.fromJson(responseBody);
+
+        return {
+          'success': false,
+          'message': addUserResponse.message ?? 'Error in response'
+        };
+      } else {
+        return {'failure': true, 'message': 'Something went wrong!'};
+      }
+    } catch (error) {
+      print("UPDATE USER ERROR: $error");
+      return {
+        'success': false,
+        'message': 'An error occurred while update user: $error'
+      };
+    }
+  }
+
+  // Update user basic details data
+  Future<Map<String, Object>> updateUserDetails() async {
+    User? user = await LocalSharePreferences.localSharePreferences.getUser();
+    if (user == null || user.id == null) {
+      return {'success': false, 'message': 'User not found'};
+    }
+    final userId = user.id!;
+    String apiUrl = ApiConstant.editUserById(userId);
+    //log("API=====$apiUrl");
+    final trimmedEmail = emailController.text.trim();
+    final String? emailToSend = trimmedEmail.isNotEmpty
+        ? trimmedEmail
+        : (user.emailId != null && user.emailId!.trim().isNotEmpty
+            ? user.emailId!.trim()
+            : null);
+
+    ApiHelper apiHelper = ApiHelper();
+    Map<String, dynamic> data = {
+      "id": userId,
+      "emailId": emailToSend,
+      "firstName": firstNameController.text.trim().isNotEmpty
+          ? firstNameController.text.trim()
+          : (user.firstName ?? ""),
+      "lastName": lastNameController.text.trim().isNotEmpty
+          ? lastNameController.text.trim()
+          : (user.lastName ?? ""),
+      "dob": dobController.text.trim().isNotEmpty
+          ? dobController.text.trim()
+          : (user.dob ?? ""),
+      "age": ageController.text.trim().isNotEmpty
+          ? ageController.text.trim()
+          : (user.age ?? ""),
+      // "mobileNumber": mobileController.text.trim(),
+      "profilePhoto": profileController.text.trim().isNotEmpty
+          ? profileController.text.trim()
+          : (user.profilePhoto ?? ""),
+      "refferedBy": refferedByController.text.trim().isNotEmpty
+          ? refferedByController.text.trim()
+          : (user.refferedBy ?? ""),
+    };
+    print("==================================================");
+    print("UPDATE USER (1st DOB POPUP) API URL: $apiUrl");
+    print("UPDATE USER (1st DOB POPUP) REQUEST DATA: ${jsonEncode(data)}");
+    print("==================================================");
+
+    try {
+      var response = await apiHelper.putApiWithBody(apiUrl, data);
+      print("==================================================");
+      print("UPDATE USER (1st DOB POPUP) STATUS CODE: ${response.statusCode}");
+      print("UPDATE USER (1st DOB POPUP) RESPONSE BODY: ${response.body}");
+      print("==================================================");
       //log('Update User statusCode === ${response.statusCode}');
       if (response.statusCode == 200) {
         Map<String, dynamic> responseBody = json.decode(response.body);
@@ -243,9 +404,13 @@ class UserProvider extends BaseProvider {
             userObject = updateUserResponse.data!.user!;
             firstNameController.text = userObject.firstName ?? "";
             lastNameController.text = userObject.lastName ?? "";
+            final updatedFirst = (userObject.firstName ?? "").trim();
+            final updatedLast = (userObject.lastName ?? "").trim();
+            nameController.text = '$updatedFirst $updatedLast'.trim();
             emailController.text = userObject.emailId ?? "";
             mobileController.text = userObject.mobileNumber ?? "";
             dobController.text = userObject.dob ?? "";
+            ageController.text = userObject.age ?? "";
             profileController.text = userObject.profilePhoto ?? "";
 
             LocalSharePreferences localSharePreferences =
@@ -285,97 +450,7 @@ class UserProvider extends BaseProvider {
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      return {
-        'success': false,
-        'message': 'An error occurred while update user: $error'
-      };
-    }
-  }
-
-  // Update user basic details data
-  Future<Map<String, Object>> updateUserDetails() async {
-    User? user = await LocalSharePreferences.localSharePreferences.getUser();
-    if (user?.id == null) {
-      return {'success': false, 'message': 'User not found'};
-    }
-    String apiUrl = ApiConstant.editUserById(user!.id);
-    //log("API=====$apiUrl");
-    ApiHelper apiHelper = ApiHelper();
-    Map<String, dynamic> data = {
-      "id": user.id,
-      "emailId": emailController.text.trim().isNotEmpty
-          ? emailController.text.trim()
-          : (user.emailId ?? ""),
-      "firstName": firstNameController.text.trim().isNotEmpty
-          ? firstNameController.text.trim()
-          : (user.firstName ?? ""),
-      "lastName": lastNameController.text.trim().isNotEmpty
-          ? lastNameController.text.trim()
-          : (user.lastName ?? ""),
-      "dob": dobController.text.trim().isNotEmpty
-          ? dobController.text.trim()
-          : (user.dob ?? ""),
-      // "mobileNumber": mobileController.text.trim(),
-      "profilePhoto": profileController.text.trim().isNotEmpty
-          ? profileController.text.trim()
-          : (user.profilePhoto ?? ""),
-      "refferedBy": refferedByController.text.trim().isNotEmpty
-          ? refferedByController.text.trim()
-          : (user.refferedBy ?? ""),
-    };
-    //log("data=====$data");
-
-    try {
-      var response = await apiHelper.putApiWithBody(apiUrl, data);
-      //log('Update User statusCode === ${response.statusCode}');
-      if (response.statusCode == 200) {
-        Map<String, dynamic> responseBody = json.decode(response.body);
-
-        UpdateUserResponse updateUserResponse =
-            UpdateUserResponse.fromJson(responseBody);
-        //log('Update User response === ${updateUserResponse}');
-
-        if (updateUserResponse.success == true) {
-          if (updateUserResponse.data != null) {
-            userObject = updateUserResponse.data!.user!;
-
-            LocalSharePreferences localSharePreferences =
-                LocalSharePreferences();
-            localSharePreferences.setString(
-                SharedPreferencesConstant.currentUser,
-                jsonEncode(updateUserResponse.data!.user));
-
-            notifyListeners();
-            return {
-              'success': true,
-              'message': updateUserResponse.message ?? ""
-            };
-          } else {
-            return {
-              'success': false,
-              'message': updateUserResponse.message ?? 'No data returned'
-            };
-          }
-        } else {
-          return {
-            'success': false,
-            'message': updateUserResponse.message ?? 'Error in response'
-          };
-        }
-      } else if (response.statusCode == 401 || response.statusCode == 500) {
-        Map<String, dynamic> responseBody = json.decode(response.body);
-        AddUserResponse addUserResponse =
-            AddUserResponse.fromJson(responseBody);
-
-        return {
-          'success': false,
-          'message': addUserResponse.message ?? 'Error in response'
-        };
-      } else {
-        return {'failure': true, 'message': 'Something went wrong!'};
-        // throw Exception('Failed to add user. Status code: ${response.statusCode}');
-      }
-    } catch (error) {
+      print("UPDATE USER (1st DOB POPUP) ERROR: $error");
       return {
         'success': false,
         'message': 'An error occurred while update user: $error'
@@ -386,15 +461,18 @@ class UserProvider extends BaseProvider {
   // Update user Location data
   Future<Map<String, Object>> updateUserLocation() async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
-    if (user?.id == null) {
+    if (user == null || user.id == null) {
       return {'success': false, 'message': 'User not found'};
     }
-    String apiUrl = ApiConstant.editUserById(user!.id);
+    final userId = user.id!;
+    String apiUrl = ApiConstant.editUserById(userId);
     log("API=====$apiUrl");
     ApiHelper apiHelper = ApiHelper();
     Map<String, dynamic> data = {
-      "id": user.id,
-      "emailId": user.emailId,
+      "id": userId,
+      "emailId": (user.emailId != null && user.emailId!.trim().isNotEmpty)
+          ? user.emailId!.trim()
+          : null,
       //  "mobileNumber": user.mobileNumber,
       "country": countryController.text.trim(),
       "state": stateController.text.trim(),
@@ -572,6 +650,132 @@ class UserProvider extends BaseProvider {
     } catch (error) {
       log('Current location fetch error: $error');
       return false;
+    } finally {
+      isFetchingCurrentLocation = false;
+      notifyListeners();
+    }
+  }
+
+  /// Requests device location permissions, retrieves current GPS coordinates,
+  /// and reverse-geocodes with Google Geocoding API without falling back to IP/hardcoded defaults.
+  Future<Map<String, dynamic>> fetchAndApplyCurrentDeviceLocation() async {
+    isFetchingCurrentLocation = true;
+    notifyListeners();
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        return {
+          'success': false,
+          'error':
+              'Location services are disabled on your device. Please enable location services in Settings.',
+          'isServiceDisabled': true,
+        };
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.deniedForever) {
+        return {
+          'success': false,
+          'error':
+              'Location permission is permanently denied. Please grant permission in App Settings, or tap Cancel.',
+          'isPermanentlyDenied': true,
+        };
+      }
+
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        return {
+          'success': false,
+          'error':
+              'Location permission is permanently denied. Please grant permission in App Settings, or tap Cancel.',
+          'isPermanentlyDenied': true,
+        };
+      }
+
+      if (permission == LocationPermission.denied) {
+        return {
+          'success': false,
+          'error':
+              'Location permission was denied. Tap Use Current Location to try again, or Cancel to continue.',
+          'isDenied': true,
+        };
+      }
+
+      Position position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 15),
+          ),
+        );
+      } catch (e) {
+        return {
+          'success': false,
+          'error':
+              'Unable to determine GPS location ($e). Please check your GPS and try again.',
+        };
+      }
+
+      final geocodeUri = Uri.https(
+        'maps.googleapis.com',
+        '/maps/api/geocode/json',
+        {
+          'latlng': '${position.latitude},${position.longitude}',
+          'key': AppConstant.GOOGLE_KEY,
+        },
+      );
+
+      final geocodeResponse =
+          await http.get(geocodeUri).timeout(const Duration(seconds: 10));
+      if (geocodeResponse.statusCode != 200) {
+        return {
+          'success': false,
+          'error':
+              'Reverse geocoding service returned status code ${geocodeResponse.statusCode}.',
+        };
+      }
+
+      final geocodeBody =
+          jsonDecode(geocodeResponse.body) as Map<String, dynamic>;
+      final status = geocodeBody['status']?.toString();
+      if (status != 'OK') {
+        return {
+          'success': false,
+          'error':
+              'Unable to resolve address (${geocodeBody['error_message'] ?? status}).',
+        };
+      }
+
+      final results = geocodeBody['results'] as List? ?? [];
+      if (results.isEmpty) {
+        return {
+          'success': false,
+          'error': 'No address details found for your current coordinates.',
+        };
+      }
+
+      final firstResult = results.first as Map<String, dynamic>;
+      _applyGoogleAddressResult(firstResult);
+      addressSuggestions = [];
+
+      return {
+        'success': true,
+        'country': countryController.text,
+        'state': stateController.text,
+        'city': cityController.text,
+        'formattedAddress': officeBuildingController.text,
+      };
+    } catch (error) {
+      log('Current device location error: $error');
+      return {
+        'success': false,
+        'error': 'An unexpected error occurred while fetching location: $error',
+      };
     } finally {
       isFetchingCurrentLocation = false;
       notifyListeners();
@@ -1079,6 +1283,15 @@ class UserProvider extends BaseProvider {
     notifyListeners();
   }
 
+  /// Sets birth month and year in format e.g. "October 1992" without fabricating a day.
+  void setBirthMonthAndYear(String month, int year) {
+    dobController.text = '$month $year';
+    final currentYear = DateTime.now().year;
+    final age = currentYear - year;
+    ageController.text = '$age';
+    notifyListeners();
+  }
+
 // login email
   login(String email, String password, {BuildContext? context}) async {
     String apiUrl = ApiConstant.login;
@@ -1438,6 +1651,65 @@ class UserProvider extends BaseProvider {
     notifyListeners();
   }
 
+  Future<List<String>> resolveStateForCity({
+    required String country,
+    required String city,
+  }) async {
+    final cleanCountry = country.trim();
+    final cleanCity = city.trim();
+    if (cleanCountry.isEmpty || cleanCity.isEmpty) return [];
+
+    try {
+      final uri = Uri.https(
+        'maps.googleapis.com',
+        '/maps/api/geocode/json',
+        {
+          'address': '$cleanCity, $cleanCountry',
+          'key': AppConstant.GOOGLE_KEY,
+        },
+      );
+      final response = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final results = body['results'] as List? ?? [];
+        final Set<String> states = {};
+
+        for (final item in results) {
+          final data = item as Map<String, dynamic>;
+          final components = data['address_components'] as List? ?? [];
+          for (final comp in components) {
+            final c = comp as Map<String, dynamic>;
+            final types = (c['types'] as List? ?? []).map((e) => '$e');
+            if (types.contains('administrative_area_level_1')) {
+              final stateName = c['long_name']?.toString().trim() ?? '';
+              if (stateName.isNotEmpty) {
+                states.add(stateName);
+              }
+            }
+          }
+        }
+
+        if (states.isNotEmpty) {
+          final sortedStates = states.toList()..sort();
+          if (sortedStates.length == 1) {
+            stateController.text = sortedStates.first;
+          }
+          return sortedStates;
+        }
+      }
+    } catch (e) {
+      log('Geocode state resolve error: $e');
+    }
+
+    try {
+      final availableStates =
+          await _countryService.fetchStatesByCountry(cleanCountry);
+      return availableStates;
+    } catch (_) {
+      return [];
+    }
+  }
+
   void disposeData() {
     firstNameController.clear();
     lastNameController.clear();
@@ -1454,6 +1726,7 @@ class UserProvider extends BaseProvider {
     confirmPasswordController.clear();
     districtController.clear();
     dobController.clear();
+    ageController.clear();
     emailController.clear();
     mobileController.clear(); // double-check spelling here
     officeBuildingController.clear();

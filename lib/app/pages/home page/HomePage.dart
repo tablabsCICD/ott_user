@@ -22,7 +22,7 @@ import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
-import 'package:ott/app/widgets/continueWatchMovieCard.dart';
+import 'package:ott/app/widgets/continue_watching_banner.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/feature_tour.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
@@ -38,7 +38,10 @@ import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/movieCard.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../core/services/referral_service.dart';
+import '../../core/services/staged_registration_service.dart';
+import '../../widgets/month_year_picker_dialog.dart';
 import '../../core/utils/sharepreferences.dart';
 import '../../provider/onboarding_tour_provider.dart';
 import '../../provider/userProvider.dart';
@@ -79,11 +82,6 @@ class _HomePageState extends State<HomePage>
   final Map<int, List<Content>> _rowItems = {};
   final Map<int, GlobalKey> _rowKeys = {};
   final ScrollController _verticalController = ScrollController();
-  final ScrollController _continueWatchController = ScrollController();
-  final ValueNotifier<int?> _continueWatchActiveIndex = ValueNotifier<int?>(0);
-  int _continueWatchItemCount = 0;
-  List<Content> _continueWatchItems = const <Content>[];
-  bool _continueWatchListenerAttached = false;
   final GlobalKey _continueWatchKey = GlobalKey();
   bool _visibleUpdateScheduled = false;
   bool _isOffline = false;
@@ -98,8 +96,10 @@ class _HomePageState extends State<HomePage>
     selectedType = widget.initialSelectedType;
 
     _verticalController.addListener(_updateVisibleRows);
-    _connectivitySubscription =
-        Connectivity().onConnectivityChanged.listen(_setConnectionStatus);
+    try {
+      _connectivitySubscription =
+          Connectivity().onConnectivityChanged.listen(_setConnectionStatus);
+    } catch (_) {}
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!_dataLoaded) {
@@ -112,12 +112,28 @@ class _HomePageState extends State<HomePage>
     });
   }
 
+  void _resetRowState() {
+    _clearHomeAutoPlay('category changed');
+    for (final controller in _rowControllers.values) {
+      controller.dispose();
+    }
+    for (final notifier in _rowActiveIndexes.values) {
+      notifier.dispose();
+    }
+    _rowControllers.clear();
+    _rowActiveIndexes.clear();
+    _rowItemCounts.clear();
+    _rowItems.clear();
+    _rowKeys.clear();
+  }
+
   @override
   void didUpdateWidget(covariant HomePage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialSelectedType != widget.initialSelectedType &&
         selectedType != widget.initialSelectedType) {
       selectedType = widget.initialSelectedType;
+      _resetRowState();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           unawaited(_initializeData());
@@ -180,8 +196,6 @@ class _HomePageState extends State<HomePage>
 
     _verticalController.dispose();
     _pageController.dispose();
-    _continueWatchController.dispose();
-    _continueWatchActiveIndex.dispose();
     _connectivitySubscription?.cancel();
     super.dispose();
   }
@@ -206,18 +220,32 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<void> _initializeData() async {
-    await _updateConnectionStatus();
-    await _fetchUserData();
-    if (!mounted) return;
-    setState(() {
-      isLoading = false;
-    });
-    confirmDetails(context);
+    try {
+      await _updateConnectionStatus();
+      await _fetchUserData();
+    } catch (e) {
+      log('HomePage initialization warning: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+        confirmDetails(context);
+      }
+    }
   }
 
   Future<void> _updateConnectionStatus() async {
-    final connectivityResults = await Connectivity().checkConnectivity();
-    _setConnectionStatus(connectivityResults);
+    try {
+      final connectivityResults =
+          await Connectivity().checkConnectivity().timeout(
+                const Duration(milliseconds: 500),
+                onTimeout: () => [ConnectivityResult.wifi],
+              );
+      _setConnectionStatus(connectivityResults);
+    } catch (e) {
+      _setConnectionStatus([ConnectivityResult.wifi]);
+    }
   }
 
   void _setConnectionStatus(List<ConnectivityResult> connectivityResults) {
@@ -255,27 +283,35 @@ class _HomePageState extends State<HomePage>
   }
 
   void confirmDetails(BuildContext context) {
-    final userProvider =
-        Provider.of<UserProvider>(context, listen: false).userObject;
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final user = userProvider.userObject;
 
-    if (userProvider.id == null || (userProvider.id ?? 0) <= 0) {
+    if (user.id == null || (user.id ?? 0) <= 0) {
       return;
     }
 
-    // Stage 1: Email ID & Date of Birth
-    final hasEmail =
-        userProvider.emailId != null && userProvider.emailId!.trim().isNotEmpty;
-    final hasDob =
-        userProvider.dob != null && userProvider.dob!.trim().isNotEmpty;
-    if (!hasEmail || !hasDob) {
-      stage1ProfilePopUp(context);
+    final stagedService = StagedRegistrationService.instance;
+    final nextStep = stagedService.getNextIncompleteStep(user);
+
+    if (!stagedService.shouldShowStepInCurrentLaunch(
+      step: nextStep,
+      user: user,
+    )) {
       return;
-    } else if (userProvider.location == null ||
-        userProvider.location!.country == null ||
-        userProvider.location!.state == null ||
-        userProvider.location!.district == null) {
-      userLocationPopUp(context);
-      return;
+    }
+
+    switch (nextStep) {
+      case StagedRegistrationStep.dobAndEmail:
+        stage1ProfilePopUp(context);
+        break;
+      case StagedRegistrationStep.name:
+        stage2ProfilePopUp(context);
+        break;
+      case StagedRegistrationStep.location:
+        userLocationPopUp(context);
+        break;
+      case StagedRegistrationStep.none:
+        break;
     }
   }
 
@@ -335,16 +371,18 @@ class _HomePageState extends State<HomePage>
     if (realItemCount <= 0) return null;
 
     final viewStart = controller.offset;
+    final extent = MovieCard.cardExtentFor(context);
+    final cardW = MovieCard.cardWidthFor(context);
     final viewEnd = viewStart + viewport;
     final firstCandidate = math.max(
       0,
-      (viewStart / MovieCard.itemExtent).floor(),
+      (viewStart / extent).floor(),
     );
     final lastCandidate = math.min(
       realItemCount - 1,
       math.max(
         firstCandidate,
-        ((viewEnd - 0.001) / MovieCard.itemExtent).floor(),
+        ((viewEnd - 0.001) / extent).floor(),
       ),
     );
     final isAtEnd =
@@ -356,7 +394,7 @@ class _HomePageState extends State<HomePage>
     for (int candidate = firstCandidate;
         candidate <= lastCandidate;
         candidate++) {
-      final overlap = _visibleOverlap(viewStart, viewEnd, candidate);
+      final overlap = _visibleOverlap(viewStart, viewEnd, candidate, extent);
       if (overlap <= 0) continue;
 
       final hasTrailer = items != null &&
@@ -366,8 +404,7 @@ class _HomePageState extends State<HomePage>
         continue;
       }
 
-      final visibility =
-          (overlap / MovieCard.itemWidth).clamp(0.0, 1.0).toDouble();
+      final visibility = (overlap / cardW).clamp(0.0, 1.0).toDouble();
       _logHomeAutoPlay(
         'Visibility Percentage index=$candidate '
         '${(visibility * 100).toStringAsFixed(0)}%',
@@ -387,9 +424,9 @@ class _HomePageState extends State<HomePage>
     if (bestIndex == null && isAtEnd) {
       final lastPlayableIndex = _lastPlayableIndex(items);
       if (lastPlayableIndex != null) {
-        final overlap = _visibleOverlap(viewStart, viewEnd, lastPlayableIndex);
-        final visibility =
-            (overlap / MovieCard.itemWidth).clamp(0.0, 1.0).toDouble();
+        final overlap =
+            _visibleOverlap(viewStart, viewEnd, lastPlayableIndex, extent);
+        final visibility = (overlap / cardW).clamp(0.0, 1.0).toDouble();
         _logHomeAutoPlay(
           'End-of-list visibility index=$lastPlayableIndex '
           '${(visibility * 100).toStringAsFixed(0)}%',
@@ -413,9 +450,11 @@ class _HomePageState extends State<HomePage>
     return null;
   }
 
-  double _visibleOverlap(double viewStart, double viewEnd, int index) {
-    final itemStart = index * MovieCard.itemExtent;
-    final itemEnd = itemStart + MovieCard.itemExtent;
+  double _visibleOverlap(double viewStart, double viewEnd, int index,
+      [double? extent]) {
+    final itemExtent = extent ?? MovieCard.cardExtentFor(context);
+    final itemStart = index * itemExtent;
+    final itemEnd = itemStart + itemExtent;
     final overlap = math.min(viewEnd, itemEnd) - math.max(viewStart, itemStart);
     return overlap <= 0 ? 0 : overlap;
   }
@@ -525,6 +564,7 @@ class _HomePageState extends State<HomePage>
     var selectedThemeData = themeProvider.getTheme;
 
     return Scaffold(
+      backgroundColor: Colors.black,
       body: isLoading
           ? HomeShimmer()
           : CustomScrollView(
@@ -532,10 +572,8 @@ class _HomePageState extends State<HomePage>
               slivers: [
                 _buildSliverAppBar(context, selectedThemeData),
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Consumer<DashboardProvider>(
-                        builder: (context, dashboardProvider, child) {
+                  child: Consumer<DashboardProvider>(
+                    builder: (context, dashboardProvider, child) {
                       final showContentLoader = dashboardProvider.isLoading &&
                           (ContentType.isMovieLike(selectedType) ||
                               ContentType.isSeries(selectedType));
@@ -544,289 +582,289 @@ class _HomePageState extends State<HomePage>
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(
-                            height: 5,
-                          ),
-                          if (ResponsiveWidget.isTabletOrTv(context) &&
-                              selectedType != 'MINI SERIES' &&
-                              selectedType != 'MADIOO')
-                            _buildTvHeroSlider(
-                              context,
-                              selectedThemeData,
-                              dashboardProvider,
-                            ),
                           if (!widget.lockContentType)
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: _buildFilterButtons(
-                                  context, dashboardProvider),
+                            Container(
+                              color: Colors.black,
+                              width: double.infinity,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 8.0),
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10.0),
+                                child: _buildFilterButtons(
+                                    context, dashboardProvider),
+                              ),
                             ),
-                          SizedBox(
-                            height: 20,
-                          ),
-                          showContentLoader
-                              ? _buildDashboardSectionLoader(
-                                  context,
-                                  selectedThemeData,
-                                )
-                              : Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    selectedType == 'MINI SERIES' ||
-                                            selectedType == 'MADIOO'
-                                        ? SizedBox.shrink()
-                                        : _isOffline
-                                            ? _continueWatchShimmerWidget()
-                                            : continueWatchWidget(
-                                                continueWatchList:
-                                                    dashboardProvider
-                                                        .continueWatchedMovies),
-                                    selectedType == 'MINI SERIES'
-                                        ? ShortsLibraryPage(
-                                            useParentScroll: true)
-                                        : selectedType == 'MADIOO'
-                                            ? MadiooPage(useParentScroll: true)
-                                            : ListView.builder(
-                                                shrinkWrap: true,
-                                                physics:
-                                                    NeverScrollableScrollPhysics(),
-                                                padding: EdgeInsets.zero,
-                                                scrollDirection: Axis.vertical,
-                                                itemCount: dashboardProvider
-                                                    .dashboardData.length,
-                                                itemBuilder: (context, index) {
-                                                  DashboardData dashboardData =
-                                                      dashboardProvider
-                                                          .dashboardData[index];
-
-                                                  _rowControllers.putIfAbsent(
-                                                      index,
-                                                      () => ScrollController());
-                                                  _rowActiveIndexes.putIfAbsent(
-                                                      index,
-                                                      () => ValueNotifier<int?>(
-                                                          null));
-                                                  _rowItemCounts[index] =
-                                                      dashboardData
-                                                              .movies?.length ??
-                                                          0;
-                                                  _rowItems[index] =
-                                                      dashboardData.movies ??
-                                                          const <Content>[];
-                                                  _scheduleVisibleUpdate();
-                                                  _rowKeys.putIfAbsent(
-                                                      index, () => GlobalKey());
-
-                                                  final controller =
-                                                      _rowControllers[index]!;
-                                                  final activeIndex =
-                                                      _rowActiveIndexes[index]!;
-                                                  final rowKey =
-                                                      _rowKeys[index]!;
-                                                  final rowIndex = index;
-
-                                                  // Attach listener only once.
-                                                  if (!controller
-                                                      .hasListeners) {
-                                                    controller.addListener(() {
-                                                      _scheduleVisibleUpdate();
-
-                                                      if (controller.position
-                                                              .pixels >=
-                                                          controller.position
-                                                                  .maxScrollExtent -
-                                                              200) {
-                                                        if (_userId != null) {
+                          const SizedBox(height: 6),
+                          if (selectedType != 'MINI SERIES' &&
+                              selectedType != 'MADIOO')
+                            _isOffline
+                                ? _continueWatchShimmerWidget()
+                                : continueWatchWidget(
+                                    continueWatchList: dashboardProvider
+                                        .continueWatchedMovies),
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 10.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (ResponsiveWidget.isTabletOrTv(context) &&
+                                    selectedType != 'MINI SERIES' &&
+                                    selectedType != 'MADIOO')
+                                  _buildTvHeroSlider(
+                                    context,
+                                    selectedThemeData,
+                                    dashboardProvider,
+                                  ),
+                                const SizedBox(height: 8),
+                                showContentLoader
+                                    ? _buildDashboardSectionLoader(
+                                        context,
+                                        selectedThemeData,
+                                      )
+                                    : Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          selectedType == 'MINI SERIES'
+                                              ? ShortsLibraryPage(
+                                                  useParentScroll: true)
+                                              : selectedType == 'MADIOO'
+                                                  ? MadiooPage(
+                                                      useParentScroll: true)
+                                                  : ListView.builder(
+                                                      shrinkWrap: true,
+                                                      physics:
+                                                          NeverScrollableScrollPhysics(),
+                                                      padding: EdgeInsets.zero,
+                                                      scrollDirection:
+                                                          Axis.vertical,
+                                                      itemCount:
                                                           dashboardProvider
-                                                              .loadMoreRowData(
-                                                                  dashboardData,
-                                                                  selectedType,
-                                                                  _userId!)
-                                                              .whenComplete(
-                                                                  _scheduleVisibleUpdate);
-                                                        }
-                                                      }
-                                                    });
-                                                  }
+                                                              .dashboardData
+                                                              .length,
+                                                      itemBuilder:
+                                                          (context, index) {
+                                                        DashboardData
+                                                            dashboardData =
+                                                            dashboardProvider
+                                                                    .dashboardData[
+                                                                index];
 
-                                                  return KeyedSubtree(
-                                                    key: rowKey,
-                                                    child: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        (dashboardData.movies ==
-                                                                    null ||
-                                                                dashboardData
-                                                                    .movies!
-                                                                    .isEmpty)
-                                                            ? SizedBox.shrink()
-                                                            : OttTvFocus(
-                                                                onTap: () {
-                                                                  Navigator
-                                                                      .push(
-                                                                    context,
-                                                                    MaterialPageRoute(
-                                                                      builder:
-                                                                          (_) =>
-                                                                              CategoryContentPage(
-                                                                        categoryTitle:
-                                                                            "${dashboardData.language} - ${dashboardData.category}",
-                                                                        contents:
-                                                                            dashboardData.movies ??
-                                                                                [],
-                                                                      ),
-                                                                    ),
-                                                                  );
-                                                                },
-                                                                borderRadius: 8,
-                                                                scale: 1.01,
-                                                                semanticLabel:
-                                                                    "See all ${dashboardData.language} ${dashboardData.category}",
-                                                                child: InkWell(
-                                                                  splashColor:
-                                                                      Colors
-                                                                          .transparent,
-                                                                  onTap: () {
-                                                                    Navigator
-                                                                        .push(
-                                                                      context,
-                                                                      MaterialPageRoute(
-                                                                        builder:
-                                                                            (_) =>
+                                                        _rowControllers.putIfAbsent(
+                                                            index,
+                                                            () =>
+                                                                ScrollController());
+                                                        _rowActiveIndexes
+                                                            .putIfAbsent(
+                                                                index,
+                                                                () => ValueNotifier<
+                                                                        int?>(
+                                                                    null));
+                                                        _rowItemCounts[index] =
+                                                            dashboardData.movies
+                                                                    ?.length ??
+                                                                0;
+                                                        _rowItems[index] =
+                                                            dashboardData
+                                                                    .movies ??
+                                                                const <Content>[];
+                                                        _scheduleVisibleUpdate();
+                                                        _rowKeys.putIfAbsent(
+                                                            index,
+                                                            () => GlobalKey());
+
+                                                        final controller =
+                                                            _rowControllers[
+                                                                index]!;
+                                                        final activeIndex =
+                                                            _rowActiveIndexes[
+                                                                index]!;
+                                                        final rowKey =
+                                                            _rowKeys[index]!;
+
+                                                        // Attach listener only once.
+                                                        if (!controller
+                                                            .hasListeners) {
+                                                          controller
+                                                              .addListener(() {
+                                                            _scheduleVisibleUpdate();
+
+                                                            if (controller
+                                                                    .position
+                                                                    .pixels >=
+                                                                controller
+                                                                        .position
+                                                                        .maxScrollExtent -
+                                                                    200) {
+                                                              if (_userId !=
+                                                                  null) {
+                                                                dashboardProvider
+                                                                    .loadMoreRowData(
+                                                                        dashboardData,
+                                                                        selectedType,
+                                                                        _userId!)
+                                                                    .whenComplete(
+                                                                        _scheduleVisibleUpdate);
+                                                              }
+                                                            }
+                                                          });
+                                                        }
+
+                                                        return KeyedSubtree(
+                                                          key: rowKey,
+                                                          child: Column(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            children: [
+                                                              (dashboardData.movies ==
+                                                                          null ||
+                                                                      dashboardData
+                                                                          .movies!
+                                                                          .isEmpty)
+                                                                  ? SizedBox
+                                                                      .shrink()
+                                                                  : OttTvFocus(
+                                                                      onTap: () {
+                                                                        Navigator.push(
+                                                                          context,
+                                                                          MaterialPageRoute(
+                                                                            builder: (_) =>
                                                                                 CategoryContentPage(
-                                                                          categoryTitle:
-                                                                              "${dashboardData.language} - ${dashboardData.category}",
-                                                                          contents:
-                                                                              dashboardData.movies ?? [],
-                                                                        ),
-                                                                      ),
-                                                                    );
-                                                                  },
-                                                                  child:
-                                                                      Padding(
-                                                                    padding:
-                                                                        const EdgeInsets
-                                                                            .symmetric(
-                                                                      horizontal:
-                                                                          4,
-                                                                      vertical:
-                                                                          4,
-                                                                    ),
-                                                                    child: Row(
-                                                                      children: [
-                                                                        Expanded(
-                                                                          child:
-                                                                              Text(
-                                                                            "${dashboardData.language} - ${dashboardData.category}",
-                                                                            overflow:
-                                                                                TextOverflow.ellipsis,
-                                                                            style:
-                                                                                GoogleFonts.inter(
-                                                                              fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
-                                                                              fontWeight: FontWeight.bold,
-                                                                              color: selectedThemeData.canvasColor,
+                                                                              categoryTitle: "${dashboardData.language} - ${dashboardData.category}",
+                                                                              contents: dashboardData.movies ?? [],
                                                                             ),
                                                                           ),
+                                                                        );
+                                                                      },
+                                                                      borderRadius: 8,
+                                                                      scale: 1.01,
+                                                                      semanticLabel: "See all ${dashboardData.language} ${dashboardData.category}",
+                                                                      child: InkWell(
+                                                                        splashColor: Colors.transparent,
+                                                                        onTap: () {
+                                                                          Navigator.push(
+                                                                            context,
+                                                                            MaterialPageRoute(
+                                                                              builder: (_) =>
+                                                                                  CategoryContentPage(
+                                                                                categoryTitle: "${dashboardData.language} - ${dashboardData.category}",
+                                                                                contents: dashboardData.movies ?? [],
+                                                                              ),
+                                                                            ),
+                                                                          );
+                                                                        },
+                                                                        child: Padding(
+                                                                          padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
+                                                                          child: Row(
+                                                                            children: [
+                                                                              Expanded(
+                                                                                child: Text(
+                                                                                  "${dashboardData.language} - ${dashboardData.category}",
+                                                                                  overflow: TextOverflow.ellipsis,
+                                                                                  style: GoogleFonts.inter(
+                                                                                    fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
+                                                                                    fontWeight: FontWeight.bold,
+                                                                                    color: Colors.white,
+                                                                                  ),
+                                                                                ),
+                                                                              ),
+                                                                              Row(
+                                                                                mainAxisSize: MainAxisSize.min,
+                                                                                children: [
+                                                                                  Text(
+                                                                                    "See All",
+                                                                                    style: GoogleFonts.inter(
+                                                                                      fontSize: 14,
+                                                                                      fontWeight: FontWeight.bold,
+                                                                                      color: const Color(0xFFE50914),
+                                                                                    ),
+                                                                                  ),
+                                                                                  const SizedBox(width: 4),
+                                                                                  const Icon(
+                                                                                    Icons.arrow_forward_ios_rounded,
+                                                                                    size: 12,
+                                                                                    color: Color(0xFFE50914),
+                                                                                  ),
+                                                                                ],
+                                                                              ),
+                                                                            ],
+                                                                          ),
                                                                         ),
-                                                                        Icon(
-                                                                          Icons
-                                                                              .arrow_forward_ios,
-                                                                          size:
-                                                                              18,
-                                                                          color:
-                                                                              selectedThemeData.primaryColor,
-                                                                        ),
-                                                                        SizedBox(
-                                                                          width:
-                                                                              3,
-                                                                        )
-                                                                      ],
+                                                                      ),
                                                                     ),
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                        (dashboardData.movies ==
-                                                                    null ||
-                                                                dashboardData
-                                                                    .movies!
-                                                                    .isEmpty)
-                                                            ? SizedBox.shrink()
-                                                            : SizedBox(
-                                                                height: 270,
-                                                                child: ListView
-                                                                    .builder(
-                                                                  controller:
-                                                                      controller,
-                                                                  scrollDirection:
-                                                                      Axis.horizontal,
-                                                                  //padding: EdgeInsets.zero,
-                                                                  itemCount: dashboardData
+                                                              (dashboardData.movies ==
+                                                                          null ||
+                                                                      dashboardData
                                                                           .movies!
-                                                                          .length +
-                                                                      (dashboardData
-                                                                              .isRowLoading
-                                                                          ? 1
-                                                                          : 0),
-                                                                  itemBuilder:
-                                                                      (context,
-                                                                          i) {
-                                                                    if (i <
-                                                                        dashboardData
-                                                                            .movies!
-                                                                            .length) {
-                                                                      return MovieCard(
-                                                                          movie: dashboardData.movies![
-                                                                              i],
-                                                                          index:
-                                                                              i,
-                                                                          isShortFilmTab: ContentType.normalize(selectedType) ==
-                                                                              ContentType
-                                                                                  .shortFilm,
-                                                                          activeIndexListenable:
-                                                                              activeIndex);
-                                                                    } else if (dashboardData
-                                                                        .isRowLoading) {
-                                                                      return Padding(
-                                                                        padding: const EdgeInsets
-                                                                            .all(
-                                                                            12),
-                                                                        child:
-                                                                            SizedBox(
-                                                                          width:
-                                                                              40,
-                                                                          height:
-                                                                              40,
-                                                                          child:
-                                                                              CircularProgressIndicator(strokeWidth: 2),
-                                                                        ),
-                                                                      );
-                                                                    } else {
-                                                                      return const SizedBox
-                                                                          .shrink();
-                                                                    }
-                                                                  },
-                                                                ),
-                                                              ),
-                                                        (dashboardData.movies ==
-                                                                    null ||
-                                                                dashboardData
-                                                                    .movies!
-                                                                    .isEmpty)
-                                                            ? SizedBox.shrink()
-                                                            : SizedBox(
-                                                                height: 20),
-                                                      ],
+                                                                          .isEmpty)
+                                                                  ? SizedBox
+                                                                      .shrink()
+                                                                  : SizedBox(
+                                                                      height: MovieCard
+                                                                          .standardHeight,
+                                                                      child: ListView
+                                                                          .builder(
+                                                                        controller:
+                                                                            controller,
+                                                                        scrollDirection:
+                                                                            Axis.horizontal,
+                                                                        //padding: EdgeInsets.zero,
+                                                                        itemCount: dashboardData.movies!.length +
+                                                                            (dashboardData.isRowLoading
+                                                                                ? 1
+                                                                                : 0),
+                                                                        itemBuilder:
+                                                                            (context,
+                                                                                i) {
+                                                                          if (i <
+                                                                              dashboardData.movies!.length) {
+                                                                            return MovieCard(
+                                                                                movie: dashboardData.movies![i],
+                                                                                index: i,
+                                                                                isShortFilmTab: ContentType.normalize(selectedType) == ContentType.shortFilm,
+                                                                                activeIndexListenable: activeIndex);
+                                                                          } else if (dashboardData.isRowLoading) {
+                                                                            return Padding(
+                                                                              padding: const EdgeInsets.all(12),
+                                                                              child: SizedBox(
+                                                                                width: 40,
+                                                                                height: 40,
+                                                                                child: CircularProgressIndicator(strokeWidth: 2),
+                                                                              ),
+                                                                            );
+                                                                          } else {
+                                                                            return const SizedBox.shrink();
+                                                                          }
+                                                                        },
+                                                                      ),
+                                                                    ),
+                                                              (dashboardData.movies ==
+                                                                          null ||
+                                                                      dashboardData
+                                                                          .movies!
+                                                                          .isEmpty)
+                                                                  ? SizedBox
+                                                                      .shrink()
+                                                                  : SizedBox(
+                                                                      height:
+                                                                          20),
+                                                            ],
+                                                          ),
+                                                        );
+                                                      },
                                                     ),
-                                                  );
-                                                },
-                                              ),
-                                  ],
-                                ),
+                                        ],
+                                      ),
+                              ],
+                            ),
+                          ),
                         ],
                       );
-                    }),
+                    },
                   ),
                 ),
               ],
@@ -839,10 +877,12 @@ class _HomePageState extends State<HomePage>
     ThemeData theme,
     DashboardProvider dashboardProvider,
   ) {
+    final normalizedSelectedType = selectedType.trim().toUpperCase();
     final heroItems = dashboardProvider.dashboardData
         .expand((row) => row.movies ?? const <Content>[])
         .where((item) =>
             item.id != null &&
+            (item.type?.trim().toUpperCase() == normalizedSelectedType) &&
             ((item.landscapeBannerUrl?.isNotEmpty ?? false) ||
                 (item.posterUrlList?.isNotEmpty ?? false)) &&
             (item.title?.trim().isNotEmpty ?? false))
@@ -1198,164 +1238,28 @@ class _HomePageState extends State<HomePage>
     if (items.isEmpty) {
       return const SizedBox.shrink();
     }
-    var theme = Theme.of(context);
-
-    _continueWatchItemCount = items.length;
-    _continueWatchItems = items;
-    if (!_continueWatchListenerAttached) {
-      _continueWatchListenerAttached = true;
-      _continueWatchController.addListener(() {
-        _scheduleVisibleUpdate();
-      });
-    }
-
-    _scheduleVisibleUpdate();
 
     return KeyedSubtree(
       key: _continueWatchKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Label
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
-            child: Text(
-              "Continue Watching",
-              style: GoogleFonts.inter(
-                fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
-                fontWeight: FontWeight.bold,
-                color: theme.canvasColor,
-              ),
-            ),
-          ),
-
-          // Horizontal list
-          SizedBox(
-            height: 220, //270,
-            child: ListView.builder(
-              controller: _continueWatchController,
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.zero,
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                final item = items[index];
-
-                // return SizedBox(
-                //   width: MovieCard.itemExtent,
-                //   child: MovieCard(
-                //     movie: item,
-                //     index: index,
-                //     activeIndexListenable: _continueWatchActiveIndex,
-                //   ),
-                // );
-                return SizedBox(
-                  width: ContinueWatchMovieCard.itemExtent,
-                  child: ContinueWatchMovieCard(
-                    movie: item,
-                    index: index,
-                    isShortFilmTab: ContentType.normalize(selectedType) ==
-                        ContentType.shortFilm,
-                    enableTrailerPreview: false,
-                  ),
-                );
-              },
-            ),
-          ),
-          SizedBox(height: 20),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 20.0),
+        child: ContinueWatchingBanner(
+          items: items,
+          selectedType: selectedType,
+          onPlaybackFinished: () {
+            if (mounted) {
+              setState(() {});
+            }
+          },
+        ),
       ),
     );
   }
 
   Widget _continueWatchShimmerWidget() {
-    final theme = Theme.of(context);
-    final itemCount = ResponsiveWidget.isMobile(context)
-        ? 2
-        : ResponsiveWidget.isDesktop(context)
-            ? 5
-            : 3;
-
-    _continueWatchItemCount = 0;
-    _continueWatchItems = const <Content>[];
-    if (_continueWatchActiveIndex.value != null) {
-      _continueWatchActiveIndex.value = null;
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-          child: ShimmerLoader(
-            width: ResponsiveWidget.isMobile(context) ? 170 : 220,
-            height: ResponsiveWidget.isMobile(context) ? 18 : 20,
-            borderRadius: 8,
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 220,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: EdgeInsets.zero,
-            itemCount: itemCount,
-            itemBuilder: (context, index) {
-              return Container(
-                width: ContinueWatchMovieCard.itemExtent,
-                margin: const EdgeInsets.only(right: 12),
-                decoration: BoxDecoration(
-                  color: theme.cardColor.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(12),
-                        ),
-                        child: ShimmerLoader(
-                          width: double.infinity,
-                          height: double.infinity,
-                          borderRadius: 0,
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const ShimmerLoader(
-                            width: double.infinity,
-                            height: 6,
-                            borderRadius: 6,
-                          ),
-                          const SizedBox(height: 10),
-                          ShimmerLoader(
-                            width: ContinueWatchMovieCard.itemExtent * 0.62,
-                            height: 14,
-                            borderRadius: 6,
-                          ),
-                          const SizedBox(height: 8),
-                          ShimmerLoader(
-                            width: ContinueWatchMovieCard.itemExtent * 0.4,
-                            height: 10,
-                            borderRadius: 6,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 20),
-      ],
+    return const Padding(
+      padding: EdgeInsets.only(bottom: 20.0),
+      child: ContinueWatchingBannerShimmer(),
     );
   }
 
@@ -1366,163 +1270,129 @@ class _HomePageState extends State<HomePage>
   //   return width / posterRatio;
   // }
 
+  Widget _buildCircleGlassButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+    FeatureTourStepId? tourStepId,
+  }) {
+    Widget button = Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.black.withOpacity(0.15),
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            icon,
+            size: 20,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+
+    if (tourStepId != null) {
+      return FeatureTourTarget(id: tourStepId, child: button);
+    }
+    return button;
+  }
+
   SliverAppBar _buildSliverAppBar(
       BuildContext context, ThemeData selectedThemeData) {
     final lang = AppLocalizations.of(context)!;
-    final useTransparentAppBar = !ResponsiveWidget.isMobile(context);
 
     return SliverAppBar(
       automaticallyImplyLeading: false,
-      forceMaterialTransparency: useTransparentAppBar,
-      // expandedHeight: bannerHeight(context),
+      forceMaterialTransparency: false,
       floating: false,
       pinned: true,
       stretch: true,
       surfaceTintColor: Colors.transparent,
-      backgroundColor: useTransparentAppBar
-          ? selectedThemeData.scaffoldBackgroundColor
-          : selectedThemeData.primaryColor,
-      title: useTransparentAppBar
-          ? Text(
-              "",
-              style: TextStyle(
-                color: selectedThemeData.canvasColor,
-                fontWeight: FontWeight.bold,
+      backgroundColor: selectedThemeData.primaryColor,
+      title: Align(
+        alignment: Alignment.centerLeft,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    NavigationPage(),
+                transitionDuration: Duration.zero,
+                reverseTransitionDuration: Duration.zero,
               ),
-            )
-          : SizedBox(
-              width: 70,
-              height: 70,
-              /*   decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white),
-              ), */
-              child: Hero(
-                tag: "logo",
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(10),
-                  onTap: () {
-                    Navigator.pushReplacement(
-                      context,
-                      PageRouteBuilder(
-                        pageBuilder: (context, animation, secondaryAnimation) =>
-                            NavigationPage(),
-                        transitionDuration: Duration.zero,
-                        reverseTransitionDuration: Duration.zero,
-                      ),
-                    );
-                  },
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.asset(
-                      ImageConstant.logo,
-                      width: 75,
-                      height: 75,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ),
-              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 0),
+            child: Image.asset(
+              ImageConstant.logo,
+              height: 70.0,
+              fit: BoxFit.contain,
+              alignment: Alignment.centerLeft,
             ),
-
-      titleSpacing: 10,
+          ),
+        ),
+      ),
+      titleSpacing: 12,
       actions: [
-        //LanguageDropdown(),
-        FeatureTourTarget(
-          id: FeatureTourStepId.search,
-          child: IconButton(
-            icon: Icon(Icons.search,
-                color: useTransparentAppBar
-                    ? selectedThemeData.canvasColor
-                    : Colors.white),
-            tooltip: lang.search,
-            style: IconButton.styleFrom(
-                backgroundColor: useTransparentAppBar
-                    ? Colors.white.withOpacity(0.3)
-                    : Colors.black.withOpacity(0.2)),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => SearchPage()),
+        _buildCircleGlassButton(
+          icon: Icons.search,
+          tooltip: lang.search,
+          tourStepId: FeatureTourStepId.search,
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => SearchPage()),
+          ),
+        ),
+        const SizedBox(width: 6),
+        _buildCircleGlassButton(
+          icon: Icons.notifications_none,
+          tooltip: lang.notification,
+          tourStepId: FeatureTourStepId.notifications,
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => NotificationPage()),
+          ),
+        ),
+        const SizedBox(width: 6),
+        _buildCircleGlassButton(
+          icon: Icons.language,
+          tooltip: lang.selectPreferredLanguage,
+          tourStepId: FeatureTourStepId.language,
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ChangeLanguage(),
             ),
           ),
         ),
-        SizedBox(
-          width: 4,
-        ),
-        FeatureTourTarget(
-          id: FeatureTourStepId.notifications,
-          child: IconButton(
-            icon: Icon(Icons.notifications_active,
-                color: useTransparentAppBar
-                    ? selectedThemeData.canvasColor
-                    : Colors.white),
-            tooltip: lang.notification,
-            style: IconButton.styleFrom(
-                backgroundColor: useTransparentAppBar
-                    ? Colors.white.withOpacity(0.3)
-                    : Colors.black.withOpacity(0.2)),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => NotificationPage()),
-            ),
-          ),
-        ),
-        SizedBox(
-          width: 4,
-        ),
-        FeatureTourTarget(
-          id: FeatureTourStepId.language,
-          child: IconButton(
-            tooltip: lang.selectPreferredLanguage,
-            style: IconButton.styleFrom(
-              backgroundColor: useTransparentAppBar
-                  ? Colors.white.withOpacity(0.3)
-                  : Colors.black.withOpacity(0.2),
-            ),
-            icon: Icon(Icons.language_sharp,
-                color: useTransparentAppBar
-                    ? selectedThemeData.canvasColor
-                    : Colors.white),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ChangeLanguage(),
-              ),
-            ),
-          ),
-        ),
-
-        SizedBox(
-          width: 4,
-        ),
+        const SizedBox(width: 6),
         Consumer<UserProvider>(builder: (context, userProvider, child) {
           final walletProvider =
               Provider.of<WalletProvider>(context, listen: false);
 
-          final user = userProvider.userObject;
           return Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              FeatureTourTarget(
-                id: FeatureTourStepId.wallet,
-                child: IconButton(
-                  icon: Icon(Icons.account_balance_wallet,
-                      color: useTransparentAppBar
-                          ? selectedThemeData.canvasColor
-                          : Colors.white),
-                  tooltip: "₹ ${walletProvider.walletBalance.toStringAsFixed(2)}",
-                  style: IconButton.styleFrom(
-                      backgroundColor: useTransparentAppBar
-                          ? Colors.white.withOpacity(0.3)
-                          : Colors.black.withOpacity(0.2)),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => WalletPage()),
-                  ),
+              _buildCircleGlassButton(
+                icon: Icons.account_balance_wallet_outlined,
+                tooltip: "₹ ${walletProvider.walletBalance.toStringAsFixed(2)}",
+                tourStepId: FeatureTourStepId.wallet,
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => WalletPage()),
                 ),
               ),
-              SizedBox(
-                width: 4,
-              ),
+              const SizedBox(width: 6),
               FeatureTourTarget(
                 id: FeatureTourStepId.profile,
                 child: Tooltip(
@@ -1539,49 +1409,43 @@ class _HomePageState extends State<HomePage>
                           MaterialPageRoute(
                               builder: (context) => ProfilePage()));
                     },
-                    child: Hero(
-                      tag: "profile",
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white,
-                            width: 1,
-                          ),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white,
+                          width: 1.5,
                         ),
-                        child: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: selectedThemeData.canvasColor,
-                          child: ClipOval(
-                            child: Builder(
-                              builder: (_) {
-                                final profilePhotoUrl =
-                                    normalizeNetworkImageUrl(
-                                  userProvider.userObj.profilePhoto,
-                                );
-                                if (profilePhotoUrl.isEmpty) {
-                                  return Image.asset(
-                                    ImageConstant.profile,
-                                    width: 36,
-                                    height: 36,
-                                    fit: BoxFit.cover,
-                                  );
-                                }
-                                return Image.network(
-                                  profilePhotoUrl,
-                                  width: 36,
-                                  height: 36,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Image.asset(
-                                    ImageConstant.profile,
-                                    width: 36,
-                                    height: 36,
-                                    fit: BoxFit.cover,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
+                      ),
+                      child: ClipOval(
+                        child: Builder(
+                          builder: (_) {
+                            final profilePhotoUrl = normalizeNetworkImageUrl(
+                              userProvider.userObj.profilePhoto,
+                            );
+                            if (profilePhotoUrl.isEmpty) {
+                              return Image.asset(
+                                ImageConstant.profile,
+                                width: 36,
+                                height: 36,
+                                fit: BoxFit.cover,
+                              );
+                            }
+                            return Image.network(
+                              profilePhotoUrl,
+                              width: 36,
+                              height: 36,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Image.asset(
+                                ImageConstant.profile,
+                                width: 36,
+                                height: 36,
+                                fit: BoxFit.cover,
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -1591,339 +1455,93 @@ class _HomePageState extends State<HomePage>
             ],
           );
         }),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
       ],
-      // flexibleSpace: FlexibleSpaceBar(
-      //   stretchModes: const [
-      //     StretchMode.zoomBackground,
-      //     StretchMode.fadeTitle,
-      //   ],
-      //   background: Stack(
-      //     children: [
-      //       // Base fallback
-      //       Positioned.fill(
-      //         child: Container(
-      //           color: selectedThemeData.scaffoldBackgroundColor,
-      //         ),
-      //       ),
-
-      //       // Banner carousel
-      //       Positioned.fill(
-      //         child: trendingMovieList.isEmpty
-      //             ? const SizedBox.shrink()
-      //             : PageView.builder(
-      //                 controller: _pageController,
-      //                 itemCount: trendingMovieList.length,
-      //                 onPageChanged: (i) {
-      //                   setState(() => _currentPage = i);
-      //                 },
-      //                 itemBuilder: (context, index) {
-      //                   final poster = trendingMovieList[index].posterUrlList;
-      //                   return poster != null && poster.isNotEmpty
-      //                       ? Image.network(
-      //                           poster.first,
-      //                           fit: BoxFit.cover,
-      //                           errorBuilder: (_, __, ___) => Container(
-      //                             color: Colors.black12,
-      //                             child: const Icon(Icons.broken_image),
-      //                           ),
-      //                         )
-      //                       : const SizedBox.shrink();
-      //                 },
-      //               ),
-      //       ),
-
-      //       // Hotstar-style dark gradient
-      //       Positioned.fill(
-      //         child: Container(
-      //           decoration: const BoxDecoration(
-      //             gradient: LinearGradient(
-      //               begin: Alignment.topCenter,
-      //               end: Alignment.bottomCenter,
-      //               colors: [
-      //                 Color.fromARGB(120, 0, 0, 0),
-      //                 Color.fromARGB(60, 0, 0, 0),
-      //                 Colors.transparent,
-      //                 Color.fromARGB(180, 0, 0, 0),
-      //               ],
-      //             ),
-      //           ),
-      //         ),
-      //       ),
-
-      //       if (trendingMovieList.isNotEmpty) ...[
-      //         // Bottom-left content
-      //         Positioned(
-      //           left: 16,
-      //           right: ResponsiveWidget.isMobile(context) ? 150 : 360,
-      //           bottom: 16,
-      //           child: Column(
-      //             crossAxisAlignment: CrossAxisAlignment.start,
-      //             children: [
-      //               Text(
-      //                 trendingMovieList[_currentPage].title ?? '',
-      //                 maxLines: 1,
-      //                 overflow: TextOverflow.ellipsis,
-      //                 style: TextStyle(
-      //                   color: Colors.white,
-      //                   fontSize: ResponsiveWidget.isMobile(context) ? 20 : 24,
-      //                   fontWeight: FontWeight.w700,
-      //                 ),
-      //               ),
-      //               const SizedBox(height: 4),
-      //               Row(
-      //                 children: [
-      //                   StarRatingWidget(
-      //                     rating: double.parse(
-      //                       (trendingMovieList[_currentPage].ratings ?? 0)
-      //                           .toStringAsFixed(1),
-      //                     ),
-      //                   ),
-      //                   const SizedBox(width: 8),
-      //                   Text(
-      //                     (trendingMovieList[_currentPage]
-      //                                 .genreList
-      //                                 ?.isNotEmpty ??
-      //                             false)
-      //                         ? trendingMovieList[_currentPage]
-      //                             .genreList!
-      //                             .join(', ')
-      //                         : 'N/A',
-      //                     style: const TextStyle(
-      //                       color: Colors.white70,
-      //                       fontWeight: FontWeight.bold,
-      //                       fontSize: 11,
-      //                     ),
-      //                     maxLines: 1,
-      //                     overflow: TextOverflow.ellipsis,
-      //                   ),
-      //                 ],
-      //               ),
-      //               const SizedBox(height: 4),
-      //               Row(
-      //                 crossAxisAlignment: CrossAxisAlignment.center,
-      //                 children: [
-      //                   Text(
-      //                     (trendingMovieList[_currentPage]
-      //                                 .languageList
-      //                                 ?.isNotEmpty ??
-      //                             false)
-      //                         ? trendingMovieList[_currentPage]
-      //                             .languageList!
-      //                             .map((e) => e.language)
-      //                             .join(', ')
-      //                         : 'N/A',
-      //                     style: const TextStyle(
-      //                       color: Colors.white,
-      //                       fontSize: 11,
-      //                       fontWeight: FontWeight.bold,
-      //                     ),
-      //                     maxLines: 1,
-      //                     overflow: TextOverflow.ellipsis,
-      //                   ),
-      //                   Text(
-      //                     ' | ',
-      //                     style: TextStyle(
-      //                       color: selectedThemeData.primaryColor,
-      //                       fontSize: 14,
-      //                       fontWeight: FontWeight.bold,
-      //                     ),
-      //                     maxLines: 1,
-      //                     overflow: TextOverflow.ellipsis,
-      //                   ),
-      //                   Text(
-      //                     "${trendingMovieList[_currentPage].runtime ?? 'xx min'} min",
-      //                     style: const TextStyle(
-      //                       color: Colors.white,
-      //                       fontSize: 11,
-      //                       fontWeight: FontWeight.bold,
-      //                     ),
-      //                     maxLines: 1,
-      //                     overflow: TextOverflow.ellipsis,
-      //                   ),
-      //                   Text(
-      //                     ' | ',
-      //                     style: TextStyle(
-      //                       color: selectedThemeData.primaryColor,
-      //                       fontSize: 14,
-      //                       fontWeight: FontWeight.bold,
-      //                     ),
-      //                     maxLines: 1,
-      //                     overflow: TextOverflow.ellipsis,
-      //                   ),
-      //                   Text(
-      //                     "${trendingMovieList[_currentPage].releaseDate ?? 'NA'}",
-      //                     style: const TextStyle(
-      //                       color: Colors.white,
-      //                       fontSize: 11,
-      //                       fontWeight: FontWeight.bold,
-      //                     ),
-      //                     maxLines: 1,
-      //                     overflow: TextOverflow.ellipsis,
-      //                   ),
-      //                 ],
-      //               ),
-      //               const SizedBox(height: 4),
-      //               Text(
-      //                 trendingMovieList[_currentPage].description ?? '',
-      //                 maxLines: 2,
-      //                 overflow: TextOverflow.ellipsis,
-      //                 style: const TextStyle(
-      //                   color: Colors.white70,
-      //                   fontSize: 11,
-      //                 ),
-      //               ),
-      //             ],
-      //           ),
-      //         ),
-
-      //         // Bottom-right button
-      //         Positioned(
-      //           right: 16,
-      //           bottom: 48,
-      //           child: GestureDetector(
-      //             onTap: () => Navigator.push(
-      //               context,
-      //               MaterialPageRoute(
-      //                 builder: (context) => trendingMovieList[_currentPage]
-      //                             .type!
-      //                             .toLowerCase() ==
-      //                         'movie'
-      //                     ? MovieDetailsPage(
-      //                         movieId: trendingMovieList[_currentPage].id!,
-      //                       )
-      //                     : SeriesDetailsPage(
-      //                         seriesId: trendingMovieList[_currentPage].id ?? 0,
-      //                         content: trendingMovieList[_currentPage],
-      //                       ),
-      //               ),
-      //             ),
-      //             child: Container(
-      //               decoration: BoxDecoration(
-      //                 borderRadius: BorderRadius.circular(
-      //                   10,
-      //                 ),
-      //                 color: selectedThemeData.primaryColor.withOpacity(0.9),
-      //               ),
-      //               child: Padding(
-      //                 padding: EdgeInsets.symmetric(
-      //                   vertical: 8.0,
-      //                   horizontal: 16,
-      //                 ),
-      //                 child: Text(
-      //                   "Watch",
-      //                   style: TextStyle(
-      //                     fontSize: 14,
-      //                     fontWeight: FontWeight.bold,
-      //                     color: Colors.white,
-      //                   ),
-      //                 ),
-      //               ),
-      //             ),
-      //           ),
-      //           // child: GestureDetector(
-      //           //   onTap: () {},
-      //           //   child: Container(
-      //           //     padding:
-      //           //         const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      //           //     decoration: BoxDecoration(
-      //           //       color: selectedThemeData.primaryColor,
-      //           //       borderRadius: BorderRadius.circular(6),
-      //           //     ),
-      //           //     child: Text(
-      //           //       trendingMovieList[_currentPage].isRental == true
-      //           //           ? (trendingMovieList[_currentPage]
-      //           //                       .type
-      //           //                       ?.toLowerCase() ==
-      //           //                   "movie"
-      //           //               ? lang.watchMovie
-      //           //               : lang.watchSeries)
-      //           //           : "Rs ${trendingMovieList[_currentPage].price}",
-      //           //       style: const TextStyle(
-      //           //         color: Colors.white,
-      //           //         fontSize: 14,
-      //           //         fontWeight: FontWeight.w600,
-      //           //       ),
-      //           //     ),
-      //           //   ),
-      //           // ),
-      //         ),
-      //       ],
-      //     ],
-      //   ),
-      // ),
     );
   }
 
   Widget _buildFilterButtons(
       BuildContext context, DashboardProvider dashboardProvider) {
     final lang = AppLocalizations.of(context)!;
-    var themeProvider = Provider.of<ThemeProvider>(context, listen: true);
-    var selectedThemeData = themeProvider.getTheme;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: ContentType.homeTypes.map<Widget>((type) {
-        return Padding(
-          padding: const EdgeInsets.only(right: 8.0),
-          child: InkWell(
-            onTap: () async {
-              setState(() {
-                selectedType = type;
-              });
-              final selectedLanguages =
-                  Provider.of<UserProvider>(context, listen: false)
-                          .userObject
-                          .selectedLanguages ??
-                      [];
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final selectedThemeData = themeProvider.getTheme;
 
-              if (selectedType == 'MINI SERIES' || selectedType == 'MADIOO') {
-                return;
-              }
-              if (selectedLanguages.isEmpty) {
-                await getMovieList(
-                    dashboardProvider, selectedType, ["Hindi", "English"]);
-              } else {
-                await getMovieList(
-                    dashboardProvider, selectedType, selectedLanguages);
-              }
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                color: selectedType == type
-                    ? selectedThemeData.primaryColor
-                    : Colors.transparent,
-                border: Border.all(
-                  color: selectedType == type
-                      ? selectedThemeData.primaryColor
-                      : selectedThemeData.canvasColor.withOpacity(0.6),
-                ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-                child: Text(
-                  type == 'MOVIE'
-                      ? lang.movie
-                      : type == 'SERIES'
-                          ? lang.series
-                          : type == 'MINI SERIES'
-                              ? 'Mini Series'
-                              : 'Madioo',
-                  style: TextStyle(
-                    color: selectedType == type
-                        ? Colors.white
-                        : selectedThemeData.primaryColor,
-                    fontWeight: selectedType == type
-                        ? FontWeight.bold
-                        : FontWeight.w600,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          ...ContentType.homeTypes,
+        ].map((type) {
+          final isSelected = selectedType == type;
+          Future<void> onSelect() async {
+            if (selectedType == type) return;
+            setState(() {
+              selectedType = type;
+              _resetRowState();
+            });
+            final selectedLanguages =
+                Provider.of<UserProvider>(context, listen: false)
+                        .userObject
+                        .selectedLanguages ??
+                    [];
+
+            if (selectedType == 'MINI SERIES' || selectedType == 'MADIOO') {
+              return;
+            }
+            if (selectedLanguages.isEmpty || selectedLanguages == []) {
+              await getMovieList(
+                  dashboardProvider, selectedType, ["Hindi", "English"]);
+            } else {
+              await getMovieList(
+                  dashboardProvider, selectedType, selectedLanguages);
+            }
+          }
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: OttTvFocus(
+              onTap: onSelect,
+              borderRadius: 12,
+              scale: 1.05,
+              semanticLabel: 'Select $type filter',
+              child: GestureDetector(
+                onTap: onSelect,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? const Color(0xFFE50914)
+                        : const Color(0xFF141418),
+                    border: Border.all(
+                      color: isSelected
+                          ? const Color(0xFFE50914)
+                          : const Color(0xFF26262E),
+                      width: 1,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 18),
+                  child: Text(
+                    type == 'MOVIE'
+                        ? lang.movie
+                        : type == 'SERIES'
+                            ? lang.series
+                            : ContentType.displayLabel(type),
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        );
-      }).toList(),
+          );
+        }).toList(),
+      ),
     );
   }
 
@@ -1953,14 +1571,14 @@ class _HomePageState extends State<HomePage>
               ),
               const SizedBox(height: 12),
               SizedBox(
-                height: 300,
+                height: MovieCard.standardHeight,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: cardCount,
                   itemBuilder: (context, index) {
                     return Container(
-                      width: MovieCard.itemWidth,
+                      width: MovieCard.cardWidthFor(context),
                       margin: const EdgeInsets.all(MovieCard.itemMargin),
                       decoration: BoxDecoration(
                         color:
@@ -2032,212 +1650,408 @@ class _HomePageState extends State<HomePage>
     final userId = user?.id ?? 0;
     await dashBoardProvider.getDashboardData(selectedType, langList, userId);
   }
+
 // Compatibility alias
   Future<void> userDetailsPopUp(BuildContext context) async {
     confirmDetails(context);
   }
 
-  // STAGE 1: First Login / Minimum Information Popup (Email, DOB, Referral Code)
+  // STAGE 1: First Login / Minimum Information Popup (Email, Age based on Birth Year, Optional Referral Code)
   Future<void> stage1ProfilePopUp(BuildContext context) async {
     final formKey = GlobalKey<FormState>();
     final lang = AppLocalizations.of(context)!;
     final userProvider = Provider.of<UserProvider>(context, listen: false);
 
     if (userProvider.emailController.text.trim().isEmpty) {
-      userProvider.emailController.text =
-          userProvider.userObject.emailId ?? "";
+      userProvider.emailController.text = userProvider.userObject.emailId ?? "";
     }
-    if (userProvider.dobController.text.trim().isEmpty) {
-      userProvider.dobController.text = userProvider.userObject.dob ?? "";
+    // Set age from userObject.age if present, or infer from dob if existing user has dob
+    if (userProvider.ageController.text.trim().isEmpty) {
+      final existingAge = userProvider.userObject.age?.trim();
+      if (existingAge != null && existingAge.isNotEmpty) {
+        userProvider.ageController.text = existingAge;
+      } else {
+        final existingDob = userProvider.userObject.dob?.trim();
+        if (existingDob != null && existingDob.isNotEmpty) {
+          final parsed = parseBirthMonthAndYear(existingDob);
+          if (parsed['year'] != null) {
+            final calculated = DateTime.now().year - (parsed['year'] as int);
+            userProvider.ageController.text = '$calculated';
+          }
+        }
+      }
     }
     if (userProvider.refferedByController.text.trim().isEmpty) {
-      final pendingReferral =
-          await ReferralService.instance.getPendingReferralCode();
-      if (pendingReferral != null && pendingReferral.isNotEmpty) {
-        userProvider.refferedByController.text = pendingReferral;
+      final userRefferedBy = userProvider.userObject.refferedBy?.trim();
+      if (userRefferedBy != null && userRefferedBy.isNotEmpty) {
+        userProvider.refferedByController.text = userRefferedBy;
+      } else {
+        final pendingReferral =
+            await ReferralService.instance.getPendingReferralCode();
+        if (pendingReferral != null && pendingReferral.isNotEmpty) {
+          userProvider.refferedByController.text = pendingReferral;
+        }
       }
     }
 
+    final initialDob = userProvider.dobController.text.trim().isNotEmpty
+        ? userProvider.dobController.text.trim()
+        : (userProvider.userObject.dob?.trim() ?? '');
+    final initialParsed = parseBirthMonthAndYear(initialDob);
+    String? selectedMonth = initialParsed['month'];
+    int? selectedYear = initialParsed['year'];
+
+    if (selectedYear == null &&
+        userProvider.ageController.text.trim().isNotEmpty) {
+      final ageVal = int.tryParse(userProvider.ageController.text.trim());
+      if (ageVal != null && ageVal > 0 && ageVal < 130) {
+        selectedYear = DateTime.now().year - ageVal;
+      }
+    }
+    if (selectedMonth != null && selectedYear != null) {
+      userProvider.setBirthMonthAndYear(selectedMonth, selectedYear);
+    }
+
     if (!context.mounted) return;
+
+    StagedRegistrationService.instance.setDialogActive(true);
+    bool isSubmitting = false;
 
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        UserProvider provider =
-            Provider.of<UserProvider>(context, listen: true);
-        var selectedThemeData =
-            Provider.of<ThemeProvider>(context, listen: true).getTheme;
-        return AlertDialog(
-          backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            final provider = Provider.of<UserProvider>(context, listen: true);
+            final selectedThemeData =
+                Provider.of<ThemeProvider>(context, listen: true).getTheme;
+
+            final currentYear = DateTime.now().year;
+            final currentMonth = DateTime.now().month;
+            final birthYears = getBirthYears();
+
+            return AlertDialog(
+              backgroundColor: selectedThemeData.scaffoldBackgroundColor,
+              title: Text(
                 lang.enterDetails,
                 style: TextStyle(
                   color: selectedThemeData.canvasColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              IconButton(
-                icon: Icon(Icons.close, color: selectedThemeData.canvasColor),
-                onPressed: () => Navigator.of(ctx).pop(),
-                splashRadius: 20,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-            ],
-          ),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CustomTextField(
-                    controller: provider.emailController,
-                    isEmail: true,
-                    isValidator: true,
-                    label: lang.email,
-                    hintText: lang.enterEmail,
-                    textInputType: TextInputType.emailAddress,
-                  ),
-                  const SizedBox(height: 10),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      lang.birthDate,
-                      style: TextStyle(
-                        color: selectedThemeData.canvasColor,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+              content: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Field 1: Birth Month and Year (Month & Year Only, No Day Field)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Month Dropdown
+                          Expanded(
+                            flex: 3,
+                            child: DropdownButtonFormField<String>(
+                              value: selectedMonth,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                labelText: 'Birth Month *',
+                                hintText: 'Month',
+                                isDense: true,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.calendar_month_outlined,
+                                  size: 18,
+                                  color: selectedThemeData.canvasColor
+                                      .withValues(alpha: 0.7),
+                                ),
+                              ),
+                              dropdownColor:
+                                  selectedThemeData.scaffoldBackgroundColor,
+                              items: kBirthMonths
+                                  .map(
+                                    (m) => DropdownMenuItem(
+                                      value: m,
+                                      child: Text(
+                                        m,
+                                        style: TextStyle(
+                                          color: selectedThemeData.canvasColor,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: isSubmitting
+                                  ? null
+                                  : (val) {
+                                      setDialogState(() {
+                                        selectedMonth = val;
+                                        if (selectedMonth != null &&
+                                            selectedYear != null) {
+                                          provider.setBirthMonthAndYear(
+                                            selectedMonth!,
+                                            selectedYear!,
+                                          );
+                                        }
+                                      });
+                                    },
+                              validator: (val) {
+                                if (val == null || val.trim().isEmpty) {
+                                  return 'Select month';
+                                }
+                                if (selectedYear == currentYear &&
+                                    val.isNotEmpty) {
+                                  final monthIndex =
+                                      kBirthMonths.indexOf(val) + 1;
+                                  if (monthIndex > currentMonth) {
+                                    return 'Invalid month';
+                                  }
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          // Year Dropdown
+                          Expanded(
+                            flex: 2,
+                            child: DropdownButtonFormField<int>(
+                              value: selectedYear,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                labelText: 'Birth Year *',
+                                hintText: 'Year',
+                                isDense: true,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              dropdownColor:
+                                  selectedThemeData.scaffoldBackgroundColor,
+                              items: birthYears
+                                  .map(
+                                    (y) => DropdownMenuItem(
+                                      value: y,
+                                      child: Text(
+                                        '$y',
+                                        style: TextStyle(
+                                          color: selectedThemeData.canvasColor,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: isSubmitting
+                                  ? null
+                                  : (val) {
+                                      setDialogState(() {
+                                        selectedYear = val;
+                                        if (selectedMonth != null &&
+                                            selectedYear != null) {
+                                          provider.setBirthMonthAndYear(
+                                            selectedMonth!,
+                                            selectedYear!,
+                                          );
+                                        }
+                                      });
+                                    },
+                              validator: (val) {
+                                if (val == null) {
+                                  return 'Select year';
+                                }
+                                if (val > currentYear) {
+                                  return 'Invalid year';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  TextFormField(
-                    cursorColor: selectedThemeData.primaryColor,
-                    controller: provider.dobController,
-                    readOnly: true,
-                    onTap: () async {
-                      DateTime? pickedDate = await showDatePicker(
-                        context: ctx,
-                        initialDate:
-                            DateTime.tryParse(provider.dobController.text) ??
-                                DateTime(2000, 1, 1),
-                        firstDate: DateTime(1900),
-                        lastDate: DateTime.now(),
-                      );
-                      if (pickedDate != null) {
-                        provider.setDate(pickedDate);
-                      }
-                    },
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return '${lang.enterBirthDate} is required';
-                      }
-                      return null;
-                    },
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: selectedThemeData.cardColor,
-                      hintText: lang.enterBirthDate,
-                      hintStyle: TextStyle(
-                        color: selectedThemeData.canvasColor,
-                        fontSize: 13,
-                      ),
-                      border: OutlineInputBorder(
-                        borderSide: const BorderSide(color: Colors.transparent),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: const BorderSide(color: Colors.transparent),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: selectedThemeData.primaryColor,
+                      if (selectedMonth != null && selectedYear != null) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: selectedThemeData.cardColor,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: selectedThemeData.primaryColor
+                                  .withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.cake_outlined,
+                                size: 16,
+                                color: selectedThemeData.primaryColor,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Birth Date: $selectedMonth $selectedYear',
+                                style: TextStyle(
+                                  color: selectedThemeData.canvasColor,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        borderRadius: BorderRadius.circular(6),
+                      ],
+                      const SizedBox(height: 12),
+
+                      // Field 2: Email (Completely Optional)
+                      CustomTextField(
+                        controller: provider.emailController,
+                        isEmail: false,
+                        isValidator: false,
+                        label: '${lang.email} (Optional)',
+                        hintText: lang.enterEmail,
+                        textInputType: TextInputType.emailAddress,
+                        validator: (val) {
+                          if (val != null && val.trim().isNotEmpty) {
+                            final emailRegex =
+                                RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                            if (!emailRegex.hasMatch(val.trim())) {
+                              return lang.enterEmail;
+                            }
+                          }
+                          return null;
+                        },
                       ),
-                      suffixIcon: const Icon(Icons.calendar_today),
+                      const SizedBox(height: 12),
+
+                      // Field 3: Referral Code (Optional)
+                      CustomTextField(
+                        controller: provider.refferedByController,
+                        hintText: lang.referralCodeOptional,
+                        label: lang.enterReferralCode,
+                        textInputType: TextInputType.text,
+                        capitalization: TextCapitalization.characters,
+                        isValidator: false,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: selectedThemeData.primaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  CustomTextField(
-                    controller: provider.refferedByController,
-                    hintText: lang.referralCodeOptional,
-                    label: lang.enterReferralCode,
-                    textInputType: TextInputType.text,
-                    capitalization: TextCapitalization.characters,
-                    isValidator: false,
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) return;
+                          if (selectedMonth != null && selectedYear != null) {
+                            provider.setBirthMonthAndYear(
+                              selectedMonth!,
+                              selectedYear!,
+                            );
+                          }
+                          setDialogState(() {
+                            isSubmitting = true;
+                          });
+
+                          print(
+                              "[DOB POPUP] Submitting birth month and year popup...");
+                          var result = await provider.updateUserDetails();
+                          print("[DOB POPUP] Update API result: $result");
+                          if (!dialogCtx.mounted) return;
+
+                          if (result['success'] == true) {
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setBool('isLoggedIn', true);
+
+                            if (provider.userObject.id != null) {
+                              await provider
+                                  .getUserById(provider.userObject.id!);
+                            }
+
+                            await StagedRegistrationService.instance
+                                .markStepCompleted(
+                              step: StagedRegistrationStep.dobAndEmail,
+                              userId: provider.userObject.id,
+                            );
+
+                            if (provider.refferedByController.text
+                                .trim()
+                                .isNotEmpty) {
+                              await ReferralService.instance
+                                  .clearReferralCode();
+                            }
+
+                            if (context.mounted) {
+                              CustomToast.show(
+                                context,
+                                lang.profileUpdatedSuccessfully,
+                                isSuccess: true,
+                              );
+                            }
+
+                            Navigator.of(dialogCtx).pop();
+                          } else {
+                            setDialogState(() {
+                              isSubmitting = false;
+                            });
+                            if (context.mounted) {
+                              CustomToast.show(
+                                context,
+                                'Failure: ${result['message']}',
+                                isSuccess: false,
+                              );
+                            }
+                          }
+                        },
+                  child: Center(
+                    child: isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Continue',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: selectedThemeData.primaryColor,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
                 ),
-              ),
-              onPressed: () async {
-                if (!formKey.currentState!.validate()) return;
-                var result = await provider.updateUserDetails();
-                if (!ctx.mounted) return;
-                if (result['success'] == true) {
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setBool('isLoggedIn', true);
-
-                  if (provider.userObject.id != null) {
-                    await provider.getUserById(provider.userObject.id!);
-                  }
-
-                  CustomToast.show(
-                    context,
-                    lang.profileUpdatedSuccessfully,
-                    isSuccess: true,
-                  );
-
-                  Navigator.of(ctx).pop();
-                  // Re-evaluate next stage
-                  if (context.mounted) {
-                    confirmDetails(context);
-                  }
-                } else {
-                  CustomToast.show(
-                    context,
-                    'Failure: ${result['message']}',
-                    isSuccess: false,
-                  );
-                }
-              },
-              child: const Center(
-                child: Text(
-                  'Continue',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         );
       },
     );
+    StagedRegistrationService.instance.setDialogActive(false);
   }
 
-  // STAGE 2: Second App Open / Remaining Profile Information Popup (Single Name Field)
+  // STAGE 2: Second App Open / Remaining Profile Information Popup (Single Optional Name Field)
   Future<void> stage2ProfilePopUp(BuildContext context) async {
     final formKey = GlobalKey<FormState>();
     final lang = AppLocalizations.of(context)!;
@@ -2245,568 +2059,551 @@ class _HomePageState extends State<HomePage>
 
     final initialFirst = userProvider.userObject.firstName ??
         userProvider.firstNameController.text;
-    final initialLast =
-        userProvider.userObject.lastName ?? userProvider.lastNameController.text;
+    final initialLast = userProvider.userObject.lastName ??
+        userProvider.lastNameController.text;
     final initialFullName = '$initialFirst $initialLast'.trim();
     final nameController = TextEditingController(text: initialFullName);
+
+    StagedRegistrationService.instance.setDialogActive(true);
+    bool isSubmitting = false;
 
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        UserProvider provider =
-            Provider.of<UserProvider>(context, listen: true);
-        var selectedThemeData =
-            Provider.of<ThemeProvider>(context, listen: true).getTheme;
-        return AlertDialog(
-          backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            final provider = Provider.of<UserProvider>(context, listen: true);
+            final selectedThemeData =
+                Provider.of<ThemeProvider>(context, listen: true).getTheme;
+
+            return AlertDialog(
+              backgroundColor: selectedThemeData.scaffoldBackgroundColor,
+              title: Text(
                 lang.enterDetails,
                 style: TextStyle(
                   color: selectedThemeData.canvasColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              IconButton(
-                icon: Icon(Icons.close, color: selectedThemeData.canvasColor),
-                onPressed: () => Navigator.of(ctx).pop(),
-                splashRadius: 20,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-            ],
-          ),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CustomTextField(
-                    controller: nameController,
-                    isName: true,
-                    label: 'Name',
-                    hintText: 'Enter your name',
-                    isValidator: true,
-                    textInputType: TextInputType.name,
-                    capitalization: TextCapitalization.words,
-                    validator: (val) {
-                      if (val == null || val.trim().isEmpty) {
-                        return 'Name cannot be empty';
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: selectedThemeData.primaryColor,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              onPressed: () async {
-                if (!formKey.currentState!.validate()) return;
-                final fullName = nameController.text.trim();
-                final parts = fullName.split(RegExp(r'\s+'));
-                final firstName = parts.first;
-                final lastName =
-                    parts.length > 1 ? parts.sublist(1).join(' ') : '';
-
-                provider.firstNameController.text = firstName;
-                provider.lastNameController.text = lastName;
-
-                var result = await provider.updateUserDetails();
-                if (!ctx.mounted) return;
-                if (result['success'] == true) {
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setBool('isLoggedIn', true);
-
-                  if (provider.userObject.id != null) {
-                    await provider.getUserById(provider.userObject.id!);
-                  }
-
-                  CustomToast.show(
-                    context,
-                    lang.profileUpdatedSuccessfully,
-                    isSuccess: true,
-                  );
-
-                  Navigator.of(ctx).pop();
-                  // Re-evaluate next stage
-                  if (context.mounted) {
-                    confirmDetails(context);
-                  }
-                } else {
-                  CustomToast.show(
-                    context,
-                    'Failure: ${result['message']}',
-                    isSuccess: false,
-                  );
-                }
-              },
-              child: const Center(
-                child: Text(
-                  'Continue',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+              content: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CustomTextField(
+                        controller: nameController,
+                        isName: true,
+                        label: 'Name (Optional)',
+                        hintText: 'Enter your name',
+                        isValidator: false,
+                        textInputType: TextInputType.name,
+                        capitalization: TextCapitalization.words,
+                        validator: (val) {
+                          if (val != null &&
+                              val.trim().isNotEmpty &&
+                              val.trim().length < 2) {
+                            return 'Please enter a valid name';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ),
-          ],
+              actions: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: BorderSide(
+                            color: selectedThemeData.canvasColor
+                                .withValues(alpha: 0.3),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                await StagedRegistrationService.instance
+                                    .markStepSkipped(
+                                  step: StagedRegistrationStep.name,
+                                  userId: provider.userObject.id,
+                                );
+                                Navigator.of(dialogCtx).pop();
+                              },
+                        child: Text(
+                          lang.skip,
+                          style: TextStyle(
+                            color: selectedThemeData.canvasColor
+                                .withValues(alpha: 0.8),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: selectedThemeData.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                if (!formKey.currentState!.validate()) return;
+                                final fullName = nameController.text.trim();
+
+                                if (fullName.isEmpty) {
+                                  await StagedRegistrationService.instance
+                                      .markStepSkipped(
+                                    step: StagedRegistrationStep.name,
+                                    userId: provider.userObject.id,
+                                  );
+                                  Navigator.of(dialogCtx).pop();
+                                  return;
+                                }
+
+                                setDialogState(() {
+                                  isSubmitting = true;
+                                });
+
+                                final parts = fullName.split(RegExp(r'\s+'));
+                                final firstName = parts.first;
+                                final lastName = parts.length > 1
+                                    ? parts.sublist(1).join(' ')
+                                    : '';
+
+                                provider.firstNameController.text = firstName;
+                                provider.lastNameController.text = lastName;
+
+                                var result = await provider.updateUserDetails();
+                                if (!dialogCtx.mounted) return;
+
+                                if (result['success'] == true) {
+                                  final prefs =
+                                      await SharedPreferences.getInstance();
+                                  await prefs.setBool('isLoggedIn', true);
+
+                                  if (provider.userObject.id != null) {
+                                    await provider
+                                        .getUserById(provider.userObject.id!);
+                                  }
+
+                                  await StagedRegistrationService.instance
+                                      .markStepCompleted(
+                                    step: StagedRegistrationStep.name,
+                                    userId: provider.userObject.id,
+                                  );
+
+                                  if (context.mounted) {
+                                    CustomToast.show(
+                                      context,
+                                      lang.profileUpdatedSuccessfully,
+                                      isSuccess: true,
+                                    );
+                                  }
+
+                                  Navigator.of(dialogCtx).pop();
+                                } else {
+                                  setDialogState(() {
+                                    isSubmitting = false;
+                                  });
+                                  if (context.mounted) {
+                                    CustomToast.show(
+                                      context,
+                                      'Failure: ${result['message']}',
+                                      isSuccess: false,
+                                    );
+                                  }
+                                }
+                              },
+                        child: isSubmitting
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Continue',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
         );
       },
     );
+    StagedRegistrationService.instance.setDialogActive(false);
   }
 
-  // STAGE 3: Third App Open / Address Popup with Location Detection & Cascading Dropdowns
+  // STAGE 3: Third App Open / Location Popup (Current Location Only with Cancel)
   Future<void> userLocationPopUp(BuildContext context) async {
-    final formKey = GlobalKey<FormState>();
     final lang = AppLocalizations.of(context)!;
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    await userProvider.loadCountryOptions();
 
     if (!context.mounted) return;
+
+    StagedRegistrationService.instance.setDialogActive(true);
+
+    bool isFetching = false;
+    bool isSaving = false;
+    String? locationError;
+    bool isPermanentlyDenied = false;
+    bool locationDetected = false;
+    String detectedSummary = '';
 
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        UserProvider provider =
-            Provider.of<UserProvider>(context, listen: true);
-        var selectedThemeData =
-            Provider.of<ThemeProvider>(context, listen: true).getTheme;
-        return AlertDialog(
-          backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                lang.enterLocationDetails,
-                style: TextStyle(
-                  color: selectedThemeData.canvasColor,
-                  fontWeight: FontWeight.bold,
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            final provider = Provider.of<UserProvider>(context, listen: true);
+            final selectedThemeData =
+                Provider.of<ThemeProvider>(context, listen: true).getTheme;
+
+            return AlertDialog(
+              backgroundColor: selectedThemeData.scaffoldBackgroundColor,
+              title: Row(
+                children: [
+                  Icon(
+                    Icons.my_location,
+                    color: selectedThemeData.primaryColor,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      lang.enterLocationDetails,
+                      style: TextStyle(
+                        color: selectedThemeData.canvasColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Share your current location to get regional content and personalized recommendations.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: selectedThemeData.canvasColor
+                            .withValues(alpha: 0.8),
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (locationDetected) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: selectedThemeData.cardColor,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: selectedThemeData.primaryColor
+                                .withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.check_circle_outline,
+                              color: Colors.green,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Location Detected',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: selectedThemeData.canvasColor,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    detectedSummary,
+                                    style: TextStyle(
+                                      color: selectedThemeData.canvasColor
+                                          .withValues(alpha: 0.9),
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    if (locationError != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.red.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Text(
+                          locationError!,
+                          style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      if (isPermanentlyDenied) ...[
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            await Geolocator.openAppSettings();
+                          },
+                          icon: const Icon(Icons.settings, size: 16),
+                          label: const Text('Open App Settings'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: selectedThemeData.primaryColor,
+                            side: BorderSide(
+                              color: selectedThemeData.primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                    ],
+                  ],
                 ),
               ),
-              IconButton(
-                icon: Icon(Icons.close, color: selectedThemeData.canvasColor),
-                onPressed: () => Navigator.of(ctx).pop(),
-                splashRadius: 20,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ],
-          ),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextFormField(
-                    controller: userProvider.officeBuildingController,
-                    maxLines: 2,
-                    textCapitalization: TextCapitalization.words,
-                    inputFormatters: [CapitalizeWordsTextInputFormatter()],
-                    cursorColor: selectedThemeData.primaryColor,
-                    onChanged: (value) {
-                      userProvider.searchAddressSuggestions(value);
-                    },
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: selectedThemeData.cardColor,
-                      labelText: 'Address',
-                      hintText: 'Search your address',
-                      labelStyle:
-                          TextStyle(color: selectedThemeData.canvasColor),
-                      hintStyle: TextStyle(
-                        color: selectedThemeData.canvasColor,
-                        fontSize: 13,
-                      ),
-                      border: OutlineInputBorder(
-                        borderSide: const BorderSide(color: Colors.transparent),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: const BorderSide(color: Colors.transparent),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: selectedThemeData.primaryColor,
+              actionsPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              actions: [
+                Row(
+                  children: [
+                    // CANCEL BUTTON
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: isFetching || isSaving
+                            ? null
+                            : () {
+                                // Close dialog without requesting or saving location.
+                                // Does not mark location as completed; prevents repeating in current session.
+                                StagedRegistrationService.instance
+                                    .markStepHandledForLaunch();
+                                Navigator.of(dialogCtx).pop();
+                              },
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                            color: selectedThemeData.dividerColor,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        borderRadius: BorderRadius.circular(6),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: selectedThemeData.canvasColor,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                      prefixIcon: Icon(
-                        Icons.location_on_outlined,
-                        color: selectedThemeData.canvasColor,
-                      ),
-                      suffixIcon: userProvider.isSearchingAddress
-                          ? Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: SizedBox(
+                    ),
+                    const SizedBox(width: 12),
+                    // USE CURRENT LOCATION / SAVE LOCATION BUTTON
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: selectedThemeData.primaryColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: isFetching || isSaving
+                            ? null
+                            : () async {
+                                if (locationDetected) {
+                                  // Save already detected location
+                                  setDialogState(() {
+                                    isSaving = true;
+                                  });
+                                  final saveResult =
+                                      await provider.updateUserLocation();
+                                  setDialogState(() {
+                                    isSaving = false;
+                                  });
+
+                                  if (saveResult['success'] == true) {
+                                    await StagedRegistrationService.instance
+                                        .markStepCompleted(
+                                      step: StagedRegistrationStep.location,
+                                      userId: provider.userObject.id,
+                                    );
+                                    if (context.mounted) {
+                                      CustomToast.show(
+                                        context,
+                                        lang.profileUpdatedSuccessfully,
+                                        isSuccess: true,
+                                      );
+                                    }
+                                    Navigator.of(dialogCtx).pop();
+                                  } else {
+                                    setDialogState(() {
+                                      locationError =
+                                          saveResult['message']?.toString() ??
+                                              'Failed to save location';
+                                    });
+                                  }
+                                } else {
+                                  // Fetch current location via device GPS + Google Geocoding
+                                  setDialogState(() {
+                                    isFetching = true;
+                                    locationError = null;
+                                    isPermanentlyDenied = false;
+                                  });
+
+                                  final fetchResult = await provider
+                                      .fetchAndApplyCurrentDeviceLocation();
+
+                                  if (fetchResult['success'] == true) {
+                                    final city =
+                                        fetchResult['city']?.toString() ?? '';
+                                    final state =
+                                        fetchResult['state']?.toString() ?? '';
+                                    final country =
+                                        fetchResult['country']?.toString() ??
+                                            '';
+                                    final summary = [city, state, country]
+                                        .where((s) => s.isNotEmpty)
+                                        .join(', ');
+
+                                    setDialogState(() {
+                                      isFetching = false;
+                                      locationDetected = true;
+                                      detectedSummary = summary.isNotEmpty
+                                          ? summary
+                                          : (fetchResult['formattedAddress']
+                                                  ?.toString() ??
+                                              'Current Location');
+                                      isSaving = true;
+                                    });
+
+                                    // Save the resolved location using existing API
+                                    final saveResult =
+                                        await provider.updateUserLocation();
+                                    setDialogState(() {
+                                      isSaving = false;
+                                    });
+
+                                    if (saveResult['success'] == true) {
+                                      await StagedRegistrationService.instance
+                                          .markStepCompleted(
+                                        step: StagedRegistrationStep.location,
+                                        userId: provider.userObject.id,
+                                      );
+                                      if (context.mounted) {
+                                        CustomToast.show(
+                                          context,
+                                          lang.profileUpdatedSuccessfully,
+                                          isSuccess: true,
+                                        );
+                                      }
+                                      Navigator.of(dialogCtx).pop();
+                                    } else {
+                                      setDialogState(() {
+                                        locationError = saveResult['message']
+                                                ?.toString() ??
+                                            'Failed to save location to profile';
+                                      });
+                                    }
+                                  } else {
+                                    setDialogState(() {
+                                      isFetching = false;
+                                      locationError = fetchResult['error']
+                                              ?.toString() ??
+                                          'Could not determine your location';
+                                      isPermanentlyDenied =
+                                          fetchResult['isPermanentlyDenied'] ==
+                                              true;
+                                    });
+                                  }
+                                }
+                              },
+                        child: isFetching || isSaving
+                            ? const SizedBox(
                                 width: 18,
                                 height: 18,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: selectedThemeData.primaryColor,
+                                  color: Colors.white,
                                 ),
+                              )
+                            : Text(
+                                locationDetected
+                                    ? 'Save Location'
+                                    : 'Use Current Location',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
-                            )
-                          : null,
-                    ),
-                    style: TextStyle(color: selectedThemeData.canvasColor),
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: userProvider.isFetchingCurrentLocation
-                        ? null
-                        : () async {
-                            final allowed =
-                                await _showLocationPermissionPrompt(ctx);
-                            if (!ctx.mounted) return;
-                            if (allowed != true) return;
-
-                            final locationFilled = await userProvider
-                                .useCurrentLocationFromGoogle();
-                            if (!ctx.mounted) return;
-                            if (!locationFilled) {
-                              CustomToast.show(
-                                ctx,
-                                'Unable to fetch your location. Please enter address manually.',
-                                isSuccess: false,
-                              );
-                            }
-                          },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: selectedThemeData.primaryColor,
-                      side: BorderSide(color: selectedThemeData.primaryColor),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    icon: userProvider.isFetchingCurrentLocation
-                        ? SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: selectedThemeData.primaryColor,
-                            ),
-                          )
-                        : const Icon(Icons.my_location),
-                    label: Text(
-                      userProvider.isFetchingCurrentLocation
-                          ? 'Fetching location...'
-                          : 'Use current location',
-                    ),
-                  ),
-                  if (userProvider.addressSuggestions.isNotEmpty)
-                    Container(
-                      margin: const EdgeInsets.only(top: 6, bottom: 8),
-                      decoration: BoxDecoration(
-                        color: selectedThemeData.cardColor,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: selectedThemeData.primaryColor
-                              .withValues(alpha: 0.25),
-                        ),
-                      ),
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: provider.addressSuggestions.length,
-                        separatorBuilder: (_, __) => Divider(
-                          height: 1,
-                          color: selectedThemeData.canvasColor
-                              .withValues(alpha: 0.08),
-                        ),
-                        itemBuilder: (context, index) {
-                          final suggestion =
-                              userProvider.addressSuggestions[index];
-                          return ListTile(
-                            dense: true,
-                            leading: Icon(
-                              Icons.place_outlined,
-                              color: selectedThemeData.primaryColor,
-                            ),
-                            title: Text(
-                              suggestion['description'] ?? '',
-                              style: TextStyle(
-                                color: selectedThemeData.canvasColor,
-                                fontSize: 13,
-                              ),
-                            ),
-                            onTap: () {
-                              userProvider.selectAddressSuggestion(suggestion);
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  _buildEditableLocationDropdown(
-                    context: context,
-                    selectedThemeData: selectedThemeData,
-                    controller: provider.countryController,
-                    label: lang.country,
-                    hintText: lang.enterCountry,
-                    options: provider.countryOptions,
-                    onChanged: (value) {
-                      if (value.trim().isEmpty) {
-                        provider.loadStateOptionsByCountry('');
-                      }
-                    },
-                    onFieldSubmitted: (value) {
-                      provider.loadStateOptionsByCountry(value);
-                    },
-                    onOptionSelected: (value) {
-                      provider.loadStateOptionsByCountry(value);
-                    },
-                  ),
-                  _buildEditableLocationDropdown(
-                    context: context,
-                    selectedThemeData: selectedThemeData,
-                    controller: provider.stateController,
-                    label: lang.state,
-                    hintText: lang.enterState,
-                    options: provider.stateOptions,
-                    onChanged: (value) {
-                      if (value.trim().isEmpty) {
-                        provider.loadDistrictOptionsByState('');
-                      }
-                    },
-                    onFieldSubmitted: (value) {
-                      provider.loadDistrictOptionsByState(value);
-                    },
-                    onOptionSelected: (value) {
-                      provider.loadDistrictOptionsByState(value);
-                    },
-                  ),
-                  _buildEditableLocationDropdown(
-                    context: context,
-                    selectedThemeData: selectedThemeData,
-                    controller: provider.districtController,
-                    label: lang.district,
-                    hintText: lang.enterDistrict,
-                    options: provider.districtOptions,
-                    onChanged: (value) {
-                      if (value.trim().isEmpty) {
-                        provider.loadTalukaOptionsByDistrict('');
-                      }
-                    },
-                    onFieldSubmitted: (value) {
-                      provider.loadTalukaOptionsByDistrict(value);
-                    },
-                    onOptionSelected: (value) {
-                      provider.loadTalukaOptionsByDistrict(value);
-                    },
-                  ),
-                  _buildEditableLocationDropdown(
-                    context: context,
-                    selectedThemeData: selectedThemeData,
-                    controller: provider.talukaController.text.isNotEmpty
-                        ? provider.talukaController
-                        : provider.cityController,
-                    label: lang.taluka,
-                    hintText: lang.enterTaluka,
-                    options: provider.talukaOptions,
-                  ),
-                  _buildEditableLocationDropdown(
-                    context: context,
-                    selectedThemeData: selectedThemeData,
-                    controller: provider.pinCodeDateController,
-                    label: 'Pincode',
-                    hintText: 'Enter pincode',
-                    options: provider.pincodeOptions,
-                    keyboardType: TextInputType.number,
-                    isRequired: false,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: selectedThemeData.primaryColor,
-                padding: EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6)),
-              ),
-              onPressed: () async {
-                if (!formKey.currentState!.validate()) return;
-                var result = await userProvider.updateUserLocation();
-                if (result['success'] == true) {
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setBool('isLoggedIn', true);
-
-                  CustomToast.show(context, lang.profileUpdatedSuccessfully,
-                      isSuccess: true);
-
-                  Navigator.of(context).pop();
-                } else {
-                  CustomToast.show(context, 'Failure: ${result['message']}',
-                      isSuccess: false);
-                  Navigator.of(context).pop();
-                }
-              },
-              child: Center(
-                child: Text(
-                  lang.save,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  ],
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         );
       },
     );
-  }
-
-  Future<bool?> _showLocationPermissionPrompt(BuildContext dialogContext) {
-    final selectedThemeData = Theme.of(dialogContext);
-
-    return showDialog<bool>(
-      context: dialogContext,
-      builder: (permissionContext) {
-        return AlertDialog(
-          backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          title: Row(
-            children: [
-              Icon(
-                Icons.my_location,
-                color: selectedThemeData.primaryColor,
-              ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text('Use your location?'),
-              ),
-            ],
-          ),
-          content: Text(
-            'Filmytell can use your current location to fill your registration address details automatically.',
-            style: TextStyle(color: selectedThemeData.canvasColor),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(permissionContext).pop(false),
-              child: Text(
-                'Not now',
-                style: TextStyle(color: selectedThemeData.canvasColor),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: selectedThemeData.primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              onPressed: () => Navigator.of(permissionContext).pop(true),
-              child: const Text('Allow'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildEditableLocationDropdown({
-    required BuildContext context,
-    required ThemeData selectedThemeData,
-    required TextEditingController controller,
-    required String label,
-    required String hintText,
-    required List<String> options,
-    TextInputType keyboardType = TextInputType.text,
-    bool isRequired = true,
-    ValueChanged<String>? onChanged,
-    ValueChanged<String>? onFieldSubmitted,
-    ValueChanged<String>? onOptionSelected,
-  }) {
-    final cleanOptions =
-        options.where((option) => option.trim().isNotEmpty).toSet().toList();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: CustomTextField(
-        controller: controller,
-        label: label,
-        hintText: hintText,
-        textInputType: keyboardType,
-        isValidator: isRequired,
-        onValueChange: onChanged,
-        onFieldSubmitted: onFieldSubmitted,
-        suffixWidget: PopupMenuButton<String>(
-          icon: Icon(
-            Icons.arrow_drop_down,
-            color: selectedThemeData.primaryColor,
-          ),
-          color: selectedThemeData.cardColor,
-          enabled: cleanOptions.isNotEmpty,
-          onSelected: (value) {
-            controller.text = value;
-            if (onOptionSelected != null) {
-              onOptionSelected(value);
-            }
-          },
-          itemBuilder: (context) {
-            if (cleanOptions.isEmpty) {
-              return [
-                PopupMenuItem<String>(
-                  enabled: false,
-                  child: Text(
-                    'No options available',
-                    style: TextStyle(
-                      color:
-                          selectedThemeData.canvasColor.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ),
-              ];
-            }
-
-            return cleanOptions
-                .map(
-                  (option) => PopupMenuItem<String>(
-                    value: option,
-                    child: Text(
-                      option,
-                      style: TextStyle(
-                        color: selectedThemeData.canvasColor,
-                      ),
-                    ),
-                  ),
-                )
-                .toList();
-          },
-        ),
-      ),
-    );
+    StagedRegistrationService.instance.setDialogActive(false);
   }
 }

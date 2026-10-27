@@ -168,13 +168,14 @@ class _SeriesListViewState extends State<_SeriesListView>
 
     final viewStart = controller.offset;
     final viewEnd = viewStart + viewport;
+    final cardExtent = MovieCard.cardExtentFor(context);
     final firstCandidate = math.max(
       0,
-      (viewStart / MovieCard.itemExtent).floor(),
+      (viewStart / cardExtent).floor(),
     );
     final lastCandidate = math.min(
       itemCount - 1,
-      ((viewEnd - 0.001) / MovieCard.itemExtent).floor(),
+      ((viewEnd - 0.001) / cardExtent).floor(),
     );
 
     int? bestIndex;
@@ -183,7 +184,12 @@ class _SeriesListViewState extends State<_SeriesListView>
     for (int candidate = firstCandidate;
         candidate <= lastCandidate;
         candidate++) {
-      final overlap = _visibleOverlap(viewStart, viewEnd, candidate);
+      final overlap = _visibleOverlap(
+        viewStart,
+        viewEnd,
+        candidate,
+        cardExtent: cardExtent,
+      );
       if (overlap <= 0) continue;
 
       final hasTrailer = items != null &&
@@ -191,7 +197,7 @@ class _SeriesListViewState extends State<_SeriesListView>
           (items[candidate].trailerUrl?.trim().isNotEmpty ?? false);
       if (!hasTrailer) continue;
 
-      final visibility = overlap / MovieCard.itemExtent;
+      final visibility = overlap / cardExtent;
       if (visibility < _autoPlayVisibilityThreshold) continue;
 
       if (bestIndex == null ||
@@ -205,9 +211,15 @@ class _SeriesListViewState extends State<_SeriesListView>
     if (notifier.value != bestIndex) notifier.value = bestIndex;
   }
 
-  double _visibleOverlap(double viewStart, double viewEnd, int index) {
-    final itemStart = index * MovieCard.itemExtent;
-    final itemEnd = itemStart + MovieCard.itemExtent;
+  double _visibleOverlap(
+    double viewStart,
+    double viewEnd,
+    int index, {
+    double? cardExtent,
+  }) {
+    final extent = cardExtent ?? MovieCard.cardExtentFor(context);
+    final itemStart = index * extent;
+    final itemEnd = itemStart + extent;
     final overlap = math.min(viewEnd, itemEnd) - math.max(viewStart, itemStart);
     return overlap <= 0 ? 0 : overlap;
   }
@@ -623,7 +635,7 @@ class _SeriesListViewState extends State<_SeriesListView>
             ),
           ),
           SizedBox(
-            height: 270,
+            height: MovieCard.standardHeight,
             child: ListView.builder(
               controller: controller,
               scrollDirection: Axis.horizontal,

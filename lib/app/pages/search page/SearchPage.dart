@@ -11,6 +11,7 @@ import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/responsive_poster_image.dart';
 import 'package:ott/app/widgets/shimmer%20loader/search_shimmer.dart';
 import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
@@ -808,31 +809,31 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                 SizedBox(
                   width: 100,
                   height: 140,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: (movie.portraitPosterUrl != null &&
+                  child: ResponsivePosterImage(
+                    imageUrl: (movie.portraitPosterUrl != null &&
                             movie.portraitPosterUrl!.isNotEmpty)
-                        ? Image.network(
-                            movie.portraitPosterUrl!,
-                            width: 100,
-                            height: 140,
-                            fit: BoxFit.cover,
-                            alignment: Alignment.topCenter,
-                            cacheWidth: 300,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.broken_image,
-                                    size: 30, color: Colors.grey),
-                          )
-                        : Container(
-                            width: 100,
-                            height: 140,
-                            color: Colors.grey[800],
-                            child: const Icon(
-                              Icons.movie,
-                              size: 48,
-                              color: Colors.white54,
-                            ),
-                          ),
+                        ? movie.portraitPosterUrl
+                        : (movie.posterUrlList != null &&
+                                movie.posterUrlList!.isNotEmpty
+                            ? movie.posterUrlList![0]
+                            : null),
+                    imageUrls: movie.posterUrlList,
+                    fit: BoxFit.contain,
+                    alignment: Alignment.center,
+                    backgroundColor: Colors.black,
+                    borderRadius: BorderRadius.circular(8),
+                    fallbackBuilder: () => Container(
+                      width: 100,
+                      height: 140,
+                      color: Colors.grey[900],
+                      child: const Center(
+                        child: Icon(
+                          Icons.movie,
+                          size: 48,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),

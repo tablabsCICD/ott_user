@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart' show appFlavor;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/app_update_service.dart';
@@ -32,8 +31,8 @@ void main() {
     });
 
     test('App version and build number are aligned for JioStore resubmission', () {
-      expect(AppConstant.appVersion, equals('1.0.21'));
-      expect(AppConstant.appBuildNumber, equals(52));
+      expect(AppConstant.appVersion, equals('1.0.22'));
+      expect(AppConstant.appBuildNumber, equals(57));
       expect(AppConstant.appBuildNumber, greaterThan(51)); // Must exceed rejected v51 and v46
     });
   });

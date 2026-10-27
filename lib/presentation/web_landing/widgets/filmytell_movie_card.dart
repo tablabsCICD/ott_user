@@ -69,6 +69,7 @@ class _FilmytellMovieCardState extends State<FilmytellMovieCard> {
                     width: widget.width,
                     height: widget.height,
                     decoration: BoxDecoration(
+                      color: Colors.black,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: _hovered
@@ -94,7 +95,8 @@ class _FilmytellMovieCardState extends State<FilmytellMovieCard> {
                             imageUrls: widget.content.posterUrlList,
                             width: widget.width,
                             height: widget.height,
-                            fit: BoxFit.fill,
+                            fit: BoxFit.contain,
+                            alignment: Alignment.center,
                           ),
                           // Subtle bottom dark gradient
                           Positioned(

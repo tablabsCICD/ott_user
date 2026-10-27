@@ -1,15 +1,15 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/month_year_picker_dialog.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
+import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../provider/userProvider.dart';
-import '../../../widgets/show_toast.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -20,14 +20,20 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
-  final _firstNameFocusNode = FocusNode(debugLabel: 'edit-first-name');
-  final _lastNameFocusNode = FocusNode(debugLabel: 'edit-last-name');
+  final _nameFocusNode = FocusNode(debugLabel: 'edit-name');
   final _emailFocusNode = FocusNode(debugLabel: 'edit-email');
   final _dobFocusNode = FocusNode(debugLabel: 'edit-dob');
 
   @override
   void initState() {
     super.initState();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final first = (userProvider.userObj.firstName ?? '').trim();
+    final last = (userProvider.userObj.lastName ?? '').trim();
+    final currentFullName = '$first $last'.trim();
+    if (currentFullName.isNotEmpty) {
+      userProvider.nameController.text = currentFullName;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       getData();
@@ -36,8 +42,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   void dispose() {
-    _firstNameFocusNode.dispose();
-    _lastNameFocusNode.dispose();
+    _nameFocusNode.dispose();
     _emailFocusNode.dispose();
     _dobFocusNode.dispose();
     super.dispose();
@@ -52,6 +57,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
     if (!mounted) return;
     if (user != null) {
       await userProvider.getUserById(user.id!);
+      if (!mounted) return;
+      if (userProvider.nameController.text.trim().isEmpty) {
+        final first = (userProvider.userObj.firstName ?? '').trim();
+        final last = (userProvider.userObj.lastName ?? '').trim();
+        final currentFullName = '$first $last'.trim();
+        if (currentFullName.isNotEmpty) {
+          userProvider.nameController.text = currentFullName;
+        }
+      }
     }
   }
 
@@ -86,7 +100,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 Text(
                   "Are you sure you want to go back?",
                   style: TextStyle(
-                    color: selectedThemeData.canvasColor.withOpacity(0.8),
+                    color: selectedThemeData.canvasColor.withValues(alpha: 0.8),
                     fontSize: 14,
                   ),
                 ),
@@ -110,6 +124,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       borderRadius: 8,
                       onTap: () {
                         userProvider.profileController.clear();
+                        final first =
+                            (userProvider.userObj.firstName ?? '').trim();
+                        final last =
+                            (userProvider.userObj.lastName ?? '').trim();
+                        userProvider.nameController.text =
+                            '$first $last'.trim();
                         Navigator.of(dialogContext).pop(true);
                       },
                       child: ElevatedButton(
@@ -121,6 +141,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         ),
                         onPressed: () {
                           userProvider.profileController.clear();
+                          final first =
+                              (userProvider.userObj.firstName ?? '').trim();
+                          final last =
+                              (userProvider.userObj.lastName ?? '').trim();
+                          userProvider.nameController.text =
+                              '$first $last'.trim();
                           Navigator.of(dialogContext).pop(true);
                         },
                         child: const Text(
@@ -228,7 +254,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           Positioned.fill(
                             child: DecoratedBox(
                               decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.35),
+                                color: Colors.black.withValues(alpha: 0.35),
                                 shape: BoxShape.circle,
                               ),
                               child: const Center(
@@ -240,46 +266,47 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ),
                     const SizedBox(height: 20),
                     CustomTextField(
-                      controller: userProvider.firstNameController,
-                      focusNode: _firstNameFocusNode,
+                      controller: userProvider.nameController,
+                      focusNode: _nameFocusNode,
                       autofocus: ResponsiveWidget.isTabletOrTv(context),
-                      label: 'Enter First Name',
-                      isName: true,
-                      textInputAction: TextInputAction.next,
-                      onFieldSubmitted: (_) => _lastNameFocusNode.requestFocus(),
-                      hintText: userProvider.userObj.firstName != null
-                          ? userProvider.userObj.firstName!.isNotEmpty
-                              ? userProvider.userObj.firstName!
-                              : 'Enter a valid name'
-                          : 'Enter a valid name',
-                      isValidator: true,
-                      textInputType: TextInputType.name,
-                    ),
-                    CustomTextField(
-                      controller: userProvider.lastNameController,
-                      focusNode: _lastNameFocusNode,
-                      label: 'Enter Last Name',
+                      label: 'Name',
                       isName: true,
                       textInputAction: TextInputAction.next,
                       onFieldSubmitted: (_) => _emailFocusNode.requestFocus(),
-                      hintText: userProvider.userObj.lastName != null
-                          ? userProvider.userObj.lastName!.isNotEmpty
-                              ? userProvider.userObj.lastName!
-                              : 'Enter a valid name'
-                          : 'Enter a valid name',
-                      isValidator: true,
+                      hintText: (() {
+                        final first =
+                            (userProvider.userObj.firstName ?? '').trim();
+                        final last =
+                            (userProvider.userObj.lastName ?? '').trim();
+                        final fullName = '$first $last'.trim();
+                        return fullName.isNotEmpty
+                            ? fullName
+                            : 'Enter your name';
+                      })(),
+                      isValidator: false,
                       textInputType: TextInputType.name,
+                      capitalization: TextCapitalization.words,
                     ),
                     CustomTextField(
                       controller: userProvider.emailController,
                       focusNode: _emailFocusNode,
-                      label: 'Email',
-                      isEmail: true,
-                      isValidator: true,
+                      label: 'Email (Optional)',
+                      isEmail: false,
+                      isValidator: false,
                       textInputAction: TextInputAction.next,
                       onFieldSubmitted: (_) {
                         _dobFocusNode.requestFocus();
                         _selectDate(userProvider);
+                      },
+                      validator: (val) {
+                        if (val != null && val.trim().isNotEmpty) {
+                          final emailRegex =
+                              RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                          if (!emailRegex.hasMatch(val.trim())) {
+                            return 'Enter valid email';
+                          }
+                        }
+                        return null;
                       },
                       hintText:
                           userProvider.userObj.emailId ?? 'Enter valid email',
@@ -288,15 +315,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     CustomTextField(
                       controller: userProvider.dobController,
                       focusNode: _dobFocusNode,
-                      label: 'Birth Date',
-                      isValidator: true,
+                      label: 'Birth Date (Month & Year)',
+                      isValidator: false,
                       readOnly: true,
                       suffixIcon: Icons.calendar_today_outlined,
                       hintText: userProvider.userObj.dob != null
                           ? userProvider.userObj.dob!.isNotEmpty
                               ? userProvider.userObj.dob!
-                              : 'Enter birth date'
-                          : 'Enter birth date',
+                              : 'Select birth month and year'
+                          : 'Select birth month and year',
                       textInputType: TextInputType.datetime,
                       onTap: () => _selectDate(userProvider),
                     ),
@@ -349,13 +376,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
       userProvider.emailController.text =
           userProvider.userObj.emailId ?? '';
     }
-    if (userProvider.firstNameController.text.isEmpty) {
-      userProvider.firstNameController.text =
-          userProvider.userObj.firstName ?? '';
-    }
-    if (userProvider.lastNameController.text.isEmpty) {
+    final fullName = userProvider.nameController.text.trim();
+    if (fullName.isNotEmpty) {
+      final parts = fullName.split(RegExp(r'\s+'));
+      userProvider.firstNameController.text = parts.first;
       userProvider.lastNameController.text =
-          userProvider.userObj.lastName ?? '';
+          parts.length > 1 ? parts.sublist(1).join(' ') : '';
+    } else {
+      userProvider.firstNameController.text = '';
+      userProvider.lastNameController.text = '';
     }
     if (userProvider.mobileController.text.isEmpty) {
       userProvider.mobileController.text =
@@ -389,224 +418,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Future<void> _selectDate(UserProvider userProvider) async {
-    final now = DateTime.now();
-    final initialDate = _initialDobDate(userProvider.dobController.text, now);
-
-    if (ResponsiveWidget.isTabletOrTv(context)) {
-      final pickedDate = await _showTvDatePicker(context, initialDate);
-      if (pickedDate != null) {
-        userProvider.setDate(pickedDate);
-      }
-      return;
-    }
-
-    final pickedDate = await showDatePicker(
+    final result = await showBirthMonthYearPicker(
       context: context,
-      initialDate: initialDate,
-      firstDate: DateTime(1900),
-      lastDate: now,
+      currentValue: userProvider.dobController.text,
     );
 
-    if (pickedDate != null) {
-      userProvider.setDate(pickedDate);
+    if (result != null) {
+      userProvider.setBirthMonthAndYear(
+        result['month'] as String,
+        result['year'] as int,
+      );
     }
-  }
-
-  Future<DateTime?> _showTvDatePicker(
-    BuildContext pageContext,
-    DateTime initialDate,
-  ) async {
-    final theme = Theme.of(pageContext);
-    DateTime tempDate = initialDate;
-
-    return showDialog<DateTime>(
-      context: pageContext,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            void updateDate(int year, int month, int day) {
-              final lastDay = DateTime(year, month + 1, 0).day;
-              final safeDay = day.clamp(1, lastDay);
-              final newDate = DateTime(year, month, safeDay);
-              if (newDate.isAfter(DateTime.now())) return;
-              setDialogState(() {
-                tempDate = newDate;
-              });
-            }
-
-            return Dialog(
-              backgroundColor: theme.cardColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Select Birth Date',
-                      style: TextStyle(
-                        color: theme.canvasColor,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildDateSpinner(
-                          label: 'Day',
-                          value: tempDate.day.toString().padLeft(2, '0'),
-                          onDecrement: () => updateDate(
-                              tempDate.year, tempDate.month, tempDate.day - 1),
-                          onIncrement: () => updateDate(
-                              tempDate.year, tempDate.month, tempDate.day + 1),
-                          theme: theme,
-                        ),
-                        const SizedBox(width: 14),
-                        _buildDateSpinner(
-                          label: 'Month',
-                          value: tempDate.month.toString().padLeft(2, '0'),
-                          onDecrement: () => updateDate(
-                              tempDate.year, tempDate.month - 1, tempDate.day),
-                          onIncrement: () => updateDate(
-                              tempDate.year, tempDate.month + 1, tempDate.day),
-                          theme: theme,
-                        ),
-                        const SizedBox(width: 14),
-                        _buildDateSpinner(
-                          label: 'Year',
-                          value: tempDate.year.toString(),
-                          onDecrement: () => updateDate(
-                              tempDate.year - 1, tempDate.month, tempDate.day),
-                          onIncrement: () => updateDate(
-                              tempDate.year + 1, tempDate.month, tempDate.day),
-                          theme: theme,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        OttTvFocus(
-                          borderRadius: 8,
-                          onTap: () => Navigator.of(dialogContext).pop(null),
-                          child: TextButton(
-                            onPressed: () =>
-                                Navigator.of(dialogContext).pop(null),
-                            child: Text(
-                              'Cancel',
-                              style: TextStyle(color: theme.canvasColor),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        OttTvFocus(
-                          autofocus: true,
-                          borderRadius: 8,
-                          onTap: () =>
-                              Navigator.of(dialogContext).pop(tempDate),
-                          child: ElevatedButton(
-                            onPressed: () =>
-                                Navigator.of(dialogContext).pop(tempDate),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: theme.primaryColor,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text('OK'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildDateSpinner({
-    required String label,
-    required String value,
-    required VoidCallback onDecrement,
-    required VoidCallback onIncrement,
-    required ThemeData theme,
-  }) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: theme.canvasColor.withOpacity(0.7),
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 6),
-        OttTvFocus(
-          borderRadius: 8,
-          onTap: onIncrement,
-          child: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(Icons.keyboard_arrow_up,
-                color: theme.canvasColor, size: 24),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Container(
-            constraints: const BoxConstraints(minWidth: 64),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: theme.canvasColor.withOpacity(0.2)),
-            ),
-            child: Center(
-              child: Text(
-                value,
-                style: TextStyle(
-                  color: theme.canvasColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-        ),
-        OttTvFocus(
-          borderRadius: 8,
-          onTap: onDecrement,
-          child: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(Icons.keyboard_arrow_down,
-                color: theme.canvasColor, size: 24),
-          ),
-        ),
-      ],
-    );
-  }
-
-  DateTime _initialDobDate(String value, DateTime fallback) {
-    final parsed = DateTime.tryParse(value);
-    if (parsed == null || parsed.isAfter(fallback)) return fallback;
-    return parsed;
   }
 }

@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/utils/content_type.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
@@ -939,47 +939,23 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: SizedBox(
+              child: Container(
                 width: 300,
                 height: 170,
-                child: image.isNotEmpty
-                    ? Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Image.network(
-                            image,
-                            fit: BoxFit.cover,
-                            alignment: Alignment.topCenter,
-                            width: 300,
-                            height: 170,
-                            cacheWidth: 600,
-                            errorBuilder: (_, __, ___) =>
-                                const SizedBox.shrink(),
-                          ),
-                          Container(
-                            color: Colors.black.withValues(alpha: 0.55),
-                          ),
-                          Center(
-                            child: Image.network(
-                              image,
-                              fit: BoxFit.contain,
-                              alignment: Alignment.topCenter,
-                              cacheWidth: 600,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.movie,
-                                color: Colors.white54,
-                                size: 40,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    : Container(
-                        width: 300,
-                        height: 170,
-                        color: Colors.grey.shade900,
-                        child: const Icon(Icons.movie, color: Colors.white54),
-                      ),
+                color: Colors.black,
+                child: Image.network(
+                  image,
+                  width: 300,
+                  height: 170,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.center,
+                  errorBuilder: (_, __, ___) => Container(
+                    width: 300,
+                    height: 170,
+                    color: Colors.grey.shade900,
+                    child: const Icon(Icons.movie, color: Colors.white54),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 10),
@@ -1570,17 +1546,24 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
             itemBuilder: (context, index) {
               return ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  posters[index],
+                child: Container(
                   width: 320,
                   height: 180,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
+                  color: Colors.black,
+                  alignment: Alignment.center,
+                  child: Image.network(
+                    posters[index],
                     width: 320,
-                    color: Colors.black26,
-                    child: Icon(
-                      Icons.broken_image,
-                      color: theme.canvasColor.withOpacity(0.5),
+                    height: 180,
+                    fit: BoxFit.contain,
+                    alignment: Alignment.center,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 320,
+                      color: Colors.black26,
+                      child: Icon(
+                        Icons.broken_image,
+                        color: theme.canvasColor.withOpacity(0.5),
+                      ),
                     ),
                   ),
                 ),

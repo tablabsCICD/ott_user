@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/services/legal_document_service.dart';
@@ -686,8 +686,14 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  "${userProvider.userObj.firstName ?? 'First Name'} ${userProvider.userObj.lastName ?? 'Last Name'}",
-                  style: TextStyle(
+                  (() {
+                    final first =
+                        (userProvider.userObj.firstName ?? '').trim();
+                    final last = (userProvider.userObj.lastName ?? '').trim();
+                    final full = '$first $last'.trim();
+                    return full.isNotEmpty ? full : 'User';
+                  })(),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
