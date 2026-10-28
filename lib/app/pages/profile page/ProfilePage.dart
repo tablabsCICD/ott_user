@@ -35,6 +35,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:ott/app/flavor/app_flavor.dart';
 import 'package:ott/app/pages/profile page/component/in_app_privacy_policy_page.dart';
+import 'package:ott/app/pages/profile page/component/in_app_terms_conditions_page.dart';
 import 'package:ott/app/pages/profile page/component/in_app_licenses_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
@@ -96,7 +97,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _openPrivacyPolicy() async {
-    if (FlavorConfig.current.isJio) {
+    if (FlavorConfig.current.isJio || FlavorConfig.current.isTv) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const InAppPrivacyPolicyPage()),
@@ -127,6 +128,13 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _openTerms() async {
+    if (FlavorConfig.current.isJio || FlavorConfig.current.isTv) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const InAppTermsConditionsPage()),
+      );
+      return;
+    }
     try {
       final documentUrls =
           await LegalDocumentService.instance.getDocumentUrls();
@@ -136,23 +144,29 @@ class _ProfilePageState extends State<ProfilePage> {
         webOnlyWindowName: '_blank',
       );
       if (!opened && mounted) {
-        CustomToast.show(
+        Navigator.push(
           context,
-          'Unable to open terms and condition right now.',
-          isSuccess: false,
+          MaterialPageRoute(builder: (_) => const InAppTermsConditionsPage()),
         );
       }
     } catch (error) {
       if (!mounted) return;
-      CustomToast.show(
+      Navigator.push(
         context,
-        'Unable to open terms and condition right now.',
-        isSuccess: false,
+        MaterialPageRoute(builder: (_) => const InAppTermsConditionsPage()),
       );
     }
   }
 
   Future<void> _openRateUs() async {
+    if (FlavorConfig.current.isJio) {
+      CustomToast.show(
+        context,
+        'Thank you for using Filmytell on Jio STB!',
+        isSuccess: true,
+      );
+      return;
+    }
     try {
       bool launched = false;
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {

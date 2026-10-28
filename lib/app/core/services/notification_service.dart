@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/flavor/app_flavor.dart';
 import 'package:ott/app/pages/news page/NewsScreen.dart';
 import 'package:ott/app/route/navigation_service.dart';
 import 'package:ott/app/route/routes/app_routes.dart';
@@ -72,8 +73,13 @@ class NotificationService {
   }
 
   Future<String?> getDeviceToken() async {
+    if (FlavorConfig.current.isJio || !_isInitialized) {
+      return null;
+    }
     try {
-      final token = await _messaging.getToken();
+      final token = await _messaging
+          .getToken()
+          .timeout(const Duration(seconds: 2));
       if (token != null && token.trim().isNotEmpty) {
         await _persistToken(token);
         return token;

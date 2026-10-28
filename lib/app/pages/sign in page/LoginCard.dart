@@ -67,11 +67,13 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
   @override
   void initState() {
     super.initState();
+    debugPrint('LOGIN_TRACE: LoginCard initState entered');
     _screenLoadWatch.start();
     _mobileFocusNode.addListener(_handleInputFocusChanged);
     _otpFocusNode.addListener(_handleInputFocusChanged);
     _checkPendingReferralCode();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint('LOGIN_TRACE: LoginCard post frame callback executed');
       if (kDebugMode) {
         log(
           'Verify OTP/Login screen first frame in ${_screenLoadWatch.elapsedMilliseconds}ms',
@@ -80,11 +82,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
       }
       if (!mounted) return;
       if (_useTvKeypad(context)) {
-        if (_keypadFocusNodes.isNotEmpty) {
-          _keypadFocusNodes[0].requestFocus();
-        } else {
-          _mobileFocusNode.requestFocus();
-        }
+        _mobileFocusNode.requestFocus();
       }
     });
   }
@@ -163,88 +161,117 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     final theme = Theme.of(context);
     final useTvKeypad = _useTvKeypad(context);
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
-        forceMaterialTransparency: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-            child: LanguageDropdown(),
-          ),
-        ],
-      ),
-      body: Focus(
-        onKeyEvent: useTvKeypad ? _handleTvCredentialKey : null,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  height: ResponsiveWidget.isMobile(context) ? 90 : 130,
-                  child: Hero(
-                    tag: "logo",
-                    child: ClipRRect(
-                      borderRadius: BorderRadiusGeometry.circular(25),
-                      child: Image.asset(
-                        ImageConstant.logo,
-                        fit: BoxFit.contain,
+    return PopScope(
+      canPop: !otpSent,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (otpSent) {
+          setState(() {
+            otpSent = false;
+            _otpController.clear();
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _mobileFocusNode.requestFocus();
+          });
+        }
+      },
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
+          forceMaterialTransparency: true,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          actions: const [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+              child: LanguageDropdown(),
+            ),
+          ],
+        ),
+        body: Focus(
+          onKeyEvent: useTvKeypad ? _handleTvCredentialKey : null,
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: ResponsiveWidget.isMobile(context) ? 90 : 75,
+                    child: Hero(
+                      tag: "logo",
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.asset(
+                          ImageConstant.logo,
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                SizedBox(
-                  height: ResponsiveWidget.isMobile(context) ? 24 : 24,
-                ),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 400),
-                  child: Card(
-                    elevation: 6,
-                    color: theme.cardColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                  const SizedBox(height: 16),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: ResponsiveWidget.isTv(context) ? 440 : 400,
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 32),
-                      child: FocusTraversalGroup(
-                        policy: OrderedTraversalPolicy(),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (otpSent) ...[
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    IconButton(
-                                      onPressed: () {
-                                        Navigator.pushReplacement(
-                                            context,
-                                            MaterialPageRoute(
-                                                builder: (context) =>
-                                                    LoginCard()));
-                                      },
-                                      icon: Icon(
-                                        Icons.arrow_back_ios_new_sharp,
+                    child: Card(
+                      elevation: 6,
+                      color: theme.cardColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 32),
+                        child: FocusTraversalGroup(
+                          policy: OrderedTraversalPolicy(),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (otpSent) ...[
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    children: [
+                                      OttTvFocus(
+                                        focusNode: _backFocusNode,
+                                        borderRadius: 20,
+                                        onTap: () {
+                                          setState(() {
+                                            otpSent = false;
+                                            _otpController.clear();
+                                          });
+                                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                                            if (mounted) _mobileFocusNode.requestFocus();
+                                          });
+                                        },
+                                        child: IconButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              otpSent = false;
+                                              _otpController.clear();
+                                            });
+                                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                                              if (mounted) _mobileFocusNode.requestFocus();
+                                            });
+                                          },
+                                          icon: const Icon(
+                                            Icons.arrow_back_ios_new_sharp,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                              Text(
-                                lang.login,
-                                style: TextStyle(
-                                  color: theme.primaryColor,
-                                  fontSize: 24,
+                                    ],
+                                  ),
+                                ],
+                                Text(
+                                  lang.login,
+                                  style: TextStyle(
+                                    color: theme.primaryColor,
+                                    fontSize: 24,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -311,7 +338,9 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                       showCursor: true,
                                       cursorColor: theme.primaryColor,
                                       controller: _mobileController,
-                                      keyboardType: TextInputType.phone,
+                                      keyboardType: useTvKeypad
+                                          ? TextInputType.none
+                                          : TextInputType.phone,
                                       inputFormatters: [
                                         FilteringTextInputFormatter.digitsOnly,
                                         LengthLimitingTextInputFormatter(10),
@@ -338,7 +367,10 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
 
                                         return null;
                                       },
-                                      style: const TextStyle(fontSize: 16),
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: theme.canvasColor,
+                                      ),
                                     ),
                                   ),
                                 )
@@ -456,7 +488,9 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                       appContext: context,
                                       length: 6,
                                       controller: _otpController,
-                                      keyboardType: TextInputType.number,
+                                      keyboardType: useTvKeypad
+                                          ? TextInputType.none
+                                          : TextInputType.number,
                                       inputFormatters: [
                                         FilteringTextInputFormatter.digitsOnly,
                                       ],
@@ -470,6 +504,11 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                           _handleLoginOrOtp();
                                         }
                                       },
+                                      textStyle: TextStyle(
+                                        color: theme.canvasColor,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                       pinTheme: PinTheme(
                                         shape: PinCodeFieldShape.box,
                                         borderRadius: BorderRadius.circular(8),
@@ -604,8 +643,9 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   InputDecoration _loginInputDecoration(ThemeData theme, String hintText) {
     return InputDecoration(
@@ -613,7 +653,10 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
       fillColor: theme.cardColor,
       counterText: '',
       hintText: hintText,
-      hintStyle: const TextStyle(fontSize: 14),
+      hintStyle: TextStyle(
+        fontSize: 14,
+        color: theme.canvasColor.withOpacity(0.45),
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(color: Colors.grey[400]!),
@@ -1032,10 +1075,10 @@ class _TvNumberPad extends StatelessWidget {
             scale: 1.08,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.06),
+                color: Colors.white.withOpacity(0.06),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.10),
+                  color: Colors.white.withOpacity(0.12),
                   width: 1.0,
                 ),
               ),
@@ -1043,7 +1086,7 @@ class _TvNumberPad extends StatelessWidget {
                 child: key.icon == null
                     ? Text(
                         key.label!,
-                        style: GoogleFonts.outfit(
+                        style: TextStyle(
                           color: theme.canvasColor,
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -1092,11 +1135,33 @@ class _TvFocusFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!enabled) return child;
-    return OttTvFocus(
-      focusNode: focusNode,
-      enabled: enabled,
-      child: child,
+    if (!enabled || focusNode == null) return child;
+    return ListenableBuilder(
+      listenable: focusNode!,
+      builder: (context, _) {
+        final hasFocus = focusNode!.hasFocus;
+        final theme = Theme.of(context);
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 170),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: hasFocus ? theme.primaryColor : Colors.transparent,
+              width: 2.0,
+            ),
+            boxShadow: hasFocus
+                ? [
+                    BoxShadow(
+                      color: theme.primaryColor.withOpacity(0.35),
+                      blurRadius: 8,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                : null,
+          ),
+          child: child,
+        );
+      },
     );
   }
 }

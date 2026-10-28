@@ -45,6 +45,7 @@ import '../../widgets/month_year_picker_dialog.dart';
 import '../../core/utils/sharepreferences.dart';
 import '../../provider/onboarding_tour_provider.dart';
 import '../../provider/userProvider.dart';
+import 'package:ott/app/flavor/app_flavor.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({
@@ -283,6 +284,11 @@ class _HomePageState extends State<HomePage>
   }
 
   void confirmDetails(BuildContext context) {
+    if (ResponsiveWidget.isTv(context) ||
+        FlavorConfig.current.isTv ||
+        FlavorConfig.current.isJio) {
+      return;
+    }
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final user = userProvider.userObject;
 
@@ -1307,6 +1313,9 @@ class _HomePageState extends State<HomePage>
   SliverAppBar _buildSliverAppBar(
       BuildContext context, ThemeData selectedThemeData) {
     final lang = AppLocalizations.of(context)!;
+    final hideAppBarLogo = ResponsiveWidget.isTabletOrTv(context) ||
+        FlavorConfig.current.isTv ||
+        FlavorConfig.current.isJio;
 
     return SliverAppBar(
       automaticallyImplyLeading: false,
@@ -1316,33 +1325,35 @@ class _HomePageState extends State<HomePage>
       stretch: true,
       surfaceTintColor: Colors.transparent,
       backgroundColor: selectedThemeData.primaryColor,
-      title: Align(
-        alignment: Alignment.centerLeft,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: () {
-            Navigator.pushReplacement(
-              context,
-              PageRouteBuilder(
-                pageBuilder: (context, animation, secondaryAnimation) =>
-                    NavigationPage(),
-                transitionDuration: Duration.zero,
-                reverseTransitionDuration: Duration.zero,
-              ),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 0),
-            child: Image.asset(
-              ImageConstant.logo,
-              height: 70.0,
-              fit: BoxFit.contain,
+      title: hideAppBarLogo
+          ? null
+          : Align(
               alignment: Alignment.centerLeft,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (context, animation, secondaryAnimation) =>
+                          NavigationPage(),
+                      transitionDuration: Duration.zero,
+                      reverseTransitionDuration: Duration.zero,
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 0),
+                  child: Image.asset(
+                    ImageConstant.logo,
+                    height: 70.0,
+                    fit: BoxFit.contain,
+                    alignment: Alignment.centerLeft,
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
-      ),
-      titleSpacing: 12,
+      titleSpacing: hideAppBarLogo ? 0 : 12,
       actions: [
         _buildCircleGlassButton(
           icon: Icons.search,

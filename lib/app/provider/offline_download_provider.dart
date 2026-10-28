@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'baseProvider.dart';
+import 'package:ott/app/flavor/app_flavor.dart';
 
 enum OfflineDownloadStatus { idle, downloading, completed, failed }
 
@@ -276,6 +277,13 @@ class OfflineDownloadProvider extends BaseProvider {
     }
     if (kIsWeb) {
       return _downloadForWeb(content, videoUrl);
+    }
+    if (FlavorConfig.current.isJio) {
+      return {
+        'success': false,
+        'message':
+            'Offline downloads are not supported on Jio Set-Top Box to preserve internal device storage.',
+      };
     }
 
     final file = await _existingLocalFileForContent(content);

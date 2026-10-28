@@ -42,16 +42,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 Future<void> runFilmytellApp({
   FilmytellFlavor? fallbackFlavor,
 }) {
-  if (!kReleaseMode) {
-    return _runFilmytellApp(fallbackFlavor: fallbackFlavor);
-  }
-
-  return runZoned(
-    () => _runFilmytellApp(fallbackFlavor: fallbackFlavor),
-    zoneSpecification: ZoneSpecification(
-      print: (self, parent, zone, message) {},
-    ),
-  );
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.dumpErrorToConsole(details);
+  };
+  PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+    debugPrint('UNCAUGHT_PLATFORM_ERROR: $error\n$stack');
+    return false;
+  };
+  return _runFilmytellApp(fallbackFlavor: fallbackFlavor);
 }
 
 Future<void> _runFilmytellApp({
@@ -230,11 +228,13 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    sendNotification();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      NotificationService.instance.consumePendingNavigation();
-    });
+    if (!kIsWeb && !FlavorConfig.current.isJio) {
+      sendNotification();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        NotificationService.instance.consumePendingNavigation();
+      });
+    }
   }
 
   @override

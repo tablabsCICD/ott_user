@@ -42,12 +42,11 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    debugPrint('SPLASH_TRACE: initState called');
     // Safety timer: guarantees the splash screen will NEVER freeze indefinitely
     _safetyTimer = Timer(const Duration(seconds: 4), () {
+      debugPrint('SPLASH_TRACE: safety timer fired, mounted=$mounted, _hasNavigated=$_hasNavigated');
       if (mounted && !_hasNavigated) {
-        if (kDebugMode) {
-          developer.log('Splash safety timer triggered navigation', name: 'SplashScreen');
-        }
         _performNavigation(isLoggedIn: _isLoggedIn);
       }
     });
@@ -55,6 +54,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _startFlow() async {
+    debugPrint('SPLASH_TRACE: _startFlow started');
     final flowVersion = ++_flowVersion;
     final requestedPath = widget.initialNavigationRoute?.path ?? '/';
 
@@ -124,6 +124,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _performNavigation({required bool isLoggedIn}) {
+    debugPrint('SPLASH_TRACE: _performNavigation entered, isLoggedIn=$isLoggedIn, mounted=$mounted, _hasNavigated=$_hasNavigated');
     if (_hasNavigated || !mounted) return;
     _hasNavigated = true;
     _safetyTimer?.cancel();
@@ -135,11 +136,13 @@ class _SplashScreenState extends State<SplashScreen> {
             ? '/'
             : null;
 
+    debugPrint('SPLASH_TRACE: pushing route replacement, routeName=$routeName');
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         settings: RouteSettings(name: routeName),
         builder: (routeContext) {
+          debugPrint('SPLASH_TRACE: MaterialPageRoute builder executing, isLoggedIn=$isLoggedIn');
           if (isLoggedIn) {
             final route = initialNavigationRoute;
             return NavigationPage(
@@ -148,14 +151,9 @@ class _SplashScreenState extends State<SplashScreen> {
             );
           }
           if (_shouldShowWebLandingForContext(routeContext)) {
-            if (kIsWeb && kDebugMode) {
-              developer.log(
-                'Splash redirecting to web landing because authenticated=false',
-                name: 'WebAuthGuard',
-              );
-            }
             return const WebLandingScreen();
           }
+          debugPrint('SPLASH_TRACE: Returning const LoginCard()');
           return const LoginCard();
         },
       ),

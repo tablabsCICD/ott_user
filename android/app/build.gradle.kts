@@ -45,6 +45,11 @@ android {
         buildConfig = true
     }
 
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+
     defaultConfig {
         applicationId = "com.filmytell.ott"
         minSdk = flutter.minSdkVersion
@@ -163,4 +168,8 @@ dependencies {
 
 flutter {
     source = "../.."
+}
+
+tasks.matching { it.name.startsWith("collect") && it.name.endsWith("Dependencies") }.configureEach {
+    doNotTrackState("Avoid snapshotting race on dependency metadata")
 }

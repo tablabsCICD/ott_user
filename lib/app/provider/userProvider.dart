@@ -28,6 +28,7 @@ import '../core/services/notification_service.dart';
 import '../core/services/referral_service.dart';
 import '../core/services/session_manager.dart';
 import '../core/utils/sharepreferences.dart';
+import '../flavor/app_flavor.dart';
 import 'baseProvider.dart';
 
 class UserProvider extends BaseProvider {
@@ -1124,7 +1125,9 @@ class UserProvider extends BaseProvider {
     final deviceInfoFuture = DeviceTypeHelper.buildSessionInfo(
       context: context,
     );
-    final deviceTokenFuture = NotificationService.instance.getDeviceToken();
+    final deviceTokenFuture = FlavorConfig.current.isJio
+        ? Future<String?>.value(null)
+        : NotificationService.instance.getDeviceToken();
     final deviceInfo = await deviceInfoFuture;
     final deviceToken = await deviceTokenFuture;
     _logOtpPerformance(

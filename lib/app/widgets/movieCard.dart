@@ -353,6 +353,15 @@ class _MovieCardState extends State<MovieCard> {
     setState(() => _isHovered = hovering);
 
     if (hovering) {
+      if (ResponsiveWidget.isTabletOrTv(context)) {
+        Scrollable.ensureVisible(
+          context,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          alignment: 0.1,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+        );
+      }
       _schedulePreview();
     } else {
       _playDelayTimer?.cancel();
