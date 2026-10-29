@@ -97,6 +97,51 @@ class RazorpayPaymentService {
     );
   }
 
+  /// Creates a Razorpay order specifically for content/movie purchase with optional coupon and idempotency key.
+  Future<PaymentOrder> createContentOrder({
+    required int contentId,
+    required int userId,
+    String? couponCode,
+    String? idempotencyKey,
+  }) async {
+    final url = ApiConstant.createContentOrder(
+      customerId: userId,
+      contentId: contentId,
+      couponCode: couponCode,
+      idempotencyKey: idempotencyKey,
+    );
+
+    debugPrint('Attempting to create Razorpay content order via: $url');
+    try {
+      final postResponse = await _apiHelper.postApi(url);
+      debugPrint(
+        'POST content order response status: ${postResponse.statusCode}, body: ${postResponse.body}',
+      );
+      if (postResponse.statusCode == 200) {
+        final order = _tryParseOrder(postResponse.body);
+        if (order != null) return order;
+      }
+    } catch (error) {
+      debugPrint('POST content order failed: $error, trying with GET fallback');
+    }
+
+    try {
+      final getResponse = await _apiHelper.getApi(url);
+      debugPrint(
+        'GET content order response status: ${getResponse.statusCode}, body: ${getResponse.body}',
+      );
+      if (getResponse.statusCode == 200) {
+        final order = _tryParseOrder(getResponse.body);
+        if (order != null) return order;
+      }
+      throw Exception(
+        'Unable to create order (status: ${getResponse.statusCode}).',
+      );
+    } catch (e) {
+      throw Exception('Unable to create Razorpay order for content: $e');
+    }
+  }
+
   PaymentOrder? _tryParseOrder(String bodyString) {
     try {
       final body = jsonDecode(bodyString);

@@ -51,6 +51,11 @@ class PurchaseHistoryItem {
     this.rentalDuration,
     this.contentType,
     this.itemTitle,
+    this.couponCode,
+    this.discountAmount,
+    this.originalAmount,
+    this.status,
+    this.orderId,
   });
 
   final int? id;
@@ -65,6 +70,11 @@ class PurchaseHistoryItem {
   final String? rentalDuration;
   final String? contentType;
   final String? itemTitle;
+  final String? couponCode;
+  final double? discountAmount;
+  final double? originalAmount;
+  final String? status;
+  final String? orderId;
 
   factory PurchaseHistoryItem.fromJson(Map<String, dynamic> json) {
     final contentJson = json['content'] ?? json['movie'] ?? json['item'];
@@ -102,6 +112,12 @@ class PurchaseHistoryItem {
       contentType: json['contentType']?.toString() ??
           (contentJson is Map ? contentJson['type']?.toString() : null),
       itemTitle: json['itemTitle']?.toString(),
+      couponCode: json['couponCode']?.toString() ?? json['coupon']?.toString(),
+      discountAmount: _asDouble(json['discountAmount'] ?? json['discount']),
+      originalAmount: _asDouble(json['originalAmount'] ?? json['originalPrice']),
+      status: json['status']?.toString(),
+      orderId:
+          json['orderId']?.toString() ?? json['razorPayOrderId']?.toString(),
     );
   }
 }

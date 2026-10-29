@@ -48,6 +48,10 @@ class Content {
   int? seasonId;
   int? episodeId;
 
+  double? discountPercentage;
+  double? discountedPrice;
+  String? offerBadge;
+
   Content({
     this.id,
     this.title,
@@ -86,6 +90,9 @@ class Content {
     this.watchedPercentage,
     this.seasonId,
     this.episodeId,
+    this.discountPercentage,
+    this.discountedPrice,
+    this.offerBadge,
   });
 
   String? get teaserOrTrailerUrl {
@@ -194,6 +201,18 @@ class Content {
 
         seasonId: _asInt(json['seasonId']),
         episodeId: _asInt(json['episodeId']),
+
+        discountPercentage: _asDouble(json['discountPercentage'] ??
+            json['discountPercent'] ??
+            json['discount_percentage']),
+        discountedPrice: _asDouble(json['discountedPrice'] ??
+            json['discountPrice'] ??
+            json['discounted_price'] ??
+            json['offerPrice']),
+        offerBadge: (json['offerBadge'] ??
+                json['discountBadge'] ??
+                json['offer_badge'])
+            ?.toString(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -234,6 +253,9 @@ class Content {
         "watchedPercentage": watchedPercentage,
         "seasonId": seasonId,
         "episodeId": episodeId,
+        if (discountPercentage != null) "discountPercentage": discountPercentage,
+        if (discountedPrice != null) "discountedPrice": discountedPrice,
+        if (offerBadge != null) "offerBadge": offerBadge,
       };
 }
 

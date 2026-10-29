@@ -19,7 +19,11 @@ class PurchaseContentProvider extends BaseProvider {
   List<UserContent> get userContentList => _userContentList;
   bool get isSavingContent => _isSavingContent;
 
-  Future<Map<String, Object>> saveUserContent(Content content) async {
+  Future<Map<String, Object>> saveUserContent(
+    Content content, {
+    String? couponCode,
+    String? orderId,
+  }) async {
     if (_isSavingContent) {
       return {
         'success': false,
@@ -31,8 +35,6 @@ class PurchaseContentProvider extends BaseProvider {
     notifyListeners();
 
     String apiUrl = ApiConstant.saveUserContent;
-
-
 
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
     Map<String, dynamic> mapData = {
@@ -48,7 +50,11 @@ class PurchaseContentProvider extends BaseProvider {
       "status": "Paid",
       "userId": user!.id!,
       "userIdGiftFrom": 0,
-      "userIdGiftTo": 0
+      "userIdGiftTo": 0,
+      if (couponCode != null && couponCode.trim().isNotEmpty)
+        "couponCode": couponCode.trim().toUpperCase(),
+      if (orderId != null && orderId.trim().isNotEmpty)
+        "orderId": orderId.trim(),
     };
 
     ApiHelper apiHelper = ApiHelper();

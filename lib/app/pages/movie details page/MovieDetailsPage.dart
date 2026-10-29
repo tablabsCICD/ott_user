@@ -2158,19 +2158,77 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '${lang.price}: ${movie.price ?? 0.0}',
-            style: TextStyle(
-              fontSize: 14,
-              color: selectedThemeData.secondaryHeaderColor, // Theme text color
-            ),
-          ),
+          movie.discountedPrice != null &&
+                  movie.discountedPrice! < (movie.price ?? 0)
+              ? Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '${lang.price}: ',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: selectedThemeData.secondaryHeaderColor,
+                      ),
+                    ),
+                    Text(
+                      '₹${movie.price ?? 0.0}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        decoration: TextDecoration.lineThrough,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '₹${movie.discountedPrice!.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: selectedThemeData.primaryColor,
+                      ),
+                    ),
+                  ],
+                )
+              : Text(
+                  '${lang.price}: ₹${movie.price ?? 0.0}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: selectedThemeData.secondaryHeaderColor,
+                  ),
+                ),
           const SizedBox(height: 4),
           Text(
             '${lang.rentDuration}: ${movie.rentlDuration ?? ''}',
             style: TextStyle(
               fontSize: 14,
               color: selectedThemeData.secondaryHeaderColor, // Theme text color
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: selectedThemeData.primaryColor.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.local_offer_outlined,
+                  size: 13,
+                  color: selectedThemeData.primaryColor,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Apply eligible coupon during checkout',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                    color: selectedThemeData.primaryColor,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 10),

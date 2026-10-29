@@ -1,8 +1,8 @@
 class ApiConstant {
   static const String baseUrl = "https://filmytell.com/ott/";
 
-  /*  static const String baseUrl =
-      "http://ec2-13-201-27-141.ap-south-1.compute.amazonaws.com:8080/ott/"; */
+  //static const String baseUrl =
+  //  "http://ec2-13-201-27-141.ap-south-1.compute.amazonaws.com:8080/ott/";
 
   static String legacyLogin = "${baseUrl}user/email/login2";
   static String sessionLogout = "${baseUrl}auth/session/logout";
@@ -197,16 +197,81 @@ class ApiConstant {
       "${baseUrl}api/shortsMaster/part/$partId/unlike?userId=$userId";
   static String viewsShort(partId) =>
       "${baseUrl}api/shortsMaster/part/$partId/view";
-  static String purchaseShort(partId, userId) =>
-      "${baseUrl}api/shortsMaster/purchaseShort?partId=$partId&userId=$userId";
+  static String validateCoupon = "${baseUrl}api/coupons/validate";
+
+  static String createContentOrder({
+    required int customerId,
+    required int contentId,
+    String? couponCode,
+    String? idempotencyKey,
+  }) {
+    final query = <String, String>{
+      'customerId': customerId.toString(),
+      'contentId': contentId.toString(),
+      if (couponCode != null && couponCode.trim().isNotEmpty)
+        'couponCode': couponCode.trim().toUpperCase(),
+      if (idempotencyKey != null && idempotencyKey.trim().isNotEmpty)
+        'idempotencyKey': idempotencyKey.trim(),
+    };
+    final queryString = Uri(queryParameters: query).query;
+    return "${baseUrl}api/razorpay/create-order?$queryString";
+  }
+
+  static String purchaseShort(
+    dynamic partId,
+    dynamic userId, {
+    String? couponCode,
+    String? idempotencyKey,
+  }) {
+    final query = <String, String>{
+      'partId': partId.toString(),
+      'userId': userId.toString(),
+      if (couponCode != null && couponCode.trim().isNotEmpty)
+        'couponCode': couponCode.trim().toUpperCase(),
+      if (idempotencyKey != null && idempotencyKey.trim().isNotEmpty)
+        'idempotencyKey': idempotencyKey.trim(),
+    };
+    return "${baseUrl}api/shortsMaster/purchaseShort?${Uri(queryParameters: query).query}";
+  }
 
   //series
   static String seriesDetails(seriesId, userId) =>
       "${baseUrl}api/userSeries/$seriesId/user-details?userId=$userId";
-  static String purchaseEpisode(episodeId, userId) =>
-      '${baseUrl}series/purchase/episode?episodeId=$episodeId&userId=$userId';
-  static String purchaseSeason(seasonId, userId) =>
-      '${baseUrl}series/purchase/season?seasonId=$seasonId&userId=$userId';
+
+  static String purchaseEpisode(
+    dynamic episodeId,
+    dynamic userId, {
+    String? couponCode,
+    String? idempotencyKey,
+  }) {
+    final query = <String, String>{
+      'episodeId': episodeId.toString(),
+      'userId': userId.toString(),
+      if (couponCode != null && couponCode.trim().isNotEmpty)
+        'couponCode': couponCode.trim().toUpperCase(),
+      if (idempotencyKey != null && idempotencyKey.trim().isNotEmpty)
+        'idempotencyKey': idempotencyKey.trim(),
+    };
+    return "${baseUrl}series/purchase/episode?${Uri(queryParameters: query).query}";
+  }
+
+  static String purchaseSeason(
+    dynamic seasonId,
+    dynamic userId, {
+    String? couponCode,
+    String? idempotencyKey,
+  }) {
+    final query = <String, String>{
+      'seasonId': seasonId.toString(),
+      'userId': userId.toString(),
+      if (couponCode != null && couponCode.trim().isNotEmpty)
+        'couponCode': couponCode.trim().toUpperCase(),
+      if (idempotencyKey != null && idempotencyKey.trim().isNotEmpty)
+        'idempotencyKey': idempotencyKey.trim(),
+    };
+    return "${baseUrl}series/purchase/season?${Uri(queryParameters: query).query}";
+  }
+
   static String continueWatchedMoviesByUser(userId, type) =>
       "${baseUrl}continue-watching/user/$userId?contentType=$type";
 

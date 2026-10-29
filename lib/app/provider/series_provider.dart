@@ -20,16 +20,22 @@ class SeriesPurchaseResult {
     this.seasonId,
     this.episodeId,
     this.invoiceUrl,
+    this.couponCode,
+    this.discountAmount,
+    this.originalAmount,
   });
 
   final bool success;
   final String message;
-  final int? coinsDeducted;
-  final int? newBalance;
+  final double? coinsDeducted;
+  final double? newBalance;
   final int? seriesId;
   final int? seasonId;
   final int? episodeId;
   final String? invoiceUrl;
+  final String? couponCode;
+  final double? discountAmount;
+  final double? originalAmount;
 
   factory SeriesPurchaseResult.fromJson(Map<String, dynamic> json) {
     final data = json['data'] is Map<String, dynamic>
@@ -42,12 +48,15 @@ class SeriesPurchaseResult {
       success: json['success'] == true || json['isSuccess'] == true,
       message: (data['message'] ?? json['message'] ?? 'Purchase failed')
           .toString(),
-      coinsDeducted: _asInt(data['coinsDeducted']),
-      newBalance: _asInt(data['newBalance']),
+      coinsDeducted: _asDouble(data['coinsDeducted']),
+      newBalance: _asDouble(data['newBalance']),
       seriesId: _asInt(data['seriesId']),
       seasonId: _asInt(data['seasonId']),
       episodeId: _asInt(data['episodeId']),
       invoiceUrl: data['invoiceUrl']?.toString(),
+      couponCode: data['couponCode']?.toString(),
+      discountAmount: _asDouble(data['discountAmount'] ?? data['discount']),
+      originalAmount: _asDouble(data['originalAmount'] ?? data['originalPrice']),
     );
   }
 
@@ -102,8 +111,10 @@ class SeriesProvider extends BaseProvider {
 
   Future<SeriesPurchaseResult> purchaseEpisode(
     int episodeId,
-    int seriesId,
-  ) async {
+    int seriesId, {
+    String? couponCode,
+    String? idempotencyKey,
+  }) async {
     final user = await LocalSharePreferences.localSharePreferences.getUser();
 
     if (_isPurchasing) {
@@ -117,7 +128,12 @@ class SeriesProvider extends BaseProvider {
     notifyListeners();
 
     try {
-      final url = ApiConstant.purchaseEpisode(episodeId, user!.id);
+      final url = ApiConstant.purchaseEpisode(
+        episodeId,
+        user!.id,
+        couponCode: couponCode,
+        idempotencyKey: idempotencyKey,
+      );
       log('Purchase Episode URL: $url');
 
       final response = await _apiHelper.putApi(url);
@@ -156,8 +172,10 @@ class SeriesProvider extends BaseProvider {
 
   Future<SeriesPurchaseResult> purchaseSeason(
     int seasonId,
-    int seriesId,
-  ) async {
+    int seriesId, {
+    String? couponCode,
+    String? idempotencyKey,
+  }) async {
     final user = await LocalSharePreferences.localSharePreferences.getUser();
 
     if (_isPurchasing) {
@@ -171,7 +189,12 @@ class SeriesProvider extends BaseProvider {
     notifyListeners();
 
     try {
-      final url = ApiConstant.purchaseSeason(seasonId, user!.id);
+      final url = ApiConstant.purchaseSeason(
+        seasonId,
+        user!.id,
+        couponCode: couponCode,
+        idempotencyKey: idempotencyKey,
+      );
       log('Purchase Season URL: $url');
 
       final response = await _apiHelper.putApi(url);
@@ -219,4 +242,11 @@ int? _asInt(dynamic value) {
   if (value == null) return null;
   if (value is int) return value;
   return int.tryParse(value.toString());
+}
+
+double? _asDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
 }

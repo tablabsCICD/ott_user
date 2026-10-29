@@ -240,10 +240,17 @@ class ShortProvider extends BaseProvider {
 
   Future<Map<String, dynamic>?> purchaseShortPart({
     required int partId,
+    String? couponCode,
+    String? idempotencyKey,
   }) async {
     final user = await LocalSharePreferences.localSharePreferences.getUser();
     if (user == null) return null;
-    final url = ApiConstant.purchaseShort(partId, user.id!);
+    final url = ApiConstant.purchaseShort(
+      partId,
+      user.id!,
+      couponCode: couponCode,
+      idempotencyKey: idempotencyKey,
+    );
     log('short purchase URL======== $url');
     ApiHelper apiHelper = ApiHelper();
     try {

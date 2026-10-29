@@ -74,6 +74,21 @@ class PaymentService {
     );
   }
 
+  /// Creates a content order for movie/content purchase with optional coupon and idempotency key
+  Future<PaymentOrder> createContentOrder({
+    required int contentId,
+    required int userId,
+    String? couponCode,
+    String? idempotencyKey,
+  }) {
+    return _razorpayService.createContentOrder(
+      contentId: contentId,
+      userId: userId,
+      couponCode: couponCode,
+      idempotencyKey: idempotencyKey,
+    );
+  }
+
   /// Opens the appropriate checkout experience:
   /// - India -> Razorpay Checkout
   /// - All other countries -> Stripe Checkout Session

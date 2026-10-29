@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:ott/app/core/services/PaymentService.dart';
+import 'package:ott/app/core/services/coupon_service.dart';
 import 'package:ott/app/core/services/invoice_service.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/gifted%20movies%20page/GiftedMoviesPage.dart';
@@ -10,8 +12,11 @@ import 'package:ott/app/pages/wallet%20page/PaymentPage.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
+import 'package:ott/app/widgets/coupon_section_widget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/purchase_confirmation_dialog.dart';
 import 'package:ott/data/models/content.dart';
+import 'package:ott/data/models/coupon/coupon_models.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 import '../../provider/themeProvider.dart';
@@ -38,6 +43,11 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
   DateTime? _endDate;
   bool _purchaseLoaderVisible = false;
 
+  CouponValidationData? _appliedCoupon;
+  String? _idempotencyKey;
+  final PaymentService _paymentService = PaymentService();
+  bool _isProcessingRazorpay = false;
+
   static const double _minimumRechargeAmount = 100;
   static const double _maximumRechargeAmount = 100000;
 
@@ -49,12 +59,19 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
   @override
   void initState() {
     super.initState();
+    _idempotencyKey = CouponService.generateIdempotencyKey();
     Future.microtask(() async {
       final walletProvider =
           Provider.of<WalletProvider>(context, listen: false);
       await walletProvider.getBalance();
       await walletProvider.getTransactionHistory();
     });
+  }
+
+  @override
+  void dispose() {
+    _paymentService.dispose();
+    super.dispose();
   }
 
   @override
@@ -67,8 +84,11 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
             : 16.0;
 
     moviePrice = double.tryParse(widget.movie.price.toString()) ?? 0.0;
+    final effectivePrice = _appliedCoupon != null
+        ? _appliedCoupon!.finalPayableAmount
+        : moviePrice;
     final totalCoins =
-        moviePrice * (widget.giftCount == 0 ? 1 : widget.giftCount);
+        effectivePrice * (widget.giftCount == 0 ? 1 : widget.giftCount);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -156,17 +176,37 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                           const SizedBox(height: 12),
                           widget.giftCount == 0
                               ? Text(
-                                  "Price: ₹ ${moviePrice.toStringAsFixed(0)}",
-                                  style: const TextStyle(fontSize: 16),
+                                  "Price: ₹ ${moviePrice.toStringAsFixed(2)}",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    decoration: _appliedCoupon != null
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                    color: _appliedCoupon != null
+                                        ? Colors.grey
+                                        : null,
+                                  ),
                                 )
                               : Text(
                                   "₹ ${moviePrice.toStringAsFixed(0)} × ${widget.giftCount} Gifts",
                                   style: const TextStyle(
                                       fontSize: 14, color: Colors.grey),
                                 ),
+                          if (_appliedCoupon != null &&
+                              widget.giftCount == 0) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              "Discount (${_appliedCoupon!.couponCode}): -₹ ${_appliedCoupon!.discountAmount.toStringAsFixed(2)}",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.green.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 6),
                           Text(
-                            "Total: ₹ ${totalCoins.toStringAsFixed(0)}",
+                            "Total: ₹ ${totalCoins.toStringAsFixed(2)}",
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -174,6 +214,29 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                             ),
                           ),
                           const SizedBox(height: 16),
+
+                          /// Coupon Section (for individual movie / short film purchase)
+                          if (widget.giftCount == 0) ...[
+                            CouponSectionWidget(
+                              purchaseKind: 'CONTENT',
+                              targetId: widget.movie.id ?? 0,
+                              originalPrice: moviePrice,
+                              appliedCoupon: _appliedCoupon,
+                              onCouponApplied: (coupon) {
+                                setState(() {
+                                  _appliedCoupon = coupon;
+                                });
+                              },
+                              onCouponRemoved: () {
+                                setState(() {
+                                  _appliedCoupon = null;
+                                  _idempotencyKey =
+                                      CouponService.generateIdempotencyKey();
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                          ],
 
                           /// Wallet Status
                           Card(
@@ -207,54 +270,81 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                           ),
                           const SizedBox(height: 20),
 
-                          provider.walletBalance >= totalCoins
-                              ? ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: theme.primaryColor,
-                                    minimumSize:
-                                        const Size(double.infinity, 50),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12)),
-                                  ),
-                                  icon: const Icon(Icons.check,
-                                      color: Colors.white),
-                                  label: const Text(
-                                    "Proceed to Pay",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    _showConfirmationDialog(
-                                      provider,
-                                      totalCoins,
-                                      widget.movie.id!,
-                                      widget.giftCount,
-                                    );
-                                  },
-                                )
-                              : ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: theme.primaryColor,
-                                    minimumSize:
-                                        const Size(double.infinity, 50),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12)),
-                                  ),
-                                  icon: const Icon(Icons.add_circle,
-                                      color: Colors.white),
-                                  label: const Text(
-                                    "Recharge Wallet",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  onPressed: () => _showRechargeDialog(context),
+                          // Option 1: Pay from Wallet
+                          if (provider.walletBalance >= totalCoins)
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: theme.primaryColor,
+                                minimumSize: const Size(double.infinity, 50),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                              ),
+                              icon: const Icon(Icons.account_balance_wallet,
+                                  color: Colors.white),
+                              label: Text(
+                                "Pay from Wallet (₹ ${totalCoins.toStringAsFixed(2)})",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
                                 ),
+                              ),
+                              onPressed: () {
+                                _showConfirmationDialog(
+                                  provider,
+                                  totalCoins,
+                                  widget.movie.id!,
+                                  widget.giftCount,
+                                );
+                              },
+                            ),
+
+                          // Option 2: Pay with Razorpay (for individual movie / short film purchase on supported platforms)
+                          if (widget.giftCount == 0 &&
+                              PaymentService.isSupportedPlatform) ...[
+                            if (provider.walletBalance >= totalCoins)
+                              const SizedBox(height: 10),
+                            OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(double.infinity, 50),
+                                side: BorderSide(color: theme.primaryColor),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                              ),
+                              icon: Icon(Icons.payment,
+                                  color: theme.primaryColor),
+                              label: Text(
+                                "Pay with Razorpay (₹ ${effectivePrice.toStringAsFixed(2)})",
+                                style: TextStyle(
+                                  color: theme.primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              onPressed: _payWithRazorpay,
+                            ),
+                          ],
+
+                          // Option 3: If wallet insufficient, offer Recharge Wallet
+                          if (provider.walletBalance < totalCoins) ...[
+                            const SizedBox(height: 10),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: theme.primaryColor,
+                                minimumSize: const Size(double.infinity, 50),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                              ),
+                              icon: const Icon(Icons.add_circle,
+                                  color: Colors.white),
+                              label: const Text(
+                                "Recharge Wallet",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              onPressed: () => _showRechargeDialog(context),
+                            ),
+                          ],
 
                           const SizedBox(height: 10),
 
@@ -472,6 +562,93 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
     );
   }
 
+  // ---------------- Razorpay Payment Flow ----------------
+  Future<void> _payWithRazorpay() async {
+    if (_isProcessingRazorpay) return;
+    _isProcessingRazorpay = true;
+    _showPurchaseLoader(context);
+
+    try {
+      final user = await LocalSharePreferences.localSharePreferences.getUser();
+      if (user?.id == null) {
+        throw Exception('Please log in again to continue purchase.');
+      }
+
+      final effectiveAmount = _appliedCoupon != null
+          ? _appliedCoupon!.finalPayableAmount
+          : moviePrice;
+
+      final idempotency =
+          _idempotencyKey ??= CouponService.generateIdempotencyKey();
+
+      final order = await _paymentService.createContentOrder(
+        contentId: widget.movie.id!,
+        userId: user!.id!,
+        couponCode: _appliedCoupon?.couponCode,
+        idempotencyKey: idempotency,
+      );
+
+      _hidePurchaseLoader(context);
+
+      final checkoutResult = await _paymentService.openCheckout(
+        order: order,
+        amount: effectiveAmount,
+        description: widget.movie.title ?? 'Movie Purchase',
+      );
+
+      if (!checkoutResult.success) {
+        throw Exception(checkoutResult.message);
+      }
+
+      _showPurchaseLoader(context);
+
+      final purchaseProvider =
+          Provider.of<PurchaseContentProvider>(context, listen: false);
+      final saveResult = await purchaseProvider.saveUserContent(
+        widget.movie,
+        couponCode: _appliedCoupon?.couponCode,
+        orderId: checkoutResult.orderId ?? order.orderId,
+      );
+
+      if (saveResult['success'] != true) {
+        throw Exception(saveResult['message']?.toString() ??
+            'Unable to record content purchase.');
+      }
+
+      Provider.of<DashboardProvider>(context, listen: false)
+          .getContentById(widget.movie.id!)
+          .catchError((_) {});
+
+      if (!mounted) return;
+      _hidePurchaseLoader(context);
+
+      await PurchaseConfirmationDialog.show(
+        context,
+        contentTitle: widget.movie.title ?? 'Movie Purchase',
+        originalPrice: moviePrice,
+        finalAmountPaid: effectiveAmount,
+        discountAmount: _appliedCoupon?.discountAmount,
+        couponCode: _appliedCoupon?.couponCode,
+        currency: _appliedCoupon?.currency ?? 'INR',
+        paymentMethod: 'Razorpay',
+        orderReference: checkoutResult.orderId ?? order.orderId,
+        onDone: () {
+          Navigator.pop(context, true);
+        },
+      );
+    } catch (error) {
+      if (!mounted) return;
+      _hidePurchaseLoader(context);
+      CustomToast.show(
+        context,
+        _cleanPurchaseScreenError(error),
+        isSuccess: false,
+      );
+    } finally {
+      _isProcessingRazorpay = false;
+    }
+  }
+
   // ---------------- Confirmation ----------------
   void _showConfirmationDialog(
     WalletProvider provider,
@@ -547,7 +724,10 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                       PurchaseContentProvider>(
                                     pageContext,
                                     listen: false,
-                                  ).saveUserContent(widget.movie);
+                                  ).saveUserContent(
+                                    widget.movie,
+                                    couponCode: _appliedCoupon?.couponCode,
+                                  );
                                   if (purchaseResult['success'] != true) {
                                     throw Exception(
                                       purchaseResult['message']?.toString() ??
@@ -579,18 +759,13 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
 
                                 if (!mounted) return;
                                 _hidePurchaseLoader(pageContext);
-                                CustomToast.show(
-                                  pageContext,
-                                  "Payment successful! Enjoy your content 🎬",
-                                  isSuccess: true,
-                                );
-
-                                /*  await _handlePostPurchaseInvoice(
-                                  pageContext,
-                                  quantity: giftCount > 0 ? giftCount : 1,
-                                ); */
 
                                 if (giftCount > 0) {
+                                  CustomToast.show(
+                                    pageContext,
+                                    "Payment successful! Enjoy your content 🎬",
+                                    isSuccess: true,
+                                  );
                                   Navigator.pushReplacement(
                                     pageContext,
                                     MaterialPageRoute(
@@ -598,7 +773,20 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                             GiftedMoviesPage()),
                                   );
                                 } else {
-                                  Navigator.pop(pageContext, true);
+                                  await PurchaseConfirmationDialog.show(
+                                    pageContext,
+                                    contentTitle: widget.movie.title ?? 'Movie Purchase',
+                                    originalPrice: moviePrice,
+                                    finalAmountPaid: coins,
+                                    discountAmount: _appliedCoupon?.discountAmount,
+                                    couponCode: _appliedCoupon?.couponCode,
+                                    currency: _appliedCoupon?.currency ?? 'INR',
+                                    paymentMethod: 'Wallet',
+                                    orderReference: _idempotencyKey,
+                                    onDone: () {
+                                      Navigator.pop(pageContext, true);
+                                    },
+                                  );
                                 }
                               } catch (error) {
                                 if (!mounted) return;

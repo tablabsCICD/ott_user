@@ -310,8 +310,30 @@ class _PurchaseHistoryCard extends StatelessWidget {
             Text(
               'Date: ${purchaseDate != null ? DateFormat('dd MMM yyyy, hh:mm a').format(purchaseDate) : 'N/A'}',
             ),
+            if (item.originalAmount != null &&
+                item.discountAmount != null &&
+                item.discountAmount! > 0) ...[
+              Text(
+                'Original Price: Rs ${item.originalAmount!.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  decoration: TextDecoration.lineThrough,
+                  color: Colors.grey,
+                  fontSize: 13,
+                ),
+              ),
+              Text(
+                'Coupon (${item.couponCode ?? 'Applied'}): -Rs ${item.discountAmount!.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  color: Colors.green,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ],
             Text(
-                'Amount: Rs ${(item.amount ?? content?.price ?? 0).toStringAsFixed(2)}'),
+                'Amount Paid: Rs ${(item.amount ?? content?.price ?? 0).toStringAsFixed(2)}'),
+            if (item.status != null && item.status!.isNotEmpty)
+              Text('Status: ${item.status}'),
             Text('Invoice: ${item.invoiceNumber ?? item.invoiceId ?? 'N/A'}'),
             if ((item.rentalDuration ?? '').trim().isNotEmpty)
               Text('Duration: ${item.rentalDuration}'),

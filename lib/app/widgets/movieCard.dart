@@ -761,10 +761,77 @@ class _MovieCardState extends State<MovieCard> {
             errorIconColor: theme.canvasColor.withValues(alpha: 0.3),
           ),
 
+          /// Discount Offer Badge (only shown when backend provides discount info)
+          if (_hasDiscountOffer(content)) _buildDiscountBadge(content),
+
           /// 🔥 CONTINUE WATCHING BAR
           if ((widget.movie.watchedPercentage ?? 0) > 0)
             _watchProgressBar(theme),
         ],
+      ),
+    );
+  }
+
+  bool _hasDiscountOffer(Content c) {
+    if (c.isRental == true) {
+      return false;
+    }
+    if (c.discountPercentage != null && c.discountPercentage! > 0) {
+      return true;
+    }
+    if (c.discountedPrice != null &&
+        c.price != null &&
+        c.discountedPrice! < c.price!) {
+      return true;
+    }
+    if (c.offerBadge != null && c.offerBadge!.trim().isNotEmpty) {
+      return true;
+    }
+    return false;
+  }
+
+  Widget _buildDiscountBadge(Content c) {
+    String badgeText = '';
+    if (c.discountPercentage != null && c.discountPercentage! > 0) {
+      badgeText = '${c.discountPercentage!.toInt()}% OFF';
+    } else if (c.discountedPrice != null && c.price != null && c.price! > 0) {
+      final pct = (((c.price! - c.discountedPrice!) / c.price!) * 100).round();
+      if (pct > 0) {
+        badgeText = '$pct% OFF';
+      } else {
+        badgeText = 'Special Offer';
+      }
+    } else if (c.offerBadge != null && c.offerBadge!.trim().isNotEmpty) {
+      badgeText = c.offerBadge!.trim();
+    } else {
+      badgeText = 'Special Offer';
+    }
+
+    return Positioned(
+      top: 6,
+      left: 6,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE50914),
+          borderRadius: BorderRadius.circular(4),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black45,
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Text(
+          badgeText,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 9.5,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.3,
+          ),
+        ),
       ),
     );
   }
@@ -853,6 +920,9 @@ class _MovieCardState extends State<MovieCard> {
         ContentType.normalize(movie.type) == ContentType.shortFilm;
 
     final isSeries = (movie.type?.toLowerCase() ?? '') == 'series';
+    final hasDiscount = !isRental &&
+        movie.discountedPrice != null &&
+        movie.discountedPrice! < price;
 
     return GestureDetector(
       onTap: () => isSeries
@@ -866,24 +936,47 @@ class _MovieCardState extends State<MovieCard> {
           borderRadius: BorderRadius.circular(6),
           color: const Color(0xFFE50914),
         ),
-        child: Text(
-          isSeries
-              ? isRental
-                  ? (isShortFilm ? 'Watch Now' : 'Watch Series')
-                  : '₹ $price'
-              : isRental
-                  ? isShortFilm
-                      ? 'Watch Now'
-                      : movie.type?.toLowerCase() == "movie"
-                          ? lang.watchMovie
-                          : lang.watchSeries
-                  : (isShortFilm || price == 0 ? 'Watch Now' : '₹ $price'),
-          style: const TextStyle(
-            fontSize: 11.5,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        child: hasDiscount
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '₹ $price',
+                    style: const TextStyle(
+                      fontSize: 9.5,
+                      decoration: TextDecoration.lineThrough,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '₹ ${movie.discountedPrice!.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              )
+            : Text(
+                isSeries
+                    ? isRental
+                        ? (isShortFilm ? 'Watch Now' : 'Watch Series')
+                        : '₹ $price'
+                    : isRental
+                        ? isShortFilm
+                            ? 'Watch Now'
+                            : movie.type?.toLowerCase() == "movie"
+                                ? lang.watchMovie
+                                : lang.watchSeries
+                        : (isShortFilm || price == 0 ? 'Watch Now' : '₹ $price'),
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
       ),
     );
   }
