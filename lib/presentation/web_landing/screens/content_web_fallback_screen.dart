@@ -66,7 +66,8 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
     });
 
     try {
-      if (widget.contentType == DeepLinkContentType.short) {
+      if (widget.contentType == DeepLinkContentType.short ||
+          widget.contentType == DeepLinkContentType.miniSeries) {
         final shortProvider =
             Provider.of<ShortProvider>(context, listen: false);
         await shortProvider.fetchShortDetail(widget.contentId, 1);
@@ -199,7 +200,8 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
           ),
         ),
       );
-    } else if (widget.contentType == DeepLinkContentType.short) {
+    } else if (widget.contentType == DeepLinkContentType.short ||
+        widget.contentType == DeepLinkContentType.miniSeries) {
       if (_shortDetail != null) {
         Navigator.of(context).push(
           MaterialPageRoute<void>(
@@ -462,7 +464,8 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
       child: posterUrl.isNotEmpty
           ? Image.network(
               posterUrl,
-              fit: BoxFit.cover,
+              fit: BoxFit.contain,
+              alignment: Alignment.center,
               errorBuilder: (_, __, ___) => const Center(
                 child: Icon(
                   Icons.movie,

@@ -1,11 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
+import 'package:ott/app/core/utils/content_type.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/response/continueWatchedResponse.dart';
 import 'package:ott/data/models/response/getContentResponse.dart';
+import 'package:ott/data/models/response/SeriesDetailsResponse.dart';
+import 'package:ott/data/models/seriesModel.dart';
 import 'package:ott/data/models/user.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/response/get_dashboard_data.dart';
 import '../core/constant/api_constant.dart';
 import '../core/network/api_helper.dart';
@@ -13,9 +17,6 @@ import 'baseProvider.dart';
 
 class DashboardProvider extends BaseProvider {
   DashboardProvider() : super('Ideal');
-
-  static const Duration _continueWatchingCacheDuration = Duration(minutes: 2);
-  static const Duration _continueWatchingRequestTimeout = Duration(seconds: 6);
 
   List<DashboardData> _dashboardData = [];
   List<DashboardData> get dashboardData => _dashboardData;
@@ -34,12 +35,6 @@ class DashboardProvider extends BaseProvider {
 
   List<Content> _continueWatchedMovies = [];
   List<Content> get continueWatchedMovies => _continueWatchedMovies;
-  bool _isLoadingContinueWatching = false;
-  bool get isLoadingContinueWatching => _isLoadingContinueWatching;
-  String? _activeContinueWatchingKey;
-  final Map<String, List<Content>> _continueWatchingCache = {};
-  final Map<String, DateTime> _continueWatchingCacheTimes = {};
-  final Map<String, Future<void>> _continueWatchingRequests = {};
 
   int _activeDashboardRequestId = 0;
   String? _activeDashboardType;
@@ -62,21 +57,12 @@ class DashboardProvider extends BaseProvider {
 
     List<DashboardData> finalDashboardData = [];
 
-    debugPrint("Languages: $languages");
-
     for (final lang in languages) {
       if (requestId != _activeDashboardRequestId) return;
-      debugPrint("➡ Loading dashboard for: $lang");
       try {
-        final dashboardRows = await Future.wait([
-          getDashboardLatestData(type, [lang], userId),
-          getDashboardTrendingData(type, [lang], userId),
-          getDashboardUpcomingData(type, [lang], userId),
-        ]);
-
-        final latest = dashboardRows[0];
-        final trending = dashboardRows[1];
-        final upcoming = dashboardRows[2];
+        final latest = await getDashboardLatestData(type, [lang], userId);
+        final trending = await getDashboardTrendingData(type, [lang], userId);
+        final upcoming = await getDashboardUpcomingData(type, [lang], userId);
 
         if (requestId != _activeDashboardRequestId) return;
 
@@ -91,9 +77,7 @@ class DashboardProvider extends BaseProvider {
         finalDashboardData.addAll(latest);
         finalDashboardData.addAll(trending);
         finalDashboardData.addAll(upcoming);
-      } catch (e) {
-        debugPrint("❌ Dashboard error ($lang): $e");
-      }
+      } catch (e) {}
     }
 
     if (requestId != _activeDashboardRequestId) return;
@@ -172,9 +156,7 @@ class DashboardProvider extends BaseProvider {
         row.movies!.addAll(newData.first.movies!);
         row.pagination = newData.first.pagination;
       }
-    } catch (e) {
-      debugPrint("❌ Pagination error: $e");
-    }
+    } catch (e) {}
 
     row.isRowLoading = false;
     notifyListeners();
@@ -270,9 +252,7 @@ class DashboardProvider extends BaseProvider {
           return _content;
         }
       }
-    } catch (error) {
-      debugPrint("❌ getContentById error::: $error");
-    }
+    } catch (error) {}
     return null;
   }
 
@@ -296,7 +276,6 @@ class DashboardProvider extends BaseProvider {
         _castList = [];
       }
     } catch (error) {
-      debugPrint("cast fetch error: $error");
       _castList = [];
     } finally {
       _isLoadingCast = false;
@@ -304,78 +283,27 @@ class DashboardProvider extends BaseProvider {
     }
   }
 
-  Future<void> getContinueWatchedMovieList(
-    String type, {
-    bool forceRefresh = false,
-  }) async {
+  Future<void> getContinueWatchedMovieList(String type) async {
     final cwRequestId = ++_activeContinueWatchRequestId;
     _activeContinueWatchType = type;
 
-    final user = await LocalSharePreferences.localSharePreferences.getUser();
-    final userId = user?.id;
-    if (userId == null) {
-      if (cwRequestId == _activeContinueWatchRequestId) {
-        _setActiveContinueWatchingData(null, const <Content>[]);
-      }
-      return;
-    }
-
-    final normalizedType = type.toUpperCase();
-    final cacheKey = '$userId:$normalizedType';
-    _activeContinueWatchingKey = cacheKey;
-
-    final cachedItems = _continueWatchingCache[cacheKey];
-    if (cachedItems != null) {
-      _continueWatchedMovies = cachedItems;
-      notifyListeners();
-
-      if (!forceRefresh && _isContinueWatchingCacheFresh(cacheKey)) {
-        return;
-      }
-    } else if (_continueWatchedMovies.isNotEmpty) {
-      _continueWatchedMovies = const <Content>[];
-      notifyListeners();
-    }
-
-    final inFlightRequest = _continueWatchingRequests[cacheKey];
-    if (inFlightRequest != null) {
-      await inFlightRequest;
-      return;
-    }
-
-    _isLoadingContinueWatching = true;
+    _continueWatchedMovies.clear();
     notifyListeners();
 
-    final request = _fetchContinueWatching(
-      apiUrl: ApiConstant.continueWatchedMoviesByUser(userId, normalizedType),
-      cacheKey: cacheKey,
-      cwRequestId: cwRequestId,
-      type: type,
-    );
-    _continueWatchingRequests[cacheKey] = request;
-
-    try {
-      await request;
-    } finally {
-      _continueWatchingRequests.remove(cacheKey);
-      if (_activeContinueWatchingKey == cacheKey) {
-        _isLoadingContinueWatching = false;
+    final localSharePreferences = LocalSharePreferences();
+    final user = await localSharePreferences.getUser();
+    if (user?.id == null) {
+      if (cwRequestId == _activeContinueWatchRequestId) {
+        _continueWatchedMovies.clear();
         notifyListeners();
       }
+      return;
     }
-  }
+    String apiUrl = ApiConstant.continueWatchedMoviesByUser(user!.id, type);
+    ApiHelper apiHelper = ApiHelper();
 
-  Future<void> _fetchContinueWatching({
-    required String apiUrl,
-    required String cacheKey,
-    required int cwRequestId,
-    required String type,
-  }) async {
-    final watch = Stopwatch()..start();
     try {
-      final response = await ApiHelper()
-          .getApi1(apiUrl)
-          .timeout(_continueWatchingRequestTimeout);
+      var response = await apiHelper.getApi1(apiUrl);
 
       if (cwRequestId != _activeContinueWatchRequestId ||
           type.trim().toUpperCase() !=
@@ -385,63 +313,158 @@ class DashboardProvider extends BaseProvider {
 
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
-        final continueWatchedResponse =
+
+        ContinueWatchedResponse continueWatchedResponse =
             ContinueWatchedResponse.fromJson(responseBody);
 
-        if (continueWatchedResponse.isSuccess == true ||
-            continueWatchedResponse.success == true ||
-            (response.statusCode == 200 &&
-                continueWatchedResponse.data != null)) {
-          final rawItems = continueWatchedResponse.data ?? const <Content>[];
+        if (continueWatchedResponse.isSuccess == true &&
+            continueWatchedResponse.data != null) {
           final normalizedType = type.trim().toUpperCase();
-          final items = rawItems.where((item) {
+          final rawItems = continueWatchedResponse.data!.where((item) {
             final itemType = item.type?.trim().toUpperCase();
             return itemType == normalizedType;
           }).toList();
 
-          _continueWatchingCache[cacheKey] = items;
-          _continueWatchingCacheTimes[cacheKey] = DateTime.now();
-          debugPrint(
-            "✅ continue watching loaded ${items.length} items "
-            "in ${watch.elapsedMilliseconds}ms",
-          );
-          _setActiveContinueWatchingData(cacheKey, items);
-          return;
-        } else {
-          _setActiveContinueWatchingData(cacheKey, const <Content>[]);
-        }
-      }
+          final enrichedItems = <Content>[];
+          final seenSeriesIds = <int>{};
 
-      if (!_continueWatchingCache.containsKey(cacheKey)) {
-        _setActiveContinueWatchingData(cacheKey, const <Content>[]);
+          for (final item in rawItems) {
+            final isSeries =
+                ContentType.isSeries(item.type) || item.episodeId != null;
+
+            if (isSeries) {
+              final seriesId = item.seriesId ?? item.id;
+              if (seriesId != null && seenSeriesIds.contains(seriesId)) {
+                continue;
+              }
+              if (seriesId != null) seenSeriesIds.add(seriesId);
+
+              // 1. Enrich from local SharedPreferences cache if episode metadata is missing
+              if (item.episodeTitle == null || item.episodeNumber == null) {
+                try {
+                  final prefs = await SharedPreferences.getInstance();
+                  Map<String, dynamic>? meta;
+                  if (item.episodeId != null && item.episodeId! > 0) {
+                    final metaStr = prefs.getString(
+                      "episode_meta_${seriesId}_${item.seasonId ?? 0}_${item.episodeId}",
+                    );
+                    if (metaStr != null) {
+                      meta = jsonDecode(metaStr) as Map<String, dynamic>;
+                    }
+                  }
+                  if (meta == null && seriesId != null) {
+                    final seriesLastStr =
+                        prefs.getString("series_last_episode_$seriesId");
+                    if (seriesLastStr != null) {
+                      meta = jsonDecode(seriesLastStr) as Map<String, dynamic>;
+                    }
+                  }
+
+                  if (meta != null) {
+                    item.episodeId ??= meta['episodeId'];
+                    item.seasonId ??= meta['seasonId'];
+                    item.episodeTitle ??= meta['episodeTitle'];
+                    item.episodeNumber ??= meta['episodeNumber'];
+                    item.seasonNumber ??= meta['seasonNumber'];
+                    item.episodePosterUrl ??= meta['episodePosterUrl'];
+                    item.seriesTitle ??= meta['seriesTitle'] ?? item.title;
+                    if (meta['watchedSeconds'] != null &&
+                        (item.watchedSeconds == null ||
+                            item.watchedSeconds == 0)) {
+                      item.watchedSeconds = meta['watchedSeconds'];
+                    }
+                    if (meta['watchedPercentage'] != null &&
+                        (item.watchedPercentage == null ||
+                            item.watchedPercentage == 0)) {
+                      item.watchedPercentage = meta['watchedPercentage'];
+                    }
+                  }
+                } catch (_) {}
+              }
+
+              // 2. If still missing episode metadata, resolve from series details
+              if ((item.episodeTitle == null || item.episodeNumber == null) &&
+                  seriesId != null &&
+                  seriesId > 0) {
+                try {
+                  final detailsUrl =
+                      ApiConstant.seriesDetails(seriesId, user.id);
+                  final detailsRes = await apiHelper.getApi(detailsUrl);
+                  if (detailsRes.statusCode == 200) {
+                    final detailsBody = jsonDecode(detailsRes.body);
+                    final seriesData =
+                        SeriesDetailsResponse.fromJson(detailsBody);
+                    final entity = seriesData.toEntity();
+
+                    SeasonEntity? matchedSeason;
+                    EpisodeEntity? matchedEpisode;
+
+                    for (final s in entity.seasons) {
+                      if (item.seasonId == null ||
+                          s.seasonId == item.seasonId) {
+                        for (final ep in s.episodes) {
+                          if (item.episodeId == null ||
+                              ep.episodeId == item.episodeId) {
+                            matchedSeason = s;
+                            matchedEpisode = ep;
+                            break;
+                          }
+                        }
+                      }
+                      if (matchedEpisode != null) break;
+                    }
+
+                    if (matchedEpisode == null && entity.seasons.isNotEmpty) {
+                      for (final s in entity.seasons) {
+                        for (final ep in s.episodes) {
+                          if (item.episodeId == ep.episodeId) {
+                            matchedSeason = s;
+                            matchedEpisode = ep;
+                            break;
+                          }
+                        }
+                        if (matchedEpisode != null) break;
+                      }
+                    }
+
+                    if (matchedEpisode != null) {
+                      item.episodeTitle = matchedEpisode.title;
+                      item.episodeNumber = matchedEpisode.episodeNumber;
+                      item.seasonNumber = matchedSeason?.seasonNumber;
+                      item.episodePosterUrl = matchedEpisode.posterUrl;
+                      item.seriesTitle = entity.title.isNotEmpty
+                          ? entity.title
+                          : item.title;
+                      item.contentUrl = matchedEpisode.videoUrl;
+                      item.seasonId ??= matchedSeason?.seasonId;
+                      item.episodeId ??= matchedEpisode.episodeId;
+                    }
+                  }
+                } catch (_) {}
+              }
+
+              enrichedItems.add(item);
+            } else {
+              enrichedItems.add(item);
+            }
+          }
+
+          _continueWatchedMovies = enrichedItems;
+        } else {
+          _continueWatchedMovies.clear();
+        }
+      } else {
+        _continueWatchedMovies.clear();
       }
     } catch (error) {
-      debugPrint("❌ continue watching error: $error");
-      if (!_continueWatchingCache.containsKey(cacheKey)) {
-        _setActiveContinueWatchingData(cacheKey, const <Content>[]);
+      if (cwRequestId == _activeContinueWatchRequestId) {
+        _continueWatchedMovies.clear();
       }
     } finally {
       if (cwRequestId == _activeContinueWatchRequestId) {
-        _continueWatchingRequests.remove(cacheKey);
-        _isLoadingContinueWatching = false;
         notifyListeners();
       }
     }
-  }
-
-  bool _isContinueWatchingCacheFresh(String cacheKey) {
-    final fetchedAt = _continueWatchingCacheTimes[cacheKey];
-    if (fetchedAt == null) return false;
-    return DateTime.now().difference(fetchedAt) <
-        _continueWatchingCacheDuration;
-  }
-
-  void _setActiveContinueWatchingData(String? cacheKey, List<Content> items) {
-    if (cacheKey != null && _activeContinueWatchingKey != cacheKey) {
-      return;
-    }
-    _continueWatchedMovies = items;
-    notifyListeners();
   }
 
   void clear() {
@@ -452,11 +475,6 @@ class DashboardProvider extends BaseProvider {
     _isLoadingDashboard = false;
     _dashboardData.clear();
     _continueWatchedMovies.clear();
-    _continueWatchingCache.clear();
-    _continueWatchingCacheTimes.clear();
-    _continueWatchingRequests.clear();
-    _isLoadingContinueWatching = false;
-    _activeContinueWatchingKey = null;
     _castList.clear();
     notifyListeners();
   }

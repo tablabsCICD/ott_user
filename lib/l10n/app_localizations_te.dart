@@ -395,7 +395,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get viewersEntertainmentDescription =>
-      'మీరు ఎంచుకున్న సినిమాలు మరియు సిరీస్‌లను కొనుగోలు చేయండి లేదా బహుమతిగా ఇవ్వండి. సభ్యత్వం అవసరం లేదు. ఆఫ్‌లైన్‌లో చూడటానికి కంటెంట్‌ను డౌన్‌లోడ్ చేసుకోండి.';
+      'సినిమాలు, సిరీస్‌లు, షార్ట్ ఫిల్మ్‌లను అద్దెకు తీసుకోండి మరియు బహుమతిగా ఇవ్వండి. సబ్‌స్క్రిప్షన్ లేదు, ప్రకటనలు లేవు. స్వచ్ఛమైన వినోదం.';
 
   @override
   String get createAccountMobileOtp => 'మొబైల్ OTPతో ఖాతాను సృష్టించండి';
@@ -650,4 +650,58 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get everyDay => 'ప్రతి రోజు';
+
+  @override
+  String get shortFilm => 'షార్ట్ ఫిల్మ్';
+
+  @override
+  String get cookies => 'కుకీలు';
+
+  @override
+  String get accountDeletion => 'ఖాతా తొలగింపు';
+
+  @override
+  String get oneOttEcosystem =>
+      'వీక్షకులు మరియు సృష్టికర్తల కోసం ఒకే OTT పర్యావరణ వ్యవస్థ';
+
+  @override
+  String get oneOttEcosystemDescription =>
+      'సురక్షిత స్ట్రీమింగ్, సినిమా వారీగా యాక్సెస్, బహుమతులు, ప్రొడక్షన్ హౌస్ పబ్లిషింగ్, ప్రమోటర్ గ్రోత్ టూల్స్ మరియు బహుళ-పరికర వినోదం.';
+
+  @override
+  String get readMore => 'మరింత చదవండి';
+
+  @override
+  String get readLess => 'తక్కువ చదవండి';
+
+  @override
+  String get step => 'దశ';
+
+  @override
+  String get enterEmailAddress => 'దయచేసి ఇమెయిల్‌ను నమోదు చేయండి';
+
+  @override
+  String get enterValidEmailAddress => 'దయచేసి సరైన ఇమెయిల్‌ను నమోదు చేయండి';
+
+  @override
+  String get enterPhoneNumber => 'దయచేసి ఫోన్ నంబర్‌ను నమోదు చేయండి';
+
+  @override
+  String get enterValidPhoneNumber => 'దయచేసి సరైన ఫోన్ నంబర్‌ను నమోదు చేయండి';
+
+  @override
+  String get enterMessage => 'దయచేసి సందేశాన్ని నమోదు చేయండి';
+
+  @override
+  String get emailSentSuccessfully => 'ఇమెయిల్ విజయవంతంగా పంపబడింది.';
+
+  @override
+  String get failedToSendEmail =>
+      'ఇమెయిల్ పంపడంలో విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get message => 'సందేశం';
+
+  @override
+  String get phoneNumber => 'ఫోన్ నంబర్';
 }

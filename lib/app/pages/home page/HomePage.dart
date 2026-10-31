@@ -22,8 +22,7 @@ import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
-import 'package:ott/app/widgets/continueWatchMovieCard.dart';
-import 'package:ott/app/widgets/ios_continue_watch_banner.dart';
+import 'package:ott/app/widgets/continue_watching_banner.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/feature_tour.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
@@ -83,11 +82,6 @@ class _HomePageState extends State<HomePage>
   final Map<int, List<Content>> _rowItems = {};
   final Map<int, GlobalKey> _rowKeys = {};
   final ScrollController _verticalController = ScrollController();
-  final ScrollController _continueWatchController = ScrollController();
-  final ValueNotifier<int?> _continueWatchActiveIndex = ValueNotifier<int?>(0);
-  int _continueWatchItemCount = 0;
-  List<Content> _continueWatchItems = const <Content>[];
-  bool _continueWatchListenerAttached = false;
   final GlobalKey _continueWatchKey = GlobalKey();
   bool _visibleUpdateScheduled = false;
   bool _isOffline = false;
@@ -102,8 +96,10 @@ class _HomePageState extends State<HomePage>
     selectedType = widget.initialSelectedType;
 
     _verticalController.addListener(_updateVisibleRows);
-    _connectivitySubscription =
-        Connectivity().onConnectivityChanged.listen(_setConnectionStatus);
+    try {
+      _connectivitySubscription =
+          Connectivity().onConnectivityChanged.listen(_setConnectionStatus);
+    } catch (_) {}
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!_dataLoaded) {
@@ -200,8 +196,6 @@ class _HomePageState extends State<HomePage>
 
     _verticalController.dispose();
     _pageController.dispose();
-    _continueWatchController.dispose();
-    _continueWatchActiveIndex.dispose();
     _connectivitySubscription?.cancel();
     super.dispose();
   }
@@ -219,25 +213,39 @@ class _HomePageState extends State<HomePage>
     try {
       await context
           .read<DashboardProvider>()
-          .getContinueWatchedMovieList(selectedType, forceRefresh: true);
+          .getContinueWatchedMovieList(selectedType);
     } finally {
       _continueWatchRefreshInFlight = false;
     }
   }
 
   Future<void> _initializeData() async {
-    await _updateConnectionStatus();
-    await _fetchUserData();
-    if (!mounted) return;
-    setState(() {
-      isLoading = false;
-    });
-    confirmDetails(context);
+    try {
+      await _updateConnectionStatus();
+      await _fetchUserData();
+    } catch (e) {
+      log('HomePage initialization warning: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+        confirmDetails(context);
+      }
+    }
   }
 
   Future<void> _updateConnectionStatus() async {
-    final connectivityResults = await Connectivity().checkConnectivity();
-    _setConnectionStatus(connectivityResults);
+    try {
+      final connectivityResults =
+          await Connectivity().checkConnectivity().timeout(
+                const Duration(milliseconds: 500),
+                onTimeout: () => [ConnectivityResult.wifi],
+              );
+      _setConnectionStatus(connectivityResults);
+    } catch (e) {
+      _setConnectionStatus([ConnectivityResult.wifi]);
+    }
   }
 
   void _setConnectionStatus(List<ConnectivityResult> connectivityResults) {
@@ -275,8 +283,7 @@ class _HomePageState extends State<HomePage>
   }
 
   void confirmDetails(BuildContext context) {
-    final userProvider =
-        Provider.of<UserProvider>(context, listen: false);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
     final user = userProvider.userObject;
 
     final stagedService = StagedRegistrationService.instance;
@@ -306,17 +313,18 @@ class _HomePageState extends State<HomePage>
 
   Future<void> _fetchUserData() async {
     final localSharePreferences = LocalSharePreferences();
-    final dashBoardProvider = context.read<DashboardProvider>();
-    final userProvider = context.read<UserProvider>();
     final user = await localSharePreferences.getUser();
     if (user != null && mounted) {
       _userId = user.id;
-      if (selectedType != 'MINI SERIES' && selectedType != 'MADIOO') {
-        unawaited(dashBoardProvider.getContinueWatchedMovieList(selectedType));
-      }
-      await userProvider.getUserById(user.id!);
+      await Provider.of<UserProvider>(context, listen: false)
+          .getUserById(user.id!);
     }
-    final selectedLanguages = userProvider.userObject.selectedLanguages ?? [];
+    final dashBoardProvider =
+        Provider.of<DashboardProvider>(context, listen: false);
+    final selectedLanguages = Provider.of<UserProvider>(context, listen: false)
+            .userObject
+            .selectedLanguages ??
+        [];
 
     if (selectedLanguages.isEmpty || selectedLanguages == []) {
       await getMovieList(dashBoardProvider, selectedType, ["English"]);
@@ -339,25 +347,6 @@ class _HomePageState extends State<HomePage>
     }
   }
 
-  double _itemExtent(BuildContext context) {
-    if (!mounted) return MovieCard.itemExtent;
-    if (Theme.of(context).platform == TargetPlatform.iOS) {
-      final screenWidth = MediaQuery.of(context).size.width;
-      final iosCardWidth = (screenWidth - 16) * 0.62;
-      return iosCardWidth + 8.0;
-    }
-    return MovieCard.itemExtent;
-  }
-
-  double _itemWidth(BuildContext context) {
-    if (!mounted) return MovieCard.itemWidth;
-    if (Theme.of(context).platform == TargetPlatform.iOS) {
-      final screenWidth = MediaQuery.of(context).size.width;
-      return (screenWidth - 16) * 0.62;
-    }
-    return MovieCard.itemWidth;
-  }
-
   int? _primaryVisibleIndexForRow(
     ScrollController controller,
     int itemCount,
@@ -375,10 +364,9 @@ class _HomePageState extends State<HomePage>
     final realItemCount = items?.length ?? itemCount;
     if (realItemCount <= 0) return null;
 
-    final extent = _itemExtent(context);
-    final width = _itemWidth(context);
-
     final viewStart = controller.offset;
+    final extent = MovieCard.cardExtentFor(context);
+    final cardW = MovieCard.cardWidthFor(context);
     final viewEnd = viewStart + viewport;
     final firstCandidate = math.max(
       0,
@@ -405,13 +393,12 @@ class _HomePageState extends State<HomePage>
 
       final hasTrailer = items != null &&
           candidate < items.length &&
-          (items[candidate].trailerUrl?.trim().isNotEmpty ?? false);
+          items[candidate].hasValidTrailer;
       if (!hasTrailer) {
         continue;
       }
 
-      final visibility =
-          (overlap / width).clamp(0.0, 1.0).toDouble();
+      final visibility = (overlap / cardW).clamp(0.0, 1.0).toDouble();
       _logHomeAutoPlay(
         'Visibility Percentage index=$candidate '
         '${(visibility * 100).toStringAsFixed(0)}%',
@@ -431,9 +418,9 @@ class _HomePageState extends State<HomePage>
     if (bestIndex == null && isAtEnd) {
       final lastPlayableIndex = _lastPlayableIndex(items);
       if (lastPlayableIndex != null) {
-        final overlap = _visibleOverlap(viewStart, viewEnd, lastPlayableIndex, extent);
-        final visibility =
-            (overlap / width).clamp(0.0, 1.0).toDouble();
+        final overlap =
+            _visibleOverlap(viewStart, viewEnd, lastPlayableIndex, extent);
+        final visibility = (overlap / cardW).clamp(0.0, 1.0).toDouble();
         _logHomeAutoPlay(
           'End-of-list visibility index=$lastPlayableIndex '
           '${(visibility * 100).toStringAsFixed(0)}%',
@@ -450,17 +437,18 @@ class _HomePageState extends State<HomePage>
   int? _lastPlayableIndex(List<Content>? items) {
     if (items == null || items.isEmpty) return null;
     for (int index = items.length - 1; index >= 0; index--) {
-      if (items[index].trailerUrl?.trim().isNotEmpty ?? false) {
+      if (items[index].hasValidTrailer) {
         return index;
       }
     }
     return null;
   }
 
-  double _visibleOverlap(double viewStart, double viewEnd, int index, [double? customExtent]) {
-    final extent = customExtent ?? MovieCard.itemExtent;
-    final itemStart = index * extent;
-    final itemEnd = itemStart + extent;
+  double _visibleOverlap(double viewStart, double viewEnd, int index,
+      [double? extent]) {
+    final itemExtent = extent ?? MovieCard.cardExtentFor(context);
+    final itemStart = index * itemExtent;
+    final itemEnd = itemStart + itemExtent;
     final overlap = math.min(viewEnd, itemEnd) - math.max(viewStart, itemStart);
     return overlap <= 0 ? 0 : overlap;
   }
@@ -549,11 +537,6 @@ class _HomePageState extends State<HomePage>
         notifier.value = null;
       }
     }
-    if (_continueWatchActiveIndex.value != null) {
-      _continueWatchActiveIndex.value = null;
-    }
-    MovieCard.stopActiveTrailerPreview(reason);
-    ContinueWatchMovieCard.stopActiveTrailerPreview(reason);
     _logHomeAutoPlay('Video Stopped: $reason');
   }
 
@@ -575,6 +558,7 @@ class _HomePageState extends State<HomePage>
     var selectedThemeData = themeProvider.getTheme;
 
     return Scaffold(
+      backgroundColor: selectedThemeData.scaffoldBackgroundColor,
       body: isLoading
           ? HomeShimmer()
           : CustomScrollView(
@@ -582,337 +566,293 @@ class _HomePageState extends State<HomePage>
               slivers: [
                 _buildSliverAppBar(context, selectedThemeData),
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Consumer<DashboardProvider>(
-                        builder: (context, dashboardProvider, child) {
+                  child: Consumer<DashboardProvider>(
+                    builder: (context, dashboardProvider, child) {
                       final showContentLoader = dashboardProvider.isLoading &&
                           (ContentType.isMovieLike(selectedType) ||
                               ContentType.isSeries(selectedType));
-                      final showContinueWatchLoader =
-                          dashboardProvider.isLoadingContinueWatching &&
-                              dashboardProvider.continueWatchedMovies.isEmpty;
 
                       return Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(
-                            height: 5,
-                          ),
-                          if (ResponsiveWidget.isTabletOrTv(context) &&
-                              selectedType != 'MINI SERIES' &&
-                              selectedType != 'MADIOO')
-                            _buildTvHeroSlider(
-                              context,
-                              selectedThemeData,
-                              dashboardProvider,
-                            ),
                           if (!widget.lockContentType)
-                            Theme.of(context).platform == TargetPlatform.iOS
-                                ? _buildIosCategoryTabs(
-                                    context, dashboardProvider)
-                                : SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: _buildFilterButtons(
-                                        context, dashboardProvider),
+                            Container(
+                              color: selectedThemeData.scaffoldBackgroundColor,
+                              width: double.infinity,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 8.0),
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10.0),
+                                child: _buildFilterButtons(
+                                    context, dashboardProvider),
+                              ),
+                            ),
+                          const SizedBox(height: 6),
+                          if (selectedType != 'MINI SERIES' &&
+                              selectedType != 'MADIOO')
+                            _isOffline
+                                ? _continueWatchShimmerWidget()
+                                : continueWatchWidget(
+                                    continueWatchList: dashboardProvider
+                                        .continueWatchedMovies),
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 10.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (ResponsiveWidget.isTabletOrTv(context) &&
+                                    selectedType != 'MINI SERIES' &&
+                                    selectedType != 'MADIOO')
+                                  _buildTvHeroSlider(
+                                    context,
+                                    selectedThemeData,
+                                    dashboardProvider,
                                   ),
-                          SizedBox(
-                            height:
-                                Theme.of(context).platform == TargetPlatform.iOS
-                                    ? 14
-                                    : 20,
-                          ),
-                          showContentLoader
-                              ? _buildDashboardSectionLoader(
-                                  context,
-                                  selectedThemeData,
-                                )
-                              : Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    selectedType == 'MINI SERIES' ||
-                                            selectedType == 'MADIOO'
-                                        ? SizedBox.shrink()
-                                        : _isOffline
-                                            ? _continueWatchShimmerWidget()
-                                            : showContinueWatchLoader
-                                                ? _continueWatchShimmerWidget()
-                                                : continueWatchWidget(
-                                                    continueWatchList:
-                                                        dashboardProvider
-                                                            .continueWatchedMovies),
-                                    selectedType == 'MINI SERIES'
-                                        ? ShortsLibraryPage(
-                                            useParentScroll: true)
-                                        : selectedType == 'MADIOO'
-                                            ? MadiooPage(useParentScroll: true)
-                                            : ListView.builder(
-                                                shrinkWrap: true,
-                                                physics:
-                                                    NeverScrollableScrollPhysics(),
-                                                padding: EdgeInsets.zero,
-                                                scrollDirection: Axis.vertical,
-                                                itemCount: dashboardProvider
-                                                    .dashboardData.length,
-                                                itemBuilder: (context, index) {
-                                                  DashboardData dashboardData =
-                                                      dashboardProvider
-                                                          .dashboardData[index];
-
-                                                  _rowControllers.putIfAbsent(
-                                                      index,
-                                                      () => ScrollController());
-                                                  _rowActiveIndexes.putIfAbsent(
-                                                      index,
-                                                      () => ValueNotifier<int?>(
-                                                          null));
-                                                  _rowItemCounts[index] =
-                                                      dashboardData
-                                                              .movies?.length ??
-                                                          0;
-                                                  _rowItems[index] =
-                                                      dashboardData.movies ??
-                                                          const <Content>[];
-                                                  _scheduleVisibleUpdate();
-                                                  _rowKeys.putIfAbsent(
-                                                      index, () => GlobalKey());
-
-                                                  final controller =
-                                                      _rowControllers[index]!;
-                                                  final activeIndex =
-                                                      _rowActiveIndexes[index]!;
-                                                  final rowKey =
-                                                      _rowKeys[index]!;
-                                                  final rowIndex = index;
-
-                                                  // Attach listener only once.
-                                                  if (!controller
-                                                      .hasListeners) {
-                                                    controller.addListener(() {
-                                                      _scheduleVisibleUpdate();
-
-                                                      if (controller.position
-                                                              .pixels >=
-                                                          controller.position
-                                                                  .maxScrollExtent -
-                                                              200) {
-                                                        if (_userId != null) {
+                                const SizedBox(height: 8),
+                                showContentLoader
+                                    ? _buildDashboardSectionLoader(
+                                        context,
+                                        selectedThemeData,
+                                      )
+                                    : Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          selectedType == 'MINI SERIES'
+                                              ? ShortsLibraryPage(
+                                                  useParentScroll: true)
+                                              : selectedType == 'MADIOO'
+                                                  ? MadiooPage(
+                                                      useParentScroll: true)
+                                                  : ListView.builder(
+                                                      shrinkWrap: true,
+                                                      physics:
+                                                          NeverScrollableScrollPhysics(),
+                                                      padding: EdgeInsets.zero,
+                                                      scrollDirection:
+                                                          Axis.vertical,
+                                                      itemCount:
                                                           dashboardProvider
-                                                              .loadMoreRowData(
-                                                                  dashboardData,
-                                                                  selectedType,
-                                                                  _userId!)
-                                                              .whenComplete(
-                                                                  _scheduleVisibleUpdate);
+                                                              .dashboardData
+                                                              .length,
+                                                      itemBuilder:
+                                                          (context, index) {
+                                                        DashboardData
+                                                            dashboardData =
+                                                            dashboardProvider
+                                                                    .dashboardData[
+                                                                index];
+
+                                                        _rowControllers.putIfAbsent(
+                                                            index,
+                                                            () =>
+                                                                ScrollController());
+                                                        _rowActiveIndexes
+                                                            .putIfAbsent(
+                                                                index,
+                                                                () => ValueNotifier<
+                                                                        int?>(
+                                                                    null));
+                                                        _rowItemCounts[index] =
+                                                            dashboardData.movies
+                                                                    ?.length ??
+                                                                0;
+                                                        _rowItems[index] =
+                                                            dashboardData
+                                                                    .movies ??
+                                                                const <Content>[];
+                                                        _scheduleVisibleUpdate();
+                                                        _rowKeys.putIfAbsent(
+                                                            index,
+                                                            () => GlobalKey());
+
+                                                        final controller =
+                                                            _rowControllers[
+                                                                index]!;
+                                                        final activeIndex =
+                                                            _rowActiveIndexes[
+                                                                index]!;
+                                                        final rowKey =
+                                                            _rowKeys[index]!;
+
+                                                        // Attach listener only once.
+                                                        if (!controller
+                                                            .hasListeners) {
+                                                          controller
+                                                              .addListener(() {
+                                                            _scheduleVisibleUpdate();
+
+                                                            if (controller
+                                                                    .position
+                                                                    .pixels >=
+                                                                controller
+                                                                        .position
+                                                                        .maxScrollExtent -
+                                                                    200) {
+                                                              if (_userId !=
+                                                                  null) {
+                                                                dashboardProvider
+                                                                    .loadMoreRowData(
+                                                                        dashboardData,
+                                                                        selectedType,
+                                                                        _userId!)
+                                                                    .whenComplete(
+                                                                        _scheduleVisibleUpdate);
+                                                              }
+                                                            }
+                                                          });
                                                         }
-                                                      }
-                                                    });
-                                                  }
 
-                                                  return KeyedSubtree(
-                                                    key: rowKey,
-                                                    child: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        (dashboardData.movies ==
-                                                                    null ||
-                                                                dashboardData
-                                                                    .movies!
-                                                                    .isEmpty)
-                                                            ? SizedBox.shrink()
-                                                            : InkWell(
-                                                                splashColor: Colors
-                                                                    .transparent,
-                                                                onTap: () {
-                                                                  Navigator
-                                                                      .push(
-                                                                    context,
-                                                                    MaterialPageRoute(
-                                                                      builder:
-                                                                          (_) =>
-                                                                              CategoryContentPage(
-                                                                        categoryTitle:
-                                                                            "${dashboardData.language} - ${dashboardData.category}",
-                                                                        contents:
-                                                                            dashboardData.movies ??
-                                                                                [],
-                                                                      ),
-                                                                    ),
-                                                                  );
-                                                                },
-                                                                child: Row(
-                                                                  children: [
-                                                                    Expanded(
-                                                                      child:
-                                                                          Text(
-                                                                        "${dashboardData.language} - ${dashboardData.category}",
-                                                                        overflow:
-                                                                            TextOverflow.ellipsis,
-                                                                        style: GoogleFonts
-                                                                            .inter(
-                                                                          fontSize: ResponsiveWidget.isMobile(context)
-                                                                              ? 18
-                                                                              : 20,
-                                                                          fontWeight:
-                                                                              FontWeight.bold,
-                                                                          color:
-                                                                              selectedThemeData.canvasColor,
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                                    if (Theme.of(context)
-                                                                            .platform ==
-                                                                        TargetPlatform
-                                                                            .iOS) ...[
-                                                                      Text(
-                                                                        "See All",
-                                                                        style:
-                                                                            TextStyle(
-                                                                          fontSize:
-                                                                              14,
-                                                                          fontWeight:
-                                                                              FontWeight.bold,
-                                                                          color:
-                                                                              selectedThemeData.primaryColor,
-                                                                        ),
-                                                                      ),
-                                                                      const SizedBox(
-                                                                          width:
-                                                                              4),
-                                                                      Icon(
-                                                                        Icons
-                                                                            .arrow_forward_ios,
-                                                                        size:
-                                                                            13,
-                                                                        color: selectedThemeData
-                                                                            .primaryColor,
-                                                                      ),
-                                                                    ] else ...[
-                                                                      Icon(
-                                                                        Icons
-                                                                            .arrow_forward_ios,
-                                                                        size:
-                                                                            18,
-                                                                        color: selectedThemeData
-                                                                            .primaryColor,
-                                                                      ),
-                                                                      SizedBox(
-                                                                        width:
-                                                                            3,
-                                                                      )
-                                                                    ],
-                                                                  ],
-                                                                ),
-                                                              ),
-                                                        (dashboardData.movies ==
-                                                                    null ||
-                                                                dashboardData
-                                                                    .movies!
-                                                                    .isEmpty)
-                                                            ? SizedBox.shrink()
-                                                            : Builder(
-                                                                builder:
-                                                                    (context) {
-                                                                  final isIOS = Theme.of(
-                                                                              context)
-                                                                          .platform ==
-                                                                      TargetPlatform
-                                                                          .iOS;
-                                                                  final screenWidth =
-                                                                      MediaQuery.of(
-                                                                              context)
-                                                                          .size
-                                                                          .width;
-                                                                  final iosCardWidth =
-                                                                      (screenWidth -
-                                                                              16) *
-                                                                          0.62;
-                                                                  final iosRowHeight =
-                                                                      (iosCardWidth *
-                                                                              9 /
-                                                                              16) +
-                                                                          72;
-
-                                                                  return SizedBox(
-                                                                    height: isIOS
-                                                                        ? iosRowHeight
-                                                                        : 270,
-                                                                    child: ListView
-                                                                        .builder(
-                                                                      controller:
-                                                                          controller,
-                                                                      scrollDirection:
-                                                                          Axis.horizontal,
-                                                                      itemCount: dashboardData
-                                                                              .movies!
-                                                                              .length +
-                                                                          (dashboardData.isRowLoading
-                                                                              ? 1
-                                                                              : 0),
-                                                                      itemBuilder:
-                                                                          (context,
-                                                                              i) {
-                                                                        if (i <
-                                                                            dashboardData
-                                                                                .movies!.length) {
-                                                                          return MovieCard(
-                                                                            movie:
-                                                                                dashboardData.movies![i],
-                                                                            index:
-                                                                                i,
-                                                                            cardWidth: isIOS
-                                                                                ? iosCardWidth
-                                                                                : null,
-                                                                            cardMargin: isIOS
-                                                                                ? 4.0
-                                                                                : null,
-                                                                            isShortFilmTab:
-                                                                                ContentType.normalize(selectedType) == ContentType.shortFilm,
-                                                                            activeIndexListenable:
-                                                                                activeIndex,
-                                                                          );
-                                                                        } else if (dashboardData
-                                                                            .isRowLoading) {
-                                                                          return Padding(
-                                                                            padding:
-                                                                                const EdgeInsets.all(12),
-                                                                            child:
-                                                                                SizedBox(
-                                                                              width: 40,
-                                                                              height: 40,
-                                                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                                        return KeyedSubtree(
+                                                          key: rowKey,
+                                                          child: Column(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            children: [
+                                                              (dashboardData.movies ==
+                                                                          null ||
+                                                                      dashboardData
+                                                                          .movies!
+                                                                          .isEmpty)
+                                                                  ? SizedBox
+                                                                      .shrink()
+                                                                  : InkWell(
+                                                                      splashColor:
+                                                                          Colors
+                                                                              .transparent,
+                                                                      onTap:
+                                                                          () {
+                                                                        Navigator
+                                                                            .push(
+                                                                          context,
+                                                                          MaterialPageRoute(
+                                                                            builder: (_) =>
+                                                                                CategoryContentPage(
+                                                                              categoryTitle: "${dashboardData.language} - ${dashboardData.category}",
+                                                                              contents: dashboardData.movies ?? [],
                                                                             ),
-                                                                          );
-                                                                        } else {
-                                                                          return const SizedBox
-                                                                              .shrink();
-                                                                        }
+                                                                          ),
+                                                                        );
                                                                       },
+                                                                      child:
+                                                                          Padding(
+                                                                        padding: const EdgeInsets
+                                                                            .symmetric(
+                                                                            horizontal:
+                                                                                4.0,
+                                                                            vertical:
+                                                                                8.0),
+                                                                        child:
+                                                                            Row(
+                                                                          children: [
+                                                                            Expanded(
+                                                                              child: Text(
+                                                                                "${dashboardData.language} - ${dashboardData.category}",
+                                                                                overflow: TextOverflow.ellipsis,
+                                                                                style: GoogleFonts.inter(
+                                                                                  fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
+                                                                                  fontWeight: FontWeight.bold,
+                                                                                  color: selectedThemeData.canvasColor,
+                                                                                ),
+                                                                              ),
+                                                                            ),
+                                                                            Row(
+                                                                              mainAxisSize: MainAxisSize.min,
+                                                                              children: [
+                                                                                Text(
+                                                                                  "See All",
+                                                                                  style: GoogleFonts.inter(
+                                                                                    fontSize: 14,
+                                                                                    fontWeight: FontWeight.bold,
+                                                                                    color: const Color(0xFFE50914),
+                                                                                  ),
+                                                                                ),
+                                                                                const SizedBox(width: 4),
+                                                                                const Icon(
+                                                                                  Icons.arrow_forward_ios_rounded,
+                                                                                  size: 12,
+                                                                                  color: Color(0xFFE50914),
+                                                                                ),
+                                                                              ],
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      ),
                                                                     ),
-                                                                  );
-                                                                },
-                                                              ),
-                                                        (dashboardData.movies ==
-                                                                    null ||
-                                                                dashboardData
-                                                                    .movies!
-                                                                    .isEmpty)
-                                                            ? SizedBox.shrink()
-                                                            : SizedBox(
-                                                                height: 20),
-                                                      ],
+                                                              (dashboardData.movies ==
+                                                                          null ||
+                                                                      dashboardData
+                                                                          .movies!
+                                                                          .isEmpty)
+                                                                  ? SizedBox
+                                                                      .shrink()
+                                                                  : SizedBox(
+                                                                      height: MovieCard
+                                                                          .standardHeight,
+                                                                      child: ListView
+                                                                          .builder(
+                                                                        controller:
+                                                                            controller,
+                                                                        scrollDirection:
+                                                                            Axis.horizontal,
+                                                                        //padding: EdgeInsets.zero,
+                                                                        itemCount: dashboardData.movies!.length +
+                                                                            (dashboardData.isRowLoading
+                                                                                ? 1
+                                                                                : 0),
+                                                                        itemBuilder:
+                                                                            (context,
+                                                                                i) {
+                                                                          if (i <
+                                                                              dashboardData.movies!.length) {
+                                                                            return MovieCard(
+                                                                                movie: dashboardData.movies![i],
+                                                                                index: i,
+                                                                                isShortFilmTab: ContentType.normalize(selectedType) == ContentType.shortFilm,
+                                                                                activeIndexListenable: activeIndex);
+                                                                          } else if (dashboardData.isRowLoading) {
+                                                                            return Padding(
+                                                                              padding: const EdgeInsets.all(12),
+                                                                              child: SizedBox(
+                                                                                width: 40,
+                                                                                height: 40,
+                                                                                child: CircularProgressIndicator(strokeWidth: 2),
+                                                                              ),
+                                                                            );
+                                                                          } else {
+                                                                            return const SizedBox.shrink();
+                                                                          }
+                                                                        },
+                                                                      ),
+                                                                    ),
+                                                              (dashboardData.movies ==
+                                                                          null ||
+                                                                      dashboardData
+                                                                          .movies!
+                                                                          .isEmpty)
+                                                                  ? SizedBox
+                                                                      .shrink()
+                                                                  : SizedBox(
+                                                                      height:
+                                                                          20),
+                                                            ],
+                                                          ),
+                                                        );
+                                                      },
                                                     ),
-                                                  );
-                                                },
-                                              ),
-                                  ],
-                                ),
+                                        ],
+                                      ),
+                              ],
+                            ),
+                          ),
                         ],
                       );
-                    }),
+                    },
                   ),
                 ),
               ],
@@ -985,12 +925,13 @@ class _HomePageState extends State<HomePage>
                         Image.network(
                           imageUrl,
                           fit: BoxFit.cover,
+                          alignment: Alignment.topCenter,
                           errorBuilder: (_, __, ___) => Container(
                             color: theme.cardColor,
                             alignment: Alignment.center,
                             child: Icon(
                               Icons.movie_creation_outlined,
-                              color: theme.canvasColor.withValues(alpha: 0.5),
+                              color: theme.canvasColor.withOpacity(0.5),
                               size: 72,
                             ),
                           ),
@@ -1077,7 +1018,7 @@ class _HomePageState extends State<HomePage>
                           decoration: BoxDecoration(
                             color: active
                                 ? Colors.white
-                                : Colors.white.withValues(alpha: 0.35),
+                                : Colors.white.withOpacity(0.35),
                             borderRadius: BorderRadius.circular(999),
                           ),
                         );
@@ -1103,7 +1044,7 @@ class _HomePageState extends State<HomePage>
       borderRadius: 999,
       scale: 1.1,
       child: Material(
-        color: Colors.black.withValues(alpha: 0.42),
+        color: Colors.black.withOpacity(0.42),
         shape: const CircleBorder(),
         child: InkWell(
           customBorder: const CircleBorder(),
@@ -1230,7 +1171,7 @@ class _HomePageState extends State<HomePage>
             const SizedBox(width: 12),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: 0.14),
+                backgroundColor: Colors.white.withOpacity(0.14),
                 foregroundColor: Colors.white,
                 minimumSize: const Size(118, 48),
                 shape: RoundedRectangleBorder(
@@ -1251,15 +1192,13 @@ class _HomePageState extends State<HomePage>
   }
 
   void _openContentDetails(Content item) {
-    if (item.id == null) return;
-    _clearHomeAutoPlay('open hero details');
     final type = item.type?.toLowerCase();
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => type == 'series'
             ? SeriesDetailsPage(
-                seriesId: item.id!,
+                seriesId: item.id ?? 0,
                 content: item,
               )
             : MovieDetailsPage(
@@ -1280,167 +1219,28 @@ class _HomePageState extends State<HomePage>
     if (items.isEmpty) {
       return const SizedBox.shrink();
     }
-    if (Theme.of(context).platform == TargetPlatform.iOS) {
-      return IosContinueWatchBanner(items: items);
-    }
-    var theme = Theme.of(context);
-
-    _continueWatchItemCount = items.length;
-    _continueWatchItems = items;
-    if (!_continueWatchListenerAttached) {
-      _continueWatchListenerAttached = true;
-      _continueWatchController.addListener(() {
-        _scheduleVisibleUpdate();
-      });
-    }
-
-    _scheduleVisibleUpdate();
 
     return KeyedSubtree(
       key: _continueWatchKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Label
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
-            child: Text(
-              "Continue Watching",
-              style: GoogleFonts.inter(
-                fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
-                fontWeight: FontWeight.bold,
-                color: theme.canvasColor,
-              ),
-            ),
-          ),
-
-          // Horizontal list
-          SizedBox(
-            height: 220, //270,
-            child: ListView.builder(
-              controller: _continueWatchController,
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.zero,
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                final item = items[index];
-
-                // return SizedBox(
-                //   width: MovieCard.itemExtent,
-                //   child: MovieCard(
-                //     movie: item,
-                //     index: index,
-                //     activeIndexListenable: _continueWatchActiveIndex,
-                //   ),
-                // );
-                return SizedBox(
-                  width: ContinueWatchMovieCard.itemExtent,
-                  child: ContinueWatchMovieCard(
-                    movie: item,
-                    index: index,
-                    isShortFilmTab: ContentType.normalize(selectedType) ==
-                        ContentType.shortFilm,
-                    enableTrailerPreview: false,
-                  ),
-                );
-              },
-            ),
-          ),
-          SizedBox(height: 20),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 20.0),
+        child: ContinueWatchingBanner(
+          items: items,
+          selectedType: selectedType,
+          onPlaybackFinished: () {
+            if (mounted) {
+              setState(() {});
+            }
+          },
+        ),
       ),
     );
   }
 
   Widget _continueWatchShimmerWidget() {
-    final theme = Theme.of(context);
-    final itemCount = ResponsiveWidget.isMobile(context)
-        ? 2
-        : ResponsiveWidget.isDesktop(context)
-            ? 5
-            : 3;
-
-    _continueWatchItemCount = 0;
-    _continueWatchItems = const <Content>[];
-    if (_continueWatchActiveIndex.value != null) {
-      _continueWatchActiveIndex.value = null;
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-          child: ShimmerLoader(
-            width: ResponsiveWidget.isMobile(context) ? 170 : 220,
-            height: ResponsiveWidget.isMobile(context) ? 18 : 20,
-            borderRadius: 8,
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 220,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: EdgeInsets.zero,
-            itemCount: itemCount,
-            itemBuilder: (context, index) {
-              return Container(
-                width: ContinueWatchMovieCard.itemExtent,
-                margin: const EdgeInsets.only(right: 12),
-                decoration: BoxDecoration(
-                  color: theme.cardColor.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(12),
-                        ),
-                        child: ShimmerLoader(
-                          width: double.infinity,
-                          height: double.infinity,
-                          borderRadius: 0,
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const ShimmerLoader(
-                            width: double.infinity,
-                            height: 6,
-                            borderRadius: 6,
-                          ),
-                          const SizedBox(height: 10),
-                          ShimmerLoader(
-                            width: ContinueWatchMovieCard.itemExtent * 0.62,
-                            height: 14,
-                            borderRadius: 6,
-                          ),
-                          const SizedBox(height: 8),
-                          ShimmerLoader(
-                            width: ContinueWatchMovieCard.itemExtent * 0.4,
-                            height: 10,
-                            borderRadius: 6,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 20),
-      ],
+    return const Padding(
+      padding: EdgeInsets.only(bottom: 20.0),
+      child: ContinueWatchingBannerShimmer(),
     );
   }
 
@@ -1451,163 +1251,129 @@ class _HomePageState extends State<HomePage>
   //   return width / posterRatio;
   // }
 
+  Widget _buildCircleGlassButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+    FeatureTourStepId? tourStepId,
+  }) {
+    Widget button = Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.black.withOpacity(0.15),
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            icon,
+            size: 20,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+
+    if (tourStepId != null) {
+      return FeatureTourTarget(id: tourStepId, child: button);
+    }
+    return button;
+  }
+
   SliverAppBar _buildSliverAppBar(
       BuildContext context, ThemeData selectedThemeData) {
     final lang = AppLocalizations.of(context)!;
-    final useTransparentAppBar = !ResponsiveWidget.isMobile(context);
 
     return SliverAppBar(
       automaticallyImplyLeading: false,
-      forceMaterialTransparency: useTransparentAppBar,
-      // expandedHeight: bannerHeight(context),
+      forceMaterialTransparency: false,
       floating: false,
       pinned: true,
       stretch: true,
       surfaceTintColor: Colors.transparent,
-      backgroundColor: useTransparentAppBar
-          ? selectedThemeData.scaffoldBackgroundColor
-          : selectedThemeData.primaryColor,
-      title: useTransparentAppBar
-          ? Text(
-              "",
-              style: TextStyle(
-                color: selectedThemeData.canvasColor,
-                fontWeight: FontWeight.bold,
+      backgroundColor: selectedThemeData.primaryColor,
+      title: Align(
+        alignment: Alignment.centerLeft,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    NavigationPage(),
+                transitionDuration: Duration.zero,
+                reverseTransitionDuration: Duration.zero,
               ),
-            )
-          : SizedBox(
-              width: 70,
-              height: 70,
-              /*   decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white),
-              ), */
-              child: Hero(
-                tag: "logo",
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.pushReplacement(
-                      context,
-                      PageRouteBuilder(
-                        pageBuilder: (context, animation, secondaryAnimation) =>
-                            NavigationPage(),
-                        transitionDuration: Duration.zero,
-                        reverseTransitionDuration: Duration.zero,
-                      ),
-                    );
-                  },
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.asset(
-                      ImageConstant.logo,
-                      width: 75,
-                      height: 75,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ),
-              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 0),
+            child: Image.asset(
+              ImageConstant.logo,
+              height: 70.0,
+              fit: BoxFit.contain,
+              alignment: Alignment.centerLeft,
             ),
-
-      titleSpacing: 10,
+          ),
+        ),
+      ),
+      titleSpacing: 12,
       actions: [
-        //LanguageDropdown(),
-        FeatureTourTarget(
-          id: FeatureTourStepId.search,
-          child: IconButton(
-            icon: Icon(Icons.search,
-                color: useTransparentAppBar
-                    ? selectedThemeData.canvasColor
-                    : Colors.white),
-            tooltip: lang.search,
-            style: IconButton.styleFrom(
-                backgroundColor: useTransparentAppBar
-                    ? Colors.white.withValues(alpha: 0.3)
-                    : Colors.black.withValues(alpha: 0.2)),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => SearchPage()),
+        _buildCircleGlassButton(
+          icon: Icons.search,
+          tooltip: lang.search,
+          tourStepId: FeatureTourStepId.search,
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => SearchPage()),
+          ),
+        ),
+        const SizedBox(width: 6),
+        _buildCircleGlassButton(
+          icon: Icons.notifications_none,
+          tooltip: lang.notification,
+          tourStepId: FeatureTourStepId.notifications,
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => NotificationPage()),
+          ),
+        ),
+        const SizedBox(width: 6),
+        _buildCircleGlassButton(
+          icon: Icons.language,
+          tooltip: lang.selectPreferredLanguage,
+          tourStepId: FeatureTourStepId.language,
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ChangeLanguage(),
             ),
           ),
         ),
-        SizedBox(
-          width: 4,
-        ),
-        FeatureTourTarget(
-          id: FeatureTourStepId.notifications,
-          child: IconButton(
-            icon: Icon(Icons.notifications_active,
-                color: useTransparentAppBar
-                    ? selectedThemeData.canvasColor
-                    : Colors.white),
-            tooltip: lang.notification,
-            style: IconButton.styleFrom(
-                backgroundColor: useTransparentAppBar
-                    ? Colors.white.withValues(alpha: 0.3)
-                    : Colors.black.withValues(alpha: 0.2)),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => NotificationPage()),
-            ),
-          ),
-        ),
-        SizedBox(
-          width: 4,
-        ),
-        FeatureTourTarget(
-          id: FeatureTourStepId.language,
-          child: IconButton(
-            tooltip: lang.selectPreferredLanguage,
-            style: IconButton.styleFrom(
-              backgroundColor: useTransparentAppBar
-                  ? Colors.white.withValues(alpha: 0.3)
-                  : Colors.black.withValues(alpha: 0.2),
-            ),
-            icon: Icon(Icons.language_sharp,
-                color: useTransparentAppBar
-                    ? selectedThemeData.canvasColor
-                    : Colors.white),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ChangeLanguage(),
-              ),
-            ),
-          ),
-        ),
-
-        SizedBox(
-          width: 4,
-        ),
+        const SizedBox(width: 6),
         Consumer<UserProvider>(builder: (context, userProvider, child) {
           final walletProvider =
               Provider.of<WalletProvider>(context, listen: false);
 
-          final user = userProvider.userObject;
           return Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              FeatureTourTarget(
-                id: FeatureTourStepId.wallet,
-                child: IconButton(
-                  icon: Icon(Icons.account_balance_wallet,
-                      color: useTransparentAppBar
-                          ? selectedThemeData.canvasColor
-                          : Colors.white),
-                  tooltip:
-                      "₹ ${walletProvider.walletBalance.toStringAsFixed(2)}",
-                  style: IconButton.styleFrom(
-                      backgroundColor: useTransparentAppBar
-                          ? Colors.white.withValues(alpha: 0.3)
-                          : Colors.black.withValues(alpha: 0.2)),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => WalletPage()),
-                  ),
+              _buildCircleGlassButton(
+                icon: Icons.account_balance_wallet_outlined,
+                tooltip: "₹ ${walletProvider.walletBalance.toStringAsFixed(2)}",
+                tourStepId: FeatureTourStepId.wallet,
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => WalletPage()),
                 ),
               ),
-              SizedBox(
-                width: 4,
-              ),
+              const SizedBox(width: 6),
               FeatureTourTarget(
                 id: FeatureTourStepId.profile,
                 child: Tooltip(
@@ -1622,52 +1388,45 @@ class _HomePageState extends State<HomePage>
                       Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) =>
-                                  const ProfilePage(showBackButton: true)));
+                              builder: (context) => ProfilePage()));
                     },
-                    child: Hero(
-                      tag: "profile",
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white,
-                            width: 1,
-                          ),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white,
+                          width: 1.5,
                         ),
-                        child: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: selectedThemeData.canvasColor,
-                          child: ClipOval(
-                            child: Builder(
-                              builder: (_) {
-                                final profilePhotoUrl =
-                                    normalizeNetworkImageUrl(
-                                  userProvider.userObj.profilePhoto,
-                                );
-                                if (profilePhotoUrl.isEmpty) {
-                                  return Image.asset(
-                                    ImageConstant.profile,
-                                    width: 36,
-                                    height: 36,
-                                    fit: BoxFit.cover,
-                                  );
-                                }
-                                return Image.network(
-                                  profilePhotoUrl,
-                                  width: 36,
-                                  height: 36,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Image.asset(
-                                    ImageConstant.profile,
-                                    width: 36,
-                                    height: 36,
-                                    fit: BoxFit.cover,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
+                      ),
+                      child: ClipOval(
+                        child: Builder(
+                          builder: (_) {
+                            final profilePhotoUrl = normalizeNetworkImageUrl(
+                              userProvider.userObj.profilePhoto,
+                            );
+                            if (profilePhotoUrl.isEmpty) {
+                              return Image.asset(
+                                ImageConstant.profile,
+                                width: 36,
+                                height: 36,
+                                fit: BoxFit.cover,
+                              );
+                            }
+                            return Image.network(
+                              profilePhotoUrl,
+                              width: 36,
+                              height: 36,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Image.asset(
+                                ImageConstant.profile,
+                                width: 36,
+                                height: 36,
+                                fit: BoxFit.cover,
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -1677,298 +1436,28 @@ class _HomePageState extends State<HomePage>
             ],
           );
         }),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
       ],
-      // flexibleSpace: FlexibleSpaceBar(
-      //   stretchModes: const [
-      //     StretchMode.zoomBackground,
-      //     StretchMode.fadeTitle,
-      //   ],
-      //   background: Stack(
-      //     children: [
-      //       // Base fallback
-      //       Positioned.fill(
-      //         child: Container(
-      //           color: selectedThemeData.scaffoldBackgroundColor,
-      //         ),
-      //       ),
-
-      //       // Banner carousel
-      //       Positioned.fill(
-      //         child: trendingMovieList.isEmpty
-      //             ? const SizedBox.shrink()
-      //             : PageView.builder(
-      //                 controller: _pageController,
-      //                 itemCount: trendingMovieList.length,
-      //                 onPageChanged: (i) {
-      //                   setState(() => _currentPage = i);
-      //                 },
-      //                 itemBuilder: (context, index) {
-      //                   final poster = trendingMovieList[index].posterUrlList;
-      //                   return poster != null && poster.isNotEmpty
-      //                       ? Image.network(
-      //                           poster.first,
-      //                           fit: BoxFit.cover,
-      //                           errorBuilder: (_, __, ___) => Container(
-      //                             color: Colors.black12,
-      //                             child: const Icon(Icons.broken_image),
-      //                           ),
-      //                         )
-      //                       : const SizedBox.shrink();
-      //                 },
-      //               ),
-      //       ),
-
-      //       // Hotstar-style dark gradient
-      //       Positioned.fill(
-      //         child: Container(
-      //           decoration: const BoxDecoration(
-      //             gradient: LinearGradient(
-      //               begin: Alignment.topCenter,
-      //               end: Alignment.bottomCenter,
-      //               colors: [
-      //                 Color.fromARGB(120, 0, 0, 0),
-      //                 Color.fromARGB(60, 0, 0, 0),
-      //                 Colors.transparent,
-      //                 Color.fromARGB(180, 0, 0, 0),
-      //               ],
-      //             ),
-      //           ),
-      //         ),
-      //       ),
-
-      //       if (trendingMovieList.isNotEmpty) ...[
-      //         // Bottom-left content
-      //         Positioned(
-      //           left: 16,
-      //           right: ResponsiveWidget.isMobile(context) ? 150 : 360,
-      //           bottom: 16,
-      //           child: Column(
-      //             crossAxisAlignment: CrossAxisAlignment.start,
-      //             children: [
-      //               Text(
-      //                 trendingMovieList[_currentPage].title ?? '',
-      //                 maxLines: 1,
-      //                 overflow: TextOverflow.ellipsis,
-      //                 style: TextStyle(
-      //                   color: Colors.white,
-      //                   fontSize: ResponsiveWidget.isMobile(context) ? 20 : 24,
-      //                   fontWeight: FontWeight.w700,
-      //                 ),
-      //               ),
-      //               const SizedBox(height: 4),
-      //               Row(
-      //                 children: [
-      //                   StarRatingWidget(
-      //                     rating: double.parse(
-      //                       (trendingMovieList[_currentPage].ratings ?? 0)
-      //                           .toStringAsFixed(1),
-      //                     ),
-      //                   ),
-      //                   const SizedBox(width: 8),
-      //                   Text(
-      //                     (trendingMovieList[_currentPage]
-      //                                 .genreList
-      //                                 ?.isNotEmpty ??
-      //                             false)
-      //                         ? trendingMovieList[_currentPage]
-      //                             .genreList!
-      //                             .join(', ')
-      //                         : 'N/A',
-      //                     style: const TextStyle(
-      //                       color: Colors.white70,
-      //                       fontWeight: FontWeight.bold,
-      //                       fontSize: 11,
-      //                     ),
-      //                     maxLines: 1,
-      //                     overflow: TextOverflow.ellipsis,
-      //                   ),
-      //                 ],
-      //               ),
-      //               const SizedBox(height: 4),
-      //               Row(
-      //                 crossAxisAlignment: CrossAxisAlignment.center,
-      //                 children: [
-      //                   Text(
-      //                     (trendingMovieList[_currentPage]
-      //                                 .languageList
-      //                                 ?.isNotEmpty ??
-      //                             false)
-      //                         ? trendingMovieList[_currentPage]
-      //                             .languageList!
-      //                             .map((e) => e.language)
-      //                             .join(', ')
-      //                         : 'N/A',
-      //                     style: const TextStyle(
-      //                       color: Colors.white,
-      //                       fontSize: 11,
-      //                       fontWeight: FontWeight.bold,
-      //                     ),
-      //                     maxLines: 1,
-      //                     overflow: TextOverflow.ellipsis,
-      //                   ),
-      //                   Text(
-      //                     ' | ',
-      //                     style: TextStyle(
-      //                       color: selectedThemeData.primaryColor,
-      //                       fontSize: 14,
-      //                       fontWeight: FontWeight.bold,
-      //                     ),
-      //                     maxLines: 1,
-      //                     overflow: TextOverflow.ellipsis,
-      //                   ),
-      //                   Text(
-      //                     "${trendingMovieList[_currentPage].runtime ?? 'xx min'} min",
-      //                     style: const TextStyle(
-      //                       color: Colors.white,
-      //                       fontSize: 11,
-      //                       fontWeight: FontWeight.bold,
-      //                     ),
-      //                     maxLines: 1,
-      //                     overflow: TextOverflow.ellipsis,
-      //                   ),
-      //                   Text(
-      //                     ' | ',
-      //                     style: TextStyle(
-      //                       color: selectedThemeData.primaryColor,
-      //                       fontSize: 14,
-      //                       fontWeight: FontWeight.bold,
-      //                     ),
-      //                     maxLines: 1,
-      //                     overflow: TextOverflow.ellipsis,
-      //                   ),
-      //                   Text(
-      //                     "${trendingMovieList[_currentPage].releaseDate ?? 'NA'}",
-      //                     style: const TextStyle(
-      //                       color: Colors.white,
-      //                       fontSize: 11,
-      //                       fontWeight: FontWeight.bold,
-      //                     ),
-      //                     maxLines: 1,
-      //                     overflow: TextOverflow.ellipsis,
-      //                   ),
-      //                 ],
-      //               ),
-      //               const SizedBox(height: 4),
-      //               Text(
-      //                 trendingMovieList[_currentPage].description ?? '',
-      //                 maxLines: 2,
-      //                 overflow: TextOverflow.ellipsis,
-      //                 style: const TextStyle(
-      //                   color: Colors.white70,
-      //                   fontSize: 11,
-      //                 ),
-      //               ),
-      //             ],
-      //           ),
-      //         ),
-
-      //         // Bottom-right button
-      //         Positioned(
-      //           right: 16,
-      //           bottom: 48,
-      //           child: GestureDetector(
-      //             onTap: () => Navigator.push(
-      //               context,
-      //               MaterialPageRoute(
-      //                 builder: (context) => trendingMovieList[_currentPage]
-      //                             .type!
-      //                             .toLowerCase() ==
-      //                         'movie'
-      //                     ? MovieDetailsPage(
-      //                         movieId: trendingMovieList[_currentPage].id!,
-      //                       )
-      //                     : SeriesDetailsPage(
-      //                         seriesId: trendingMovieList[_currentPage].id ?? 0,
-      //                         content: trendingMovieList[_currentPage],
-      //                       ),
-      //               ),
-      //             ),
-      //             child: Container(
-      //               decoration: BoxDecoration(
-      //                 borderRadius: BorderRadius.circular(
-      //                   10,
-      //                 ),
-      //                 color: selectedThemeData.primaryColor.withOpacity(0.9),
-      //               ),
-      //               child: Padding(
-      //                 padding: EdgeInsets.symmetric(
-      //                   vertical: 8.0,
-      //                   horizontal: 16,
-      //                 ),
-      //                 child: Text(
-      //                   "Watch",
-      //                   style: TextStyle(
-      //                     fontSize: 14,
-      //                     fontWeight: FontWeight.bold,
-      //                     color: Colors.white,
-      //                   ),
-      //                 ),
-      //               ),
-      //             ),
-      //           ),
-      //           // child: GestureDetector(
-      //           //   onTap: () {},
-      //           //   child: Container(
-      //           //     padding:
-      //           //         const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      //           //     decoration: BoxDecoration(
-      //           //       color: selectedThemeData.primaryColor,
-      //           //       borderRadius: BorderRadius.circular(6),
-      //           //     ),
-      //           //     child: Text(
-      //           //       trendingMovieList[_currentPage].isRental == true
-      //           //           ? (trendingMovieList[_currentPage]
-      //           //                       .type
-      //           //                       ?.toLowerCase() ==
-      //           //                   "movie"
-      //           //               ? lang.watchMovie
-      //           //               : lang.watchSeries)
-      //           //           : "Rs ${trendingMovieList[_currentPage].price}",
-      //           //       style: const TextStyle(
-      //           //         color: Colors.white,
-      //           //         fontSize: 14,
-      //           //         fontWeight: FontWeight.w600,
-      //           //       ),
-      //           //     ),
-      //           //   ),
-      //           // ),
-      //         ),
-      //       ],
-      //     ],
-      //   ),
-      // ),
     );
   }
 
-  Widget _buildIosCategoryTabs(
+  Widget _buildFilterButtons(
       BuildContext context, DashboardProvider dashboardProvider) {
-    var themeProvider = Provider.of<ThemeProvider>(context, listen: true);
-    var selectedThemeData = themeProvider.getTheme;
-
-    const tabs = [
-      (ContentType.movie, 'Movies'),
-      (ContentType.shortFilm, 'Short Film'),
-      (ContentType.series, 'Series'),
-      (ContentType.miniSeries, 'Mini Series'),
-    ];
-
-    return Row(
-      children: tabs.map((tab) {
-        final type = tab.$1;
-        final label = tab.$2;
-        final isSelected =
-            ContentType.normalize(selectedType) == ContentType.normalize(type);
-
-        return Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2.5),
+    final lang = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          ...ContentType.homeTypes,
+        ].map((type) {
+          final isSelected = selectedType == type;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8.0),
             child: GestureDetector(
               onTap: () async {
-                if (ContentType.normalize(selectedType) ==
-                    ContentType.normalize(type)) {
-                  return;
-                }
+                if (selectedType == type) return;
                 setState(() {
                   selectedType = type;
                   _resetRowState();
@@ -1989,126 +1478,42 @@ class _HomePageState extends State<HomePage>
                   await getMovieList(
                       dashboardProvider, selectedType, selectedLanguages);
                 }
-                if (mounted) {
-                  _scheduleVisibleUpdate();
-                }
               },
-              child: Container(
-                height: 36,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? selectedThemeData.primaryColor
-                      : Colors.black,
+                      ? theme.primaryColor
+                      : theme.cardColor,
                   border: Border.all(
                     color: isSelected
-                        ? selectedThemeData.primaryColor
-                        : Colors.white24,
+                        ? theme.primaryColor
+                        : theme.dividerColor.withOpacity(0.2),
                     width: 1,
                   ),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                alignment: Alignment.center,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.w500,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildFilterButtons(
-      BuildContext context, DashboardProvider dashboardProvider) {
-    final lang = AppLocalizations.of(context)!;
-    var themeProvider = Provider.of<ThemeProvider>(context, listen: true);
-    var selectedThemeData = themeProvider.getTheme;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: [
-        ...ContentType.homeTypes,
-      ].map((type) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4.0),
-          child: GestureDetector(
-            onTap: () async {
-              if (selectedType == type) return;
-              setState(() {
-                selectedType = type;
-                _resetRowState();
-              });
-              final selectedLanguages =
-                  Provider.of<UserProvider>(context, listen: false)
-                          .userObject
-                          .selectedLanguages ??
-                      []; // Ensure it doesn't throw null
-
-              if (selectedType == 'MINI SERIES') {
-                return;
-              }
-              if (selectedType == 'MADIOO') {
-                return;
-              }
-              if (selectedLanguages.isEmpty || selectedLanguages == []) {
-                await getMovieList(
-                    dashboardProvider, selectedType, ["Hindi", "English"]);
-              } else {
-                await getMovieList(
-                    dashboardProvider, selectedType, selectedLanguages);
-              }
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                color: selectedType == type
-                    ? selectedThemeData.primaryColor
-                    : Colors.transparent,
-                border: Border.all(
-                  color: selectedType == type
-                      ? selectedThemeData.primaryColor
-                      : selectedThemeData.canvasColor.withValues(alpha: 0.6),
-                ),
-                borderRadius: BorderRadius.circular(
-                  10,
-                ),
-              ),
-              child: Padding(
                 padding:
-                    const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                    const EdgeInsets.symmetric(vertical: 8, horizontal: 18),
                 child: Text(
                   type == ContentType.movie
                       ? lang.movie
                       : type == ContentType.series
                           ? lang.series
                           : ContentType.displayLabel(type),
-                  style: TextStyle(
-                    color: selectedType == type
+                  style: GoogleFonts.inter(
+                    color: isSelected
                         ? Colors.white
-                        : selectedThemeData.primaryColor,
-                    fontWeight: selectedType == type
-                        ? FontWeight.bold
-                        : FontWeight.w600,
+                        : theme.canvasColor,
+                    fontSize: 14,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                   ),
                 ),
               ),
             ),
-          ),
-          //
-        );
-      }).toList(),
+          );
+        }).toList(),
+      ),
     );
   }
 
@@ -2138,14 +1543,14 @@ class _HomePageState extends State<HomePage>
               ),
               const SizedBox(height: 12),
               SizedBox(
-                height: 300,
+                height: MovieCard.standardHeight,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: cardCount,
                   itemBuilder: (context, index) {
                     return Container(
-                      width: MovieCard.itemWidth,
+                      width: MovieCard.cardWidthFor(context),
                       margin: const EdgeInsets.all(MovieCard.itemMargin),
                       decoration: BoxDecoration(
                         color:
@@ -2211,14 +1616,12 @@ class _HomePageState extends State<HomePage>
       String selectedType, List<String> langList) async {
     final localSharePreferences = LocalSharePreferences();
     final user = await localSharePreferences.getUser();
-    if (user != null) {
-      log('User in getMovieList method ${user.firstName} ');
-      unawaited(dashBoardProvider.getContinueWatchedMovieList(selectedType));
+    log('User in getMovieList method ${user?.firstName} ');
+    await dashBoardProvider.getContinueWatchedMovieList(selectedType);
+
+    if (user?.id != null) {
       await dashBoardProvider.getDashboardData(
-          selectedType, langList, user.id!);
-    } else {
-      unawaited(dashBoardProvider.getContinueWatchedMovieList(selectedType));
-      await dashBoardProvider.getDashboardData(selectedType, langList, 1);
+          selectedType, langList, user!.id!);
     }
   }
 
@@ -2234,8 +1637,7 @@ class _HomePageState extends State<HomePage>
     final userProvider = Provider.of<UserProvider>(context, listen: false);
 
     if (userProvider.emailController.text.trim().isEmpty) {
-      userProvider.emailController.text =
-          userProvider.userObject.emailId ?? "";
+      userProvider.emailController.text = userProvider.userObject.emailId ?? "";
     }
     // Set age from userObject.age if present, or infer from dob if existing user has dob
     if (userProvider.ageController.text.trim().isEmpty) {
@@ -2544,7 +1946,8 @@ class _HomePageState extends State<HomePage>
                             isSubmitting = true;
                           });
 
-                          print("[DOB POPUP] Submitting birth month and year popup...");
+                          print(
+                              "[DOB POPUP] Submitting birth month and year popup...");
                           var result = await provider.updateUserDetails();
                           print("[DOB POPUP] Update API result: $result");
                           if (!dialogCtx.mounted) return;
@@ -2554,7 +1957,8 @@ class _HomePageState extends State<HomePage>
                             await prefs.setBool('isLoggedIn', true);
 
                             if (provider.userObject.id != null) {
-                              await provider.getUserById(provider.userObject.id!);
+                              await provider
+                                  .getUserById(provider.userObject.id!);
                             }
 
                             await StagedRegistrationService.instance
@@ -2566,7 +1970,8 @@ class _HomePageState extends State<HomePage>
                             if (provider.refferedByController.text
                                 .trim()
                                 .isNotEmpty) {
-                              await ReferralService.instance.clearReferralCode();
+                              await ReferralService.instance
+                                  .clearReferralCode();
                             }
 
                             if (context.mounted) {
@@ -2762,8 +2167,7 @@ class _HomePageState extends State<HomePage>
                                 provider.firstNameController.text = firstName;
                                 provider.lastNameController.text = lastName;
 
-                                var result =
-                                    await provider.updateUserDetails();
+                                var result = await provider.updateUserDetails();
                                 if (!dialogCtx.mounted) return;
 
                                 if (result['success'] == true) {
@@ -3064,9 +2468,9 @@ class _HomePageState extends State<HomePage>
                                     Navigator.of(dialogCtx).pop();
                                   } else {
                                     setDialogState(() {
-                                      locationError = saveResult['message']
-                                              ?.toString() ??
-                                          'Failed to save location';
+                                      locationError =
+                                          saveResult['message']?.toString() ??
+                                              'Failed to save location';
                                     });
                                   }
                                 } else {

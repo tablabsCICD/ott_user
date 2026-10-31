@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/services/gift_deep_link_service.dart';
 import 'package:ott/app/core/services/session_manager.dart';
 import 'package:ott/app/core/utils/image_url_utils.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
@@ -117,6 +118,7 @@ class _NavigationPageState extends State<NavigationPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       DeepLinkService.instance.consumePendingNavigation();
+      GiftDeepLinkService.instance.checkAndProcessPendingGift(context);
       final tourProvider = context.read<OnboardingTourProvider>();
       if (widget.startAppTourOnHome) {
         tourProvider.replayTour(context: context);
@@ -196,6 +198,14 @@ class _NavigationPageState extends State<NavigationPage> {
                 backgroundColor: selectedThemeData.scaffoldBackgroundColor,
                 selectedItemColor: selectedThemeData.primaryColor,
                 unselectedItemColor: selectedThemeData.canvasColor,
+                selectedIconTheme: IconThemeData(
+                  color: selectedThemeData.primaryColor,
+                  size: 26,
+                ),
+                unselectedIconTheme: IconThemeData(
+                  color: selectedThemeData.canvasColor.withOpacity(0.76),
+                  size: 24,
+                ),
                 showSelectedLabels: true,
                 showUnselectedLabels: false,
                 items: [
@@ -394,7 +404,7 @@ class _NavigationPageState extends State<NavigationPage> {
     VoidCallback? onTap,
   }) {
     final selectedThemeData =
-        Provider.of<ThemeProvider>(context, listen: false).getTheme;
+        Provider.of<ThemeProvider>(context).getTheme;
     final isSelected = index == _currentIndex &&
         (homeContentType == null || homeContentType == _homeContentType);
     void handleTap() {

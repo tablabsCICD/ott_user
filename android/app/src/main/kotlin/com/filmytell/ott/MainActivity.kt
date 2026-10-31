@@ -50,8 +50,18 @@ class MainActivity : FlutterActivity() {
                 "deviceIntegrity" -> {
                     result.success(
                         mapOf(
-                            "rootedOrJailbroken" to isRootedDevice(),
+                            "rooted" to isRootedDevice(),
+                            "jailbroken" to false,
+                            "emulator" to isEmulator(),
                             "screenCaptured" to false
+                        )
+                    )
+                }
+                "deviceIdentity" -> {
+                    result.success(
+                        mapOf(
+                            "deviceName" to "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}".trim(),
+                            "osVersion" to "Android ${android.os.Build.VERSION.RELEASE}"
                         )
                     )
                 }

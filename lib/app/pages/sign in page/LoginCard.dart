@@ -19,10 +19,24 @@ import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sms_autofill/sms_autofill.dart';
+import 'package:ott/app/core/constant/prefrense_constant.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/referral_service.dart';
+import 'package:ott/app/core/services/gift_deep_link_service.dart';
 
 class LoginCard extends StatefulWidget {
-  const LoginCard({super.key});
+  final String? initialReferralCode;
+  final String? initialGiftCode;
+  final bool? isGiftFlow;
+  final bool? isReferralFlow;
+
+  const LoginCard({
+    super.key,
+    this.initialReferralCode,
+    this.initialGiftCode,
+    this.isGiftFlow,
+    this.isReferralFlow,
+  });
 
   @override
   State<LoginCard> createState() => _LoginCardState();
@@ -57,9 +71,12 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
   Timer? _otpAutoFillTimeoutTimer;
   final Stopwatch _screenLoadWatch = Stopwatch();
   String? _pendingReferralCode;
+  String? _pendingGiftCode;
 
   String selectedCode = '+91';
   final List<String> countryCodes = ['+91', '+1', '+44', '+61', '+971'];
+
+  bool _hasInitializedCodes = false;
 
   @override
   void initState() {
@@ -68,7 +85,6 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     _screenLoadWatch.start();
     _mobileFocusNode.addListener(_handleInputFocusChanged);
     _otpFocusNode.addListener(_handleInputFocusChanged);
-    _checkPendingReferralCode();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (kDebugMode) {
         log(
@@ -81,6 +97,15 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         _mobileFocusNode.requestFocus();
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasInitializedCodes) {
+      _hasInitializedCodes = true;
+      _initializePendingCodes();
+    }
   }
 
   @override
@@ -101,16 +126,206 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     super.dispose();
   }
 
-  Future<void> _checkPendingReferralCode() async {
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
-      await ReferralService.instance.checkDeferredInstallReferrer();
+  Future<void> _initializePendingCodes() async {
+    // 1. Explicit widget parameters take highest precedence
+    if (widget.isGiftFlow == true ||
+        (widget.initialGiftCode != null &&
+            widget.initialGiftCode!.trim().isNotEmpty)) {
+      final code = widget.initialGiftCode?.trim() ??
+          await GiftDeepLinkService.instance.getPendingGiftCode();
+      if (mounted) {
+        setState(() {
+          _pendingGiftCode = code;
+          _pendingReferralCode = null;
+        });
+      }
+      await ReferralService.instance.clearReferralCode();
+      return;
     }
-    final code = await ReferralService.instance.getPendingReferralCode();
-    if (mounted && code != _pendingReferralCode) {
+
+    if (widget.isReferralFlow == true ||
+        (widget.initialReferralCode != null &&
+            widget.initialReferralCode!.trim().isNotEmpty)) {
+      final code = widget.initialReferralCode?.trim() ??
+          await ReferralService.instance.getPendingReferralCode();
+      if (mounted) {
+        setState(() {
+          _pendingReferralCode = code;
+          _pendingGiftCode = null;
+        });
+      }
+      await GiftDeepLinkService.instance.clearPendingGiftCode();
+      return;
+    }
+
+    // 2. Check route arguments/settings if available
+    final routeSettings = ModalRoute.of(context)?.settings;
+    final routeArgs = routeSettings?.arguments;
+    if (routeArgs is Map) {
+      if (routeArgs['isGiftFlow'] == true ||
+          routeArgs['flow'] == 'gift' ||
+          routeArgs['giftCode'] != null) {
+        final code = routeArgs['giftCode']?.toString().trim() ??
+            await GiftDeepLinkService.instance.getPendingGiftCode();
+        if (mounted) {
+          setState(() {
+            _pendingGiftCode = code;
+            _pendingReferralCode = null;
+          });
+        }
+        await ReferralService.instance.clearReferralCode();
+        return;
+      }
+      if (routeArgs['isReferralFlow'] == true ||
+          routeArgs['flow'] == 'referral' ||
+          routeArgs['referralCode'] != null) {
+        final code = routeArgs['referralCode']?.toString().trim() ??
+            await ReferralService.instance.getPendingReferralCode();
+        if (mounted) {
+          setState(() {
+            _pendingReferralCode = code;
+            _pendingGiftCode = null;
+          });
+        }
+        await GiftDeepLinkService.instance.clearPendingGiftCode();
+        return;
+      }
+    }
+
+    // 3. Check DeepLinkService active target (deferred install or last runtime target)
+    final pendingTarget =
+        await DeepLinkService.instance.getPendingDeepLinkTarget();
+    final lastTarget = DeepLinkService.instance.lastProcessedTarget;
+    final activeTarget = pendingTarget ?? lastTarget;
+
+    if (activeTarget != null) {
+      if (activeTarget.type == DeepLinkContentType.gift) {
+        var gift = activeTarget.couponCode ??
+            await GiftDeepLinkService.instance.getPendingGiftCode();
+        if (gift != null &&
+            await GiftDeepLinkService.instance.isGiftCodeClaimed(gift)) {
+          await GiftDeepLinkService.instance.clearPendingGiftCode();
+          gift = null;
+        }
+        if (mounted) {
+          setState(() {
+            _pendingGiftCode = gift;
+            _pendingReferralCode = null;
+          });
+        }
+        await ReferralService.instance.clearReferralCode();
+        return;
+      } else if (activeTarget.type == DeepLinkContentType.register) {
+        final ref = activeTarget.referralCode ??
+            await ReferralService.instance.getPendingReferralCode();
+        if (mounted) {
+          setState(() {
+            _pendingReferralCode = ref;
+            _pendingGiftCode = null;
+          });
+        }
+        await GiftDeepLinkService.instance.clearPendingGiftCode();
+        return;
+      }
+    }
+
+    // 4. Retrieve stored codes from persistent storage
+    var storedRef = await ReferralService.instance.getPendingReferralCode();
+    var storedGift = await GiftDeepLinkService.instance.getPendingGiftCode();
+
+    if (storedGift != null &&
+        await GiftDeepLinkService.instance.isGiftCodeClaimed(storedGift)) {
+      await GiftDeepLinkService.instance.clearPendingGiftCode();
+      storedGift = null;
+    }
+
+    // Check if route name indicates registration
+    if (routeSettings?.name == '/register') {
+      if (mounted) {
+        setState(() {
+          _pendingReferralCode = storedRef;
+          _pendingGiftCode = null;
+        });
+      }
+      return;
+    }
+
+    // 5. Evaluate stored codes
+    if (storedRef != null && storedGift != null) {
+      // 5A. Identical code in both storage locations (due to install referrer capturing both)
+      if (storedRef.trim().toUpperCase() == storedGift.trim().toUpperCase()) {
+        final singleCode = storedGift.trim();
+        if (_isCanonicalGiftCode(singleCode)) {
+          // Canonical Gift code (starts with GF)
+          storedGift = singleCode;
+          storedRef = null;
+          await ReferralService.instance.clearReferralCode();
+        } else {
+          // Canonical Referral code
+          storedRef = singleCode;
+          storedGift = null;
+          await GiftDeepLinkService.instance.clearPendingGiftCode();
+        }
+      } else {
+        // 5B. Stored codes are different. Determine which one is the active link.
+        final prefs = await SharedPreferences.getInstance();
+        final lastGiftUri = prefs.getString(
+          SharedPreferencesConstant.lastProcessedGiftUri,
+        );
+        final giftMatchesUri = lastGiftUri != null &&
+            lastGiftUri.toUpperCase().contains(storedGift.toUpperCase());
+
+        if (giftMatchesUri) {
+          // Gift link was explicitly processed
+          storedRef = null;
+          await ReferralService.instance.clearReferralCode();
+        } else if (_isCanonicalReferralCode(storedRef) &&
+            !_isCanonicalGiftCode(storedRef)) {
+          // Referral link takes precedence
+          storedGift = null;
+          await GiftDeepLinkService.instance.clearPendingGiftCode();
+        } else {
+          storedRef = null;
+        }
+      }
+    } else if (storedRef != null && storedGift == null) {
+      // 6. Only storedRef exists. Check if it was actually a gift code mis-saved as referral code
+      if (_isCanonicalGiftCode(storedRef)) {
+        storedGift = storedRef;
+        storedRef = null;
+        await ReferralService.instance.clearReferralCode();
+        await GiftDeepLinkService.instance.savePendingGiftCode(storedGift);
+      }
+    } else if (storedGift != null && storedRef == null) {
+      // 7. Only storedGift exists. Check if it was actually a referral code mis-saved as gift code
+      if (_isCanonicalReferralCode(storedGift) &&
+          !_isCanonicalGiftCode(storedGift)) {
+        storedRef = storedGift;
+        storedGift = null;
+        await GiftDeepLinkService.instance.clearPendingGiftCode();
+        await ReferralService.instance.saveReferralCode(storedRef);
+      }
+    }
+
+    if (mounted) {
       setState(() {
-        _pendingReferralCode = code;
+        _pendingReferralCode = storedRef;
+        _pendingGiftCode = storedGift;
       });
     }
+  }
+
+  static bool _isCanonicalGiftCode(String? code) {
+    if (code == null) return false;
+    final trimmed = code.trim().toUpperCase();
+    return RegExp(r'^GF[A-Z0-9]{8,24}$').hasMatch(trimmed);
+  }
+
+  static bool _isCanonicalReferralCode(String? code) {
+    if (code == null) return false;
+    final trimmed = code.trim().toUpperCase();
+    if (trimmed.startsWith('FILMY') || trimmed.contains('-')) return true;
+    return !_isCanonicalGiftCode(code);
   }
 
   @override
@@ -211,41 +426,33 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            SizedBox(
-                              height: ResponsiveWidget.isMobile(context)
-                                  ? 90
-                                  : 130,
-                              child: Hero(
-                                tag: "logo",
-                                child: ClipRRect(
-                                  borderRadius:
-                                      BorderRadiusGeometry.circular(25),
-                                  child: Image.asset(
-                                    ImageConstant.logo,
-                                    fit: BoxFit.contain,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(
-                              height: ResponsiveWidget.isMobile(context)
-                                  ? 20
-                                  : 24,
-                            ),
-                            ConstrainedBox(
-                              constraints:
-                                  const BoxConstraints(maxWidth: 400),
-                              child: Card(
-                                elevation: 6,
-                                color: theme.cardColor,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
+                SizedBox(
+                  height: ResponsiveWidget.isMobile(context) ? 90 : 130,
+                  child: Hero(
+                    tag: "logo",
+                    child: ClipRRect(
+                      borderRadius: BorderRadiusGeometry.circular(25),
+                      child: Image.asset(
+                        ImageConstant.logo,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  height: ResponsiveWidget.isMobile(context) ? 24 : 24,
+                ),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: Card(
+                    elevation: 6,
+                    color: theme.cardColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 32,
-                      ),
+                          horizontal: 24, vertical: 32),
                       child: FocusTraversalGroup(
                         policy: OrderedTraversalPolicy(),
                         child: Form(
@@ -260,11 +467,10 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                     IconButton(
                                       onPressed: () {
                                         Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => LoginCard(),
-                                          ),
-                                        );
+                                            context,
+                                            MaterialPageRoute(
+                                                builder: (context) =>
+                                                    LoginCard()));
                                       },
                                       icon: Icon(
                                         Icons.arrow_back_ios_new_sharp,
@@ -281,21 +487,17 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              if (_pendingReferralCode != null) ...[
+                              if (_pendingGiftCode != null) ...[
                                 const SizedBox(height: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
+                                      horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: theme.primaryColor
-                                        .withValues(alpha: 0.12),
+                                    color: theme.primaryColor.withOpacity(0.12),
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: theme.primaryColor.withValues(
-                                        alpha: 0.3,
-                                      ),
+                                      color:
+                                          theme.primaryColor.withOpacity(0.3),
                                     ),
                                   ),
                                   child: Row(
@@ -307,12 +509,51 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                         color: theme.primaryColor,
                                       ),
                                       const SizedBox(width: 6),
-                                      Text(
-                                        'Referral Code: $_pendingReferralCode',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: theme.primaryColor,
+                                      Flexible(
+                                        child: Text(
+                                          'Gift Code: $_pendingGiftCode',
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.primaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ] else if (_pendingReferralCode != null) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: theme.primaryColor.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color:
+                                          theme.primaryColor.withOpacity(0.3),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.card_giftcard,
+                                        size: 16,
+                                        color: theme.primaryColor,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          'Referral Code: $_pendingReferralCode',
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.primaryColor,
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -355,9 +596,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                       ],
                                       textInputAction: TextInputAction.done,
                                       onChanged: (value) {
-                                        _mobileNumberForOtp = _digitsOnly(
-                                          value,
-                                        ).trim();
+                                        _mobileNumberForOtp =
+                                            _digitsOnly(value).trim();
                                       },
                                       onFieldSubmitted: (_) {
                                         if (!isLoading &&
@@ -391,9 +631,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                     FilteringTextInputFormatter.digitsOnly,
                                   ],
                                   onChanged: (phone) {
-                                    _mobileNumberForOtp = _digitsOnly(
-                                      phone.number,
-                                    );
+                                    _mobileNumberForOtp =
+                                        _digitsOnly(phone.number);
                                   },
 
                                   pickerDialogStyle: PickerDialogStyle(
@@ -406,34 +645,37 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                       color: theme.canvasColor,
                                     ),
                                     searchFieldInputDecoration: InputDecoration(
-                                      filled: true,
-                                      fillColor: theme.cardColor,
-                                      counterText: '',
-                                      hintText:
-                                          'Search by country name and code ..',
-                                      hintStyle: const TextStyle(fontSize: 14),
-                                      // Border properties for search in dropdown
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                        borderSide: BorderSide(
-                                          color: Colors.grey[400]!,
-                                        ), // Default border color
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                        borderSide: BorderSide(
-                                          color: Colors.grey[400]!,
-                                        ), // Border color when enabled
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                        borderSide: BorderSide(
-                                          color: theme.primaryColor,
-                                          width: 2,
-                                        ), // Border color when focused
-                                      ),
-                                      prefixIcon: Icon(Icons.search),
-                                    ),
+                                        filled: true,
+                                        fillColor: theme.cardColor,
+                                        counterText: '',
+                                        hintText:
+                                            'Search by country name and code ..',
+                                        hintStyle:
+                                            const TextStyle(fontSize: 14),
+                                        // Border properties for search in dropdown
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                          borderSide: BorderSide(
+                                              color: Colors.grey[
+                                                  400]!), // Default border color
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                          borderSide: BorderSide(
+                                              color: Colors.grey[
+                                                  400]!), // Border color when enabled
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                          borderSide: BorderSide(
+                                              color: theme.primaryColor,
+                                              width:
+                                                  2), // Border color when focused
+                                        ),
+                                        prefixIcon: Icon(Icons.search)),
                                   ),
                                   decoration: _loginInputDecoration(
                                     theme,
@@ -544,9 +786,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                       style: TextStyle(
                                         color: _otpAutoFilled
                                             ? Colors.green
-                                            : theme.canvasColor.withValues(
-                                                alpha: 0.65,
-                                              ),
+                                            : theme.canvasColor
+                                                .withOpacity(0.65),
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -600,12 +841,10 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: theme.primaryColor,
                                         padding: const EdgeInsets.symmetric(
-                                          vertical: 14,
-                                        ),
+                                            vertical: 14),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
                                         ),
                                       ),
                                       child: isLoading
@@ -638,8 +877,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                     ),
                   ),
                 ),
-                            ],
-                          ),
+                          ],
                         ),
                       ),
                     ),
@@ -734,7 +972,11 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
             if (mounted) _showTextInputKeyboard(_otpFocusNode);
           });
         } else {
-          CustomToast.show(context, 'Failure: $message', isSuccess: false);
+          CustomToast.show(
+            context,
+            'Failure: $message',
+            isSuccess: false,
+          );
         }
       } else {
         final otp = _digitsOnly(_otpController.text);
@@ -776,7 +1018,9 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
           final navigationWatch = Stopwatch()..start();
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => NavigationPage()),
+            MaterialPageRoute(
+              builder: (context) => NavigationPage(),
+            ),
           );
           _logOtpPerformance(
             'Post OTP navigation scheduled in ${navigationWatch.elapsedMilliseconds}ms',
@@ -960,9 +1204,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     if (current.length >= maxLength) return;
 
     controller.text = '$current$digit';
-    controller.selection = TextSelection.collapsed(
-      offset: controller.text.length,
-    );
+    controller.selection =
+        TextSelection.collapsed(offset: controller.text.length);
     setState(() {});
   }
 
@@ -973,9 +1216,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     if (current.isEmpty) return;
 
     controller.text = current.substring(0, current.length - 1);
-    controller.selection = TextSelection.collapsed(
-      offset: controller.text.length,
-    );
+    controller.selection =
+        TextSelection.collapsed(offset: controller.text.length);
     setState(() {});
   }
 
@@ -1040,7 +1282,7 @@ class _TvFocusFrame extends StatelessWidget {
               boxShadow: focused
                   ? [
                       BoxShadow(
-                        color: theme.primaryColor.withValues(alpha: 0.32),
+                        color: theme.primaryColor.withOpacity(0.32),
                         blurRadius: 18,
                         offset: const Offset(0, 8),
                       ),
@@ -1104,8 +1346,7 @@ class _TvNumberPad extends StatelessWidget {
               decoration: BoxDecoration(
                 color: theme.cardColor,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                    color: theme.primaryColor.withValues(alpha: 0.55)),
+                border: Border.all(color: theme.primaryColor.withOpacity(0.55)),
               ),
               child: Center(
                 child: key.icon == null
@@ -1128,7 +1369,11 @@ class _TvNumberPad extends StatelessWidget {
 }
 
 class _TvNumberPadKey {
-  const _TvNumberPadKey({this.label, this.icon, required this.onTap});
+  const _TvNumberPadKey({
+    this.label,
+    this.icon,
+    required this.onTap,
+  });
 
   final String? label;
   final IconData? icon;

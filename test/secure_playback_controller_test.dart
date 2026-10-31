@@ -87,7 +87,7 @@ void main() {
     );
     expect(loaded.single.playbackUrl, isNot(controller.originalPlaybackUrl));
     expect(
-      loaded.single.effectiveCookieHeader,
+      loaded.single.cookieHeader,
       'CloudFront-Policy=policy-session-1; '
       'CloudFront-Signature=signature-session-1; '
       'CloudFront-Key-Pair-Id=key-pair',

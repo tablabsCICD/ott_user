@@ -9,6 +9,7 @@ import 'package:ott/app/core/network/anti_piracy_api_client.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/invoice_service.dart';
 import 'package:ott/app/core/services/session_manager.dart';
+import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/provider/secure_playback_controller.dart';
@@ -153,6 +154,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       await InvoiceService.instance.showShareOptions(context, invoice);
     } catch (error) {
       if (!mounted) return;
+
     }
   }
 
@@ -233,13 +235,12 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       }
 
       final secureController = SecurePlaybackController(
-        contentId: updated.partId,
-        originalPlaybackUrl: updated.videoUrl,
-        country: _resolveShortPlaybackCountryCode(),
-        mediaLoader: _loadSecureMedia,
-        pausePlayer: () async => _controller?.pause(),
-        type: "SHORT_PART",
-      );
+          contentId: updated.partId,
+          originalPlaybackUrl: updated.videoUrl,
+          country: _resolveShortPlaybackCountryCode(),
+          mediaLoader: _loadSecureMedia,
+          pausePlayer: () async => _controller?.pause(),
+          type: "SHORT_PART");
       _securePlaybackController = secureController;
       secureController.addListener(_onSecurePlaybackChanged);
       await secureController.start();
@@ -289,12 +290,19 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     SignedPlaybackResponse authorization, {
     required bool isRefresh,
   }) async {
-    final playbackConfig = authorization.toPlaybackConfig();
     final previousState = _controller?.state;
     final position = previousState?.position ?? Duration.zero;
     final wasPlaying = previousState?.playing ?? true;
     final volume = previousState?.volume ?? 100;
     final rate = previousState?.rate ?? 1;
+
+    if (authorization.audioTracks.length > 1 ||
+        authorization.subtitleTracks.length > 1) {
+      SecurityDebugLog.event(
+        'PLAYER',
+        'Multiple supported external tracks were returned for the selected part; only one automatic track will be attached.',
+      );
+    }
 
     final old = _controller;
     _controller = null;
@@ -320,11 +328,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         if (mounted) setState(() {});
       }))
       ..add(player.stream.error.listen((error) {
-        debugPrint('Short media_kit error: $error');
-        if (error.toString().contains('403')) {
-          unawaited(_securePlaybackController?.handlePlayerHttp403());
-          return;
-        }
+
         if (mounted) {
           setState(() {
             _hasVideoError = true;
@@ -334,31 +338,48 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       }));
 
     try {
-      final mediaHeaders = <String, String>{
-        ...playbackConfig.httpHeaders,
-        'User-Agent': 'FilmyTell/1.0',
-      };
-      if (!kIsWeb && playbackConfig.httpHeaders.isNotEmpty) {
-        final nativeHeaderFields = mediaHeaders.entries
-            .map((entry) => '${entry.key}: ${entry.value}')
-            .join('\n');
-        await (player.platform as dynamic).setProperty(
-          'http-header-fields',
-          nativeHeaderFields,
-        );
-      }
       await player.open(
         Media(
-          playbackConfig.playbackUrl,
-          httpHeaders: mediaHeaders,
+          authorization.urlToPlay,
+          httpHeaders: authorization.httpHeaders,
         ),
         play: true,
       );
-      await _applySecurePlaybackTracks(
-        player,
-        audioTracks: playbackConfig.audioTracks,
-        subtitleTracks: playbackConfig.subtitleTracks,
-      );
+      final automaticAudio = getAutomaticAudioTrack(authorization.audioTracks);
+      if (automaticAudio != null) {
+        try {
+          await player.setAudioTrack(
+            AudioTrack.uri(
+              automaticAudio.url,
+              title: automaticAudio.label,
+              language: automaticAudio.language,
+            ),
+          );
+        } catch (_) {
+          SecurityDebugLog.event(
+            'PLAYER',
+            'Automatic external part audio is unsupported; using manifest audio.',
+          );
+        }
+      }
+      final automaticSubtitle =
+          getAutomaticSubtitleTrack(authorization.subtitleTracks);
+      if (automaticSubtitle != null) {
+        try {
+          await player.setSubtitleTrack(
+            SubtitleTrack.uri(
+              automaticSubtitle.url,
+              title: automaticSubtitle.label,
+              language: automaticSubtitle.language,
+            ),
+          );
+        } catch (_) {
+          SecurityDebugLog.event(
+            'PLAYER',
+            'Automatic external part subtitle is unsupported; continuing playback.',
+          );
+        }
+      }
       await player.setVolume(volume);
       if (isRefresh) {
         if (position > Duration.zero) await player.seek(position);
@@ -381,36 +402,6 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       _videoErrorMessage = null;
     });
     return SecureMediaRestoreResult(isPlaying: player.state.playing);
-  }
-
-  Future<void> _applySecurePlaybackTracks(
-    Player player, {
-    required List<PlaybackTrackInfo> audioTracks,
-    required List<PlaybackTrackInfo> subtitleTracks,
-  }) async {
-    final hlsAudioTracks = audioTracks.where((track) => track.isHls).toList();
-    final vttSubtitleTracks =
-        subtitleTracks.where((track) => track.isVtt).toList();
-    if (hlsAudioTracks.isNotEmpty) {
-      final track = hlsAudioTracks.first;
-      await player.setAudioTrack(
-        AudioTrack.uri(
-          track.url,
-          title: track.label.isEmpty ? null : track.label,
-          language: track.language.isEmpty ? null : track.language,
-        ),
-      );
-    }
-    if (vttSubtitleTracks.isNotEmpty) {
-      final track = vttSubtitleTracks.first;
-      await player.setSubtitleTrack(
-        SubtitleTrack.uri(
-          track.url,
-          title: track.label.isEmpty ? null : track.label,
-          language: track.language.isEmpty ? null : track.language,
-        ),
-      );
-    }
   }
 
   Future<void> _changePage(int index) async {
@@ -602,7 +593,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                         Shadow(
                           offset: Offset(2, 2), // x, y
                           blurRadius: 4,
-                          color: Colors.black.withValues(alpha: 0.4),
+                          color: Colors.black.withOpacity(0.4),
                         ),
                       ],
                     ),
@@ -635,7 +626,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                             Shadow(
                               offset: Offset(2, 2), // x, y
                               blurRadius: 4,
-                              color: Colors.black.withValues(alpha: 0.2),
+                              color: Colors.black.withOpacity(0.2),
                             ),
                           ],
                         ),
@@ -654,7 +645,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                               Shadow(
                                 offset: Offset(2, 2), // x, y
                                 blurRadius: 4,
-                                color: Colors.black.withValues(alpha: 0.2),
+                                color: Colors.black.withOpacity(0.2),
                               ),
                             ],
                           ),
@@ -675,7 +666,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                                   Shadow(
                                     offset: Offset(2, 2), // x, y
                                     blurRadius: 4,
-                                    color: Colors.black.withValues(alpha: 0.2),
+                                    color: Colors.black.withOpacity(0.2),
                                   ),
                                 ],
                               ),
@@ -689,7 +680,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                                 Shadow(
                                   offset: Offset(2, 2), // x, y
                                   blurRadius: 4,
-                                  color: Colors.black.withValues(alpha: 0.2),
+                                  color: Colors.black.withOpacity(0.2),
                                 ),
                               ],
                             ),
@@ -711,7 +702,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                                   Shadow(
                                     offset: Offset(2, 2), // x, y
                                     blurRadius: 4,
-                                    color: Colors.black.withValues(alpha: 0.2),
+                                    color: Colors.black.withOpacity(0.2),
                                   ),
                                 ],
                               ),
@@ -725,7 +716,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                                 Shadow(
                                   offset: Offset(2, 2), // x, y
                                   blurRadius: 4,
-                                  color: Colors.black.withValues(alpha: 0.2),
+                                  color: Colors.black.withOpacity(0.2),
                                 ),
                               ],
                             ),
@@ -753,7 +744,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                       Shadow(
                         offset: Offset(2, 2), // x, y
                         blurRadius: 4,
-                        color: Colors.black.withValues(alpha: 0.3),
+                        color: Colors.black.withOpacity(0.3),
                       ),
                     ],
                   ),
@@ -830,7 +821,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                 Shadow(
                   offset: Offset(2, 2), // x, y
                   blurRadius: 4,
-                  color: Colors.black.withValues(alpha: 0.3),
+                  color: Colors.black.withOpacity(0.3),
                 ),
               ],
             ),
@@ -909,7 +900,7 @@ ${short.durationSec ?? ''}
                         Shadow(
                           offset: Offset(2, 2), // x, y
                           blurRadius: 4,
-                          color: Colors.black.withValues(alpha: 0.3),
+                          color: Colors.black.withOpacity(0.3),
                         ),
                       ],
                     ),
@@ -921,7 +912,7 @@ ${short.durationSec ?? ''}
                       Shadow(
                         offset: Offset(2, 2), // x, y
                         blurRadius: 4,
-                        color: Colors.black.withValues(alpha: 0.3),
+                        color: Colors.black.withOpacity(0.3),
                       ),
                     ],
                   ),
@@ -1047,7 +1038,7 @@ ${short.durationSec ?? ''}
                         color: active ? theme.primaryColor : theme.cardColor,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                            color: theme.canvasColor.withValues(alpha: .7)),
+                            color: theme.canvasColor.withOpacity(.7)),
                       ),
                       child: Center(
                         child: Text(
@@ -1059,7 +1050,7 @@ ${short.durationSec ?? ''}
                               Shadow(
                                 offset: Offset(2, 2), // x, y
                                 blurRadius: 4,
-                                color: Colors.black.withValues(alpha: 0.2),
+                                color: Colors.black.withOpacity(0.2),
                               ),
                             ],
                           ),

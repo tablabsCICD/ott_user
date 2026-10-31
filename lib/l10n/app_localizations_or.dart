@@ -394,7 +394,7 @@ class AppLocalizationsOr extends AppLocalizations {
 
   @override
   String get viewersEntertainmentDescription =>
-      'आफ्नो रोजाइका चलचित्र र सिरिजहरू किन्नुहोस् वा उपहार दिनुहोस्। कुनै सदस्यता आवश्यक छैन। अफलाइन हेर्न सामग्री डाउनलोड गर्नुहोस्।';
+      'ଚଳଚ୍ଚିତ୍ର, ସିରିଜ୍, କ୍ଷୁଦ୍ର ଚଳଚ୍ଚିତ୍ର ଭଡ଼ାରେ ନିଅନ୍ତୁ ଏବଂ ଉପହାର ଦିଅନ୍ତୁ। କୌଣସି ସବସ୍କ୍ରିପସନ୍ ନାହିଁ, ବିଜ୍ଞାପନ ନାହିଁ। କେବଳ ଶୁଦ୍ଧ ମନୋରଞ୍ଜନ।';
 
   @override
   String get createAccountMobileOtp =>
@@ -648,4 +648,58 @@ class AppLocalizationsOr extends AppLocalizations {
 
   @override
   String get everyDay => 'हरेक दिन';
+
+  @override
+  String get shortFilm => 'କ୍ଷୁଦ୍ର ଚଳଚ୍ଚିତ୍ର';
+
+  @override
+  String get cookies => 'କୁକିଜ୍';
+
+  @override
+  String get accountDeletion => 'ଖାତା ବିଲୋପ';
+
+  @override
+  String get oneOttEcosystem =>
+      'ଦର୍ଶକ ଏବଂ ନିର୍ମାତାମାନଙ୍କ ପାଇଁ ଏକ OTT ଇକୋସିଷ୍ଟମ୍';
+
+  @override
+  String get oneOttEcosystemDescription =>
+      'ସୁରକ୍ଷିତ ଷ୍ଟ୍ରିମିଂ, ପ୍ରତି-ଚଳଚ୍ଚିତ୍ର ପ୍ରବେଶ, ଉପହାର, ପ୍ରଡକ୍ସନ୍ ହାଉସ୍ ପ୍ରକାଶନ, ପ୍ରମୋଟର୍ ବୃଦ୍ଧି ଉପକରଣ ଏବଂ ମଲ୍ଟି-ଡିଭାଇସ୍ ମନୋରଞ୍ଜନ।';
+
+  @override
+  String get readMore => 'ଅଧିକ ପଢ଼ନ୍ତୁ';
+
+  @override
+  String get readLess => 'କମ୍ ପଢ଼ନ୍ତୁ';
+
+  @override
+  String get step => 'ପଦକ୍ଷେପ';
+
+  @override
+  String get enterEmailAddress => 'ଦୟାକରି ଇମେଲ୍ ପ୍ରବେଶ କରନ୍ତୁ';
+
+  @override
+  String get enterValidEmailAddress => 'ଦୟାକରି ବୈଧ ଇମେଲ୍ ପ୍ରବେଶ କରନ୍ତୁ';
+
+  @override
+  String get enterPhoneNumber => 'ଦୟାକରି ଫୋନ୍ ନମ୍ବର ପ୍ରବେଶ କରନ୍ତୁ';
+
+  @override
+  String get enterValidPhoneNumber => 'ଦୟାକରି ବୈଧ ଫୋନ୍ ନମ୍ବର ପ୍ରବେଶ କରନ୍ତୁ';
+
+  @override
+  String get enterMessage => 'ଦୟାକରି ବାର୍ତ୍ତା ପ୍ରବେଶ କରନ୍ତୁ';
+
+  @override
+  String get emailSentSuccessfully => 'ଇମେଲ୍ ସଫଳତାର ସହିତ ପଠାଗଲା।';
+
+  @override
+  String get failedToSendEmail =>
+      'ଇମେଲ୍ ପଠାଇବାରେ ବିଫଳ ହେଲା। ଦୟାକରି ପୁନର୍ବାର ଚେଷ୍ଟା କରନ୍ତୁ।';
+
+  @override
+  String get message => 'ବାର୍ତ୍ତା';
+
+  @override
+  String get phoneNumber => 'ଫୋନ୍ ନମ୍ବର';
 }

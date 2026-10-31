@@ -74,22 +74,24 @@ class _AnimatedThemeToggleState extends State<AnimatedThemeToggle>
             height: height,
             padding: const EdgeInsets.symmetric(horizontal: 4),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E2230) : const Color(0xFFE2E8F0),
+              color: isDark
+                  ? const Color(0xFF1E2230)
+                  : const Color(0xFFE2E8F0),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: _hovered
-                    ? colors.primaryAccent.withValues(alpha: 0.6)
+                    ? colors.primaryAccent.withOpacity(0.6)
                     : (isDark
-                        ? Colors.white.withValues(alpha: 0.12)
-                        : Colors.black.withValues(alpha: 0.08)),
+                        ? Colors.white.withOpacity(0.12)
+                        : Colors.black.withOpacity(0.08)),
                 width: 1.4,
               ),
               boxShadow: [
                 if (_hovered || isDark)
                   BoxShadow(
                     color: isDark
-                        ? colors.primaryAccent.withValues(alpha: 0.22)
-                        : Colors.black.withValues(alpha: 0.06),
+                        ? colors.primaryAccent.withOpacity(0.22)
+                        : Colors.black.withOpacity(0.06),
                     blurRadius: 12,
                     offset: const Offset(0, 3),
                   ),
@@ -108,7 +110,7 @@ class _AnimatedThemeToggleState extends State<AnimatedThemeToggle>
                         Icons.wb_sunny_rounded,
                         size: widget.compact ? 13 : 15,
                         color: isDark
-                            ? Colors.white.withValues(alpha: 0.28)
+                            ? Colors.white.withOpacity(0.28)
                             : const Color(0xFFF59E0B),
                       ),
                     ),
@@ -119,7 +121,7 @@ class _AnimatedThemeToggleState extends State<AnimatedThemeToggle>
                         size: widget.compact ? 13 : 15,
                         color: isDark
                             ? const Color(0xFF93C5FD)
-                            : Colors.black.withValues(alpha: 0.25),
+                            : Colors.black.withOpacity(0.25),
                       ),
                     ),
                   ],
@@ -128,8 +130,7 @@ class _AnimatedThemeToggleState extends State<AnimatedThemeToggle>
                 AnimatedAlign(
                   duration: const Duration(milliseconds: 320),
                   curve: Curves.easeOutBack,
-                  alignment:
-                      isDark ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment: isDark ? Alignment.centerRight : Alignment.centerLeft,
                   child: AnimatedBuilder(
                     animation: _controller,
                     builder: (context, child) {
@@ -143,10 +144,7 @@ class _AnimatedThemeToggleState extends State<AnimatedThemeToggle>
                             gradient: LinearGradient(
                               colors: isDark
                                   ? const [Color(0xFF3B82F6), Color(0xFF1D4ED8)]
-                                  : const [
-                                      Color(0xFFFBBF24),
-                                      Color(0xFFF59E0B)
-                                    ],
+                                  : const [Color(0xFFFBBF24), Color(0xFFF59E0B)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -155,7 +153,7 @@ class _AnimatedThemeToggleState extends State<AnimatedThemeToggle>
                                 color: (isDark
                                         ? const Color(0xFF3B82F6)
                                         : const Color(0xFFF59E0B))
-                                    .withValues(alpha: 0.45),
+                                    .withOpacity(0.45),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),

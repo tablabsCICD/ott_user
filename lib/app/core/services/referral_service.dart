@@ -8,6 +8,13 @@ import '../constant/prefrense_constant.dart';
 class ReferralService {
   ReferralService._();
 
+  /// Builds a referral URL. Canonical domain is filmytell.com.
+  static String buildReferralUrl(String referralCode, {bool useCanonical = true}) {
+    final host = useCanonical ? "filmytell.com" : "filmytell.in";
+    return "https://" + host + "/register?referralCode=" + Uri.encodeComponent(referralCode.trim());
+  }
+
+
   static final ReferralService instance = ReferralService._();
 
   static const MethodChannel _installReferrerChannel =

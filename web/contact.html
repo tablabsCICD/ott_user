@@ -15,6 +15,33 @@
   <meta property="og:site_name" content="Filmytell">
   <link rel="icon" href="/favicon.png">
   <link rel="stylesheet" href="/static-pages.css">
+  <style>
+    .contact-container {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .enquiry-card {
+      background: linear-gradient(145deg, #151515, #0d0d0d);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 36px 32px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    @media (max-width: 600px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+      .enquiry-card {
+        padding: 24px 18px;
+      }
+    }
+  </style>
 </head>
 
 <body>
@@ -30,71 +57,43 @@
     </nav>
   </header>
   <main>
-    <section class="hero">
-
+    <section class="hero" style="text-align: center; padding: 40px 0 20px;">
       <h1>Contact Us</h1>
-      <p class="lead">Need help with your Filmytell account, playback, purchases, or partnership? Our team is here to
-        assist you.</p>
+      <p class="lead" style="margin: 0 auto;">Send us your enquiry and our team will get back to you.</p>
     </section>
-    <section class="content">
-      <div class="grid" style="margin-bottom: 24px;">
-        <article class="card">
-          <h2>Customer Support</h2>
-          <p>For account, login, playback, and payment assistance:</p>
-          <p><a href="mailto:connect@filmytell.com"
-              style="font-weight: 700; font-size: 1.05rem;">connect@filmytell.com</a></p>
-          <p style="margin-top: 10px; font-size: 0.88rem; color: var(--muted);">We typically respond within 24–48
-            business hours.</p>
-        </article>
-
-        <article class="card">
-          <h2>Partnerships &amp; Creators</h2>
-          <p>Production houses, independent creators, and promoters:</p>
-          <p><a href="mailto:connect@filmytell.com"
-              style="font-weight: 700; font-size: 1.05rem;">connect@filmytell.com</a></p>
-          <p style="margin-top: 10px; font-size: 0.88rem; color: var(--muted);">Subject line: Partner / Creator Inquiry
-          </p>
-        </article>
-      </div>
-
-      <article class="policy-section">
-        <h2>Send Us a Message</h2>
-        <form id="contactForm" onsubmit="handleContactSubmit(event)" style="margin-top: 16px;">
-          <div class="grid" style="margin-bottom: 16px;">
-            <div class="form-group">
+    <section class="content contact-container">
+      <article class="enquiry-card">
+        <form id="contactForm" onsubmit="handleContactSubmit(event)">
+          <div class="form-row">
+            <div class="form-group" style="margin-bottom: 0;">
               <label for="name">Your Name</label>
               <input type="text" id="name" class="form-input" placeholder="Enter your full name" required>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom: 0;">
               <label for="email">Email Address</label>
               <input type="email" id="email" class="form-input" placeholder="name@example.com" required>
             </div>
           </div>
-          <div class="form-group">
-            <label for="subject">Subject</label>
-            <input type="text" id="subject" class="form-input" placeholder="How can we help you?" required>
+          <div class="form-row">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="phone">Phone Number</label>
+              <input type="tel" id="phone" class="form-input" placeholder="+91 98765 43210">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="subject">Subject</label>
+              <input type="text" id="subject" class="form-input" placeholder="How can we help you?" required>
+            </div>
           </div>
           <div class="form-group">
             <label for="message">Message</label>
-            <textarea id="message" class="form-textarea" placeholder="Provide details about your query..."
+            <textarea id="message" class="form-textarea" placeholder="Provide details about your query..." rows="5"
               required></textarea>
           </div>
-          <button type="submit" class="contact-btn">Send Message</button>
-          <p id="formStatus" style="margin-top: 14px; font-weight: 600; display: none;"></p>
+          <div style="text-align: right; margin-top: 24px;">
+            <button type="submit" class="contact-btn" style="width: 100%; max-width: 220px; padding: 14px 28px;">Send Message</button>
+          </div>
+          <p id="formStatus" style="margin-top: 16px; font-weight: 600; text-align: center; display: none;"></p>
         </form>
-      </article>
-
-      <article class="policy-section">
-        <h2>Frequently Requested Topics</h2>
-        <ul class="list">
-          <li><strong>Account &amp; Security:</strong> Login troubleshooting, active device management, account
-            verification.</li>
-          <li><strong>Playback &amp; Streaming:</strong> Video quality, DRM &amp; buffering, offline playback queries.
-          </li>
-          <li><strong>Pay-Per-View:</strong> Movie rentals, pass durations, instant access.</li>
-          <li><strong>Business &amp; Distribution:</strong> Film licensing, producer dashboard access, promoter
-            onboarding.</li>
-        </ul>
       </article>
     </section>
   </main>
@@ -117,13 +116,15 @@
       e.preventDefault();
       var name = document.getElementById('name').value.trim();
       var email = document.getElementById('email').value.trim();
+      var phone = document.getElementById('phone').value.trim();
       var subject = document.getElementById('subject').value.trim();
       var message = document.getElementById('message').value.trim();
       var status = document.getElementById('formStatus');
 
+      var bodyText = 'Name: ' + name + '\nEmail: ' + email + (phone ? '\nPhone: ' + phone : '') + '\n\nMessage:\n' + message;
       var mailtoUrl = 'mailto:connect@filmytell.com' +
-        '?subject=' + encodeURIComponent(subject || 'Support Query from ' + name) +
-        '&body=' + encodeURIComponent('Name: ' + name + '\nEmail: ' + email + '\n\nMessage:\n' + message);
+        '?subject=' + encodeURIComponent(subject || 'Enquiry from ' + name) +
+        '&body=' + encodeURIComponent(bodyText);
 
       window.location.href = mailtoUrl;
 

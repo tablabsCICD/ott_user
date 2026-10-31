@@ -394,7 +394,7 @@ class AppLocalizationsBn extends AppLocalizations {
 
   @override
   String get viewersEntertainmentDescription =>
-      'আপনার পছন্দের সিনেমা ও সিরিজ কিনুন বা উপহার দিন। কোনো সাবস্ক্রিপশন প্রয়োজন নেই। অফলাইনে দেখার জন্য ডাউনলোড করুন।';
+      'সিনেমা, সিরিজ, শর্ট ফিল্ম ভাড়া নিন এবং উপহার দিন। কোনও সাবস্ক্রিপশন নেই, কোনও বিজ্ঞাপন নেই। বিশুদ্ধ বিনোদন।';
 
   @override
   String get createAccountMobileOtp => 'মোবাইল OTP দিয়ে অ্যাকাউন্ট তৈরি করুন';
@@ -644,4 +644,58 @@ class AppLocalizationsBn extends AppLocalizations {
 
   @override
   String get everyDay => 'প্রতিদিন';
+
+  @override
+  String get shortFilm => 'শর্ট ফিল্ম';
+
+  @override
+  String get cookies => 'কুকিজ';
+
+  @override
+  String get accountDeletion => 'অ্যাকাউন্ট মুছে ফেলা';
+
+  @override
+  String get oneOttEcosystem =>
+      'দর্শক এবং নির্মাতাদের জন্য একটি ওটিটি ইকোসিস্টেম';
+
+  @override
+  String get oneOttEcosystemDescription =>
+      'নিরাপদ স্ট্রিমিং, প্রতি-সিনেমা অ্যাক্সেস, উপহার, প্রযোজনা সংস্থা প্রকাশনা, প্রমোটার গ্রোথ টুলস এবং মাল্টি-ডিভাইস বিনোদন।';
+
+  @override
+  String get readMore => 'আরও পড়ুন';
+
+  @override
+  String get readLess => 'কম পড়ুন';
+
+  @override
+  String get step => 'ধাপ';
+
+  @override
+  String get enterEmailAddress => 'অনুগ্রহ করে ইমেল লিখুন';
+
+  @override
+  String get enterValidEmailAddress => 'অনুগ্রহ করে একটি বৈধ ইমেল লিখুন';
+
+  @override
+  String get enterPhoneNumber => 'অনুগ্রহ করে ফোন নম্বর লিখুন';
+
+  @override
+  String get enterValidPhoneNumber => 'অনুগ্রহ করে একটি বৈধ ফোন নম্বর লিখুন';
+
+  @override
+  String get enterMessage => 'অনুগ্রহ করে বার্তা লিখুন';
+
+  @override
+  String get emailSentSuccessfully => 'ইমেল সফলভাবে পাঠানো হয়েছে।';
+
+  @override
+  String get failedToSendEmail =>
+      'ইমেল পাঠাতে ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।';
+
+  @override
+  String get message => 'বার্তা';
+
+  @override
+  String get phoneNumber => 'ফোন নম্বর';
 }

@@ -186,6 +186,8 @@ class ShareService {
         return 'short film';
       case DeepLinkContentType.series:
         return 'series';
+      case DeepLinkContentType.miniSeries:
+        return 'mini series';
       case DeepLinkContentType.short:
         return 'short';
       case DeepLinkContentType.gift:

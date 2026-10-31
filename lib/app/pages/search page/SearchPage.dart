@@ -11,6 +11,7 @@ import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/responsive_poster_image.dart';
 import 'package:ott/app/widgets/shimmer%20loader/search_shimmer.dart';
 import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
@@ -103,7 +104,7 @@ class _SearchPageState extends State<SearchPage> {
                 padding: const EdgeInsets.only(right: 8.0),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: selectedThemeData.cardColor.withValues(alpha: 0.3),
+                    color: selectedThemeData.cardColor.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(
                       22,
                     ),
@@ -119,7 +120,9 @@ class _SearchPageState extends State<SearchPage> {
                               child: Text(
                                 lang.filter,
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: ResponsiveWidget.isDesktop(context)
+                                      ? selectedThemeData.canvasColor
+                                      : Colors.white,
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -128,8 +131,12 @@ class _SearchPageState extends State<SearchPage> {
                       PopupMenuButton(
                         color: selectedThemeData.cardColor,
                         tooltip: lang.filter,
-                        icon:
-                            const Icon(Icons.filter_list, color: Colors.white),
+                        icon: Icon(
+                          Icons.filter_list,
+                          color: ResponsiveWidget.isDesktop(context)
+                              ? selectedThemeData.canvasColor
+                              : Colors.white,
+                        ),
                         itemBuilder: (context) => [
                           PopupMenuItem(
                             child: StatefulBuilder(
@@ -364,6 +371,8 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                   .toList();
         });
       }
+    } catch (error) {
+
     } finally {
       if (mounted) {
         setState(() => _isLoadingCast = false);
@@ -449,49 +458,27 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                 SizedBox(
                   width: 100,
                   height: 140,
-                  child: ClipRRect(
+                  child: ResponsivePosterImage(
+                    imageUrl: movie.posterUrlList != null &&
+                            movie.posterUrlList!.isNotEmpty
+                        ? movie.posterUrlList![0]
+                        : null,
+                    imageUrls: movie.posterUrlList,
+                    fit: BoxFit.contain,
+                    alignment: Alignment.center,
+                    backgroundColor: Colors.black,
                     borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      color: Colors.black,
-                      child: movie.posterUrlList != null &&
-                              movie.posterUrlList!.isNotEmpty
-                          ? Image.network(
-                              movie.posterUrlList![0],
-                              width: 100,
-                              height: 140,
-                              fit: BoxFit.contain,
-                              alignment: Alignment.center,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    value: loadingProgress.expectedTotalBytes != null
-                                        ? loadingProgress.cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                        : null,
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Center(
-                                child: Icon(
-                                  Icons.broken_image,
-                                  size: 30,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            )
-                          : Container(
-                              width: 100,
-                              height: 140,
-                              color: Colors.grey[900],
-                              child: const Icon(
-                                Icons.movie,
-                                size: 60,
-                                color: Colors.grey,
-                              ),
-                            ),
+                    fallbackBuilder: () => Container(
+                      width: 100,
+                      height: 140,
+                      color: theme.cardColor,
+                      child: const Center(
+                        child: Icon(
+                          Icons.movie,
+                          size: 48,
+                          color: Colors.grey,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -507,7 +494,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                           overflow: TextOverflow.ellipsis,
                           TextSpan(
                               style: TextStyle(
-                                color: theme.canvasColor.withValues(alpha: 0.7),
+                                color: theme.canvasColor.withOpacity(0.7),
                                 fontSize: 12,
                               ),
                               children: [
@@ -520,8 +507,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                                 TextSpan(
                                   text: ' | ',
                                   style: TextStyle(
-                                    color: theme.canvasColor
-                                        .withValues(alpha: 0.7),
+                                    color: theme.canvasColor.withOpacity(0.7),
                                     fontSize: 14,
                                   ),
                                 ),
@@ -550,7 +536,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                           overflow: TextOverflow.ellipsis,
                           TextSpan(
                               style: TextStyle(
-                                color: theme.canvasColor.withValues(alpha: 0.7),
+                                color: theme.canvasColor.withOpacity(0.7),
                                 fontSize: 12,
                               ),
                               children: [
@@ -570,7 +556,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                           overflow: TextOverflow.ellipsis,
                           TextSpan(
                               style: TextStyle(
-                                color: theme.canvasColor.withValues(alpha: 0.7),
+                                color: theme.canvasColor.withOpacity(0.7),
                                 fontSize: 12,
                               ),
                               children: [
@@ -590,7 +576,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                           overflow: TextOverflow.ellipsis,
                           TextSpan(
                               style: TextStyle(
-                                color: theme.canvasColor.withValues(alpha: 0.7),
+                                color: theme.canvasColor.withOpacity(0.7),
                                 fontSize: 12,
                               ),
                               children: [
@@ -605,8 +591,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                                 TextSpan(
                                   text: ' | ',
                                   style: TextStyle(
-                                    color: theme.canvasColor
-                                        .withValues(alpha: 0.7),
+                                    color: theme.canvasColor.withOpacity(0.7),
                                     fontSize: 14,
                                   ),
                                 ),
@@ -615,8 +600,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                                   style: TextStyle(
                                     overflow: TextOverflow.ellipsis,
                                     fontSize: 12,
-                                    color: theme.canvasColor
-                                        .withValues(alpha: 0.7),
+                                    color: theme.canvasColor.withOpacity(0.7),
                                   ),
                                 )
                               ]),
@@ -722,16 +706,16 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
       constraints: const BoxConstraints(maxWidth: 140),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: theme.cardColor.withValues(alpha: 0.75),
+        color: theme.cardColor.withOpacity(0.75),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: theme.canvasColor.withValues(alpha: 0.12)),
+        border: Border.all(color: theme.canvasColor.withOpacity(0.12)),
       ),
       child: Text(
         role.isEmpty ? name : '$name ($role)',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          color: theme.canvasColor.withValues(alpha: 0.78),
+          color: theme.canvasColor.withOpacity(0.78),
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),

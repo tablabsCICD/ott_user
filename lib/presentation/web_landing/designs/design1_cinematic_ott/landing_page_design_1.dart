@@ -117,8 +117,7 @@ class _LandingPageDesign1State extends State<LandingPageDesign1> {
                     .where((item) => (item.type ?? '').toUpperCase() == 'MOVIE')
                     .toList();
                 final series = topTen
-                    .where(
-                        (item) => (item.type ?? '').toUpperCase() == 'SERIES')
+                    .where((item) => (item.type ?? '').toUpperCase() == 'SERIES')
                     .toList();
                 final shortFilms = topTen
                     .where((item) =>
@@ -228,8 +227,7 @@ class _LandingPageDesign1State extends State<LandingPageDesign1> {
                       child: ScrollRevealWrapper(
                         delay: const Duration(milliseconds: 500),
                         child: _CinematicDevicesBanner(
-                          onGetStarted: () =>
-                              LandingActionHandler.openLogin(context),
+                          onGetStarted: () => LandingActionHandler.openLogin(context),
                         ),
                       ),
                     ),
@@ -239,8 +237,7 @@ class _LandingPageDesign1State extends State<LandingPageDesign1> {
                       child: ScrollRevealWrapper(
                         delay: const Duration(milliseconds: 550),
                         child: _CreatorPartnerHub(
-                          onProductionHouse: () =>
-                              LandingActionHandler.openExternal(
+                          onProductionHouse: () => LandingActionHandler.openExternal(
                             context,
                             AppConstant.productionHouseUrl,
                           ),
@@ -319,10 +316,9 @@ class _CinematicDevicesBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: colors.primaryAccent.withValues(alpha: 0.12),
+                    color: colors.primaryAccent.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -361,8 +357,7 @@ class _CinematicDevicesBanner extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colors.primaryAccent,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 15),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -379,7 +374,7 @@ class _CinematicDevicesBanner extends StatelessWidget {
                 child: Icon(
                   Icons.tv_rounded,
                   size: 160,
-                  color: colors.primaryAccent.withValues(alpha: 0.2),
+                  color: colors.primaryAccent.withOpacity(0.2),
                 ),
               ),
             ),
@@ -416,8 +411,7 @@ class _CreatorPartnerHub extends StatelessWidget {
                 _buildCard(
                   colors,
                   title: 'For Filmmakers & Studios',
-                  desc:
-                      'Publish your films directly to millions of viewers with automated monetization.',
+                  desc: 'Publish your films directly to millions of viewers with automated monetization.',
                   btnLabel: 'Production House Portal',
                   icon: Icons.movie_creation_rounded,
                   onTap: onProductionHouse,
@@ -426,8 +420,7 @@ class _CreatorPartnerHub extends StatelessWidget {
                 _buildCard(
                   colors,
                   title: 'For Affiliates & Promoters',
-                  desc:
-                      'Earn high-tier recurring revenue with our official promoter and influencer program.',
+                  desc: 'Earn high-tier recurring revenue with our official promoter and influencer program.',
                   btnLabel: 'Promoter Portal',
                   icon: Icons.monetization_on_rounded,
                   onTap: onPromoter,
@@ -440,8 +433,7 @@ class _CreatorPartnerHub extends StatelessWidget {
                   child: _buildCard(
                     colors,
                     title: 'For Filmmakers & Studios',
-                    desc:
-                        'Publish your films directly to millions of viewers with automated monetization.',
+                    desc: 'Publish your films directly to millions of viewers with automated monetization.',
                     btnLabel: 'Production House Portal',
                     icon: Icons.movie_creation_rounded,
                     onTap: onProductionHouse,
@@ -452,8 +444,7 @@ class _CreatorPartnerHub extends StatelessWidget {
                   child: _buildCard(
                     colors,
                     title: 'For Affiliates & Promoters',
-                    desc:
-                        'Earn high-tier recurring revenue with our official promoter and influencer program.',
+                    desc: 'Earn high-tier recurring revenue with our official promoter and influencer program.',
                     btnLabel: 'Promoter Portal',
                     icon: Icons.monetization_on_rounded,
                     onTap: onPromoter,
@@ -508,8 +499,7 @@ class _CreatorPartnerHub extends StatelessWidget {
             label: Text(btnLabel),
             style: OutlinedButton.styleFrom(
               foregroundColor: colors.primaryAccent,
-              side: BorderSide(
-                  color: colors.primaryAccent.withValues(alpha: 0.5)),
+              side: BorderSide(color: colors.primaryAccent.withOpacity(0.5)),
             ),
           ),
         ],

@@ -33,7 +33,6 @@ class BookmarkProvider extends BaseProvider {
       if (user == null) return false;
 
       final url = ApiConstant.addBookmark(user.id, contentId);
-      log("AddBookmark (POST) => $url");
 
       final response = await _apiHelper.postApi(url);
       final body = jsonDecode(response.body);
@@ -52,7 +51,6 @@ class BookmarkProvider extends BaseProvider {
       if (user == null) return false;
 
       final url = ApiConstant.addBookmarkShort(user.id, shortId);
-      log("AddBookmarkShort (POST) => $url");
 
       final response = await _apiHelper.postApi(url);
       final body = jsonDecode(response.body);
@@ -87,10 +85,10 @@ class BookmarkProvider extends BaseProvider {
   Future<bool> removeBookmarkShort(int shortId) async {
     try {
       final user = await _getUser();
+
       if (user == null) return false;
 
       final url = ApiConstant.removeBookmarkShort(user.id, shortId);
-      log("RemoveBookmarkShort (DELETE) => $url");
 
       final response = await _apiHelper.deleteApi(url);
       final body = jsonDecode(response.body);
@@ -109,7 +107,6 @@ class BookmarkProvider extends BaseProvider {
       if (user == null) return false;
 
       final url = ApiConstant.isBookmarked(user.id, contentId);
-      log("IsBookmarked (GET) => $url");
 
       final response = await _apiHelper.getApi(url);
       final body = jsonDecode(response.body);
@@ -130,7 +127,6 @@ class BookmarkProvider extends BaseProvider {
       if (user == null) return false;
 
       final url = ApiConstant.isBookmarkedShort(user.id, shortId);
-      log("IsBookmarked (GET) => $url");
 
       final response = await _apiHelper.getApi(url);
       final body = jsonDecode(response.body);
@@ -153,7 +149,6 @@ class BookmarkProvider extends BaseProvider {
       if (user == null) return;
 
       final url = ApiConstant.getUserBookmarks(user.id);
-      log("GetUserBookmarks URL => $url");
 
       final response = await _apiHelper.getApi(url);
       final body = jsonDecode(response.body);
@@ -181,7 +176,6 @@ class BookmarkProvider extends BaseProvider {
       if (user == null) return;
 
       final url = ApiConstant.getUserBookmarkShort(user.id);
-      log("GetUserBookmarks URL => $url");
 
       final response = await _apiHelper.getApi(url);
       final body = jsonDecode(response.body);

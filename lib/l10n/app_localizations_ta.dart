@@ -396,7 +396,7 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get viewersEntertainmentDescription =>
-      'நீங்கள் விரும்பும் திரைப்படங்கள் மற்றும் தொடர்களை வாங்குங்கள் அல்லது பரிசளியுங்கள். சந்தா தேவையில்லை. இணையமின்றி பார்க்க பதிவிறக்குங்கள்.';
+      'திரைப்படங்கள், தொடர்கள், குறும்படங்களை வாடகைக்கு எடுக்கவும் பரிசளிக்கவும். சந்தா இல்லை, விளம்பரங்கள் இல்லை. தூய பொழுதுபோக்கு.';
 
   @override
   String get createAccountMobileOtp => 'மொபைல் OTP மூலம் கணக்கை உருவாக்கவும்';
@@ -652,4 +652,58 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get everyDay => 'ஒவ்வொரு நாளும்';
+
+  @override
+  String get shortFilm => 'குறும்படம்';
+
+  @override
+  String get cookies => 'குக்கீகள்';
+
+  @override
+  String get accountDeletion => 'கணக்கு நீக்கம்';
+
+  @override
+  String get oneOttEcosystem =>
+      'பார்வையாளர்கள் மற்றும் படைப்பாளர்களுக்கான ஒரே OTT சூழல் அமைப்பு';
+
+  @override
+  String get oneOttEcosystemDescription =>
+      'பாதுகாப்பான ஸ்ட்ரீமிங், திரைப்பட அடிப்படையிலான அணுகல், பரிசளித்தல், தயாரிப்பு நிறுவன வெளியீடு, விளம்பரதாரர் வளர்ச்சி கருவிகள் மற்றும் பல-சாதன பொழுதுபோக்கு.';
+
+  @override
+  String get readMore => 'மேலும் படிக்க';
+
+  @override
+  String get readLess => 'குறைவாக படிக்க';
+
+  @override
+  String get step => 'படி';
+
+  @override
+  String get enterEmailAddress => 'மின்னஞ்சலை உள்ளிடவும்';
+
+  @override
+  String get enterValidEmailAddress => 'சரியான மின்னஞ்சலை உள்ளிடவும்';
+
+  @override
+  String get enterPhoneNumber => 'தொலைபேசி எண்ணை உள்ளிடவும்';
+
+  @override
+  String get enterValidPhoneNumber => 'சரியான தொலைபேசி எண்ணை உள்ளிடவும்';
+
+  @override
+  String get enterMessage => 'செய்தியை உள்ளிடவும்';
+
+  @override
+  String get emailSentSuccessfully => 'மின்னஞ்சல் வெற்றிகரமாக அனுப்பப்பட்டது.';
+
+  @override
+  String get failedToSendEmail =>
+      'மின்னஞ்சல் அனுப்புவதில் தோல்வி. மீண்டும் முயற்சிக்கவும்.';
+
+  @override
+  String get message => 'செய்தி';
+
+  @override
+  String get phoneNumber => 'தொலைபேசி எண்';
 }

@@ -10,6 +10,8 @@ import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/news%20page/NewsScreen.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/presentation/web_landing/designs/preview/landing_page_design_preview.dart';
+import 'package:ott/presentation/web_landing/screens/content_web_fallback_screen.dart';
+import 'package:ott/presentation/web_landing/screens/producer_learn_more_screen.dart';
 import 'package:ott/presentation/web_landing/screens/web_landing_screen.dart';
 
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
@@ -17,12 +19,22 @@ import 'package:ott/data/models/content.dart';
 import '../../pages/onboarding pages/SplashScreen.dart';
 import '../../pages/sign in page/LoginCard.dart';
 import 'package:ott/app/core/services/referral_service.dart';
+import 'package:ott/app/core/services/gift_deep_link_service.dart';
 import 'app_routes.dart';
 import 'web_navigation_routes.dart';
 
 class RouteGenerator {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     _logRouteRequest(settings);
+
+    if (settings.name == AppRoutes.producerLearnMore ||
+        settings.name == '/producer-learn-more' ||
+        settings.name == '/learn-more') {
+      return buildRoute(
+        const ProducerLearnMoreScreen(),
+        settings: settings,
+      );
+    }
 
     if (settings.name == AppRoutes.landingPreview ||
         settings.name == '/preview' ||
@@ -52,6 +64,7 @@ class RouteGenerator {
       final uri = Uri.tryParse(settings.name!);
       if (uri != null) {
         ReferralService.instance.captureFromUri(uri);
+        GiftDeepLinkService.instance.captureFromUri(uri);
         final pathLower = uri.path.trim().toLowerCase();
         if (pathLower == '/register' ||
             pathLower == 'register' ||

@@ -175,7 +175,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           Positioned.fill(
                             child: DecoratedBox(
                               decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.35),
+                                color: Colors.black.withOpacity(0.35),
                                 shape: BoxShape.circle,
                               ),
                               child: const Center(

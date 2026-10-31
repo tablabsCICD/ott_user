@@ -7,13 +7,12 @@ class MiniSeriesPage {
   final int totalPages;
   final int totalElements;
 
-  const MiniSeriesPage({
-    required this.content,
-    required this.page,
-    required this.size,
-    required this.totalPages,
-    required this.totalElements,
-  });
+  const MiniSeriesPage(
+      {required this.content,
+      required this.page,
+      required this.size,
+      required this.totalPages,
+      required this.totalElements});
 
   factory MiniSeriesPage.fromJson(Map<String, dynamic> json) {
     final rawContent = json['content'] as List? ?? const [];

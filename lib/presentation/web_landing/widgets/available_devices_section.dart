@@ -22,11 +22,21 @@ class AvailableDevicesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final width = MediaQuery.sizeOf(context).width;
+    final compact = width < 600;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(56, 10, 56, 46),
+      padding: EdgeInsets.fromLTRB(
+        compact ? 16 : (width < 1024 ? 32 : 56),
+        10,
+        compact ? 16 : (width < 1024 ? 32 : 56),
+        compact ? 34 : 46,
+      ),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 18 : 24,
+          vertical: 18,
+        ),
         decoration: BoxDecoration(
           color: const Color(0xFF0B0B0B),
           borderRadius: BorderRadius.circular(10),

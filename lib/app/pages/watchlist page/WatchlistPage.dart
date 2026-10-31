@@ -1,3 +1,4 @@
+import 'package:ott/app/widgets/responsive_poster_image.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';

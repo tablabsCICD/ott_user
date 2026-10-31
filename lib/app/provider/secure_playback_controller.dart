@@ -81,6 +81,7 @@ class SecurePlaybackController extends ChangeNotifier {
   Future<void>? _startRequest;
   bool _disposed = false;
   bool _handledPlayer403 = false;
+
   Future<void> start() {
     return _startRequest ??= _start().whenComplete(() => _startRequest = null);
   }
@@ -105,14 +106,14 @@ class SecurePlaybackController extends ChangeNotifier {
           response.expiresAt.difference(DateTime.now().toUtc()).inSeconds;
       SecurityDebugLog.event(
         'FLOW',
-        'Signed playback authorization validated in memory as ${response.authorizationType}; expires in approximately $secondsUntilExpiry seconds.',
+        'Playback authorization validated in memory; expires in approximately $secondsUntilExpiry seconds.',
       );
       _applySession(response);
       _analytics.bindSession(response.sessionId);
       _setState(SecurePlaybackState.initializingPlayer);
       SecurityDebugLog.event(
         'PLAYER',
-        'Calling the media loader with the authorized playback configuration.',
+        'Calling the media loader with the normalized platform authorization.',
       );
       final restored = await _mediaLoader(response, isRefresh: false);
       if (_disposed) return;

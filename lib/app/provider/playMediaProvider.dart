@@ -1,11 +1,11 @@
+import 'dart:convert';
 import 'dart:developer';
-import 'package:flutter/material.dart';
 
 import 'package:ott/app/core/constant/api_constant.dart';
-import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/data/models/seriesModel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/utils/sharepreferences.dart';
+import '../core/network/api_helper.dart';
 import 'baseProvider.dart';
 
 class PlayMediaProvider extends BaseProvider {
@@ -47,7 +47,9 @@ class PlayMediaProvider extends BaseProvider {
       // request consistent with the rest of the authenticated API calls by
       // attaching the stored bearer token and handling an expired session.
       final response = await ApiHelper().postApi(url);
-      if (response.statusCode < 200 || response.statusCode >= 300) {}
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+
+      }
     } catch (e) {
       log("Add view error: $e");
     }
@@ -59,6 +61,11 @@ class PlayMediaProvider extends BaseProvider {
     required int contentId,
     int? seasonId,
     int? episodeId,
+    String? episodeTitle,
+    int? episodeNumber,
+    int? seasonNumber,
+    String? episodePosterUrl,
+    String? seriesTitle,
     required Duration position,
     required Duration duration,
     bool force = false,
@@ -79,8 +86,10 @@ class PlayMediaProvider extends BaseProvider {
       final currentSeconds = position.inSeconds;
       final lastSaved = _lastSavedSecondsMap[key] ?? 0;
 
-      /// ❌ DO NOT SPAM API (check absolute difference so rewinding still saves)
-      if (!force && (currentSeconds - lastSaved).abs() < 5) return;
+      /// ❌ DO NOT SPAM API unless forced or first time saving
+      if (!force && (currentSeconds - lastSaved).abs() < 5 && lastSaved > 0) {
+        return;
+      }
 
       // 🔥 SAVE LOCALLY
       _resumeSecondsMap[key] = currentSeconds;
@@ -95,19 +104,28 @@ class PlayMediaProvider extends BaseProvider {
       final watchedPercentage =
           ((currentSeconds / duration.inSeconds) * 100).clamp(0, 100).toInt();
 
-      final uri = Uri.parse(
-        "${ApiConstant.baseUrl}continue-watching/save",
-      ).replace(queryParameters: {
+      final queryParams = <String, String>{
         "userId": user!.id.toString(),
         "contentId": contentId.toString(),
         "watchedSeconds": currentSeconds.toString(),
         "watchedPercentage": watchedPercentage.toString(),
         if (seasonId != null) "seasonId": seasonId.toString(),
         if (episodeId != null) "episodeId": episodeId.toString(),
-      });
+        if (episodeTitle != null && episodeTitle.trim().isNotEmpty)
+          "episodeTitle": episodeTitle.trim(),
+        if (episodeNumber != null) "episodeNumber": episodeNumber.toString(),
+        if (seasonNumber != null) "seasonNumber": seasonNumber.toString(),
+        if (episodePosterUrl != null && episodePosterUrl.trim().isNotEmpty)
+          "episodePosterUrl": episodePosterUrl.trim(),
+        if (seriesTitle != null && seriesTitle.trim().isNotEmpty)
+          "seriesTitle": seriesTitle.trim(),
+      };
+
+      final uri = Uri.parse(
+        "${ApiConstant.baseUrl}continue-watching/save",
+      ).replace(queryParameters: queryParams);
 
       final response = await ApiHelper().postApi(uri.toString());
-      debugPrint("Save continue watching response: ${response.statusCode}");
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return;
       }
@@ -169,7 +187,13 @@ class PlayMediaProvider extends BaseProvider {
     required int contentId,
     int? seasonId,
     int? episodeId,
+    String? episodeTitle,
+    int? episodeNumber,
+    int? seasonNumber,
+    String? episodePosterUrl,
+    String? seriesTitle,
     required int seconds,
+    int? totalDuration,
   }) async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -182,7 +206,60 @@ class PlayMediaProvider extends BaseProvider {
     _resumeCache[key] = seconds;
     await prefs.setInt(key, seconds);
 
+    if (episodeId != null && episodeId > 0) {
+      final episodeMetaKey =
+          "episode_meta_${contentId}_${seasonId ?? 0}_$episodeId";
+      final metaData = {
+        'contentId': contentId,
+        'seriesId': contentId,
+        'seasonId': seasonId,
+        'episodeId': episodeId,
+        'episodeTitle': episodeTitle,
+        'episodeNumber': episodeNumber,
+        'seasonNumber': seasonNumber,
+        'episodePosterUrl': episodePosterUrl,
+        'seriesTitle': seriesTitle,
+        'watchedSeconds': seconds,
+        'totalDuration': totalDuration,
+        'watchedPercentage': (totalDuration != null && totalDuration > 0)
+            ? ((seconds / totalDuration) * 100).clamp(0, 100).toInt()
+            : 0,
+        'updatedAt': DateTime.now().millisecondsSinceEpoch,
+      };
+      await prefs.setString(episodeMetaKey, jsonEncode(metaData));
+
+      // Also save as the latest watched episode for this series
+      final seriesLastKey = "series_last_episode_$contentId";
+      await prefs.setString(seriesLastKey, jsonEncode(metaData));
+    }
+
     notifyListeners(); // 🔥 IMMEDIATE UI UPDATE
+  }
+
+  Future<Map<String, dynamic>?> getSavedEpisodeMeta({
+    required int contentId,
+    int? seasonId,
+    int? episodeId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (episodeId != null && episodeId > 0) {
+      final key = "episode_meta_${contentId}_${seasonId ?? 0}_$episodeId";
+      final jsonStr = prefs.getString(key);
+      if (jsonStr != null) {
+        try {
+          return jsonDecode(jsonStr) as Map<String, dynamic>;
+        } catch (_) {}
+      }
+    }
+    // Check series last watched episode
+    final seriesLastKey = "series_last_episode_$contentId";
+    final lastStr = prefs.getString(seriesLastKey);
+    if (lastStr != null) {
+      try {
+        return jsonDecode(lastStr) as Map<String, dynamic>;
+      } catch (_) {}
+    }
+    return null;
   }
 
   int getLocalResume({

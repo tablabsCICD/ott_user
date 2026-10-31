@@ -11,8 +11,8 @@ class CinematicRailSection extends StatefulWidget {
     required this.items,
     this.subtitle,
     this.isRanked = false,
-    this.cardWidth = 190,
-    this.cardHeight = 285,
+    this.cardWidth,
+    this.cardHeight,
     required this.onContentTap,
     required this.onPlayTrailer,
   });
@@ -21,8 +21,8 @@ class CinematicRailSection extends StatefulWidget {
   final String? subtitle;
   final List<Content> items;
   final bool isRanked;
-  final double cardWidth;
-  final double cardHeight;
+  final double? cardWidth;
+  final double? cardHeight;
   final ValueChanged<Content> onContentTap;
   final ValueChanged<Content> onPlayTrailer;
 
@@ -55,9 +55,9 @@ class _CinematicRailSectionState extends State<CinematicRailSection> {
     }
   }
 
-  void _scroll(bool forward) {
+  void _scroll(bool forward, double cardWidth) {
     if (!_scrollController.hasClients) return;
-    final delta = (widget.cardWidth + 20) * 3;
+    final delta = (cardWidth + 20) * 3;
     final target = forward
         ? _scrollController.offset + delta
         : _scrollController.offset - delta;
@@ -83,6 +83,22 @@ class _CinematicRailSectionState extends State<CinematicRailSection> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 768;
     final paddingHorizontal = isMobile ? 20.0 : 64.0;
+
+    // Responsive poster card sizing: wide landscape cards matching Hero Banner (1.38 ratio)
+    final effectiveCardWidth = widget.cardWidth ??
+        (screenWidth >= 1600
+            ? 340.0
+            : (screenWidth >= 1280
+                ? 300.0
+                : (screenWidth >= 1024
+                    ? 260.0
+                    : (screenWidth >= 768
+                        ? 225.0
+                        : (screenWidth >= 480
+                            ? 195.0
+                            : 170.0)))));
+    final effectiveCardHeight =
+        widget.cardHeight ?? (effectiveCardWidth / 1.38);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24),
@@ -136,13 +152,13 @@ class _CinematicRailSectionState extends State<CinematicRailSection> {
                       _ArrowButton(
                         icon: Icons.chevron_left_rounded,
                         enabled: _showLeftArrow,
-                        onTap: () => _scroll(false),
+                        onTap: () => _scroll(false, effectiveCardWidth),
                       ),
                       const SizedBox(width: 8),
                       _ArrowButton(
                         icon: Icons.chevron_right_rounded,
                         enabled: _showRightArrow,
-                        onTap: () => _scroll(true),
+                        onTap: () => _scroll(true, effectiveCardWidth),
                       ),
                     ],
                   ),
@@ -154,7 +170,7 @@ class _CinematicRailSectionState extends State<CinematicRailSection> {
 
           // Horizontal Content Rail
           SizedBox(
-            height: widget.cardHeight + 24,
+            height: effectiveCardHeight + 28,
             child: ListView.builder(
               controller: _scrollController,
               scrollDirection: Axis.horizontal,
@@ -180,23 +196,22 @@ class _CinematicRailSectionState extends State<CinematicRailSection> {
                           child: Text(
                             '${index + 1}',
                             style: TextStyle(
-                              fontSize: 110,
+                              fontSize: isMobile ? 80 : 110,
                               fontWeight: FontWeight.w900,
                               height: 1.0,
                               foreground: Paint()
                                 ..style = PaintingStyle.stroke
                                 ..strokeWidth = 3
-                                ..color = colors.primaryAccent
-                                    .withValues(alpha: 0.35),
+                                ..color = colors.primaryAccent.withValues(alpha: 0.35),
                             ),
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.only(left: 36),
+                          padding: EdgeInsets.only(left: isMobile ? 24 : 36),
                           child: PremiumContentCard(
                             content: item,
-                            width: widget.cardWidth,
-                            height: widget.cardHeight,
+                            width: effectiveCardWidth,
+                            height: effectiveCardHeight,
                             rankNumber: rank,
                             onTap: () => widget.onContentTap(item),
                             onPlayTrailer: () => widget.onPlayTrailer(item),
@@ -211,8 +226,8 @@ class _CinematicRailSectionState extends State<CinematicRailSection> {
                   padding: const EdgeInsets.only(right: 18),
                   child: PremiumContentCard(
                     content: item,
-                    width: widget.cardWidth,
-                    height: widget.cardHeight,
+                    width: effectiveCardWidth,
+                    height: effectiveCardHeight,
                     onTap: () => widget.onContentTap(item),
                     onPlayTrailer: () => widget.onPlayTrailer(item),
                   ),
@@ -249,8 +264,7 @@ class _ArrowButtonState extends State<_ArrowButton> {
     final colors = LandingThemeColors.of(context);
 
     return MouseRegion(
-      cursor:
-          widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      cursor: widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(

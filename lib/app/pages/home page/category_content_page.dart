@@ -1,9 +1,8 @@
 import 'dart:math' as math;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/app/widgets/movieCard.dart';
+import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 
@@ -24,14 +23,17 @@ class CategoryContentPage extends StatefulWidget {
 class _CategoryContentPageState extends State<CategoryContentPage>
     with RouteAware, WidgetsBindingObserver {
   static const double _autoPlayVisibilityThreshold = 0.70;
-  static const double _cardHeight = 270;
-  static const double _gap = 8;
+  static const double _cardHeight = MovieCard.standardHeight;
+  static const double _gap = 16;
 
   final ScrollController _scrollController = ScrollController();
   final ValueNotifier<int?> _activeIndex = ValueNotifier<int?>(null);
   late List<Content> _contents;
-  bool _isPageActive = true;
+  int _crossAxisCount = 1;
   PageRoute<dynamic>? _route;
+  bool _routeIsActive = true;
+  bool _appIsActive = true;
+  bool get _pageIsActive => _routeIsActive && _appIsActive;
 
   @override
   void initState() {
@@ -51,42 +53,35 @@ class _CategoryContentPageState extends State<CategoryContentPage>
     super.didChangeDependencies();
     final route = ModalRoute.of(context);
     if (route is PageRoute<dynamic> && route != _route) {
-      if (_route != null) {
-        routeObserver.unsubscribe(this);
-      }
+      if (_route != null) routeObserver.unsubscribe(this);
       _route = route;
       routeObserver.subscribe(this, route);
     }
   }
 
   @override
+  void didPushNext() {
+    _routeIsActive = false;
+    _activeIndex.value = null;
+  }
+
+  @override
   void didPopNext() {
-    _isPageActive = true;
+    _routeIsActive = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _updateActiveIndex();
     });
   }
 
   @override
-  void didPushNext() {
-    _isPageActive = false;
-    _clearAutoPlay('navigating away from category');
-  }
-
-  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
-      _isPageActive = false;
-      _clearAutoPlay('app lifecycle $state');
-    } else if (state == AppLifecycleState.resumed) {
-      _isPageActive = ModalRoute.of(context)?.isCurrent ?? true;
-      if (_isPageActive) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _updateActiveIndex();
-        });
-      }
+    _appIsActive = state == AppLifecycleState.resumed;
+    if (!_pageIsActive) {
+      _activeIndex.value = null;
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _updateActiveIndex();
+      });
     }
   }
 
@@ -102,12 +97,7 @@ class _CategoryContentPageState extends State<CategoryContentPage>
   }
 
   void _updateActiveIndex() {
-    if (!_isPageActive) {
-      _clearAutoPlay('page inactive');
-      return;
-    }
-
-    if (!_scrollController.hasClients || _contents.isEmpty) {
+    if (!_pageIsActive || !_scrollController.hasClients || _contents.isEmpty) {
       if (_activeIndex.value != null) {
         _activeIndex.value = null;
       }
@@ -120,72 +110,38 @@ class _CategoryContentPageState extends State<CategoryContentPage>
     final rowExtent = _cardHeight + _gap;
     final viewStart = _scrollController.offset;
     final viewEnd = viewStart + viewport;
-    final firstCandidate = math.max(0, (viewStart / rowExtent).floor());
-    final lastCandidate = math.min(
-      _contents.length - 1,
-      math.max(firstCandidate, ((viewEnd - 0.001) / rowExtent).floor()),
-    );
-    final isAtEnd =
-        _scrollController.position.maxScrollExtent - _scrollController.offset <=
-            1.0;
-
-    int? bestIndex;
+    final crossCount = _crossAxisCount < 1 ? 1 : _crossAxisCount;
+    final totalRows = (_contents.length / crossCount).ceil();
+    final firstRow =
+        (viewStart / rowExtent).floor().clamp(0, totalRows - 1).toInt();
+    final lastRow =
+        ((viewEnd - 0.001) / rowExtent).floor().clamp(0, totalRows - 1).toInt();
+    final first = (firstRow * crossCount).clamp(0, _contents.length - 1).toInt();
+    final last =
+        (((lastRow + 1) * crossCount) - 1).clamp(0, _contents.length - 1).toInt();
+    int? index;
     double bestVisibility = 0;
-    for (int candidate = firstCandidate;
-        candidate <= lastCandidate;
-        candidate++) {
-      if (!(_contents[candidate].trailerUrl?.trim().isNotEmpty ?? false)) {
+    for (var candidate = first; candidate <= last; candidate++) {
+      if (!_contents[candidate].hasValidTrailer) {
         continue;
       }
-
-      final itemStart = candidate * rowExtent;
+      final candidateRow = (candidate / crossCount).floor();
+      final itemStart = candidateRow * rowExtent;
       final itemEnd = itemStart + _cardHeight;
-      final overlap =
-          math.min(viewEnd, itemEnd) - math.max(viewStart, itemStart);
-      final visibility = (overlap / _cardHeight).clamp(0.0, 1.0).toDouble();
-      if (visibility < _autoPlayVisibilityThreshold) continue;
-
-      if (bestIndex == null ||
-          visibility > bestVisibility ||
-          (visibility == bestVisibility && candidate > bestIndex)) {
+      final overlap = (itemEnd.clamp(viewStart, viewEnd) -
+              itemStart.clamp(viewStart, viewEnd))
+          .clamp(0.0, _cardHeight);
+      final visibility = overlap / _cardHeight;
+      if (visibility >= _autoPlayVisibilityThreshold &&
+          visibility > bestVisibility) {
+        index = candidate;
         bestVisibility = visibility;
-        bestIndex = candidate;
       }
     }
 
-    if (bestIndex == null && isAtEnd) {
-      final lastPlayableIndex = _lastPlayableIndex();
-      if (lastPlayableIndex != null) {
-        final itemStart = lastPlayableIndex * rowExtent;
-        final itemEnd = itemStart + _cardHeight;
-        final overlap =
-            math.min(viewEnd, itemEnd) - math.max(viewStart, itemStart);
-        final visibility = (overlap / _cardHeight).clamp(0.0, 1.0).toDouble();
-        if (visibility >= _autoPlayVisibilityThreshold) {
-          bestIndex = lastPlayableIndex;
-        }
-      }
+    if (_activeIndex.value != index) {
+      _activeIndex.value = index;
     }
-
-    if (_activeIndex.value != bestIndex) {
-      _activeIndex.value = bestIndex;
-    }
-  }
-
-  int? _lastPlayableIndex() {
-    for (int index = _contents.length - 1; index >= 0; index--) {
-      if (_contents[index].trailerUrl?.trim().isNotEmpty ?? false) {
-        return index;
-      }
-    }
-    return null;
-  }
-
-  void _clearAutoPlay(String reason) {
-    if (_activeIndex.value != null) {
-      _activeIndex.value = null;
-    }
-    MovieCard.stopActiveTrailerPreview(reason);
   }
 
   void _replaceContent(Content updatedContent) {
@@ -204,8 +160,8 @@ class _CategoryContentPageState extends State<CategoryContentPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _clearAutoPlay('category disposed');
     routeObserver.unsubscribe(this);
+    _activeIndex.value = null;
     _scrollController.dispose();
     _activeIndex.dispose();
     super.dispose();
@@ -315,97 +271,61 @@ class _CategoryContentPageState extends State<CategoryContentPage>
                   );
              */
 
-                  if (isMobile) {
-                    final cardWidth = availableWidth.toDouble();
+                  // Standardized card dimensions per platform & responsive breakpoint
+                  final double cardWidth;
+                  const double cardHeight = MovieCard.standardHeight; // 235.0
+                  const double gap = 16.0;
 
-                    return Column(
-                      children: [
-                        /*  Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            horizontalPadding,
-                            8,
-                            horizontalPadding,
-                            10,
-                          ),
-                          child: header,
-                        ), */
-                        Expanded(
-                          child: ListView.separated(
-                            controller: _scrollController,
-                            padding: EdgeInsets.fromLTRB(
-                              horizontalPadding,
-                              0,
-                              horizontalPadding,
-                              16,
-                            ),
-                            itemCount: _contents.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: _gap),
-                            itemBuilder: (context, index) {
-                              final content = _contents[index];
-                              return SizedBox(
-                                width: cardWidth,
-                                height: _cardHeight,
-                                child: MovieCard(
-                                  movie: content,
-                                  index: index,
-                                  activeIndexListenable: _activeIndex,
-                                  cardWidth: cardWidth,
-                                  cardMargin: 0,
-                                  onContentUpdated: _replaceContent,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    );
+                  if (availableWidth >= 1800) {
+                    cardWidth = MovieCard.desktopCardWidth; // 300.0
+                  } else if (availableWidth >= 1024) {
+                    cardWidth = MovieCard.laptopCardWidth; // 300.0
+                  } else if (availableWidth >= 600) {
+                    cardWidth = MovieCard.tabletCardWidth; // 300.0
+                  } else {
+                    cardWidth = MovieCard.mobileCardWidth; // 300.0
                   }
 
-                  final targetCardWidth = isDesktop ? 312.0 : 296.0;
                   int crossAxisCount =
-                      ((availableWidth + _gap) / (targetCardWidth + _gap))
-                          .floor();
+                      ((availableWidth + gap) / (cardWidth + gap)).floor();
                   if (crossAxisCount < 1) crossAxisCount = 1;
-                  if (isTablet && crossAxisCount > 3) crossAxisCount = 3;
-                  if (isDesktop && crossAxisCount > 4) crossAxisCount = 4;
+                  _crossAxisCount = crossAxisCount;
 
-                  final cardWidth =
-                      (availableWidth - ((crossAxisCount - 1) * _gap)) /
-                          crossAxisCount;
+                  // Keep card dimensions stable within each breakpoint:
+                  // Center the grid of consistently sized cards, absorbing remaining space into side padding
+                  final totalGridWidth =
+                      (crossAxisCount * cardWidth) + ((crossAxisCount - 1) * gap);
+                  final centeringPadding =
+                      math.max(0.0, (availableWidth - totalGridWidth) / 2);
+                  final effectiveHorizontalPadding =
+                      horizontalPadding + centeringPadding;
 
                   return CustomScrollView(
                     controller: _scrollController,
                     slivers: [
-                      /*  SliverPadding(
-                        padding: EdgeInsets.fromLTRB(
-                          horizontalPadding,
-                          8,
-                          horizontalPadding,
-                          10,
-                        ),
-                        sliver: SliverToBoxAdapter(
-                          child: header,
-                        ),
-                      ), */
                       SliverPadding(
                         padding: EdgeInsets.fromLTRB(
-                          horizontalPadding,
-                          0,
-                          horizontalPadding,
-                          18,
+                          effectiveHorizontalPadding,
+                          12,
+                          effectiveHorizontalPadding,
+                          24,
                         ),
                         sliver: SliverGrid(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
                               final content = _contents[index];
                               return SizedBox(
-                                height: _cardHeight,
-                                child: MovieCard(
-                                  movie: content,
-                                  cardWidth: cardWidth,
-                                  cardMargin: 0,
-                                  onContentUpdated: _replaceContent,
+                                width: cardWidth,
+                                height: cardHeight,
+                                child: Center(
+                                  child: MovieCard(
+                                    movie: content,
+                                    index: index,
+                                    activeIndexListenable: _activeIndex,
+                                    cardWidth: cardWidth,
+                                    cardMargin: 0,
+                                    onContentUpdated: _replaceContent,
+                                  ),
                                 ),
                               );
                             },
@@ -414,9 +334,9 @@ class _CategoryContentPageState extends State<CategoryContentPage>
                           gridDelegate:
                               SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: crossAxisCount,
-                            mainAxisSpacing: _gap,
-                            crossAxisSpacing: _gap,
-                            mainAxisExtent: _cardHeight,
+                            mainAxisSpacing: gap,
+                            crossAxisSpacing: gap,
+                            mainAxisExtent: cardHeight,
                           ),
                         ),
                       ),

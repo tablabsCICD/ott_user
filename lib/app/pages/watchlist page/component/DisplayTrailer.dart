@@ -25,6 +25,23 @@ String? _extractYoutubeId(String urlOrId) {
   final converted = YoutubePlayer.convertUrlToId(value);
   if (converted != null && converted.isNotEmpty) return converted;
 
+  final uri = Uri.tryParse(value);
+  if (uri != null) {
+    final segments = uri.pathSegments.where((part) => part.isNotEmpty).toList();
+    if ((uri.host.contains('youtube.com') || uri.host == 'youtu.be') &&
+        segments.isNotEmpty) {
+      final candidate = uri.host == 'youtu.be'
+          ? segments.first
+          : segments.first == 'shorts' && segments.length > 1
+              ? segments[1]
+              : null;
+      if (candidate != null &&
+          RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
   final looksLikeVideoId = RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(value);
   return looksLikeVideoId ? value : null;
 }

@@ -69,7 +69,7 @@ class _MadiooPageState extends State<MadiooPage>
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          /// 📻 Radio Icon with glow
+        /// 📻 Radio Icon with glow
           /*  Container(
             padding: const EdgeInsets.all(20),
             child: Hero(
@@ -98,6 +98,7 @@ class _MadiooPageState extends State<MadiooPage>
             style: GoogleFonts.poppins(
               fontSize: 22,
               fontWeight: FontWeight.w600,
+              color: theme.canvasColor,
             ),
           ),
 
@@ -109,7 +110,7 @@ class _MadiooPageState extends State<MadiooPage>
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
               fontSize: 14,
-              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+              color: theme.canvasColor.withOpacity(0.6),
             ),
           ),
           const SizedBox(height: 60),

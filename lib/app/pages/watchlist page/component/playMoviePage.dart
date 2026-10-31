@@ -374,6 +374,17 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       'Resolving the media source before requesting signed access.',
     );
     String sourceUrl = await _resolveOfflineSourceUrl(widget.videoUrl.trim());
+    if (!_isSeries &&
+        widget.content?.contentUrl != null &&
+        widget.content!.contentUrl!.trim().isNotEmpty &&
+        (sourceUrl == widget.content?.trailerUrl?.trim() ||
+            sourceUrl == widget.content?.teaserUrl?.trim())) {
+      SecurityDebugLog.event(
+        'FLOW',
+        'Trailer URL was supplied to movie player; replacing with the canonical movie content URL.',
+      );
+      sourceUrl = widget.content!.contentUrl!.trim();
+    }
     if (sourceUrl.isEmpty) {
       SecurityDebugLog.event(
         'FLOW',
@@ -1315,20 +1326,60 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
     _lastSavedPosition = position;
 
+    final activeEpisodeId = _currentEpisodeId ?? widget.episodeIndex;
+    final activeSeasonId = _currentSeasonId ?? widget.seasonIndex;
+
+    String? episodeTitle;
+    int? episodeNumber;
+    int? seasonNumber;
+    String? episodePosterUrl;
+    final seriesTitle = widget.content?.title;
+
+    if (_isSeries && widget.seasons != null) {
+      for (final s in widget.seasons!) {
+        for (final ep in s.episodes) {
+          if (ep.episodeId == activeEpisodeId) {
+            episodeTitle = ep.title;
+            episodeNumber = ep.episodeNumber;
+            seasonNumber = s.seasonNumber;
+            episodePosterUrl = ep.posterUrl;
+            break;
+          }
+        }
+        if (episodeTitle != null) break;
+      }
+    }
+
+    episodeTitle ??= widget.content?.episodeTitle;
+    episodeNumber ??= widget.content?.episodeNumber;
+    seasonNumber ??= widget.content?.seasonNumber;
+    episodePosterUrl ??= widget.content?.episodePosterUrl;
+
     final playMediaProvider = context.read<PlayMediaProvider>();
     await playMediaProvider.saveLocalResume(
       contentId: widget.content!.id!,
-      seasonId: _isSeries ? widget.seasonIndex : null,
-      episodeId: _isSeries ? widget.episodeIndex : null,
+      seasonId: _isSeries ? activeSeasonId : null,
+      episodeId: _isSeries ? activeEpisodeId : null,
+      episodeTitle: _isSeries ? episodeTitle : null,
+      episodeNumber: _isSeries ? episodeNumber : null,
+      seasonNumber: _isSeries ? seasonNumber : null,
+      episodePosterUrl: _isSeries ? episodePosterUrl : null,
+      seriesTitle: _isSeries ? seriesTitle : null,
       seconds: position.inSeconds,
+      totalDuration: duration.inSeconds,
     );
 
     try {
       await playMediaProvider
           .saveContinueWatching(
             contentId: widget.content!.id!,
-            seasonId: _isSeries ? widget.seasonIndex : null,
-            episodeId: _isSeries ? widget.episodeIndex : null,
+            seasonId: _isSeries ? activeSeasonId : null,
+            episodeId: _isSeries ? activeEpisodeId : null,
+            episodeTitle: _isSeries ? episodeTitle : null,
+            episodeNumber: _isSeries ? episodeNumber : null,
+            seasonNumber: _isSeries ? seasonNumber : null,
+            episodePosterUrl: _isSeries ? episodePosterUrl : null,
+            seriesTitle: _isSeries ? seriesTitle : null,
             position: position,
             duration: duration,
             force: force,

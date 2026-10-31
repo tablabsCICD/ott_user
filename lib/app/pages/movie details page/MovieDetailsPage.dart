@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
@@ -210,7 +212,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
     if (contentUrl == null || contentUrl.isEmpty) {
       CustomToast.show(
         context,
-        "Video is not available",
+        "Movie video is not available at the moment.",
         isSuccess: false,
       );
       return;
@@ -218,6 +220,13 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
 
     final sanitizedUrl = Uri.encodeFull(contentUrl);
 
+    _stopHeroTrailer();
+    _trailerController.pause?.call();
+    _trailerController.stopAudio?.call();
+    _teaserController.pause?.call();
+    _teaserController.stopAudio?.call();
+    await _trailerController.disposePlayer?.call();
+    await _teaserController.disposePlayer?.call();
     if (!mounted) return;
 
     Navigator.push(
@@ -289,21 +298,27 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
         centerTitle: true,
         elevation: 0,
       ),
-      body: SafeArea(
-        top: false,
-        bottom: true,
-        child: Consumer<DashboardProvider>(
-          builder: (context, provider, child) {
-            final content = provider.content;
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          _handleTrailerScrollNotification(notification);
+          return false;
+        },
+        child: SafeArea(
+          top: false,
+          bottom: true,
+          child: Consumer<DashboardProvider>(
+            builder: (context, provider, child) {
+              final content = provider.content;
 
-            return Stack(
-              children: [
-                !ResponsiveWidget.isMobile(context)
-                    ? _buildCinematicTvView(content, selectedThemeData)
-                    : _buildMobileView(content, selectedThemeData),
-              ],
-            );
-          },
+              return Stack(
+                children: [
+                  !ResponsiveWidget.isMobile(context)
+                      ? _buildCinematicTvView(content, selectedThemeData)
+                      : _buildMobileView(content, selectedThemeData),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -386,7 +401,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
         child: FocusTraversalGroup(
           policy: OrderedTraversalPolicy(),
           child: ColoredBox(
-            color: Colors.black,
+            color: selectedThemeData.scaffoldBackgroundColor,
             child: CustomScrollView(
               controller: _tvScrollController,
               slivers: [
@@ -845,8 +860,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
               width: 104,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                color: theme.cardColor,
+                border: Border.all(color: theme.canvasColor.withOpacity(0.14)),
               ),
               child: ClipOval(
                 child: imageUrl.isNotEmpty
@@ -865,8 +880,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: theme.canvasColor,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -877,7 +892,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.58),
+                  color: theme.canvasColor.withOpacity(0.58),
                   fontSize: 12,
                 ),
               ),
@@ -1010,8 +1025,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
               content.title ?? 'Untitled',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: theme.canvasColor,
                 fontWeight: FontWeight.w800,
                 fontSize: 15,
               ),
@@ -1025,7 +1040,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
               ].whereType<String>().join('  |  '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.58)),
+              style: TextStyle(color: theme.canvasColor.withOpacity(0.58)),
             ),
           ],
         ),
@@ -1073,6 +1088,43 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
     if (_isHeroTrailerPlaying) {
       setState(() => _isHeroTrailerPlaying = false);
     }
+  }
+
+  bool _isUpwardScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) {
+      return false;
+    }
+    if (notification is UserScrollNotification) {
+      return notification.direction == ScrollDirection.reverse;
+    }
+    if (notification is ScrollUpdateNotification) {
+      final delta = notification.scrollDelta;
+      return delta != null && delta > 0;
+    }
+    if (notification is OverscrollNotification) {
+      return notification.overscroll > 0;
+    }
+    return false;
+  }
+
+  void _handleTrailerScrollNotification(ScrollNotification notification) {
+    if (_isUpwardScrollNotification(notification)) {
+      _pauseTrailerOnScrollUp();
+    }
+  }
+
+  void _pauseTrailerOnScrollUp() {
+    final isPlaying = _trailerController.isPlaying?.call();
+    final isPendingAutoplay = _heroTrailerTimer != null;
+    if (isPlaying == false && !isPendingAutoplay && !_isHeroTrailerPlaying) {
+      return;
+    }
+    if (_trailerController.pause == null &&
+        !isPendingAutoplay &&
+        !_isHeroTrailerPlaying) {
+      return;
+    }
+    _stopHeroTrailer();
   }
 
   Future<void> _openTrailer(Content content) async {
@@ -1215,7 +1267,18 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
   }
 
   String _releaseYearText(dynamic releaseDate) {
-    final text = releaseDate?.toString().trim() ?? '';
+    if (releaseDate == null) return '';
+    if (releaseDate is DateTime) return releaseDate.year.toString();
+    final numeric = releaseDate is int
+        ? releaseDate
+        : int.tryParse(releaseDate.toString().trim());
+    if (numeric != null && numeric > 1000000000) {
+      final dt = numeric > 100000000000
+          ? DateTime.fromMillisecondsSinceEpoch(numeric)
+          : DateTime.fromMillisecondsSinceEpoch(numeric * 1000);
+      return dt.year.toString();
+    }
+    final text = releaseDate.toString().trim();
     if (text.length >= 4) return text.substring(0, 4);
     return text;
   }
@@ -1246,10 +1309,17 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withValues(alpha: 0.8),
-                Colors.black.withValues(alpha: 0.9),
-              ],
+              colors: selectedThemeData.brightness == Brightness.dark
+                  ? [
+                      Colors.black.withOpacity(0.8),
+                      Colors.black.withOpacity(0.9),
+                    ]
+                  : [
+                      selectedThemeData.scaffoldBackgroundColor
+                          .withOpacity(0.85),
+                      selectedThemeData.scaffoldBackgroundColor
+                          .withOpacity(0.95),
+                    ],
             ),
           ),
         ),
@@ -1270,7 +1340,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                           decoration: BoxDecoration(
                             border: Border.all(
                               width: 1,
-                              color: Colors.white.withValues(alpha: 0.5),
+                              color: selectedThemeData.canvasColor.withOpacity(0.5),
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -1307,9 +1377,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                         const SizedBox(width: 4),
                         Text(
                           '(${content.ratingCount ?? '0'} reviews)',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
-                            color: Colors.white70,
+                            color: selectedThemeData.canvasColor.withOpacity(0.7),
                           ),
                         ),
                         const Spacer(),
@@ -1339,7 +1409,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                       "  ${content.description ?? 'N/A'}",
                       textAlign: TextAlign.left,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: selectedThemeData.canvasColor.withOpacity(0.7),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1433,10 +1503,17 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withValues(alpha: 0.8),
-                Colors.black.withValues(alpha: 0.9),
-              ],
+              colors: selectedThemeData.brightness == Brightness.dark
+                  ? [
+                      Colors.black.withOpacity(0.8),
+                      Colors.black.withOpacity(0.9),
+                    ]
+                  : [
+                      selectedThemeData.scaffoldBackgroundColor
+                          .withOpacity(0.85),
+                      selectedThemeData.scaffoldBackgroundColor
+                          .withOpacity(0.95),
+                    ],
             ),
           ),
         ),
@@ -1475,7 +1552,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 10,
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: selectedThemeData.canvasColor.withOpacity(0.7),
                     ),
                   ),
                 ],
@@ -1591,17 +1668,24 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
             itemBuilder: (context, index) {
               return ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  posters[index],
+                child: Container(
                   width: 320,
                   height: 180,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
+                  color: Colors.black,
+                  alignment: Alignment.center,
+                  child: Image.network(
+                    posters[index],
                     width: 320,
-                    color: Colors.black26,
-                    child: Icon(
-                      Icons.broken_image,
-                      color: theme.canvasColor.withValues(alpha: 0.5),
+                    height: 180,
+                    fit: BoxFit.contain,
+                    alignment: Alignment.center,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 320,
+                      color: Colors.black26,
+                      child: Icon(
+                        Icons.broken_image,
+                        color: theme.canvasColor.withOpacity(0.5),
+                      ),
                     ),
                   ),
                 ),
@@ -1626,8 +1710,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
     bool centered = false,
   }) {
     final theme = Theme.of(context);
-    final releaseDateText = content.releaseDate?.toString().trim();
-    final displayText = (releaseDateText != null && releaseDateText.isNotEmpty)
+    final releaseDateText = formatReleaseDate(content.releaseDate).trim();
+    final displayText = (releaseDateText.isNotEmpty)
         ? 'Release On: $releaseDateText'
         : 'Release On: Coming Soon';
 
@@ -1996,7 +2080,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
         Text(
           "Cast and Crew",
           style: TextStyle(
-            color: Colors.white,
+            color: theme.canvasColor,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -2060,8 +2144,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-                fontWeight: FontWeight.w600, fontSize: 11, color: Colors.white),
+            style: TextStyle(
+                fontWeight: FontWeight.w600, fontSize: 11, color: theme.canvasColor),
           ),
           if (role.isNotEmpty)
             Text(
@@ -2069,7 +2153,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 10, color: Colors.white),
+              style: TextStyle(fontSize: 10, color: theme.canvasColor.withOpacity(0.7)),
             ),
         ],
       ),
@@ -2124,7 +2208,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
       return Text(
         'N/A',
         style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.7),
+          color: theme.canvasColor.withOpacity(0.7),
           fontWeight: FontWeight.normal,
         ),
       );
@@ -2139,11 +2223,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
           cleanText,
           textAlign: TextAlign.left,
           maxLines: _isDescriptionExpanded ? null : maxCollapsedLines,
-          overflow: _isDescriptionExpanded
-              ? TextOverflow.visible
-              : TextOverflow.ellipsis,
+          overflow: _isDescriptionExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.75),
+            color: theme.canvasColor.withOpacity(0.75),
             fontWeight: FontWeight.normal,
             fontSize: 14,
             height: 1.4,
@@ -2281,17 +2363,18 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
 
   Widget _buildDetailsSection(BuildContext context, Content movie) {
     final lang = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
     final languages = (movie.languageList ?? const [])
         .map((e) => e.language?.trim())
         .where((language) => language != null && language.isNotEmpty)
         .cast<String>()
         .join(', ');
-    TextStyle titleStyle = const TextStyle(
-      color: Colors.white,
+    TextStyle titleStyle = TextStyle(
+      color: theme.canvasColor,
       fontWeight: FontWeight.bold,
     );
-    TextStyle contentStyle = const TextStyle(
-      color: Colors.white70,
+    TextStyle contentStyle = TextStyle(
+      color: theme.canvasColor.withOpacity(0.7),
     );
 
     return Container(
@@ -2423,6 +2506,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
             padding: EdgeInsets.only(bottom: 16.0),
             child: TextField(
               maxLines: 9,
+              textCapitalization: TextCapitalization.sentences,
+              inputFormatters: [CapitalizeSentencesTextInputFormatter()],
               style: TextStyle(
                 // Input text color
                 color: Colors.white,

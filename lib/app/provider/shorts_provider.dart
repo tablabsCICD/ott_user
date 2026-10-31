@@ -73,6 +73,7 @@ class ShortProvider extends BaseProvider {
       _shortSections = sections;
       shorts = sections.expand((row) => row.shorts).toList();
     } catch (e) {
+
       _shortSections = [];
       shorts = [];
       errorMessage = 'Unable to load Mini Series. Please try again.';
@@ -108,6 +109,8 @@ class ShortProvider extends BaseProvider {
         ? ApiConstant.getTrendingShortsByLang(language, page, size: size)
         : ApiConstant.getLatestShortsByLang(language, page, size: size);
     final url = Uri.parse(apiUrl);
+    // Mini Series dashboard endpoints are authenticated, just like Movies.
+    // ApiHelper attaches the current bearer token and applies session handling.
     final response = await ApiHelper().getApi(url.toString());
 
     if (response.statusCode != 200) {
@@ -152,8 +155,7 @@ class ShortProvider extends BaseProvider {
         decoded['data'] as Map<String, dynamic>,
       );
     } catch (e) {
-      print("Short Detail Error → $e");
-      errorMessage = 'Unable to load Mini Series details. Please try again.';
+
     }
 
     isLoading = false;
@@ -208,6 +210,7 @@ class ShortProvider extends BaseProvider {
 
       return false;
     } catch (e) {
+
       return false;
     } finally {
       _isLiking = false;
@@ -228,6 +231,7 @@ class ShortProvider extends BaseProvider {
       }
       return false;
     } catch (e) {
+
       return false;
     }
   }
@@ -269,6 +273,7 @@ class ShortProvider extends BaseProvider {
 
       return null;
     } catch (e) {
+
       return null;
     }
   }

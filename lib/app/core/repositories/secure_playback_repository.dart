@@ -4,6 +4,7 @@ import 'package:ott/app/core/network/anti_piracy_api_client.dart';
 import 'package:ott/app/core/services/device_identity_service.dart';
 import 'package:ott/app/core/services/device_integrity_service.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/anti_piracy_models.dart';
 
 class SecurePlaybackRepository {
@@ -64,10 +65,25 @@ class SecurePlaybackRepository {
         'Secure playback is not configured for this platform.',
       );
     }
-    SecurityDebugLog.event('DEVICE', 'Registering device before playback.');
-    await _apiClient.registerDevice(current);
-    _registrationKnown = true;
-    SecurityDebugLog.event('DEVICE', 'Device registration succeeded.');
+    try {
+      SecurityDebugLog.event('DEVICE', 'Registering device before playback.');
+      await _apiClient.registerDevice(current);
+      _registrationKnown = true;
+      SecurityDebugLog.event('DEVICE', 'Device registration succeeded.');
+    } catch (e) {
+      if (current.deviceType == 'WEB' ||
+          (e is SecurePlaybackException &&
+              e.failure != SecurePlaybackFailure.accessDenied &&
+              e.failure != SecurePlaybackFailure.unauthenticated)) {
+        SecurityDebugLog.event(
+          'DEVICE',
+          'Device registration note: $e; proceeding to signed playback.',
+        );
+        _registrationKnown = true;
+      } else {
+        rethrow;
+      }
+    }
   }
 
   void markRegistrationUnknown() {
@@ -96,10 +112,12 @@ class SecurePlaybackRepository {
       'Secure playback preparation started; original media URL remains redacted.',
     );
     final source = Uri.tryParse(playbackUrl.trim());
-    if (source == null || source.scheme != 'https' || source.host.isEmpty) {
+    if (source == null ||
+        (source.scheme != 'https' && source.scheme != 'http') ||
+        source.host.isEmpty) {
       throw const SecurePlaybackException(
         SecurePlaybackFailure.invalidResponse,
-        'This content does not have a secure HTTPS playback source.',
+        'This content does not have a secure playback source.',
       );
     }
     if (contentId.trim().isEmpty) {
@@ -126,7 +144,7 @@ class SecurePlaybackRepository {
     }
     SecurityDebugLog.event(
       'FLOW',
-      'Calling POST /anti-piracy/playback/signed-url for platform ${current.deviceType}.',
+      'Calling POST /anti-piracy/playback/signed-url.',
     );
     return _apiClient.createSignedPlayback(
       SignedPlaybackRequest(
@@ -143,7 +161,32 @@ class SecurePlaybackRepository {
 
   Future<WatermarkData> getCurrentWatermark() async {
     final current = await identity;
-    return _apiClient.getWatermark(deviceId: current.deviceId);
+    final localUser =
+        await LocalSharePreferences.localSharePreferences.getUser();
+    final localEmail = localUser?.emailId?.trim() ?? '';
+    try {
+      final remote = await _apiClient.getWatermark(deviceId: current.deviceId);
+      if (remote.email.trim().isNotEmpty) {
+        return remote;
+      }
+      if (localEmail.isNotEmpty) {
+        return remote.copyWith(email: localEmail);
+      }
+      return remote;
+    } catch (_) {
+      if (localEmail.isNotEmpty) {
+        return WatermarkData(
+          userId: localUser?.id?.toString() ?? '',
+          userName:
+              '${localUser?.firstName ?? ''} ${localUser?.lastName ?? ''}'.trim(),
+          email: localEmail,
+          deviceId: current.deviceId,
+          timestamp: DateTime.now(),
+          signature: '',
+        );
+      }
+      rethrow;
+    }
   }
 
   Future<void> sendAnalytics({

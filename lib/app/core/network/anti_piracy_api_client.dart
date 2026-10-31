@@ -111,8 +111,20 @@ class AntiPiracyApiClient {
     );
     final decoded = _unwrapMap(_decode(response.body));
     try {
-      return SignedPlaybackResponse.fromJson(decoded);
+      final parsed = SignedPlaybackResponse.fromJson(
+        decoded,
+        platform: request.platform,
+      );
+      SecurityDebugLog.event(
+        'API',
+        'Signed playback response parsed successfully; playback access authorized.',
+      );
+      return parsed;
     } on FormatException {
+      SecurityDebugLog.event(
+        'API',
+        'Signed playback response parsing failed; invalid format.',
+      );
       throw const SecurePlaybackException(
         SecurePlaybackFailure.invalidResponse,
         'Secure playback could not be prepared.',
@@ -172,6 +184,7 @@ class AntiPiracyApiClient {
         'API',
         '$method ${_safeEndpointName(uri)} started.',
       );
+      final stopwatch = Stopwatch()..start();
       late http.Response response;
       final headers = {
         'Authorization': 'Bearer $token',
@@ -190,17 +203,18 @@ class AntiPiracyApiClient {
       } else {
         throw UnsupportedError(method);
       }
+      stopwatch.stop();
       _logDiagnosticResponse(method, uri, response);
       if (response.statusCode >= 200 && response.statusCode < 300) {
         SecurityDebugLog.event(
           'API',
-          '$method ${_safeEndpointName(uri)} completed with HTTP ${response.statusCode}.',
+          '$method ${_safeEndpointName(uri)} completed in ${stopwatch.elapsedMilliseconds}ms with HTTP ${response.statusCode}.',
         );
         return response;
       }
       SecurityDebugLog.event(
         'API',
-        '$method ${_safeEndpointName(uri)} rejected with HTTP ${response.statusCode}.',
+        '$method ${_safeEndpointName(uri)} rejected in ${stopwatch.elapsedMilliseconds}ms with HTTP ${response.statusCode}.',
       );
       throw _mapStatus(response.statusCode, response.body);
     } on SecurePlaybackException {
@@ -257,8 +271,9 @@ class AntiPiracyApiClient {
       'Content-Type': 'application/json',
       ...?extraHeaders,
     };
-    final printableBody =
-        body == null ? '<none>' : jsonEncode(_redactSensitiveFields(body));
+    final printableBody = body == null
+        ? '<none>'
+        : jsonEncode(_redactSensitiveFields(body));
     SecurityDebugLog.diagnostic(
       'REQUEST $method ${_diagnosticEndpoint(uri)} '
       'headers=${jsonEncode(printableHeaders)} body=$printableBody',
@@ -302,8 +317,6 @@ class AntiPiracyApiClient {
             normalizedKey.contains('token') ||
             normalizedKey == 'playbackurl' ||
             normalizedKey == 'signedurl' ||
-            normalizedKey == 'cookieheader' ||
-            normalizedKey == 'cookies' ||
             normalizedKey == 'signature' ||
             normalizedKey == 'sessionid' ||
             normalizedKey == 'cloudfrontpolicy' ||

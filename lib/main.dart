@@ -9,6 +9,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/AppleIapService.dart';
 import 'package:ott/app/provider/themeProvider.dart';
+import 'package:ott/data/themes/custom_theme.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/core/services/notification_service.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
@@ -194,7 +195,9 @@ class _MyAppState extends State<MyApp> {
         Locale('bn'), // Bengali (বাংলা)
         Locale('ne'), // Nepali (नेपाली)
       ],
-      theme: themeProvider.getTheme,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeProvider.isDark ? ThemeMode.dark : ThemeMode.light,
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
       navigatorObservers: [routeObserver],

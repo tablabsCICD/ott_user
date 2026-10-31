@@ -111,7 +111,9 @@ class ApiHelper {
     return response;
   }
 
-  void _logRequest(String method, String url) {}
+  void _logRequest(String method, String url) {
+  }
 
-  void _logResponse(Response response) {}
+  void _logResponse(Response response) {
+  }
 }
