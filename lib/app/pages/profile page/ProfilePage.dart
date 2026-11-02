@@ -301,7 +301,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                   icon: LucideIcons.gift,
                                   title: lang.claimGiftCard,
                                   onTap: () {
-                                    showGiftClaimDialog(context);
+                                    showGiftClaimDialog(
+                                      context,
+                                      isFromDeepLink: false,
+                                    );
                                   },
                                 ),
                               ],

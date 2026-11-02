@@ -647,6 +647,7 @@ class GiftDeepLinkService {
       final result = await showGiftClaimDialog(
         context,
         initialCouponCode: normalized,
+        isFromDeepLink: true,
       );
 
       // If user successfully claimed the gift, mark as claimed and clear pending state

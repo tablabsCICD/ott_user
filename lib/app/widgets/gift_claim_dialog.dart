@@ -10,216 +10,231 @@ import 'package:provider/provider.dart';
 Future<bool?> showGiftClaimDialog(
   BuildContext context, {
   String? initialCouponCode,
+  bool isFromDeepLink = false,
 }) {
-  final theme = Theme.of(context);
-  final couponCodeController = TextEditingController(
-    text: _normalizeCouponCode(initialCouponCode ?? ''),
-  );
-
   return showDialog<bool>(
     context: context,
     barrierDismissible: false,
     builder: (dialogContext) {
-      bool isClaiming = false;
+      return GiftClaimDialog(
+        initialCouponCode: initialCouponCode,
+        isFromDeepLink: isFromDeepLink,
+      );
+    },
+  );
+}
 
-      return StatefulBuilder(
-        builder: (context, setDialogState) {
-          return Dialog(
-            backgroundColor: theme.cardColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            insetPadding: const EdgeInsets.symmetric(
-              horizontal: 24,
-              vertical: 24,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: SizedBox(
-                width: ResponsiveWidget.isMobile(dialogContext)
-                    ? double.infinity
-                    : 400,
-                child: Stack(
-                  children: [
-                    Positioned.fill(
+class GiftClaimDialog extends StatefulWidget {
+  final String? initialCouponCode;
+  final bool isFromDeepLink;
+
+  const GiftClaimDialog({
+    super.key,
+    this.initialCouponCode,
+    this.isFromDeepLink = false,
+  });
+
+  @override
+  State<GiftClaimDialog> createState() => _GiftClaimDialogState();
+}
+
+class _GiftClaimDialogState extends State<GiftClaimDialog> {
+  late final TextEditingController _couponCodeController;
+  bool _isClaiming = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _couponCodeController = TextEditingController(
+      text: _normalizeCouponCode(widget.initialCouponCode ?? ''),
+    );
+  }
+
+  @override
+  void dispose() {
+    _couponCodeController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Dialog(
+      backgroundColor: theme.cardColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: 24,
+        vertical: 24,
+      ),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: SizedBox(
+            width: ResponsiveWidget.isMobile(context)
+                ? double.infinity
+                : 400,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Center(
                       child: Icon(
                         LucideIcons.gift,
                         size: 200,
                         color: theme.canvasColor.withOpacity(0.1),
                       ),
                     ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Enter Gift Card Number",
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.canvasColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    CustomTextField(
+                      backgroundColor: theme.scaffoldBackgroundColor,
+                      isDigits: false,
+                      controller: _couponCodeController,
+                      autofocus: !widget.isFromDeepLink &&
+                          ResponsiveWidget.isTabletOrTv(context),
+                      textInputAction: TextInputAction.done,
+                      hintText: "Enter 16 Digit Number",
+                      textInputType: TextInputType.text,
+                      capitalization: TextCapitalization.characters,
+                      readOnly: widget.isFromDeepLink,
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Text(
-                          "Enter Gift Card Number",
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.canvasColor,
+                        TextButton(
+                          onPressed: _isClaiming
+                              ? null
+                              : () => Navigator.pop(context),
+                          child: Text(
+                            "Cancel",
+                            style: TextStyle(
+                              color: theme.canvasColor.withOpacity(0.7),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        CustomTextField(
-                          backgroundColor: theme.scaffoldBackgroundColor,
-                          isDigits: false,
-                          controller: couponCodeController,
-                          autofocus: ResponsiveWidget.isTabletOrTv(dialogContext),
-                          textInputAction: TextInputAction.done,
-                          hintText: "Enter 16 Digit Number",
-                          textInputType: TextInputType.text,
-                          capitalization: TextCapitalization.characters,
-                          readOnly: true,
-                        ),
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            TextButton(
-                              onPressed: isClaiming
-                                  ? null
-                                  : () => Navigator.pop(dialogContext),
-                              child: Text(
-                                "Cancel",
-                                style: TextStyle(
-                                  color: theme.canvasColor.withOpacity(0.7),
-                                ),
-                              ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.primaryColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            const SizedBox(width: 12),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: theme.primaryColor,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 12,
-                                ),
-                              ),
-                              onPressed: isClaiming
-                                  ? null
-                                  : () async {
-                                      if (isClaiming) return;
-
-                                      final couponCode = _normalizeCouponCode(
-                                        couponCodeController.text,
-                                      );
-
-                                      if (couponCode.isEmpty ||
-                                          couponCode.length != 16) {
-                                        CustomToast.show(
-                                          dialogContext,
-                                          "Invalid gift card code. Please check and try again.",
-                                          isSuccess: false,
-                                        );
-                                        return;
-                                      }
-
-                                      setDialogState(() => isClaiming = true);
-
-                                      try {
-                                        final provider =
-                                            Provider.of<GiftProvider>(
-                                          dialogContext,
-                                          listen: false,
-                                        );
-                                        final result =
-                                            await provider.useGiftByCoupon(
-                                          couponCode,
-                                        );
-                                        if (!dialogContext.mounted) return;
-
-                                        if (result["success"] == true) {
-                                          await GiftDeepLinkService.instance
-                                              .markGiftCodeClaimed(couponCode);
-                                          if (!dialogContext.mounted) return;
-                                          CustomToast.show(
-                                            dialogContext,
-                                            "Gift card claimed successfully!",
-                                            isSuccess: true,
-                                          );
-                                          Navigator.pop(dialogContext, true);
-                                        } else {
-                                          final rawMsg = result["message"]
-                                                  ?.toString() ??
-                                              "";
-                                          final statusCode =
-                                              result["statusCode"] as int?;
-                                          final errorMessage =
-                                              resolveClaimErrorMessage(
-                                            rawMessage: rawMsg,
-                                            statusCode: statusCode,
-                                            error: result["error"],
-                                          );
-
-                                          final lower = rawMsg.toLowerCase();
-                                          if (lower.contains('already') ||
-                                              lower.contains('redeemed') ||
-                                              lower.contains('claimed') ||
-                                              lower.contains('used')) {
-                                            await GiftDeepLinkService.instance
-                                                .markGiftCodeClaimed(couponCode);
-                                          }
-                                          if (!dialogContext.mounted) return;
-                                          CustomToast.show(
-                                            dialogContext,
-                                            errorMessage,
-                                            isSuccess: false,
-                                          );
-                                        }
-                                      } catch (error) {
-                                        if (!dialogContext.mounted) return;
-                                        final errorMessage =
-                                            resolveClaimErrorMessage(
-                                          error: error,
-                                        );
-                                        CustomToast.show(
-                                          dialogContext,
-                                          errorMessage,
-                                          isSuccess: false,
-                                        );
-                                      } finally {
-                                        if (dialogContext.mounted) {
-                                          setDialogState(
-                                              () => isClaiming = false);
-                                        }
-                                      }
-                                    },
-                              child: isClaiming
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                          Colors.white,
-                                        ),
-                                      ),
-                                    )
-                                  : const Text(
-                                      "Redeem",
-                                      style: TextStyle(color: Colors.white),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                          ),
+                          onPressed: _isClaiming ? null : _handleRedeem,
+                          child: _isClaiming
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
                                     ),
-                            ),
-                          ],
+                                  ),
+                                )
+                              : const Text(
+                                  "Redeem",
+                                  style: TextStyle(color: Colors.white),
+                                ),
                         ),
                       ],
                     ),
                   ],
                 ),
-              ),
+              ],
             ),
-          );
-        },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleRedeem() async {
+    if (_isClaiming) return;
+
+    final couponCode = _normalizeCouponCode(_couponCodeController.text);
+
+    if (couponCode.isEmpty || couponCode.length != 16) {
+      CustomToast.show(
+        context,
+        "Invalid gift card code. Please check and try again.",
+        isSuccess: false,
       );
-    },
-  ).whenComplete(() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      couponCodeController.dispose();
-    });
-  });
+      return;
+    }
+
+    setState(() => _isClaiming = true);
+
+    try {
+      final provider = Provider.of<GiftProvider>(context, listen: false);
+      final result = await provider.useGiftByCoupon(couponCode);
+      if (!mounted) return;
+
+      if (result["success"] == true) {
+        await GiftDeepLinkService.instance.markGiftCodeClaimed(couponCode);
+        if (!mounted) return;
+        CustomToast.show(
+          context,
+          "Gift card claimed successfully!",
+          isSuccess: true,
+        );
+        Navigator.pop(context, true);
+      } else {
+        final rawMsg = result["message"]?.toString() ?? "";
+        final statusCode = result["statusCode"] as int?;
+        final errorMessage = resolveClaimErrorMessage(
+          rawMessage: rawMsg,
+          statusCode: statusCode,
+          error: result["error"],
+        );
+
+        final lower = rawMsg.toLowerCase();
+        if (lower.contains('already') ||
+            lower.contains('redeemed') ||
+            lower.contains('claimed') ||
+            lower.contains('used')) {
+          await GiftDeepLinkService.instance.markGiftCodeClaimed(couponCode);
+        }
+        if (!mounted) return;
+        CustomToast.show(
+          context,
+          errorMessage,
+          isSuccess: false,
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+      final errorMessage = resolveClaimErrorMessage(error: error);
+      CustomToast.show(
+        context,
+        errorMessage,
+        isSuccess: false,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isClaiming = false);
+      }
+    }
+  }
 }
 
 String resolveClaimErrorMessage({
