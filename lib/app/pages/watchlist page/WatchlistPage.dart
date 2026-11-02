@@ -1,6 +1,7 @@
 import 'package:ott/app/widgets/responsive_poster_image.dart';
 import 'dart:async';
 
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
@@ -312,7 +313,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
     final items = <({WatchlistFilter value, String label})>[
       (value: WatchlistFilter.available, label: "Available"),
       (value: WatchlistFilter.downloaded, label: "Downloaded"),
-      (value: WatchlistFilter.gifted, label: "Gifted"),
+      if (!WalletPlatform.isGiftingHidden)
+        (value: WatchlistFilter.gifted, label: "Gifted"),
       (value: WatchlistFilter.expired, label: "Expired"),
     ];
 
@@ -536,7 +538,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
             ),
 
           // 🎁 Gifted badge
-          if (content.isGifted == true)
+          if (content.isGifted == true && !WalletPlatform.isGiftingHidden)
             Positioned(
               top: 8,
               left: 8,

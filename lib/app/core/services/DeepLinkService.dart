@@ -285,16 +285,21 @@ class DeepLinkService {
     return buildAppLink(type: type, id: id);
   }
 
+  String? _extractReferral(Uri uri) =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+          ? ReferralService.extractIOSReferral(uri)
+          : ReferralService.extractCodeFromUri(uri);
+
   DeepLinkTarget? parseTarget(Uri uri) {
     if (_isExpiredLink(uri)) return null;
 
-    if (uri.scheme == scheme) {
+    if (uri.scheme == scheme || uri.scheme == 'filmytell') {
       final type = _typeFromString(uri.host);
       final firstSegment =
           uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
 
       if (type == DeepLinkContentType.register) {
-        final referralCode = ReferralService.extractCodeFromUri(uri);
+        final referralCode = _extractReferral(uri);
         return DeepLinkTarget(
           type: DeepLinkContentType.register,
           referralCode: referralCode,
@@ -329,7 +334,7 @@ class DeepLinkService {
           : null;
 
       if (pathType == DeepLinkContentType.register) {
-        final referralCode = ReferralService.extractCodeFromUri(uri);
+        final referralCode = _extractReferral(uri);
         return DeepLinkTarget(
           type: DeepLinkContentType.register,
           referralCode: referralCode,
@@ -365,7 +370,7 @@ class DeepLinkService {
       final queryId = _parsePositiveInt(uri.queryParameters['id']);
 
       if (queryType == DeepLinkContentType.register) {
-        final referralCode = ReferralService.extractCodeFromUri(uri);
+        final referralCode = _extractReferral(uri);
         return DeepLinkTarget(
           type: DeepLinkContentType.register,
           referralCode: referralCode,
@@ -698,11 +703,18 @@ class DeepLinkService {
     _lastProcessedUri = uri;
     _lastProcessedTime = now;
 
-    final capturedReferralCode =
-        await ReferralService.instance.captureFromUri(uri);
+    final target = parseTarget(uri);
+    final isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final capturedReferralCode = isIOS
+        ? (target?.type == DeepLinkContentType.register
+            ? target?.referralCode
+            : null)
+        : await ReferralService.instance.captureFromUri(uri);
+    if (isIOS && capturedReferralCode != null) {
+      await ReferralService.instance.saveReferralCode(capturedReferralCode);
+    }
     final capturedGiftCode =
         await GiftDeepLinkService.instance.captureFromUri(uri);
-    final target = parseTarget(uri);
     developer.log(
       'Deep Link Received: $uri source=$source referralCode=${capturedReferralCode ?? 'none'} giftCode=${capturedGiftCode ?? 'none'}',
       name: 'DeepLinkService',

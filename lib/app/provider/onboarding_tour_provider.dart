@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'baseProvider.dart';
@@ -139,7 +140,20 @@ class OnboardingTourProvider extends BaseProvider {
     }
     final removeFifthStep =
         kIsWeb || (context != null && ResponsiveWidget.isTv(context));
-    if (!removeFifthStep) return defaultSteps;
+    if (!removeFifthStep) {
+      if (!WalletPlatform.isGiftingHidden) return defaultSteps;
+      // Gifting is temporarily hidden on iOS: drop "Gift" from the copy.
+      return defaultSteps
+          .map((step) => step.id == FeatureTourStepId.moreActions
+              ? FeatureTourStep(
+                  id: step.id,
+                  title: step.title,
+                  description:
+                      'Access additional options like Bookmark and Share.',
+                )
+              : step)
+          .toList();
+    }
 
     return defaultSteps
         .where((step) => step.id != FeatureTourStepId.moreActions)
@@ -222,8 +236,6 @@ class OnboardingTourProvider extends BaseProvider {
   }
 
   void _track(String event) {
-    if (kDebugMode) {
-
-    }
+    if (kDebugMode) {}
   }
 }

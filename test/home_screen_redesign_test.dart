@@ -43,7 +43,7 @@ class TestDashboardProvider extends DashboardProvider {
   bool get isLoading => false;
 
   @override
-  Future<void> getContinueWatchedMovieList(String type) async {}
+  Future<void> getContinueWatchedMovieList(String type, {bool forceRefresh = false}) async {}
 
   @override
   Future<void> getDashboardData(String type, List<String> languages, int userId) async {}

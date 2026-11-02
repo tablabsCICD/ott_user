@@ -77,6 +77,20 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
   int? _loadedSeasonId;
   PageRoute<dynamic>? _route;
 
+  /// Set once the trailer has been stopped because the user scrolled it out
+  /// of view; cleared when the page is scrolled back to the top. Prevents
+  /// repeated stop calls and stops queued autoplay while the trailer is hidden.
+  bool _trailerStoppedByScroll = false;
+
+  /// Layout chosen the last time this page was the visible route. The episode
+  /// player forces landscape, which on most iPhones crosses the mobile width
+  /// breakpoint; without this the covered page would rebuild into the TV
+  /// layout and back, recreating the trailer (which then autoplays in the
+  /// background) and losing the scroll position.
+  bool? _useMobileLayout;
+  bool _holdLayoutWhileCovered = false;
+  Timer? _layoutHoldTimer;
+
   /// Checks whether the user is an eligible paid user for this series.
   /// Returns true if the series is rented/purchased, or if any season or episode is purchased.
   bool _isPaidUser(SeriesProvider provider) {
@@ -119,13 +133,40 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
   @override
   void didPushNext() {
     _pauseAllTrailerPreviews();
+    _layoutHoldTimer?.cancel();
+    _holdLayoutWhileCovered = true;
   }
 
   @override
   void didPopNext() {
-    if (!ResponsiveWidget.isMobile(context)) {
+    // Keep the frozen layout until the screen orientation has been restored
+    // (see _resolveUseMobileLayout); release it after a short fallback in
+    // case the device size genuinely changed while the page was covered.
+    _layoutHoldTimer?.cancel();
+    _layoutHoldTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted && _holdLayoutWhileCovered) {
+        setState(() => _holdLayoutWhileCovered = false);
+      }
+    });
+    if (!_isMobileLayout(context)) {
       _queueHeroTrailerAutoplay();
     }
+  }
+
+  bool _isMobileLayout(BuildContext context) =>
+      _useMobileLayout ?? ResponsiveWidget.isMobile(context);
+
+  bool _resolveUseMobileLayout(BuildContext context) {
+    final isMobileNow = ResponsiveWidget.isMobile(context);
+    if (_holdLayoutWhileCovered && _useMobileLayout != null) {
+      final routeIsCurrent = ModalRoute.of(context)?.isCurrent ?? true;
+      if (!routeIsCurrent || isMobileNow != _useMobileLayout) {
+        return _useMobileLayout!;
+      }
+      _holdLayoutWhileCovered = false;
+      _layoutHoldTimer?.cancel();
+    }
+    return _useMobileLayout = isMobileNow;
   }
 
   @override
@@ -136,7 +177,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
       _pauseAllTrailerPreviews();
     } else if (state == AppLifecycleState.resumed &&
         (ModalRoute.of(context)?.isCurrent ?? true) &&
-        !ResponsiveWidget.isMobile(context)) {
+        !_isMobileLayout(context)) {
       _queueHeroTrailerAutoplay();
     }
   }
@@ -150,6 +191,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
     _teaserController.pause?.call();
     _teaserController.stopAudio?.call();
     _heroTrailerTimer?.cancel();
+    _layoutHoldTimer?.cancel();
     _tvScrollController.dispose();
     _heroFocusNode.dispose();
     super.dispose();
@@ -419,7 +461,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
 
           final series = provider.series!;
           List<SeasonEntity> seasons = series.seasons;
-          if (!ResponsiveWidget.isMobile(context)) {
+          if (!_resolveUseMobileLayout(context)) {
             return _buildCinematicTvDetails(context, series, seasons, theme);
           }
 
@@ -1431,12 +1473,18 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
     return raw;
   }
 
+  bool get _canAutoplayHeroTrailer =>
+      !_isEpisodePlaybackActive &&
+      !_trailerStoppedByScroll &&
+      (_route?.isCurrent ?? true);
+
   void _queueHeroTrailerAutoplay() {
-    if (_isEpisodePlaybackActive) return;
+    if (!_canAutoplayHeroTrailer) return;
     _heroTrailerTimer?.cancel();
     _heroTrailerTimer = Timer(const Duration(seconds: 2), () {
-      if (!mounted || _isEpisodePlaybackActive) return;
       _heroTrailerTimer = null;
+      // Re-check: the page may have been covered or scrolled meanwhile.
+      if (!mounted || !_canAutoplayHeroTrailer) return;
       if (_trailerController.canAutoPlay?.call() != true) return;
       _trailerController.mute?.call();
       _trailerController.play?.call();
@@ -1476,13 +1524,25 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
   void _handleTrailerScrollNotification(ScrollNotification notification) {
     if (_isUpwardScrollNotification(notification)) {
       _pauseTrailerOnScrollUp();
+    } else if (_trailerStoppedByScroll &&
+        notification.metrics.axis == Axis.vertical &&
+        notification.depth == 0 &&
+        notification.metrics.pixels <= notification.metrics.minScrollExtent) {
+      // Back at the top: the hero trailer is fully visible again.
+      _trailerStoppedByScroll = false;
+      if (!_isMobileLayout(context)) _queueHeroTrailerAutoplay();
     }
   }
 
   void _pauseTrailerOnScrollUp() {
     final isPlaying = _trailerController.isPlaying?.call();
     final isPendingAutoplay = _heroTrailerTimer != null;
-    if (isPlaying == false && !isPendingAutoplay && !_isHeroTrailerPlaying) {
+    // Once stopped, skip repeated stop calls on every scroll event unless
+    // playback has started again in the meantime.
+    if (_trailerStoppedByScroll &&
+        isPlaying != true &&
+        !isPendingAutoplay &&
+        !_isHeroTrailerPlaying) {
       return;
     }
     if (_trailerController.pause == null &&
@@ -1490,6 +1550,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
         !_isHeroTrailerPlaying) {
       return;
     }
+    // Stop even if the trailer is still initializing (isPlaying == false):
+    // pausing marks the preview so it will not autoplay once it loads.
+    _trailerStoppedByScroll = true;
     _stopHeroTrailer();
   }
 
@@ -1603,7 +1666,6 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
       } else {
         _isEpisodePlaybackActive = false;
       }
-    }
     }
   }
 
@@ -1805,7 +1867,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
   // ---------------- HERO ----------------
 
   SliverAppBar _buildHero(series, ThemeData theme) {
-    final bool isMobile = ResponsiveWidget.isMobile(context);
+    final bool isMobile = _isMobileLayout(context);
     final bool isTablet = ResponsiveWidget.isTablet(context);
 
     return SliverAppBar(
@@ -2207,8 +2269,6 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                                   theme.canvasColor.withOpacity(0.6),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
                               ),
                             ),
                             onPressed: () => _purchaseSeason(context, season),
@@ -3001,7 +3061,6 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                         Icons.broken_image,
                         color: theme.canvasColor.withOpacity(0.5),
                       ),
-                    ),
                     ),
                   ),
                 ),

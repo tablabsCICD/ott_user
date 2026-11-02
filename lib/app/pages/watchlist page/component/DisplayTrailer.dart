@@ -150,10 +150,13 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
       );
     }
 
-    final player = Player();
-    final controller = VideoController(player);
+    Player? player;
+    VideoController? controller;
 
     try {
+      player = Player();
+      controller = VideoController(player);
+
       // media_kit powers direct trailer URLs while YouTube URLs keep their
       // existing YouTube-specific controller.
       _subscriptions
@@ -200,7 +203,9 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
       });
     } catch (error) {
       debugPrint('Trailer init error: $error');
-      await player.dispose();
+      try {
+        await player?.dispose();
+      } catch (_) {}
       if (mounted) setState(() => _hasError = true);
     }
   }
@@ -583,6 +588,11 @@ class _TrailerPreviewState extends State<TrailerPreview>
   bool _userPaused = false;
   bool _wasPlayingBeforeRoutePause = false;
   bool _wasPlayingBeforeLifecyclePause = false;
+
+  /// Set when the preview is paused by the host page (scrolled away, another
+  /// route pushed, app backgrounded). Prevents an initialization that is still
+  /// in flight from starting playback afterwards. Cleared by an explicit play.
+  bool _autoplaySuppressed = false;
   int _initToken = 0;
   Future<void>? _initializationFuture;
   final bool _manuallyPaused = false;
@@ -599,11 +609,14 @@ class _TrailerPreviewState extends State<TrailerPreview>
     _isMuted = widget.muted;
     WidgetsBinding.instance.addObserver(this);
 
+    widget.controller._owner = this;
+
     widget.controller.pause = () {
       _pausePreview();
     };
 
     widget.controller.play = () {
+      _autoplaySuppressed = false;
       _playPreview();
     };
 
@@ -624,6 +637,30 @@ class _TrailerPreviewState extends State<TrailerPreview>
       _youtubeController?.unMute();
     };
 
+    widget.controller.stopAudio = () {
+      _player?.setVolume(0);
+      _nativePlayer?.setVolume(0);
+      _youtubeController?.mute();
+    };
+
+    widget.controller.disposePlayer = () async {
+      _userPaused = true;
+      _disposeController();
+    };
+
+    widget.controller.isPlaying = () {
+      if (_youtubeController != null) {
+        return _youtubeController!.value.isPlaying;
+      }
+      if (_nativePlayer != null) {
+        return _nativePlayer!.value.isPlaying;
+      }
+      if (_player != null) {
+        return _player!.state.playing;
+      }
+      return false;
+    };
+
     if (widget.trailerUrl?.isNotEmpty == true) _init();
   }
 
@@ -637,18 +674,29 @@ class _TrailerPreviewState extends State<TrailerPreview>
       }
       _route = route;
       routeObserver.subscribe(this, route);
+      // A preview built underneath another route (e.g. while the episode
+      // player is on top) must not start playing once it finishes loading.
+      if (!route.isCurrent) {
+        _autoplaySuppressed = true;
+        _youtubeController?.pause();
+      }
     }
   }
 
   @override
   void didPushNext() {
-    _wasPlayingBeforeRoutePause = _isPreviewPlaying;
+    // If the host page already stopped the preview before navigating (e.g.
+    // opening an episode), the pause is intentional: do not resume on return.
+    // Reading only the async player state here is racy because the host's
+    // pause() may not have been applied yet.
+    _wasPlayingBeforeRoutePause = _isPreviewPlaying && !_autoplaySuppressed;
     _pausePreview();
   }
 
   @override
   void didPopNext() {
     if (_wasPlayingBeforeRoutePause && widget.autoPlay && !_userPaused) {
+      _autoplaySuppressed = false;
       _playPreview();
     }
     _wasPlayingBeforeRoutePause = false;
@@ -665,10 +713,18 @@ class _TrailerPreviewState extends State<TrailerPreview>
         _wasPlayingBeforeLifecyclePause &&
         widget.autoPlay &&
         !_userPaused) {
+      _autoplaySuppressed = false;
       _playPreview();
       _wasPlayingBeforeLifecyclePause = false;
     }
   }
+
+  bool get _isRouteCurrent => _route?.isCurrent ?? true;
+
+  /// Whether playback may start right now: not paused by the user or the host
+  /// page, and the preview's route is the visible top-most route.
+  bool get _canStartPlayback =>
+      !_isDisposed && !_userPaused && !_autoplaySuppressed && _isRouteCurrent;
 
   bool get _isPreviewPlaying {
     final player = _player;
@@ -679,6 +735,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
   }
 
   void _pausePreview() {
+    _autoplaySuppressed = true;
     unawaited(_player?.pause());
     unawaited(_nativePlayer?.pause());
     _youtubeController?.pause();
@@ -686,7 +743,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
   }
 
   void _playPreview() {
-    if (_userPaused) return;
+    if (!_canStartPlayback) return;
     unawaited(_player?.play());
     unawaited(_nativePlayer?.play());
     _youtubeController?.play();
@@ -699,6 +756,12 @@ class _TrailerPreviewState extends State<TrailerPreview>
       _pausePreview();
     } else {
       _userPaused = false;
+      _autoplaySuppressed = false;
+      // Host pages call stopAudio() (volume 0) when stopping the preview;
+      // restore the volume that matches the visible mute state.
+      _player?.setVolume(_isMuted ? 0 : 100);
+      _nativePlayer?.setVolume(_isMuted ? 0 : 1);
+      _isMuted ? _youtubeController?.mute() : _youtubeController?.unMute();
       _playPreview();
     }
   }
@@ -726,7 +789,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
       if (!widget.muted) {
         controller.unMute();
       }
-      if (!widget.autoPlay || _userPaused) {
+      if (!widget.autoPlay || !_canStartPlayback) {
         controller.pause();
       }
 
@@ -762,10 +825,13 @@ class _TrailerPreviewState extends State<TrailerPreview>
       );
     }
 
-    final player = Player();
-    final controller = VideoController(player);
+    Player? player;
+    VideoController? controller;
 
     try {
+      player = Player();
+      controller = VideoController(player);
+
       _subscriptions
         ..add(player.stream.position.listen((_) {
           if (mounted) setState(() {});
@@ -781,8 +847,8 @@ class _TrailerPreviewState extends State<TrailerPreview>
         }))
         ..add(player.stream.completed.listen((completed) {
           if (completed && !_isDisposed && currentToken == _initToken) {
-            player.seek(Duration.zero);
-            player.play();
+            player?.seek(Duration.zero);
+            player?.play();
           }
         }))
         ..add(player.stream.error.listen((error) {
@@ -803,9 +869,6 @@ class _TrailerPreviewState extends State<TrailerPreview>
         await openFuture;
       }
       await player.setVolume(widget.muted ? 0 : 100);
-      if (widget.autoPlay && !_userPaused) {
-        await player.play();
-      }
 
       if (_isDisposed || currentToken != _initToken) {
         await player.dispose();
@@ -819,9 +882,16 @@ class _TrailerPreviewState extends State<TrailerPreview>
           _videoController = controller;
         });
       }
+      // Decide on autoplay only once initialization has finished, so a pause
+      // requested meanwhile (route pushed, scrolled away) is respected.
+      if (widget.autoPlay && _canStartPlayback) {
+        await player.play();
+      }
     } catch (error) {
       debugPrint('Trailer preview init error: $error');
-      await player.dispose();
+      try {
+        await player?.dispose();
+      } catch (_) {}
       if (mounted && !_isDisposed) {
         setState(() => _hasError = true);
       }
@@ -866,9 +936,6 @@ class _TrailerPreviewState extends State<TrailerPreview>
       await controller.initialize().timeout(_trailerNativeInitializeTimeout);
       await controller.setLooping(true);
       await controller.setVolume(widget.muted ? 0 : 1);
-      if (widget.autoPlay && !_userPaused) {
-        await controller.play();
-      }
     } catch (error) {
       debugPrint('Trailer preview native init error: $error');
       controller.removeListener(listener);
@@ -887,6 +954,15 @@ class _TrailerPreviewState extends State<TrailerPreview>
         _hasError = false;
         _nativePlayer = controller;
       });
+    }
+    // Decide on autoplay only once initialization has finished, so a pause
+    // requested meanwhile (route pushed, scrolled away) is respected.
+    if (widget.autoPlay && _canStartPlayback) {
+      try {
+        await controller.play();
+      } catch (error) {
+        debugPrint('Trailer preview native play error: $error');
+      }
     }
     return true;
   }
@@ -934,11 +1010,17 @@ class _TrailerPreviewState extends State<TrailerPreview>
     _isDisposed = true;
     WidgetsBinding.instance.removeObserver(this);
     routeObserver.unsubscribe(this);
-    widget.controller.pause = null;
-    widget.controller.play = null;
-    widget.controller.canAutoPlay = null;
-    widget.controller.mute = null;
-    widget.controller.unmute = null;
+    if (identical(widget.controller._owner, this)) {
+      widget.controller._owner = null;
+      widget.controller.pause = null;
+      widget.controller.play = null;
+      widget.controller.canAutoPlay = null;
+      widget.controller.mute = null;
+      widget.controller.unmute = null;
+      widget.controller.stopAudio = null;
+      widget.controller.disposePlayer = null;
+      widget.controller.isPlaying = null;
+    }
     _disposeController();
     super.dispose();
   }
@@ -1396,4 +1478,13 @@ class TrailerPreviewController {
   bool Function()? canAutoPlay;
   VoidCallback? mute;
   VoidCallback? unmute;
+  VoidCallback? stopAudio;
+  Future<void> Function()? disposePlayer;
+  bool Function()? isPlaying;
+
+  /// The [TrailerPreview] state whose callbacks are currently bound. When a
+  /// page rebuilds into a different layout, the replacement preview binds
+  /// before the old one is disposed; tracking the owner stops the old
+  /// preview's dispose from clearing the new preview's callbacks.
+  Object? _owner;
 }

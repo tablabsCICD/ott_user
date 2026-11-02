@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer';
 
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -487,7 +488,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              if (_pendingGiftCode != null) ...[
+                              if (_pendingGiftCode != null &&
+                                  !WalletPlatform.isGiftingHidden) ...[
                                 const SizedBox(height: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
@@ -882,8 +884,9 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                       ),
                     ),
                   ),
-                );
-              },
+                ),
+              );
+            },
             ),
           ),
         ),

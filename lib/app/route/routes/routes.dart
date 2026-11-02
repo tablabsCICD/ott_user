@@ -95,6 +95,7 @@ class RouteGenerator {
               }
               break;
             case DeepLinkContentType.series:
+            case DeepLinkContentType.miniSeries:
               if (target.id != null) {
                 return buildRoute(
                   SeriesDetailsPage(

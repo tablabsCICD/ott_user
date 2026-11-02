@@ -184,6 +184,21 @@ class ReferralService {
       rawValue = queryParams['code'];
     }
 
+    if (rawValue == null && uri.pathSegments.isNotEmpty) {
+      final segments = uri.pathSegments;
+      for (int i = 0; i < segments.length; i++) {
+        final seg = segments[i].toLowerCase();
+        if ((seg == 'register' || seg == 'signup' || seg == 'ref') &&
+            i + 1 < segments.length) {
+          final candidate = segments[i + 1];
+          if (isValidCode(candidate)) {
+            rawValue = candidate;
+            break;
+          }
+        }
+      }
+    }
+
     // Check fragment query if present
     if (rawValue == null && uri.fragment.isNotEmpty) {
       final fragmentUri = Uri.tryParse(

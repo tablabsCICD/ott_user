@@ -124,25 +124,21 @@ class ShareService {
 
   Future<List<String>> downloadAllQrImages(PreparedMovieShareData data) async {
     if (kIsWeb) {
-      _triggerWebDownload(data.qrCode.bytes,
-          '${data.contentType.name}_${data.movie.id}_qr.png');
-      _triggerWebDownload(data.appStoreQrCode.bytes,
-          '${data.contentType.name}_${data.movie.id}_appstore_qr.png');
+      _triggerWebDownload(
+        data.qrCode.bytes,
+        '${data.contentType.name}_${data.movie.id}_qr.png',
+      );
       return const <String>['browser download started'];
     }
 
     final directory = await getApplicationDocumentsDirectory();
-    final path1 =
+    final filePath =
         '${directory.path}${Platform.pathSeparator}${data.contentType.name}_${data.movie.id}_qr.png';
-    final file1 = File(path1);
-    await file1.writeAsBytes(data.qrCode.bytes, flush: true);
 
-    final path2 =
-        '${directory.path}${Platform.pathSeparator}${data.contentType.name}_${data.movie.id}_appstore_qr.png';
-    final file2 = File(path2);
-    await file2.writeAsBytes(data.appStoreQrCode.bytes, flush: true);
+    final file = File(filePath);
+    await file.writeAsBytes(data.qrCode.bytes, flush: true);
 
-    return <String>[file1.path, file2.path];
+    return <String>[file.path];
   }
 
   void _triggerWebDownload(Uint8List bytes, String fileName) {

@@ -33,7 +33,7 @@ class _MockDashboardProvider extends DashboardProvider {
   Future<void> getCastByContentId(int id) async {}
 
   @override
-  Future<void> getContinueWatchedMovieList(String type) async {}
+  Future<void> getContinueWatchedMovieList(String type, {bool forceRefresh = false}) async {}
 }
 
 class _MockSeriesProvider extends SeriesProvider {

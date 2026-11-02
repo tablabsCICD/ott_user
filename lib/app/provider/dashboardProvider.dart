@@ -283,7 +283,10 @@ class DashboardProvider extends BaseProvider {
     }
   }
 
-  Future<void> getContinueWatchedMovieList(String type) async {
+  Future<void> getContinueWatchedMovieList(
+    String type, {
+    bool forceRefresh = false,
+  }) async {
     final cwRequestId = ++_activeContinueWatchRequestId;
     _activeContinueWatchType = type;
 

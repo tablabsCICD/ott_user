@@ -6,6 +6,13 @@ class WalletPlatform {
   static bool get isIOS =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
+  /// TEMPORARY: hides every gifting entry point (gift a movie/series, claim
+  /// gift, gifted lists, gift deep-link popups) in the native iOS app only.
+  /// Gift APIs, models and logic are untouched; Android, web (including
+  /// Safari on Apple devices) and TV keep the existing behaviour.
+  /// Flip this to `false` to restore gifting on iOS.
+  static bool get isGiftingHidden => isIOS;
+
   static String? get operatingSystem {
     if (kIsWeb) return 'WEB';
 

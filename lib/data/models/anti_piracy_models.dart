@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 enum DeviceIntegrityState { verified, unknown }
 
 class DeviceIntegrityStatus {
@@ -93,11 +91,11 @@ class DeviceBinding {
 }
 
 class SignedPlaybackRequest {
-  SignedPlaybackRequest({
+  const SignedPlaybackRequest({
     required this.contentId,
     required this.deviceId,
     required this.playbackUrl,
-    required this.type,
+    this.type = 'MOVIE',
     required this.country,
     required this.platform,
     required this.deviceIntegrity,
@@ -122,8 +120,8 @@ class SignedPlaybackRequest {
       };
 }
 
-class SecureAudioTrack {
-  const SecureAudioTrack({
+class PlaybackTrackInfo {
+  const PlaybackTrackInfo({
     required this.id,
     required this.label,
     required this.language,
@@ -145,6 +143,41 @@ class SecureAudioTrack {
       url.isNotEmpty &&
       (type.toLowerCase() == 'hls' || format.toLowerCase() == 'm3u8');
 
+  bool get isSupportedVtt =>
+      url.isNotEmpty &&
+      (format.toLowerCase() == 'vtt' ||
+          Uri.tryParse(url)?.path.toLowerCase().endsWith('.vtt') == true);
+
+  bool get isHls =>
+      type.toLowerCase() == 'hls' || format.toLowerCase() == 'm3u8';
+
+  bool get isVtt =>
+      format.toLowerCase() == 'vtt' ||
+      Uri.tryParse(url)?.path.toLowerCase().endsWith('.vtt') == true;
+
+  factory PlaybackTrackInfo.fromJson(Map<String, dynamic> json) =>
+      PlaybackTrackInfo(
+        id: (json['id'] ?? '').toString().trim(),
+        label: (json['label'] ?? '').toString().trim(),
+        language: (json['language'] ?? '').toString().trim(),
+        url: (json['url'] ?? '').toString().trim(),
+        type: (json['type'] ?? '').toString().trim(),
+        format: (json['format'] ?? '').toString().trim(),
+        isDefault: json['default'] == true || json['isDefault'] == true,
+      );
+}
+
+class SecureAudioTrack extends PlaybackTrackInfo {
+  const SecureAudioTrack({
+    required super.id,
+    required super.label,
+    required super.language,
+    required super.url,
+    required super.type,
+    required super.format,
+    super.isDefault = false,
+  });
+
   factory SecureAudioTrack.fromJson(Map<String, dynamic> json) =>
       SecureAudioTrack(
         id: (json['id'] ?? '').toString().trim(),
@@ -157,29 +190,16 @@ class SecureAudioTrack {
       );
 }
 
-class SecureSubtitleTrack {
+class SecureSubtitleTrack extends PlaybackTrackInfo {
   const SecureSubtitleTrack({
-    required this.id,
-    required this.label,
-    required this.language,
-    required this.url,
-    required this.type,
-    required this.format,
-    this.isDefault = false,
+    required super.id,
+    required super.label,
+    required super.language,
+    required super.url,
+    required super.type,
+    required super.format,
+    super.isDefault = false,
   });
-
-  final String id;
-  final String label;
-  final String language;
-  final String url;
-  final String type;
-  final String format;
-  final bool isDefault;
-
-  bool get isSupportedVtt =>
-      url.isNotEmpty &&
-      (format.toLowerCase() == 'vtt' ||
-          Uri.tryParse(url)?.path.toLowerCase().endsWith('.vtt') == true);
 
   factory SecureSubtitleTrack.fromJson(Map<String, dynamic> json) =>
       SecureSubtitleTrack(
@@ -191,6 +211,32 @@ class SecureSubtitleTrack {
         format: (json['format'] ?? '').toString().trim(),
         isDefault: json['default'] == true || json['isDefault'] == true,
       );
+}
+
+class SecurePlaybackConfig {
+  const SecurePlaybackConfig({
+    required this.playbackUrl,
+    required this.httpHeaders,
+    required this.authorizationType,
+    required this.sessionId,
+    required this.expiresAt,
+    this.audioTracks = const [],
+    this.subtitleTracks = const [],
+  });
+
+  final String playbackUrl;
+  final Map<String, String> httpHeaders;
+  final String authorizationType;
+  final String sessionId;
+  final DateTime expiresAt;
+  final List<PlaybackTrackInfo> audioTracks;
+  final List<PlaybackTrackInfo> subtitleTracks;
+
+  bool get usesSignedCookies =>
+      authorizationType == SignedPlaybackResponse.cloudFrontSignedCookies;
+
+  bool get usesSignedUrl =>
+      authorizationType == SignedPlaybackResponse.cloudFrontSignedUrl;
 }
 
 SecureAudioTrack? getAutomaticAudioTrack(List<SecureAudioTrack> tracks) {
@@ -265,24 +311,17 @@ class SignedPlaybackResponse {
           .map((name) => '$name=${cookies[name]}')
           .join('; ');
 
-  Map<String, String> get httpHeaders {
-    if (authorizationType != cloudFrontSignedCookies) {
-      return const {};
-    }
-    if (kIsWeb) {
-      // Browsers forbid setting the 'Cookie' header programmatically in
-      // XMLHttpRequest / fetch (DOMException). Web playback relies on signed URL query tokens.
-      return const {};
-    }
-    return Map.unmodifiable({'Cookie': cookieHeader});
-  }
+  Map<String, String> get httpHeaders =>
+      authorizationType == cloudFrontSignedCookies
+          ? Map.unmodifiable({'Cookie': cookieHeader})
+          : const {};
 
   bool get isValid => isValidAt(DateTime.now().toUtc());
 
   bool isValidAt(DateTime now) {
     final uri = Uri.tryParse(playbackUrl);
     return uri != null &&
-        (uri.scheme == 'https' || uri.scheme == 'http') &&
+        uri.scheme == 'https' &&
         uri.host.isNotEmpty &&
         (authorizationType == cloudFrontSignedUrl ||
             (authorizationType == cloudFrontSignedCookies &&
@@ -299,35 +338,37 @@ class SignedPlaybackResponse {
             }));
   }
 
+  SecurePlaybackConfig toPlaybackConfig() {
+    return SecurePlaybackConfig(
+      playbackUrl: playbackUrl,
+      httpHeaders: httpHeaders,
+      authorizationType: authorizationType,
+      sessionId: sessionId,
+      expiresAt: expiresAt,
+      audioTracks: audioTracks,
+      subtitleTracks: subtitleTracks,
+    );
+  }
+
   factory SignedPlaybackResponse.fromJson(
     Map<String, dynamic> json, {
     DateTime? now,
     String? platform,
   }) {
-    var playbackUrl = (json['playbackUrl'] ?? '').toString().trim();
-    final signedUrl = (json['signedUrl'] ?? json['url'] ?? '').toString().trim();
-    if (playbackUrl.isEmpty && signedUrl.isNotEmpty) {
-      playbackUrl = signedUrl.contains('?') ? signedUrl.split('?').first : signedUrl;
-    }
-    final effectiveUrl = playbackUrl.isNotEmpty ? playbackUrl : signedUrl;
-    final uri = Uri.tryParse(effectiveUrl);
-    if (uri == null ||
-        (uri.scheme != 'https' && uri.scheme != 'http') ||
-        uri.host.isEmpty) {
+    final playbackUrl = (json['playbackUrl'] ?? '').toString().trim();
+    final uri = Uri.tryParse(playbackUrl);
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
       throw const FormatException('Invalid secure playback URL.');
     }
 
+    final signedUrl = (json['signedUrl'] ?? '').toString().trim();
     var authorizationType =
         (json['authorizationType'] ?? '').toString().trim().toUpperCase();
     final rawCookieHeader = (json['cookieHeader'] ?? '').toString().trim();
     if (authorizationType.isEmpty) {
-      authorizationType = (platform == 'ANDROID' || platform == 'IOS') && rawCookieHeader.isNotEmpty
+      authorizationType = platform == 'ANDROID' && rawCookieHeader.isNotEmpty
           ? cloudFrontSignedCookies
           : cloudFrontSignedUrl;
-    } else if (authorizationType.contains('COOKIE')) {
-      authorizationType = cloudFrontSignedCookies;
-    } else {
-      authorizationType = cloudFrontSignedUrl;
     }
     if (authorizationType != cloudFrontSignedCookies &&
         authorizationType != cloudFrontSignedUrl) {
@@ -354,50 +395,27 @@ class SignedPlaybackResponse {
       }
     }
 
-    var sessionId = (json['sessionId'] ?? json['id'] ?? '').toString().trim();
+    final sessionId = (json['sessionId'] ?? '').toString().trim();
     if (sessionId.isEmpty) {
-      sessionId = 'session_${DateTime.now().millisecondsSinceEpoch}';
+      throw const FormatException('Missing secure playback session.');
     }
 
-    final rawEpoch = json['expiresAtEpochSeconds'] ??
-        json['expiresAt'] ??
-        json['expires'] ??
-        json['expiry'] ??
-        json['expiration'];
+    final rawEpoch = json['expiresAtEpochSeconds'];
+    final epochNumber =
+        rawEpoch is num ? rawEpoch : num.tryParse(rawEpoch?.toString() ?? '');
+    final expiresAtEpochSeconds = epochNumber?.toInt() ?? 0;
     DateTime? expiresAt;
-    int expiresAtEpochSeconds = 0;
-    if (rawEpoch is num) {
-      final val = rawEpoch.toInt();
-      if (val > 100000000000) {
-        expiresAt = DateTime.fromMillisecondsSinceEpoch(val, isUtc: true);
-        expiresAtEpochSeconds = val ~/ 1000;
-      } else {
-        expiresAt = DateTime.fromMillisecondsSinceEpoch(val * 1000, isUtc: true);
-        expiresAtEpochSeconds = val;
-      }
-    } else if (rawEpoch is String) {
-      final asNum = num.tryParse(rawEpoch);
-      if (asNum != null) {
-        final val = asNum.toInt();
-        if (val > 100000000000) {
-          expiresAt = DateTime.fromMillisecondsSinceEpoch(val, isUtc: true);
-          expiresAtEpochSeconds = val ~/ 1000;
-        } else {
-          expiresAt = DateTime.fromMillisecondsSinceEpoch(val * 1000, isUtc: true);
-          expiresAtEpochSeconds = val;
-        }
-      } else {
-        expiresAt = DateTime.tryParse(rawEpoch)?.toUtc();
-        if (expiresAt != null) {
-          expiresAtEpochSeconds = expiresAt.millisecondsSinceEpoch ~/ 1000;
-        }
+    if (expiresAtEpochSeconds > 0) {
+      try {
+        expiresAt = DateTime.fromMillisecondsSinceEpoch(
+          expiresAtEpochSeconds * 1000,
+          isUtc: true,
+        );
+      } on ArgumentError {
+        expiresAt = null;
       }
     }
-
-    if (rawEpoch == null) {
-      expiresAt = (now ?? DateTime.now()).toUtc().add(const Duration(minutes: 10));
-      expiresAtEpochSeconds = expiresAt.millisecondsSinceEpoch ~/ 1000;
-    } else if (expiresAt == null ||
+    if (expiresAt == null ||
         !expiresAt.isAfter((now ?? DateTime.now()).toUtc())) {
       throw const FormatException('Secure playback authorization has expired.');
     }
@@ -517,15 +535,20 @@ class WatermarkData {
   }
 
   String get displayText {
-    final rawEmail = email.trim();
-    if (rawEmail.isNotEmpty) {
-      return rawEmail;
-    }
-    final rawUserName = userName.trim();
-    if (rawUserName.isNotEmpty) {
-      return rawUserName;
-    }
-    return userId.trim().isNotEmpty ? userId.trim() : 'Viewer';
+    final identity = maskEmail(email).isNotEmpty
+        ? maskEmail(email)
+        : (userId.isEmpty ? 'Viewer' : userId);
+    final normalizedDevice = deviceId.replaceAll('-', '').toUpperCase();
+    final shortDevice = normalizedDevice.length <= 6
+        ? normalizedDevice
+        : normalizedDevice.substring(normalizedDevice.length - 6);
+    final local = timestamp.toLocal();
+    final date = '${local.day.toString().padLeft(2, '0')}/'
+        '${local.month.toString().padLeft(2, '0')}/'
+        '${local.year} '
+        '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
+    return '$identity • $date';
   }
 
   static String maskEmail(String value) {

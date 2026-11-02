@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ott/app/core/constant/prefrense_constant.dart';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/widgets/gift_claim_dialog.dart';
@@ -426,6 +427,8 @@ class GiftDeepLinkService {
     if (kIsWeb) {
       return getPendingGiftCode();
     }
+    // Gifting is temporarily hidden on iOS: skip the clipboard lookup.
+    if (WalletPlatform.isGiftingHidden) return null;
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -536,6 +539,8 @@ class GiftDeepLinkService {
   /// Checks if there is a pending gift code and navigation/auth is ready,
   /// then displays the existing gift popup.
   Future<bool> checkAndProcessPendingGift(BuildContext context) async {
+    // Gifting is temporarily hidden on iOS: never surface the claim popup.
+    if (WalletPlatform.isGiftingHidden) return false;
     if (_isDialogShowing) return false;
 
     final pendingCode = await getPendingGiftCode();
@@ -568,6 +573,8 @@ class GiftDeepLinkService {
     BuildContext context,
     String couponCode,
   ) async {
+    // Gifting is temporarily hidden on iOS: never surface the claim popup.
+    if (WalletPlatform.isGiftingHidden) return false;
     final normalized = normalizeGiftCode(couponCode);
     if (normalized == null) return false;
 

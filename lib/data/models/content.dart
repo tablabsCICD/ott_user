@@ -335,8 +335,17 @@ class Content {
         rentlDuration: json['rentlDuration'],
         isRental: json['isRental'] == true,
 
-        watchedSeconds: _asInt(json['watchedSeconds']),
-        watchedPercentage: _asInt(json['watchedPercentage']),
+        watchedSeconds: _asInt(
+          json['watchedSeconds'] ??
+              json['watched_seconds'] ??
+              json['watchedDuration'],
+        ),
+        watchedPercentage: _asInt(
+          json['watchedPercentage'] ??
+              json['watched_percentage'] ??
+              json['contentPercentage'] ??
+              json['percentage'],
+        ),
 
         seasonId: _asInt(
           json['seasonId'] ??

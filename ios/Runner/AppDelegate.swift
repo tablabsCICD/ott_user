@@ -1,7 +1,7 @@
 import Flutter
 import UIKit
 
-@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+@UIApplicationMain @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private let antiPiracyChannel = "com.filmytell.ott/anti_piracy"
 
   override func application(

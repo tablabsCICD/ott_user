@@ -307,24 +307,24 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                               ],
                             ),
-                            profileCard(
-                              lang.gifts,
-                              [
-                                ProfileOption(
-                                  icon: Icons.history_sharp,
-                                  title: lang.giftedByYou,
-                                  onTap: () => _openDetail(
-                                      lang.giftedByYou, GiftedMoviesPage()),
-                                ),
-                                ProfileOption(
-                                  icon: LucideIcons.gift,
-                                  title: lang.claimGiftCard,
-                                  onTap: () {
-                                    showGiftClaimDialog(context);
-                                  },
-                                ),
-                              ],
-                            ),
+                            // profileCard(
+                            //   lang.gifts,
+                            //   [
+                            //     ProfileOption(
+                            //       icon: Icons.history_sharp,
+                            //       title: lang.giftedByYou,
+                            //       onTap: () => _openDetail(
+                            //           lang.giftedByYou, GiftedMoviesPage()),
+                            //     ),
+                            //     ProfileOption(
+                            //       icon: LucideIcons.gift,
+                            //       title: lang.claimGiftCard,
+                            //       onTap: () {
+                            //         showGiftClaimDialog(context);
+                            //       },
+                            //     ),
+                            //   ],
+                            // ),
                             profileCard(
                               lang.feedbackAndInformation,
                               [
@@ -662,8 +662,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 10),
                 Text(
                   (() {
-                    final first =
-                        (userProvider.userObj.firstName ?? '').trim();
+                    final first = (userProvider.userObj.firstName ?? '').trim();
                     final last = (userProvider.userObj.lastName ?? '').trim();
                     final full = '$first $last'.trim();
                     return full.isNotEmpty ? full : 'User';

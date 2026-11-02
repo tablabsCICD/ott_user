@@ -211,14 +211,18 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   final bool _isMicMuted = false;
   double _playbackSpeed = 1.0;
   bool _controlsVisible = true;
+  bool _isSliding = false;
   Timer? _hideControlsTimer;
+  int? _currentSeasonId;
+  int? _currentEpisodeId;
 
   static const Duration _controlsHideDelay = Duration(seconds: 3);
 
   void _scheduleHideControls() {
     _hideControlsTimer?.cancel();
+    if (_isSliding) return;
     _hideControlsTimer = Timer(_controlsHideDelay, () {
-      if (!mounted) return;
+      if (!mounted || _isSliding) return;
       setState(() => _controlsVisible = false);
     });
   }
@@ -286,6 +290,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   @override
   void initState() {
     super.initState();
+    _currentSeasonId = widget.seasonIndex;
+    _currentEpisodeId = widget.episodeIndex;
     SecurityDebugLog.event(
       'ROUTE',
       'PlayMediaPage.initState reached from the Watch Movie route.',
@@ -1912,27 +1918,37 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           child: Stack(
             fit: StackFit.expand,
             children: [
+              // Video surface layer — rendered first (behind everything).
               Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _toggleControlsVisibility,
-                  child: showLoading
-                      ? Center(
-                          child: CircularProgressIndicator(
-                            color: theme.primaryColor,
-                          ),
-                        )
-                      : _hasPlaybackError
-                          ? _secureErrorView()
-                          : ResponsiveWidget.isDesktop(context)
-                              ? _desktopPlayer()
-                              : _mobilePlayer(),
-                ),
+                child: showLoading
+                    ? Center(
+                        child: CircularProgressIndicator(
+                          color: theme.primaryColor,
+                        ),
+                      )
+                    : _hasPlaybackError
+                        ? _secureErrorView()
+                        : ResponsiveWidget.isDesktop(context)
+                            ? _desktopPlayer()
+                            : _mobilePlayer(),
               ),
               if (!showLoading && !_hasPlaybackError && watermark != null)
                 Positioned.fill(
                   child: PlaybackWatermarkOverlay(
                     watermark: watermark,
+                  ),
+                ),
+              // Tap-intercept layer — sits above the native player surface so
+              // iOS AVPlayer touch absorption does not swallow the tap.
+              // When controls are hidden this transparent layer still receives
+              // taps and reveals them; when visible, the controls overlay
+              // itself handles interaction normally.
+              if (!showLoading && !_hasPlaybackError)
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: _toggleControlsVisibility,
+                    child: const SizedBox.expand(),
                   ),
                 ),
               if (!showLoading && !_hasPlaybackError)
@@ -2268,6 +2284,18 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                 value: sliderValue,
                 min: 0,
                 max: sliderMax,
+                onChangeStart: durationMs <= 0
+                    ? null
+                    : (_) {
+                        _hideControlsTimer?.cancel();
+                        if (mounted) setState(() => _isSliding = true);
+                      },
+                onChangeEnd: durationMs <= 0
+                    ? null
+                    : (_) {
+                        if (mounted) setState(() => _isSliding = false);
+                        _scheduleHideControls();
+                      },
                 onChanged: durationMs <= 0
                     ? null
                     : (value) => _seekTo(

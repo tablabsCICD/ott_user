@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -1168,8 +1169,8 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
             },
           ),
 
-          /// 🎁 Gift (movies only)
-          if (!isSeries)
+          /// 🎁 Gift (movies only; temporarily hidden on iOS)
+          if (!isSeries && !WalletPlatform.isGiftingHidden)
             SpeedDialChild(
               label: "Gift",
               labelBackgroundColor: theme.cardColor,
