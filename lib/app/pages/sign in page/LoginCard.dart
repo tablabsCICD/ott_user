@@ -950,7 +950,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         } else {
           CustomToast.show(
             context,
-            'Failure: $message',
+            message,
             isSuccess: false,
           );
         }
@@ -1002,14 +1002,15 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
             'Post OTP navigation scheduled in ${navigationWatch.elapsedMilliseconds}ms',
           );
         } else {
-          CustomToast.show(context, 'Failure: $message', isSuccess: false);
+          CustomToast.show(context, message, isSuccess: false);
         }
       }
     } catch (e) {
       if (!mounted) return;
+      log('Login request failed: $e');
       CustomToast.show(
         context,
-        'An error occurred: ${e.toString()}',
+        'Unable to log in right now. Please try again.',
         isSuccess: false,
       );
     } finally {
@@ -1047,7 +1048,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
       final success = result?['success'] == true;
       final message = result?['message']?.toString() ?? 'Something went wrong';
       if (!success) {
-        CustomToast.show(context, 'Failure: $message', isSuccess: false);
+        CustomToast.show(context, message, isSuccess: false);
         setState(() => _otpHelperText = null);
         return;
       }

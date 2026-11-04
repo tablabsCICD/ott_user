@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/material.dart';
@@ -214,7 +215,8 @@ class GiftProvider extends BaseProvider {
       log("API URL => $apiUrl");
 
       ApiHelper apiHelper = ApiHelper();
-      final response = await apiHelper.postApi(apiUrl);
+      final response =
+          await apiHelper.postApi(apiUrl).timeout(const Duration(seconds: 30));
 
       log(
         "Gift Claim API Response Received => "
@@ -224,33 +226,38 @@ class GiftProvider extends BaseProvider {
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseBody = json.decode(response.body);
 
+        // "message" is passed through exactly as the backend sent it
+        // (null when the backend sent none).
+        final backendMessage = _extractMessage(responseBody);
         if (responseBody["success"] == true || responseBody["status"] == true) {
-          return {
-            "success": true,
-            "message": responseBody["message"] ?? "Gift card claimed successfully!"
-          };
+          return {"success": true, "message": backendMessage};
         } else {
-          final rawMsg = responseBody["message"]?.toString() ?? "";
-          log(
-            "Gift Claim Error Response Received => "
-            "${rawMsg.isNotEmpty ? rawMsg : 'Failed to save gift'}",
-          );
+          log("Gift Claim Error Response Received => $backendMessage");
           return {
             "success": false,
-            "message": rawMsg.isNotEmpty ? rawMsg : "Failed to save gift",
+            "message": backendMessage,
             "statusCode": 200,
           };
         }
       } else {
         log("Gift Claim Error Response Received => ${response.statusCode}");
+        Object? decoded;
+        try {
+          decoded = json.decode(response.body);
+        } catch (_) {}
         return {
           "success": false,
-          "message": response.statusCode >= 500
-              ? "Something went wrong while claiming the gift card. Please try again later."
-              : "Server error: ${response.statusCode}",
+          "message": _extractMessage(decoded),
           "statusCode": response.statusCode,
         };
       }
+    } on TimeoutException catch (error) {
+      log("Gift Claim Error Response Received => $error");
+      return {
+        "success": false,
+        "message":
+            "The server is taking too long to respond. Please check your gift cards before trying again.",
+      };
     } catch (error, stack) {
       log("Gift Claim Error Response Received => $error", stackTrace: stack);
       final errStr = error.toString().toLowerCase();
@@ -271,5 +278,14 @@ class GiftProvider extends BaseProvider {
       _isClaimingGift = false;
       notifyListeners();
     }
+  }
+
+  /// Returns the backend's own message from a decoded response body, or null.
+  static String? _extractMessage(Object? decoded) {
+    if (decoded is Map) {
+      final message = (decoded["message"] ?? decoded["error"])?.toString();
+      if (message != null && message.trim().isNotEmpty) return message.trim();
+    }
+    return null;
   }
 }

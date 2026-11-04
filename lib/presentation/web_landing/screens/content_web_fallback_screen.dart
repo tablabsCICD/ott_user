@@ -164,6 +164,21 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
     );
   }
 
+  String get _contentPlayStoreUrl {
+    final referrerPayload =
+        'content_type=${widget.contentType.name}&content_id=${widget.contentId}&url=${Uri.encodeComponent(_universalUrl.toString())}';
+    return '${AppConstant.playStoreLink}&referrer=${Uri.encodeComponent(referrerPayload)}';
+  }
+
+  Future<void> _openPlayStore() => _openStoreLink(_contentPlayStoreUrl);
+
+  Future<void> _openAppStore() async {
+    try {
+      await Clipboard.setData(ClipboardData(text: _universalUrl.toString()));
+    } catch (_) {}
+    await _openStoreLink(AppConstant.appStoreLink);
+  }
+
   Future<void> _openStoreLink(String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
@@ -182,9 +197,9 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
 
     // Fallback to platform store if native app open fails
     if (_isIOS) {
-      await _openStoreLink(AppConstant.appStoreLink);
+      await _openAppStore();
     } else {
-      await _openStoreLink(AppConstant.playStoreLink);
+      await _openPlayStore();
     }
   }
 
@@ -693,7 +708,7 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
             ),
             elevation: 4,
           ),
-          onPressed: () => _openStoreLink(AppConstant.playStoreLink),
+          onPressed: _openPlayStore,
           icon: const Icon(LucideIcons.play, size: 18),
           label: const Text(
             'Download for Android',
@@ -712,7 +727,7 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
               side: const BorderSide(color: Colors.white24),
             ),
           ),
-          onPressed: () => _openStoreLink(AppConstant.appStoreLink),
+          onPressed: _openAppStore,
           icon: const Icon(LucideIcons.apple, size: 18),
           label: const Text(
             'Download for iOS',
@@ -798,13 +813,13 @@ class _ContentWebFallbackScreenState extends State<ContentWebFallbackScreen> {
                     icon: LucideIcons.play,
                     title: 'GET IT ON',
                     subtitle: 'Google Play',
-                    onTap: () => _openStoreLink(AppConstant.playStoreLink),
+                    onTap: _openPlayStore,
                   ),
                   _buildStoreBadgeButton(
                     icon: LucideIcons.apple,
                     title: 'Download on the',
                     subtitle: 'App Store',
-                    onTap: () => _openStoreLink(AppConstant.appStoreLink),
+                    onTap: _openAppStore,
                   ),
                 ],
               ),

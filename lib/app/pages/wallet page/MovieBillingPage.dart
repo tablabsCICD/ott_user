@@ -2,7 +2,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:ott/app/core/services/invoice_service.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/gifted%20movies%20page/GiftedMoviesPage.dart';
@@ -10,7 +9,7 @@ import 'package:ott/app/pages/wallet%20page/PaymentPage.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
-import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/gift_claim_dialog.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
@@ -368,108 +367,14 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
   }
 
   // ---------------- Gift Dialog ----------------
-  void _showGiftDialog() {
-    final theme = Theme.of(context);
-    final couponCodeController = TextEditingController();
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return Dialog(
-          backgroundColor: theme.cardColor,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          insetPadding:
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: SizedBox(
-              width: ResponsiveWidget.isMobile(context) ? double.infinity : 400,
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: 1,
-                    left: 1,
-                    right: 1,
-                    bottom: 1,
-                    child: Icon(
-                      LucideIcons.gift,
-                      size: 200,
-                      color: theme.canvasColor.withOpacity(0.1),
-                    ),
-                  ),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text("Enter Gift Card Number"),
-                      const SizedBox(height: 6),
-                      CustomTextField(
-                        backgroundColor: theme.scaffoldBackgroundColor,
-                        isDigits: true,
-                        controller: couponCodeController,
-                        autofocus: ResponsiveWidget.isTabletOrTv(context),
-                        textInputAction: TextInputAction.done,
-                        hintText: "Enter 16 Digit Number",
-                        textInputType: TextInputType.text,
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text("Cancel"),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton(
-                            onPressed: () async {
-                              final provider = Provider.of<GiftProvider>(
-                                  context,
-                                  listen: false);
-
-                              if (couponCodeController.text.trim().length !=
-                                  16) {
-                                CustomToast.show(
-                                  context,
-                                  "Coupon code is invalid",
-                                  isSuccess: false,
-                                );
-                                return;
-                              }
-
-                              final result = await provider.useGiftByCoupon(
-                                  couponCodeController.text.trim());
-
-                              if (result["success"] == true) {
-                                CustomToast.show(
-                                  context,
-                                  "Coupon applied successfully",
-                                  isSuccess: true,
-                                );
-                                Navigator.pop(context, true);
-                              } else {
-                                CustomToast.show(
-                                  context,
-                                  "Failed to apply coupon",
-                                  isSuccess: false,
-                                );
-                              }
-                            },
-                            child: const Text("Redeem"),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
+  Future<void> _showGiftDialog() async {
+    // Reuse the shared gift claim dialog: it disables the button and shows a
+    // loader while the request runs, sends only one request, shows the
+    // backend error, and closes only after a confirmed success.
+    final claimed = await showGiftClaimDialog(context);
+    if (claimed != true || !mounted) return;
+    await Provider.of<WalletProvider>(context, listen: false)
+        .refreshWalletData();
   }
 
   // ---------------- Confirmation ----------------
@@ -572,10 +477,8 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   pageContext,
                                   listen: false,
                                 ).getContentById(widget.movie.id!).catchError((
-                                  error,
-                                ) {
-
-                                });
+                                      error,
+                                    ) {});
 
                                 if (!mounted) return;
                                 _hidePurchaseLoader(pageContext);
@@ -783,12 +686,11 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                               if (!mounted) return;
                               if (result is Map && result['success'] == true) {
                                 _showWalletReflectLoader(pageContext);
-                                final addResult =
-                                    await provider
-                                        .onPaymentVerified(
-                                          expectedAmount: amount,
-                                        )
-                                        .whenComplete(() {
+                                final addResult = await provider
+                                    .onPaymentVerified(
+                                  expectedAmount: amount,
+                                )
+                                    .whenComplete(() {
                                   if (mounted) {
                                     Navigator.of(pageContext,
                                             rootNavigator: true)
@@ -883,7 +785,6 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
         'Purchase completed, but invoice generation failed.',
         isSuccess: false,
       );
-
     }
   }
 }

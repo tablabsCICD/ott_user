@@ -48,10 +48,20 @@ class _GiftClaimDialogState extends State<GiftClaimDialog> {
     _couponCodeController = TextEditingController(
       text: _normalizeCouponCode(widget.initialCouponCode ?? ''),
     );
+    // Rebuild so the Redeem button enables/disables as the code is typed.
+    _couponCodeController.addListener(_onCodeChanged);
   }
+
+  void _onCodeChanged() {
+    if (mounted) setState(() {});
+  }
+
+  bool get _isCodeValid =>
+      isValidGiftCardCodeLength(_couponCodeController.text);
 
   @override
   void dispose() {
+    _couponCodeController.removeListener(_onCodeChanged);
     _couponCodeController.dispose();
     super.dispose();
   }
@@ -60,107 +70,111 @@ class _GiftClaimDialogState extends State<GiftClaimDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Dialog(
-      backgroundColor: theme.cardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      insetPadding: const EdgeInsets.symmetric(
-        horizontal: 24,
-        vertical: 24,
-      ),
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: SizedBox(
-            width: ResponsiveWidget.isMobile(context)
-                ? double.infinity
-                : 400,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Center(
-                      child: Icon(
-                        LucideIcons.gift,
-                        size: 200,
-                        color: theme.canvasColor.withOpacity(0.1),
+    return PopScope(
+      // Block back-button dismissal while a redemption request is in flight.
+      canPop: !_isClaiming,
+      child: Dialog(
+        backgroundColor: theme.cardColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        insetPadding: const EdgeInsets.symmetric(
+          horizontal: 24,
+          vertical: 24,
+        ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: SizedBox(
+              width: ResponsiveWidget.isMobile(context) ? double.infinity : 400,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Center(
+                        child: Icon(
+                          LucideIcons.gift,
+                          size: 200,
+                          color: theme.canvasColor.withOpacity(0.1),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Enter Gift Card Number",
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.canvasColor,
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Enter Gift Card Number",
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.canvasColor,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    CustomTextField(
-                      backgroundColor: theme.scaffoldBackgroundColor,
-                      isDigits: false,
-                      controller: _couponCodeController,
-                      autofocus: !widget.isFromDeepLink &&
-                          ResponsiveWidget.isTabletOrTv(context),
-                      textInputAction: TextInputAction.done,
-                      hintText: "Enter 16 Digit Number",
-                      textInputType: TextInputType.text,
-                      capitalization: TextCapitalization.characters,
-                      readOnly: widget.isFromDeepLink,
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: _isClaiming
-                              ? null
-                              : () => Navigator.pop(context),
-                          child: Text(
-                            "Cancel",
-                            style: TextStyle(
-                              color: theme.canvasColor.withOpacity(0.7),
+                      const SizedBox(height: 4),
+                      CustomTextField(
+                        backgroundColor: theme.scaffoldBackgroundColor,
+                        isDigits: false,
+                        controller: _couponCodeController,
+                        autofocus: !widget.isFromDeepLink &&
+                            ResponsiveWidget.isTabletOrTv(context),
+                        textInputAction: TextInputAction.done,
+                        hintText: "Enter 16 Digit Number",
+                        textInputType: TextInputType.text,
+                        capitalization: TextCapitalization.characters,
+                        readOnly: widget.isFromDeepLink,
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: _isClaiming
+                                ? null
+                                : () => Navigator.pop(context),
+                            child: Text(
+                              "Cancel",
+                              style: TextStyle(
+                                color: theme.canvasColor.withOpacity(0.7),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.primaryColor,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: theme.primaryColor,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
                             ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                          ),
-                          onPressed: _isClaiming ? null : _handleRedeem,
-                          child: _isClaiming
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
+                            onPressed: _isClaiming || !_isCodeValid
+                                ? null
+                                : _handleRedeem,
+                            child: _isClaiming
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
                                     ),
+                                  )
+                                : const Text(
+                                    "Redeem",
+                                    style: TextStyle(color: Colors.white),
                                   ),
-                                )
-                              : const Text(
-                                  "Redeem",
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -173,14 +187,8 @@ class _GiftClaimDialogState extends State<GiftClaimDialog> {
 
     final couponCode = _normalizeCouponCode(_couponCodeController.text);
 
-    if (couponCode.isEmpty || couponCode.length != 16) {
-      CustomToast.show(
-        context,
-        "Invalid gift card code. Please check and try again.",
-        isSuccess: false,
-      );
-      return;
-    }
+    // Never call the API unless the code is exactly 16 characters.
+    if (!isValidGiftCardCodeLength(couponCode)) return;
 
     setState(() => _isClaiming = true);
 
@@ -192,20 +200,22 @@ class _GiftClaimDialogState extends State<GiftClaimDialog> {
       if (result["success"] == true) {
         await GiftDeepLinkService.instance.markGiftCodeClaimed(couponCode);
         if (!mounted) return;
-        CustomToast.show(
-          context,
-          "Gift card claimed successfully!",
-          isSuccess: true,
-        );
+        // Show exactly the backend's success message.
+        final successMessage = result["message"]?.toString().trim() ?? "";
+        if (successMessage.isNotEmpty) {
+          CustomToast.show(context, successMessage, isSuccess: true);
+        }
         Navigator.pop(context, true);
       } else {
-        final rawMsg = result["message"]?.toString() ?? "";
-        final statusCode = result["statusCode"] as int?;
-        final errorMessage = resolveClaimErrorMessage(
-          rawMessage: rawMsg,
-          statusCode: statusCode,
-          error: result["error"],
-        );
+        final rawMsg = result["message"]?.toString().trim() ?? "";
+        // Show exactly the backend's error message; the generic fallback is
+        // used only when the response carried no message at all.
+        final errorMessage = rawMsg.isNotEmpty
+            ? rawMsg
+            : resolveClaimErrorMessage(
+                statusCode: result["statusCode"] as int?,
+                error: result["error"],
+              );
 
         final lower = rawMsg.toLowerCase();
         if (lower.contains('already') ||
@@ -307,6 +317,11 @@ String resolveClaimErrorMessage({
 
   return "Something went wrong while claiming the gift card. Please try again later.";
 }
+
+/// A gift card code is redeemable only when, after normalization, it is
+/// exactly 16 characters long (empty, shorter or longer codes are rejected).
+bool isValidGiftCardCodeLength(String value) =>
+    _normalizeCouponCode(value).length == 16;
 
 String _normalizeCouponCode(String value) {
   return value.trim().replaceAll(' ', '').toUpperCase();

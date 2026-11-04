@@ -1050,7 +1050,9 @@ class UserProvider extends BaseProvider {
     final watch = Stopwatch()..start();
 
     try {
-      var response = await apiHelper.postApiWithoutAuthToken(apiUrl);
+      var response = await apiHelper
+          .postApiWithoutAuthToken(apiUrl)
+          .timeout(_authRequestTimeout);
       _logOtpPerformance(
         'Send OTP API completed in ${watch.elapsedMilliseconds}ms',
       );
@@ -1074,23 +1076,11 @@ class UserProvider extends BaseProvider {
             'message': addUserResponse.message ?? 'User not found',
           };
         }
-      } else if (response.statusCode == 401 ||
-          response.statusCode == 500 ||
-          response.statusCode == 404) {
-        final responseBody = json.decode(response.body);
-        final message = responseBody is Map<String, dynamic>
-            ? responseBody['message']?.toString()
-            : null;
-        return {
-          'success': false,
-          'message': message ?? 'Error in response',
-        };
       } else {
         return {
-          'failure': true,
-          'message': 'Something went wrong!',
+          'success': false,
+          'message': _authErrorMessage(response.statusCode, response.body),
         };
-        // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } on io.SocketException {
       _logOtpPerformance(
@@ -1098,15 +1088,22 @@ class UserProvider extends BaseProvider {
       );
       return {
         'success': false,
-        'message':
-            'No internet connection. Please check your network and try again.',
+        'message': _noConnectionMessage,
       };
+    } on TimeoutException {
+      _logOtpPerformance(
+        'Send OTP timed out after ${watch.elapsedMilliseconds}ms',
+      );
+      return {'success': false, 'message': _timeoutMessage};
     } catch (error) {
       _logOtpPerformance(
         'Send OTP failed after ${watch.elapsedMilliseconds}ms',
       );
       log("Error: $error");
-      return {'success': false, 'message': 'error: $error'};
+      return {
+        'success': false,
+        'message': 'Unable to send OTP. Please try again.',
+      };
     }
   }
 
@@ -1145,7 +1142,9 @@ class UserProvider extends BaseProvider {
 
     try {
       final apiWatch = Stopwatch()..start();
-      var response = await apiHelper.postApiWithoutAuthToken(apiUrl);
+      var response = await apiHelper
+          .postApiWithoutAuthToken(apiUrl)
+          .timeout(_authRequestTimeout);
       _logOtpPerformance(
         'Verify OTP API completed in ${apiWatch.elapsedMilliseconds}ms',
       );
@@ -1190,27 +1189,51 @@ class UserProvider extends BaseProvider {
             'message': addUserResponse.message ?? 'Error in response'
           };
         }
-      } else if (response.statusCode == 401 ||
-          response.statusCode == 500 ||
-          response.statusCode == 404) {
+      } else {
         return {
           'success': false,
-          'message': SessionManager.extractMessage(response.body) ??
-              'Error in response'
+          'message': _authErrorMessage(response.statusCode, response.body),
         };
-      } else {
-        return {'failure': true, 'message': 'Something went wrong!'};
-        // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
+    } on io.SocketException {
+      _logOtpPerformance(
+        'Verify OTP failed after ${totalWatch.elapsedMilliseconds}ms: no connection',
+      );
+      return {'success': false, 'message': _noConnectionMessage};
+    } on TimeoutException {
+      _logOtpPerformance(
+        'Verify OTP timed out after ${totalWatch.elapsedMilliseconds}ms',
+      );
+      return {'success': false, 'message': _timeoutMessage};
     } catch (error) {
       _logOtpPerformance(
         'Verify OTP failed after ${totalWatch.elapsedMilliseconds}ms',
       );
       return {
         'success': false,
-        'message': 'An error occurred while logging user'
+        'message': 'Unable to log in right now. Please try again.',
       };
     }
+  }
+
+  static const Duration _authRequestTimeout = Duration(seconds: 30);
+  static const String _noConnectionMessage =
+      'No internet connection. Please check your network and try again.';
+  static const String _timeoutMessage =
+      'The server is taking too long to respond. Please try again.';
+
+  /// Uses the backend's own message for any non-200 auth response
+  /// (invalid OTP, inactive account, rate limit, server error),
+  /// with a status-based fallback when the body has no message.
+  static String _authErrorMessage(int statusCode, String body) {
+    final backendMessage = SessionManager.extractMessage(body)?.trim();
+    if (backendMessage != null && backendMessage.isNotEmpty) {
+      return backendMessage;
+    }
+    if (statusCode >= 500) {
+      return 'Server error. Please try again later.';
+    }
+    return 'Something went wrong. Please try again.';
   }
 
   void _logOtpPerformance(String message) {

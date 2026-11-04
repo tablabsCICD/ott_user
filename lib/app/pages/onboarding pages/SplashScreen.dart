@@ -50,7 +50,9 @@ class _SplashScreenState extends State<SplashScreen> {
     // Recover any deferred install referral code, gift code, or content link on cold start / first launch
     unawaited(ReferralService.instance.checkDeferredInstallReferrer());
     unawaited(GiftDeepLinkService.instance.checkDeferredGiftInstall());
-    unawaited(DeepLinkService.instance.checkDeferredContentInstall());
+    await DeepLinkService.instance
+        .checkDeferredContentInstall()
+        .timeout(const Duration(seconds: 2), onTimeout: () => null);
 
     final loggedIn =
         await _prefs.getBool(SharedPreferencesConstant.isUserLoggedIn);

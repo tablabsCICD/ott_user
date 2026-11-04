@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ott/app/core/constant/prefrense_constant.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/core/services/gift_deep_link_service.dart';
 import 'package:ott/app/core/services/referral_service.dart';
 import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
@@ -451,6 +452,7 @@ class DeepLinkService {
   }
 
   Future<void> savePendingDeepLinkTarget(DeepLinkTarget target) async {
+    _pendingTarget = target;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
@@ -475,7 +477,9 @@ class DeepLinkService {
       final raw = prefs.getString(SharedPreferencesConstant.pendingDeepLinkUri);
       if (raw == null || raw.trim().isEmpty) return null;
       final map = jsonDecode(raw) as Map<String, dynamic>;
-      return DeepLinkTarget.fromJson(map);
+      final target = DeepLinkTarget.fromJson(map);
+      _pendingTarget ??= target;
+      return target;
     } catch (e) {
       developer.log(
         'Failed to read persisted deep link target: $e',
@@ -486,6 +490,7 @@ class DeepLinkService {
   }
 
   Future<void> clearPendingDeepLinkTarget() async {
+    _pendingTarget = null;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(SharedPreferencesConstant.pendingDeepLinkUri);
@@ -522,8 +527,15 @@ class DeepLinkService {
     }
 
     try {
-      final decodedQuery = Uri.decodeQueryComponent(toParse);
-      final queryParams = Uri.splitQueryString(decodedQuery);
+      final queryParams = Uri.splitQueryString(toParse);
+
+      if (queryParams.containsKey('referrer')) {
+        final nestedReferrer = queryParams['referrer'];
+        if (nestedReferrer != null && nestedReferrer.trim().isNotEmpty) {
+          final target = extractTargetFromString(nestedReferrer);
+          if (target != null) return target;
+        }
+      }
 
       if (queryParams.containsKey('url')) {
         final nestedUrl = queryParams['url'];
@@ -563,6 +575,18 @@ class DeepLinkService {
           type: DeepLinkContentType.register,
           referralCode: referralCode.trim(),
         );
+      }
+
+      // If no target found directly and string contains percent-encoded characters,
+      // attempt one level of component decoding as fallback
+      if (toParse.contains('%')) {
+        try {
+          final decoded = Uri.decodeQueryComponent(toParse);
+          if (decoded != toParse) {
+            final fallbackTarget = extractTargetFromString(decoded);
+            if (fallbackTarget != null) return fallbackTarget;
+          }
+        } catch (_) {}
       }
     } catch (_) {}
 
@@ -666,11 +690,42 @@ class DeepLinkService {
     var target = _pendingTarget;
     target ??= await getPendingDeepLinkTarget();
     if (target == null) {
+      target = await checkDeferredContentInstall();
+    }
+    if (target == null) {
+      return;
+    }
+
+    final isLoggedIn = await LocalSharePreferences.localSharePreferences.getBool(
+      SharedPreferencesConstant.isUserLoggedIn,
+    );
+
+    if (!isLoggedIn && _isContentTarget(target)) {
+      _pendingTarget = target;
+      await savePendingDeepLinkTarget(target);
+      developer.log(
+        'User not logged in. Preserving pending content deep link target: $target',
+        name: 'DeepLinkService',
+      );
       return;
     }
 
     _pendingTarget = null;
     await _navigateToTarget(target, source: 'pending_navigation');
+  }
+
+  bool _isContentTarget(DeepLinkTarget target) {
+    switch (target.type) {
+      case DeepLinkContentType.movie:
+      case DeepLinkContentType.shortFilm:
+      case DeepLinkContentType.series:
+      case DeepLinkContentType.miniSeries:
+      case DeepLinkContentType.short:
+        return true;
+      case DeepLinkContentType.gift:
+      case DeepLinkContentType.register:
+        return false;
+    }
   }
 
   Future<void> dispose() async {
@@ -764,6 +819,18 @@ class DeepLinkService {
       _pendingTarget = target;
       developer.log(
         'Navigation Triggered: queued ${target.typeName} from initial launch',
+        name: 'DeepLinkService',
+      );
+      return true;
+    }
+
+    final isLoggedIn = await LocalSharePreferences.localSharePreferences.getBool(
+      SharedPreferencesConstant.isUserLoggedIn,
+    );
+    if (!isLoggedIn && _isContentTarget(target)) {
+      _pendingTarget = target;
+      developer.log(
+        'User not logged in during stream event. Preserving pending content deep link target: $target',
         name: 'DeepLinkService',
       );
       return true;
