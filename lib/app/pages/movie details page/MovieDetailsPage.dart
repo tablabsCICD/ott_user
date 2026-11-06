@@ -23,6 +23,7 @@ import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/review_input_field.dart';
 import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -212,7 +213,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
     if (contentUrl == null || contentUrl.isEmpty) {
       CustomToast.show(
         context,
-        "Movie video is not available at the moment.",
+        AppLocalizations.of(context)!.detailsMovieVideoUnavailable,
         isSuccess: false,
       );
       return;
@@ -359,7 +360,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
               ),
               const SizedBox(height: 8),
               Text(
-                "This content is currently unavailable. Please try again later.",
+                AppLocalizations.of(context)!.detailsContentUnavailable,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: selectedThemeData.canvasColor.withValues(alpha: 0.7),
@@ -586,10 +587,12 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
         .take(2)
         .join(' / ');
     final items = <String>[
-      '${(content.ratings ?? 0).toStringAsFixed(1)} rating',
+      AppLocalizations.of(context)!
+          .detailsRatingValue((content.ratings ?? 0).toStringAsFixed(1)),
       if (_releaseYearText(content.releaseDate).isNotEmpty)
         _releaseYearText(content.releaseDate),
-      if ((content.runtime ?? 0) > 0) '${content.runtime} min',
+      if ((content.runtime ?? 0) > 0)
+        AppLocalizations.of(context)!.detailsRuntimeMinutes(content.runtime!),
       if (genres.isNotEmpty) genres,
       if (languages.isNotEmpty) languages,
       _qualityBadge(content),
@@ -636,8 +639,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
         _tvActionButton(
           theme: theme,
           label: content.isRental == true
-              ? (hasResume ? 'Resume' : 'Watch Now')
-              : 'Rent Rs ${content.price ?? 0}',
+              ? (hasResume
+                  ? AppLocalizations.of(context)!.cardResume
+                  : AppLocalizations.of(context)!.watchNow)
+              : AppLocalizations.of(context)!
+                  .detailsRentPrice('${content.price ?? 0}'),
           icon: content.isRental == true
               ? (hasResume ? Icons.restart_alt : Icons.play_arrow_rounded)
               : Icons.lock_open_rounded,
@@ -655,14 +661,14 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
         ),
         _tvActionButton(
           theme: theme,
-          label: 'Watch Trailer',
+          label: AppLocalizations.of(context)!.watchTrailer,
           icon: Icons.movie_creation_outlined,
           onPressed: () => _openTrailer(content),
         ),
         _buildTvDownloadButton(context, content, theme),
         _tvActionButton(
           theme: theme,
-          label: 'Share',
+          label: AppLocalizations.of(context)!.cardShare,
           icon: Icons.ios_share_rounded,
           onPressed: () => showContentShareSheet(
             context,
@@ -670,13 +676,14 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
             contentType: _contentType == ContentType.shortFilm
                 ? DeepLinkContentType.shortFilm
                 : DeepLinkContentType.movie,
-            unavailableMessage: "Movie details are not available yet",
+            unavailableMessage:
+                AppLocalizations.of(context)!.detailsMovieDetailsUnavailable,
           ),
         ),
         if (!WalletPlatform.isIOS)
           _tvActionButton(
             theme: theme,
-            label: 'Gift',
+            label: AppLocalizations.of(context)!.cardGift,
             icon: LucideIcons.gift,
             onPressed: () => _showGiftDialog(context, content),
           ),
@@ -695,7 +702,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
 
     return _tvActionButton(
       theme: theme,
-      label: isBookmarked ? 'Watchlisted' : 'Add to Watchlist',
+      label: isBookmarked
+          ? AppLocalizations.of(context)!.detailsWatchlisted
+          : AppLocalizations.of(context)!.detailsAddToWatchlist,
       icon: isBookmarked ? Icons.bookmark : Icons.bookmark_border,
       onPressed: id == 0
           ? null
@@ -707,8 +716,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
               CustomToast.show(
                 context,
                 wasBookmarked
-                    ? '${content.title} removed from bookmarks'
-                    : '${content.title} added to bookmarks',
+                    ? AppLocalizations.of(context)!
+                        .cardRemovedFromBookmarks('${content.title}')
+                    : AppLocalizations.of(context)!
+                        .cardAddedToBookmarks('${content.title}'),
                 isSuccess: true,
               );
             },
@@ -723,11 +734,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
     if (!_canDownloadOffline(content)) {
       return _tvActionButton(
         theme: theme,
-        label: 'Download',
+        label: AppLocalizations.of(context)!.detailsDownload,
         icon: Icons.download_rounded,
         onPressed: () => CustomToast.show(
           context,
-          'Download is not available for this movie.',
+          AppLocalizations.of(context)!.detailsDownloadNotAvailable,
           isSuccess: false,
         ),
       );
@@ -744,10 +755,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
         return _tvActionButton(
           theme: theme,
           label: isDownloading
-              ? 'Downloading ${(progress * 100).clamp(0, 100).toStringAsFixed(0)}%'
+              ? AppLocalizations.of(context)!.detailsDownloadingPercent(
+                  (progress * 100).clamp(0, 100).toStringAsFixed(0))
               : isDownloaded
-                  ? 'Downloaded'
-                  : 'Download',
+                  ? AppLocalizations.of(context)!.detailsDownloaded
+                  : AppLocalizations.of(context)!.detailsDownload,
           icon: isDownloaded ? Icons.download_done_rounded : Icons.download,
           onPressed: isDownloading
               ? null
@@ -758,7 +770,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                   if (!mounted) return;
                   CustomToast.show(
                     context,
-                    result['message']?.toString() ?? 'Download updated',
+                    result['message']?.toString() ??
+                        AppLocalizations.of(context)!.detailsDownloadUpdated,
                     isSuccess: result['success'] == true,
                   );
                 },
@@ -821,7 +834,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildTvSectionTitle('Cast & Crew'),
+        _buildTvSectionTitle(AppLocalizations.of(context)!.detailsCastAndCrew),
         const SizedBox(height: 14),
         SizedBox(
           height: 172,
@@ -924,7 +937,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
         if (continueItems.isNotEmpty) ...[
           _buildTvContentRail(
             context,
-            'Continue Watching',
+            AppLocalizations.of(context)!.continueWatching,
             continueItems,
             theme,
           ),
@@ -1022,7 +1035,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
             ),
             const SizedBox(height: 10),
             Text(
-              content.title ?? 'Untitled',
+              content.title ?? AppLocalizations.of(context)!.detailsUntitled,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -1062,10 +1075,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
 
   String _railTitle(String? category) {
     final raw = category?.trim();
-    if (raw == null || raw.isEmpty) return 'More Like This';
-    if (raw.toLowerCase().contains('trending')) return 'Trending';
-    if (raw.toLowerCase().contains('latest')) return 'Recommended';
-    if (raw.toLowerCase().contains('upcoming')) return 'More Like This';
+    final lang = AppLocalizations.of(context)!;
+    if (raw == null || raw.isEmpty) return lang.detailsMoreLikeThis;
+    if (raw.toLowerCase().contains('trending')) return lang.detailsTrending;
+    if (raw.toLowerCase().contains('latest')) return lang.detailsRecommended;
+    if (raw.toLowerCase().contains('upcoming')) return lang.detailsMoreLikeThis;
     return raw;
   }
 
@@ -1140,7 +1154,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
     if (trailerUrl.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Trailer is not available.')),
+        SnackBar(
+            content: Text(AppLocalizations.of(context)!.trailerNotAvailable)),
       );
       return;
     }
@@ -1185,7 +1200,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                           color: theme.primaryColor, size: 28),
                       const SizedBox(width: 10),
                       Text(
-                        "Gift This Movie",
+                        AppLocalizations.of(context)!.detailsGiftThisMovie,
                         style: theme.textTheme.titleLarge
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
@@ -1193,7 +1208,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    "Enter how many people you'd like to gift this movie to.",
+                    AppLocalizations.of(context)!.detailsGiftRecipientsPrompt,
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(color: theme.canvasColor),
                   ),
@@ -1202,7 +1217,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                     backgroundColor: theme.scaffoldBackgroundColor,
                     isDigits: true,
                     controller: countController,
-                    hintText: "Number of recipients",
+                    hintText:
+                        AppLocalizations.of(context)!.detailsNumberOfRecipients,
                     textInputType: TextInputType.number,
                   ),
                   const SizedBox(height: 24),
@@ -1211,7 +1227,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                     children: [
                       TextButton(
                         onPressed: () => Navigator.pop(dialogContext),
-                        child: Text("Cancel",
+                        child: Text(AppLocalizations.of(context)!.cancel,
                             style: TextStyle(color: theme.canvasColor)),
                       ),
                       const SizedBox(width: 12),
@@ -1228,7 +1244,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                           if (count == null || count <= 0) {
                             CustomToast.show(
                               dialogContext,
-                              'Please enter valid number',
+                              AppLocalizations.of(context)!
+                                  .detailsEnterValidNumber,
                               isSuccess: false,
                             );
                             return;
@@ -1246,8 +1263,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                             ),
                           );
                         },
-                        child: const Text("Continue",
-                            style: TextStyle(color: Colors.white)),
+                        child: Text(AppLocalizations.of(context)!.homeContinue,
+                            style: const TextStyle(color: Colors.white)),
                       ),
                     ],
                   ),
@@ -1340,7 +1357,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                           decoration: BoxDecoration(
                             border: Border.all(
                               width: 1,
-                              color: selectedThemeData.canvasColor.withOpacity(0.5),
+                              color: selectedThemeData.canvasColor
+                                  .withOpacity(0.5),
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -1376,10 +1394,12 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '(${content.ratingCount ?? '0'} reviews)',
+                          AppLocalizations.of(context)!
+                              .detailsReviewsCount(content.ratingCount ?? 0),
                           style: TextStyle(
                             fontSize: 14,
-                            color: selectedThemeData.canvasColor.withOpacity(0.7),
+                            color:
+                                selectedThemeData.canvasColor.withOpacity(0.7),
                           ),
                         ),
                         const Spacer(),
@@ -1651,7 +1671,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Gallery",
+          AppLocalizations.of(context)!.detailsGallery,
           style: TextStyle(
             color: theme.primaryColor,
             fontSize: 18,
@@ -1712,8 +1732,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
     final theme = Theme.of(context);
     final releaseDateText = formatReleaseDate(content.releaseDate).trim();
     final displayText = (releaseDateText.isNotEmpty)
-        ? 'Release On: $releaseDateText'
-        : 'Release On: Coming Soon';
+        ? AppLocalizations.of(context)!.detailsReleaseOn(releaseDateText)
+        : AppLocalizations.of(context)!.detailsReleaseOnComingSoon;
 
     final child = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -1751,10 +1771,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
             showDuration: const Duration(seconds: 2),
             waitDuration: const Duration(seconds: 1),
             message: ageRating == 'U'
-                ? 'Universal Age'
+                ? AppLocalizations.of(context)!.detailsUniversalAge
                 : ageRating == 'U/A'
-                    ? 'Parental Guidance'
-                    : 'Adults Only',
+                    ? AppLocalizations.of(context)!.detailsParentalGuidance
+                    : AppLocalizations.of(context)!.detailsAdultsOnly,
             child: Image.asset(
               height: 40,
               width: 60,
@@ -1779,7 +1799,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
 
     return Center(
       child: ActionButtonWidget(
-        label: 'Gift Movie',
+        label: AppLocalizations.of(context)!.cardGiftMovie,
         icon: LucideIcons.gift,
         iconOnly: iconOnly,
         onTap: () {
@@ -1824,7 +1844,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                                     color: theme.primaryColor, size: 28),
                                 const SizedBox(width: 10),
                                 Text(
-                                  "Gift This Movie",
+                                  AppLocalizations.of(context)!
+                                      .detailsGiftThisMovie,
                                   style: theme.textTheme.titleLarge?.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -1835,7 +1856,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
 
                             // Description
                             Text(
-                              "Enter how many people you’d like to gift this movie to.",
+                              AppLocalizations.of(context)!
+                                  .detailsGiftRecipientsPrompt,
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: theme.canvasColor,
                               ),
@@ -1847,7 +1869,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                               backgroundColor: theme.scaffoldBackgroundColor,
                               isDigits: true,
                               controller: countController,
-                              hintText: "Number of recipients",
+                              hintText: AppLocalizations.of(context)!
+                                  .detailsNumberOfRecipients,
                               textInputType: TextInputType.number,
                             ),
                             const SizedBox(height: 24),
@@ -1859,7 +1882,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                                 TextButton(
                                   onPressed: () => Navigator.pop(context),
                                   child: Text(
-                                    "Cancel",
+                                    AppLocalizations.of(context)!.cancel,
                                     style: TextStyle(color: theme.canvasColor),
                                   ),
                                 ),
@@ -1880,7 +1903,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                                         int.tryParse(countController.text);
                                     if (count == null || count <= 0) {
                                       CustomToast.show(
-                                          context, 'Please enter valid number',
+                                          context,
+                                          AppLocalizations.of(context)!
+                                              .detailsEnterValidNumber,
                                           isSuccess: false);
                                       return;
                                     }
@@ -1897,9 +1922,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                                       ),
                                     );
                                   },
-                                  child: const Text(
-                                    "Continue",
-                                    style: TextStyle(color: Colors.white),
+                                  child: Text(
+                                    AppLocalizations.of(context)!.homeContinue,
+                                    style: const TextStyle(color: Colors.white),
                                   ),
                                 ),
                               ],
@@ -1947,14 +1972,14 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                     ? lang.watchMovie
                     : contentType == "series"
                         ? lang.watchSeries
-                        : "Watch Now",
+                        : lang.watchNow,
                 icon: Icons.play_circle_fill,
                 iconOnly: showIconOnlyButtons,
                 onTap: () {
                   if (!canPlay) {
                     CustomToast.show(
                       context,
-                      "Video is not available",
+                      lang.cardVideoNotAvailable,
                       isSuccess: false,
                     );
                     return;
@@ -2023,10 +2048,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
 
         return ActionButtonWidget(
           label: isDownloading
-              ? 'Downloading ${(progress * 100).clamp(0, 100).toStringAsFixed(0)}%'
+              ? AppLocalizations.of(context)!.detailsDownloadingPercent(
+                  (progress * 100).clamp(0, 100).toStringAsFixed(0))
               : isDownloaded
-                  ? 'Remove Offline'
-                  : 'Download',
+                  ? AppLocalizations.of(context)!.detailsRemoveOffline
+                  : AppLocalizations.of(context)!.detailsDownload,
           icon: isDownloaded ? Icons.delete_outline : Icons.download_rounded,
           iconOnly: iconOnly,
           onTap: () async {
@@ -2039,7 +2065,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
             if (!mounted) return;
             CustomToast.show(
               context,
-              result['message']?.toString() ?? 'Action completed.',
+              result['message']?.toString() ??
+                  AppLocalizations.of(context)!.detailsActionCompleted,
               isSuccess: result['success'] == true,
             );
           },
@@ -2078,7 +2105,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Cast and Crew",
+          AppLocalizations.of(context)!.detailsCastAndCrewText,
           style: TextStyle(
             color: theme.canvasColor,
             fontSize: 18,
@@ -2145,7 +2172,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
             style: TextStyle(
-                fontWeight: FontWeight.w600, fontSize: 11, color: theme.canvasColor),
+                fontWeight: FontWeight.w600,
+                fontSize: 11,
+                color: theme.canvasColor),
           ),
           if (role.isNotEmpty)
             Text(
@@ -2153,7 +2182,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 10, color: theme.canvasColor.withOpacity(0.7)),
+              style: TextStyle(
+                  fontSize: 10, color: theme.canvasColor.withOpacity(0.7)),
             ),
         ],
       ),
@@ -2184,7 +2214,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
   Widget _buildShareActionButton(BuildContext context, Content movie,
       {bool iconOnly = false}) {
     return ActionButtonWidget(
-      label: 'Share',
+      label: AppLocalizations.of(context)!.cardShare,
       icon: Icons.qr_code_2_rounded,
       iconOnly: iconOnly,
       onTap: () => showContentShareSheet(
@@ -2193,7 +2223,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
         contentType: _contentType == ContentType.shortFilm
             ? DeepLinkContentType.shortFilm
             : DeepLinkContentType.movie,
-        unavailableMessage: "Movie details are not available yet",
+        unavailableMessage:
+            AppLocalizations.of(context)!.detailsMovieDetailsUnavailable,
       ),
     );
   }
@@ -2223,7 +2254,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
           cleanText,
           textAlign: TextAlign.left,
           maxLines: _isDescriptionExpanded ? null : maxCollapsedLines,
-          overflow: _isDescriptionExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+          overflow: _isDescriptionExpanded
+              ? TextOverflow.visible
+              : TextOverflow.ellipsis,
           style: TextStyle(
             color: theme.canvasColor.withOpacity(0.75),
             fontWeight: FontWeight.normal,
@@ -2245,7 +2278,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _isDescriptionExpanded ? "Read Less" : "Read More",
+                    _isDescriptionExpanded
+                        ? AppLocalizations.of(context)!.readLess
+                        : AppLocalizations.of(context)!.readMore,
                     style: TextStyle(
                       color: theme.primaryColor,
                       fontWeight: FontWeight.bold,
@@ -2305,7 +2340,13 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
           ),
           const SizedBox(height: 10),
           Text(
-            'Do you want to rent this ${movie.type}?',
+            lang.detailsRentConfirm(
+              ContentType.normalize(movie.type) == ContentType.shortFilm
+                  ? lang.shortFilm
+                  : ContentType.isSeries(movie.type)
+                      ? lang.seriesLabel
+                      : lang.cardTypeMovie,
+            ),
             style: TextStyle(
               fontSize: 14,
               color: selectedThemeData.primaryColor, // Theme text color
@@ -2355,7 +2396,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
               await _fetchData();
             }
           },
-          child: Text("Continue"),
+          child: Text(AppLocalizations.of(context)!.homeContinue),
         ),
       ],
     );
@@ -2488,9 +2529,12 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
       builder: (context, provider, child) => Column(
         children: [
           Text(
-            "Rate your experience",
+            AppLocalizations.of(context)!.detailsRateYourExperience,
             style: TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: Theme.of(context).canvasColor,
+            ),
           ),
           StarRating(
             rating: provider.rating,
@@ -2500,24 +2544,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
           SizedBox(
             height: 7,
           ),
-          Container(
-            height: 90,
-            margin: EdgeInsets.all(10.0),
-            padding: EdgeInsets.only(bottom: 16.0),
-            child: TextField(
-              maxLines: 9,
-              textCapitalization: TextCapitalization.sentences,
-              inputFormatters: [CapitalizeSentencesTextInputFormatter()],
-              style: TextStyle(
-                // Input text color
-                color: Colors.white,
-              ),
-              controller: provider.reviewController,
-              decoration: InputDecoration(
-                hintText: "Your Feedback!",
-                border: OutlineInputBorder(),
-              ),
-            ),
+          ReviewInputField(
+            controller: provider.reviewController,
+            hintText: AppLocalizations.of(context)!.detailsYourFeedback,
+            inputFormatters: [CapitalizeSentencesTextInputFormatter()],
           ),
           SizedBox(
             height: 7,
@@ -2532,14 +2562,18 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
             ),
             onPressed: () async {
               if (content.id == null) {
-                CustomToast.show(context, "Movie details are not available yet",
+                CustomToast.show(
+                    context,
+                    AppLocalizations.of(context)!
+                        .detailsMovieDetailsUnavailable,
                     isSuccess: false);
                 return;
               }
 
               // if (provider.reviewController.text.isNotEmpty) {
               if (provider.rating == 0) {
-                CustomToast.show(context, "Please select rating..",
+                CustomToast.show(context,
+                    AppLocalizations.of(context)!.detailsPleaseSelectRating,
                     isSuccess: false);
               } else {
                 var result = await provider.saveRatingReview(content.id!);
@@ -2549,7 +2583,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                       context,
                       message != null && message.isNotEmpty
                           ? message
-                          : "something went wrong to submit review",
+                          : AppLocalizations.of(context)!
+                              .detailsReviewSubmitFailed,
                       isSuccess: false);
                 } else {
                   final message = result['message']?.toString().trim();
@@ -2557,7 +2592,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                       context,
                       message != null && message.isNotEmpty
                           ? message
-                          : 'review submitted successfully',
+                          : AppLocalizations.of(context)!
+                              .detailsReviewSubmitted,
                       isSuccess: true);
                   await _fetchData();
                 }
@@ -2569,8 +2605,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child:
-                  Text("Submit Review", style: TextStyle(color: Colors.white)),
+              child: Text(AppLocalizations.of(context)!.detailsSubmitReview,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ),
           /*  Row(
@@ -2605,7 +2641,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                 DateFormat('yyyy-MM-dd HH:mm:ss').format(date);
             final username = provider.reviewList[index].username;
             final displayName = username == null || username == "null null"
-                ? "Anonymous User"
+                ? AppLocalizations.of(context)!.detailsAnonymousUser
                 : username;
 
             return Container(
@@ -2637,9 +2673,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                         child: Text(
                           displayName,
                           style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: Colors.white),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
                         ),
                       )
                     ],
@@ -2654,9 +2690,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                       Flexible(
                         child: Text(formattedDate,
                             style: const TextStyle(
-                                fontWeight: FontWeight.normal,
-                                fontSize: 12,
-                                color: Colors.white)),
+                              fontWeight: FontWeight.normal,
+                              fontSize: 12,
+                            )),
                       )
                     ],
                   ),
@@ -2665,9 +2701,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage>
                   ),
                   Text(provider.reviewList[index].title.toString(),
                       style: const TextStyle(
-                          fontWeight: FontWeight.normal,
-                          fontSize: 12,
-                          color: Colors.white)),
+                        fontWeight: FontWeight.normal,
+                        fontSize: 12,
+                      )),
                   const SizedBox(
                     height: 10,
                   ),

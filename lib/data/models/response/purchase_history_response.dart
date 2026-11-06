@@ -51,6 +51,8 @@ class PurchaseHistoryItem {
     this.rentalDuration,
     this.contentType,
     this.itemTitle,
+    this.transactionId,
+    this.rawStatus,
   });
 
   final int? id;
@@ -65,6 +67,15 @@ class PurchaseHistoryItem {
   final String? rentalDuration;
   final String? contentType;
   final String? itemTitle;
+
+  /// Gateway/backend transaction reference, read from whichever existing
+  /// response key carries it.
+  final String? transactionId;
+
+  /// Status exactly as returned by the API (e.g. SUCCESS, CANCELLED).
+  final String? rawStatus;
+
+  PurchaseStatus get status => PurchaseStatus.fromRaw(rawStatus);
 
   factory PurchaseHistoryItem.fromJson(Map<String, dynamic> json) {
     final contentJson = json['content'] ?? json['movie'] ?? json['item'];
@@ -97,13 +108,76 @@ class PurchaseHistoryItem {
           : invoiceJson is Map
               ? invoiceJson['invoiceUrl']?.toString()
               : json['invoiceUrl']?.toString(),
-      paymentMethod: json['paymentMethod']?.toString(),
+      paymentMethod: _firstText(json, const [
+        'paymentMethod',
+        'paymentMode',
+        'paymentGateway',
+        'method',
+      ]),
       rentalDuration: json['rentalDuration']?.toString(),
       contentType: json['contentType']?.toString() ??
           (contentJson is Map ? contentJson['type']?.toString() : null),
       itemTitle: json['itemTitle']?.toString(),
+      transactionId: _firstText(json, const [
+        'transactionId',
+        'paymentId',
+        'razorpayPaymentId',
+        'razorPayPaymentId',
+        'paymentIntentId',
+        'orderId',
+        'razorPayOrderId',
+        'txnId',
+      ]),
+      rawStatus: _firstText(json, const [
+        'status',
+        'paymentStatus',
+        'transactionStatus',
+        'purchaseStatus',
+      ]),
     );
   }
+}
+
+/// Normalized transaction status for display.
+enum PurchaseStatus {
+  success,
+  failed,
+  cancelled,
+  pending;
+
+  /// Maps the API's status text to a display status. Purchase history entries
+  /// without a status field are completed purchases, so they show as success.
+  static PurchaseStatus fromRaw(String? raw) {
+    final value = (raw ?? '').trim().toLowerCase();
+    if (value.isEmpty) return PurchaseStatus.success;
+    if (value.contains('cancel') || value.contains('dismiss')) {
+      return PurchaseStatus.cancelled;
+    }
+    if (value.contains('fail') ||
+        value.contains('error') ||
+        value.contains('declin') ||
+        value.contains('reject')) {
+      return PurchaseStatus.failed;
+    }
+    if (value.contains('pend') ||
+        value.contains('process') ||
+        value.contains('initiat') ||
+        value == 'created' ||
+        value == 'authorized') {
+      return PurchaseStatus.pending;
+    }
+    return PurchaseStatus.success;
+  }
+}
+
+String? _firstText(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key]?.toString().trim();
+    if (value != null && value.isNotEmpty && value.toLowerCase() != 'null') {
+      return value;
+    }
+  }
+  return null;
 }
 
 int? _asInt(dynamic value) {

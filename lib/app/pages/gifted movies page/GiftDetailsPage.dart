@@ -6,6 +6,7 @@ import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/l10n/app_localizations.dart';
 // avoid conflict
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -30,7 +31,9 @@ class _GiftDetailsPageState extends State<GiftDetailsPage> {
 
   void copyToClipboard(BuildContext context, String text) {
     Clipboard.setData(ClipboardData(text: text));
-    CustomToast.show(context, "Copied: $text", isSuccess: true);
+    CustomToast.show(
+        context, AppLocalizations.of(context)!.giftCopiedText(text),
+        isSuccess: true);
   }
 
   Future<void> shareGiftLink(
@@ -39,22 +42,18 @@ class _GiftDetailsPageState extends State<GiftDetailsPage> {
   ) async {
     final giftLink = DeepLinkService.instance.buildGiftDeepLink(couponCode);
     final fallbackLink = DeepLinkService.instance.buildGiftAppLink(couponCode);
-    final message = '''
-You have received a Filmytell gift: $movieTitle
-
-Claim gift:
-$giftLink
-
-Fallback link:
-$fallbackLink
-
-Gift code: $couponCode
-''';
+    final lang = AppLocalizations.of(context)!;
+    final message = lang.giftShareMessage(
+      movieTitle,
+      giftLink.toString(),
+      fallbackLink.toString(),
+      couponCode,
+    );
 
     await SharePlus.instance.share(
       ShareParams(
         text: message.trim(),
-        subject: 'Filmytell movie gift',
+        subject: lang.giftShareSubject,
       ),
     );
   }
@@ -62,6 +61,7 @@ Gift code: $couponCode
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -70,9 +70,9 @@ Gift code: $couponCode
         backgroundColor: theme.primaryColor,
         foregroundColor: Colors.white,
         centerTitle: true,
-        title: const Text(
-          "Gift Details",
-          style: TextStyle(
+        title: Text(
+          lang.giftDetails,
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -91,7 +91,7 @@ Gift code: $couponCode
           if (giftMaster == null) {
             return Center(
               child: Text(
-                "No gift details found",
+                lang.giftNoDetailsFound,
                 style: TextStyle(
                   color: theme.canvasColor,
                   fontWeight: FontWeight.bold,
@@ -149,7 +149,8 @@ Gift code: $couponCode
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  "Price: ₹${giftMaster.movie?.price ?? 0}",
+                                  lang.giftPriceRupees(
+                                      '${giftMaster.movie?.price ?? 0}'),
                                   style: TextStyle(
                                     color: theme.primaryColor,
                                     fontSize: 14,
@@ -157,7 +158,8 @@ Gift code: $couponCode
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  "Description: ${giftMaster.movie?.description ?? "-"}",
+                                  lang.giftDescriptionValue(
+                                      giftMaster.movie?.description ?? "-"),
                                   maxLines: 3,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
@@ -193,7 +195,8 @@ Gift code: $couponCode
                                 onTap: () {
                                   shareGiftLink(
                                     giftMaster.couponCode!,
-                                    giftMaster.movie?.title ?? "this movie",
+                                    giftMaster.movie?.title ??
+                                        lang.giftThisMovie,
                                   );
                                 },
                                 child: Container(
@@ -226,17 +229,17 @@ Gift code: $couponCode
                         const SizedBox(height: 8),
                         if (giftMaster.createdDate != null)
                           _buildInfoRow(
-                            "Created Date",
+                            lang.giftCreatedDate,
                             DateFormat("dd MMM yyyy").format(
                               DateTime.fromMillisecondsSinceEpoch(
                                   giftMaster.createdDate!),
                             ),
                           ),
-                        _buildInfoRow("Total Gift Count", "$total"),
-                        _buildInfoRow("Remaining", "$remaining"),
-                        _buildInfoRow("Used", "$used"),
-                        _buildInfoRow(
-                            "Total Paid", "₹${giftMaster.totalPaid ?? 0}"),
+                        _buildInfoRow(lang.giftTotalGiftCount, "$total"),
+                        _buildInfoRow(lang.giftRemaining, "$remaining"),
+                        _buildInfoRow(lang.giftUsed, "$used"),
+                        _buildInfoRow(lang.giftTotalPaid,
+                            "₹${giftMaster.totalPaid ?? 0}"),
                       ],
                     ),
                   ),
@@ -249,7 +252,7 @@ Gift code: $couponCode
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Users who claimed",
+                      lang.giftUsersWhoClaimed,
                       style: TextStyle(
                         color: theme.canvasColor,
                         fontWeight: FontWeight.bold,
@@ -272,7 +275,7 @@ Gift code: $couponCode
                       SizedBox(
                         height: 50,
                       ),
-                      const Text("No users have claimed this gift yet."),
+                      Text(lang.giftNoUsersClaimedYet),
                     ],
                   )),
                 if (giftMaster.user != null && giftMaster.user!.isNotEmpty)
@@ -301,7 +304,7 @@ Gift code: $couponCode
                                   )
                                 : null,
                           ),
-                          title: Text(user.name ?? "Unknown"),
+                          title: Text(user.name ?? lang.deviceUnknown),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [

@@ -224,5 +224,1139 @@
   "emailSentSuccessfully": "Email sent successfully.",
   "failedToSendEmail": "Failed to send email. Please try again.",
   "message": "Message",
-  "phoneNumber": "Phone Number"
+  "phoneNumber": "Phone Number",
+  "paymentCancelled": "Payment cancelled.",
+  "rechargeFailedTryAgain": "Recharge failed. Please try again.",
+  "paymentFailedTryAgain": "Payment failed. Please try again.",
+  "all": "All",
+  "shortFilms": "Short Films",
+  "from": "Start date",
+  "to": "End date",
+  "failedLoadPurchaseHistory": "Couldn't load purchase history",
+  "retry": "Retry",
+  "noPurchaseHistory": "No purchases found",
+  "noPurchaseHistoryHint": "Purchases made between the selected dates will appear here.",
+  "startDateBeforeEndDate": "Start date should be less than end date.",
+  "statusSuccessful": "Successful",
+  "statusFailed": "Failed",
+  "statusCancelled": "Cancelled",
+  "statusPending": "Pending",
+  "purchasedContent": "Purchased Content",
+  "amountPaid": "Amount paid",
+  "transactionId": "Transaction ID",
+  "invoiceNumber": "Invoice No.",
+  "paymentMethod": "Payment Method",
+  "viewInvoice": "View Invoice",
+  "shareInvoice": "Share Invoice",
+  "invoiceNotAvailable": "Invoice not available",
+  "invalidInvoiceUrl": "Invalid invoice URL.",
+  "unableOpenInvoice": "Unable to open invoice right now.",
+  "unableShareInvoice": "Unable to share invoice right now.",
+  "purchaseInvoice": "Purchase Invoice",
+  "invoiceShareText": "Here is your invoice for {title}.",
+  "@invoiceShareText": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "copied": "Copied",
+  "noMoviesInSelectedLanguage": "No movies available in this selected language.",
+  "noContentInSelectedLanguage": "No content available in this selected language.",
+  "selectedLanguagesLabel": "Selected languages",
+  "tryAnotherLanguageHint": "Try choosing another language to discover more content.",
+  "searchNoResultsHint": "Try a different title, actor or director, or clear the filters.",
+  "searchResultsCount": "{count, plural, =1{1 result} other{{count} results}}",
+  "@searchResultsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "newestFirst": "Newest first",
+  "done": "Done",
+  "noTitle": "No Title",
+  "homeSeeAll": "See All",
+  "homeStarRating": "{rating} star",
+  "@homeStarRating": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
+  "homeTrendingRank": "#{rank} Trending",
+  "@homeTrendingRank": {
+    "placeholders": {
+      "rank": {
+        "type": "int"
+      }
+    }
+  },
+  "homeTrailer": "Trailer",
+  "homeBirthMonthRequired": "Birth Month *",
+  "homeMonth": "Month",
+  "homeSelectMonth": "Select month",
+  "homeInvalidMonth": "Invalid month",
+  "homeBirthYearRequired": "Birth Year *",
+  "homeYear": "Year",
+  "homeSelectYear": "Select year",
+  "homeInvalidYear": "Invalid year",
+  "homeBirthDateValue": "Birth Date: {month} {year}",
+  "@homeBirthDateValue": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "homeEmailOptional": "Email (Optional)",
+  "homeFailureMessage": "Failure: {message}",
+  "@homeFailureMessage": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "homeContinue": "Continue",
+  "homeNameOptional": "Name (Optional)",
+  "homeEnterYourName": "Enter your name",
+  "homeEnterValidName": "Please enter a valid name",
+  "homeShareLocationPrompt": "Share your current location to get regional content and personalized recommendations.",
+  "homeLocationDetected": "Location Detected",
+  "homeOpenAppSettings": "Open App Settings",
+  "homeFailedToSaveLocation": "Failed to save location",
+  "homeCurrentLocation": "Current Location",
+  "homeFailedToSaveLocationToProfile": "Failed to save location to profile",
+  "homeCouldNotDetermineLocation": "Could not determine your location",
+  "homeSaveLocation": "Save Location",
+  "homeUseCurrentLocation": "Use Current Location",
+  "navCloseAppTitle": "Close app?",
+  "navCloseAppMessage": "Are you sure you want to close the app?",
+  "navClose": "Close",
+  "navToggleTheme": "Toggle Theme",
+  "navSettings": "Settings",
+  "navLogoutConfirm": "Are you sure you want Logout?",
+  "cardMuteTrailer": "Mute trailer",
+  "cardUnmuteTrailer": "Unmute trailer",
+  "cardDefaultGenre": "Drama",
+  "cardVideoNotAvailable": "Video is not available",
+  "cardNotApplicable": "NA",
+  "cardRentConfirm": "Do you want to rent {title}?",
+  "@cardRentConfirm": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "cardRemoveBookmark": "Remove Bookmark",
+  "cardBookmark": "Bookmark",
+  "cardRemovedFromBookmarks": "{title} removed from bookmarks",
+  "@cardRemovedFromBookmarks": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "cardAddedToBookmarks": "{title} added to bookmarks",
+  "@cardAddedToBookmarks": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "cardShare": "Share",
+  "cardContentDetailsNotAvailable": "Content details are not available yet",
+  "cardGift": "Gift",
+  "cardGiftMovie": "Gift Movie",
+  "cardGiftHowMany": "How many people do you want to gift this movie to?",
+  "cardRecipients": "Recipients",
+  "cardEnterValidNumber": "Enter a valid number",
+  "cardPercentWatched": "{percent}% watched",
+  "@cardPercentWatched": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "cardRentSeries": "Rent Series",
+  "cardEpisodeVideoNotAvailable": "Episode video is not available at the moment.",
+  "cardResumeTitle": "Resume {title}",
+  "@cardResumeTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "cardResume": "Resume",
+  "cardGeneratingShareQr": "Generating share QR code...",
+  "cardUnableToPrepareShare": "Unable to prepare this share right now. Please try again.",
+  "cardShareContent": "Share Content",
+  "cardScanToWatch": "Scan to watch on Filmytell",
+  "cardUniversalLinkCopied": "Universal link copied to clipboard",
+  "cardCopyLink": "Copy Link",
+  "cardShareLinkCopied": "Share link copied to clipboard",
+  "cardFailedToShare": "Failed to share content",
+  "cardTypeMovie": "Movie",
+  "searchNotAvailable": "N/A",
+  "searchCrew": "Crew",
+  "upcomingNotifiedOnRelease": "You’ll be notified on release day",
+  "upcomingNoContent": "No upcoming content",
+  "notifLoginAgain": "Please log in again to view notifications.",
+  "notifRequestFailed": "Request failed.",
+  "notifNoDataReturned": "No notification data returned.",
+  "notifInvalidServerResponse": "Invalid server response. Please try again.",
+  "notifUnableToFetch": "Unable to fetch notifications. Please try again.",
+  "notifNoNotifications": "No Notifications",
+  "notifSubject": "Subject",
+  "notifSentBy": "Sent By",
+  "notifSentDate": "Sent Date",
+  "notifDetails": "Details",
+  "notifAttachments": "Attachments",
+  "notifAttachment": "Attachment",
+  "notifAttachmentUrlUnavailable": "Attachment URL is not available.",
+  "notifUnableToOpenAttachment": "Unable to open attachment.",
+  "shortsNoMiniSeriesAvailable": "No Mini Series available",
+  "shortsTrending": "TRENDING",
+  "shortsPricePerPartWithLanguages": "₹ {coins} /part | {languages}",
+  "@shortsPricePerPartWithLanguages": {
+    "placeholders": {
+      "coins": {
+        "type": "int"
+      },
+      "languages": {
+        "type": "String"
+      }
+    }
+  },
+  "shortsPartsCount": "{count, plural, =1{1 Part} other{{count} Parts}}",
+  "@shortsPartsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shortsMiniSeriesDetailsUnavailable": "Mini series details are not available yet",
+  "playerInvalidVideo": "Invalid video",
+  "playerVideoUnavailable": "Video unavailable",
+  "playerSessionExpired": "Your session has expired. Please sign in again.",
+  "playerFailedToLoadVideo": "Failed to load video",
+  "shortsInsufficientBalance": "Insufficient Balance",
+  "shortsNotEnoughCoins": "You don't have enough coins.",
+  "shortsSeeMore": "See more",
+  "shortsSeeLess": "See less",
+  "shortsShareAction": "share",
+  "shortsShareTextCopied": "Share text copied to clipboard",
+  "shortsEpisodeOfTotal": "Episode {current} / {total}",
+  "@shortsEpisodeOfTotal": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "shortsEpisodeShort": "EP {number}",
+  "@shortsEpisodeShort": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "playerUnableToPlayTrailer": "Unable to play this trailer.",
+  "playerPlayTrailerFullscreen": "Play trailer fullscreen",
+  "playerFullscreenTrailer": "Fullscreen trailer",
+  "playerPauseTrailer": "Pause trailer",
+  "playerPlayTrailerAction": "Play trailer",
+  "playerTrailerUnavailable": "Trailer unavailable",
+  "detailsMovieVideoUnavailable": "Movie video is not available at the moment.",
+  "detailsContentUnavailable": "This content is currently unavailable. Please try again later.",
+  "detailsRatingValue": "{rating} rating",
+  "@detailsRatingValue": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
+  "detailsRuntimeMinutes": "{minutes} min",
+  "@detailsRuntimeMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "detailsRentPrice": "Rent Rs {price}",
+  "@detailsRentPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "detailsMovieDetailsUnavailable": "Movie details are not available yet",
+  "detailsWatchlisted": "Watchlisted",
+  "detailsAddToWatchlist": "Add to Watchlist",
+  "detailsDownload": "Download",
+  "detailsDownloadNotAvailable": "Download is not available for this movie.",
+  "detailsDownloadingPercent": "Downloading {percent}%",
+  "@detailsDownloadingPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "detailsDownloaded": "Downloaded",
+  "detailsDownloadUpdated": "Download updated",
+  "detailsCastAndCrew": "Cast & Crew",
+  "detailsCastAndCrewText": "Cast and Crew",
+  "detailsUntitled": "Untitled",
+  "detailsMoreLikeThis": "More Like This",
+  "detailsTrending": "Trending",
+  "detailsRecommended": "Recommended",
+  "detailsGiftThisMovie": "Gift This Movie",
+  "detailsGiftRecipientsPrompt": "Enter how many people you'd like to gift this movie to.",
+  "detailsNumberOfRecipients": "Number of recipients",
+  "detailsEnterValidNumber": "Please enter valid number",
+  "detailsReviewsCount": "{count, plural, =1{(1 review)} other{({count} reviews)}}",
+  "@detailsReviewsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "detailsGallery": "Gallery",
+  "detailsReleaseOn": "Release On: {date}",
+  "@detailsReleaseOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "detailsReleaseOnComingSoon": "Release On: Coming Soon",
+  "detailsUniversalAge": "Universal Age",
+  "detailsParentalGuidance": "Parental Guidance",
+  "detailsAdultsOnly": "Adults Only",
+  "detailsRemoveOffline": "Remove Offline",
+  "detailsActionCompleted": "Action completed.",
+  "detailsRentConfirm": "Do you want to rent this {type}?",
+  "@detailsRentConfirm": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "detailsRateYourExperience": "Rate your experience",
+  "detailsYourFeedback": "Your Feedback!",
+  "detailsPleaseSelectRating": "Please select rating..",
+  "detailsReviewSubmitFailed": "something went wrong to submit review",
+  "detailsReviewSubmitted": "review submitted successfully",
+  "detailsSubmitReview": "Submit Review",
+  "detailsAnonymousUser": "Anonymous User",
+  "detailsNoSeasonsYet": "No seasons available yet",
+  "detailsNoEpisodesYet": "No episodes available yet",
+  "detailsEpisodesComingSoon": "Episodes coming soon",
+  "detailsSeasonsAndEpisodes": "Seasons & Episodes",
+  "detailsSeasonsCount": "{count, plural, =1{1 season} other{{count} seasons}}",
+  "@detailsSeasonsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "detailsEpisodesCount": "{count, plural, =1{1 episode} other{{count} episodes}}",
+  "@detailsEpisodesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "detailsResumeWatching": "Resume Watching",
+  "detailsSeriesDetailsUnavailable": "Series details are not available yet",
+  "detailsDownloadNotAvailableSeries": "Download is not available for this series.",
+  "detailsSeasonN": "Season {number}",
+  "@detailsSeasonN": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "detailsSeasonTitle": "Season {number}: {title}",
+  "@detailsSeasonTitle": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "detailsRentSeasonPrice": "Rent Season ₹{price}",
+  "@detailsRentSeasonPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "detailsRentCompleteSeasonPrice": "Rent complete Season ₹{price}",
+  "@detailsRentCompleteSeasonPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "detailsContinueWatchingPercent": "Continue watching - {percent}%",
+  "@detailsContinueWatchingPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "detailsEpisodeN": "Episode {number}",
+  "@detailsEpisodeN": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "detailsRecommendedSeries": "Recommended Series",
+  "detailsRelatedContent": "Related Content",
+  "detailsEpisodeUnlocked": "Episode unlocked! Enjoy watching 🎬",
+  "detailsSeasonUnlocked": "Season unlocked! Enjoy watching 🎬",
+  "detailsGiftThisSeries": "Gift This Series",
+  "detailsGiftSeriesRecipientsPrompt": "Enter how many people you'd like to gift this series to.",
+  "detailsGiftSeries": "Gift Series",
+  "detailsEpisodeRuntime": "Ep. {number} • {runtime}",
+  "@detailsEpisodeRuntime": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "runtime": {
+        "type": "String"
+      }
+    }
+  },
+  "seriesPageNoSeriesAvailable": "No series available",
+  "playerFailedToResumeVideo": "Failed to resume video",
+  "playerContentNotFound": "The requested content was not found.",
+  "playerRewind10Seconds": "Rewind 10 seconds",
+  "playerPause": "Pause",
+  "playerPlay": "Play",
+  "playerForward10Seconds": "Forward 10 seconds",
+  "playerNextEpisode": "Next Episode",
+  "playerMovieAlreadyDownloaded": "Movie is already downloaded.",
+  "playerUnmuteMic": "Unmute Mic",
+  "playerMuteMic": "Mute Mic",
+  "playerMicMuted": "Mic Muted",
+  "playerMicEnabled": "Mic Enabled",
+  "playerPlaybackSpeed": "Playback speed",
+  "playerResumedFrom": "Resumed from {time}",
+  "@playerResumedFrom": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "playerStartOver": "Start Over",
+  "profileUnableOpenPrivacyPolicy": "Unable to open privacy policy page right now.",
+  "profileUnableOpenTerms": "Unable to open terms and condition right now.",
+  "profileUnableOpenRating": "Unable to open rating page right now.",
+  "profileBookmarks": "Bookmarks",
+  "profileRegisteredDevices": "Registered Devices",
+  "profileAppTour": "App Tour",
+  "profileTermsCondition": "Terms & Condition",
+  "profileVersion": "Version - {version}",
+  "@profileVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "profileCopyright": "Copyright Filmytell - All Rights Reserved.",
+  "profileTechnicalPartner": "Technical Partner",
+  "profileUserFallback": "User",
+  "profileDiscardChangesTitle": "Discard Changes?",
+  "profileDiscardChangesBody": "Are you sure you want to go back?",
+  "profileDiscard": "Discard",
+  "profileName": "Name",
+  "profileEnterValidEmail": "Enter valid email",
+  "profileBirthDateMonthYear": "Birth Date (Month & Year)",
+  "profileSelectBirthMonthYear": "Select birth month and year",
+  "profileAboutHeadline": "Filmytell – Rent Movies & Series",
+  "profileAboutSubheadline": "No ads. No subscriptions. Just pure cinema.",
+  "profilePayPerView": "Pay Per View",
+  "profileNoAds": "No Ads",
+  "profileExclusive": "Exclusive",
+  "profileAboutIntro": "Your personal theatre in your pocket.\nWatch movies, web series & mini series anytime, anywhere.",
+  "profileWhyFilmytell": "Why Filmytell",
+  "profilePayPerViewSubtitle": "Only pay for what you watch",
+  "profileNoAdsSubtitle": "Uninterrupted experience",
+  "profileExclusiveContent": "Exclusive Content",
+  "profileExclusiveContentSubtitle": "Independent & unique stories",
+  "profileWatch": "Watch",
+  "profileWebSeries": "Web Series",
+  "profileRegional": "Regional",
+  "profileViewers": "Viewers",
+  "profileViewersContent": "Watch anytime\nNo commitment",
+  "profileCreators": "Creators",
+  "profileCreatorsContent": "Reach global audience",
+  "profileNotAdded": "Not added",
+  "profileEmailAddress": "Email Address",
+  "profilePersonalDetails": "Personal Details",
+  "profileBirthday": "Birthday",
+  "profileAddress": "Address",
+  "profileAddressLine": "Address Line",
+  "profileCity": "City",
+  "profilePincode": "Pincode",
+  "profileDeleteAccountInfo": "Delete your Filmytell account and personal profile data. Purchases, wallet activity, support tickets, and records required for legal, tax, security, or fraud-prevention purposes may be retained as required by law.",
+  "profileDeletionInfo": "Deletion Info",
+  "profileDeleting": "Deleting...",
+  "profileDelete": "Delete",
+  "profileUnableOpenAccountDeletion": "Unable to open account deletion page right now.",
+  "profileAccountNotFound": "Unable to find your account. Please log in again.",
+  "profileDeleteAccountTitle": "Delete account?",
+  "profileDeleteAccountConfirm": "This will permanently delete your Filmytell account. You will be logged out after the request is completed.",
+  "profileAccountDeleted": "Your account has been deleted.",
+  "profileUnableDeleteAccount": "Unable to delete account right now. Please try again.",
+  "profileSearchAddress": "Search your address",
+  "profileFetchingLocation": "Fetching location...",
+  "profileUseCurrentLocation": "Use current location",
+  "profileEnterCountry": "Enter country",
+  "profileEnterState": "Enter state",
+  "profileEnterDistrict": "Enter district",
+  "profileEnterCity": "Enter city",
+  "profileEnterPincode": "Enter pincode",
+  "profileAddressUpdated": "Address updated successfully!",
+  "profileFieldRequired": "{field} is required",
+  "@profileFieldRequired": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "profileNoOptionsAvailable": "No options available",
+  "profileSaveChanges": "Save Changes",
+  "langSelectAtLeastOne": "Please select at least one language.",
+  "langUpdatedSuccessfully": "Language updated successfully.",
+  "langUpdateFailed": "Update failed",
+  "langPreferredLanguages": "Preferred Languages",
+  "langFailedToLoad": "Failed to load languages",
+  "langMajorIndianLanguages": "Major Indian Languages",
+  "langOtherIndianLanguages": "Other Indian Languages",
+  "langForeignLanguages": "Foreign Languages",
+  "authOtpDetectedAutomatically": "OTP detected automatically.",
+  "authGiftCodeLabel": "Gift Code: {code}",
+  "@authGiftCodeLabel": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "authReferralCodeLabel": "Referral Code: {code}",
+  "@authReferralCodeLabel": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "authEnterValidMobileNumber": "Please enter a valid mobile number",
+  "authSearchCountryHint": "Search by country name and code ..",
+  "authResendOtpIn": "Resend OTP in {time}",
+  "@authResendOtpIn": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "authResendOtp": "Resend OTP",
+  "authSomethingWentWrong": "Something went wrong",
+  "authInvalidOtp": "Invalid OTP",
+  "authUnableToLogin": "Unable to log in right now. Please try again.",
+  "authRequestingNewOtp": "Requesting a new OTP...",
+  "authWaitingForOtpSms": "Waiting for OTP SMS...",
+  "authUnableToResendOtp": "Unable to resend OTP. Please try again.",
+  "authAutoFillTimedOut": "Auto-fill timed out. Please enter the OTP manually.",
+  "authAutoFillUnavailable": "Auto-fill is unavailable. Please enter the OTP manually.",
+  "onboardingUpdateAvailable": "Update Available",
+  "onboardingUpdateAvailableMessage": "A newer version is available ({version}). Please update for the best experience.",
+  "@onboardingUpdateAvailableMessage": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingLater": "Later",
+  "onboardingUpdateNow": "Update Now",
+  "helpDateUnavailable": "Date unavailable",
+  "helpResponseTimeInfo": "We typically respond within 24 hours. Add details for faster help.",
+  "helpAppTourSubtitle": "Replay the quick guide to important app features.",
+  "helpRaiseTicket": "Raise a Ticket",
+  "helpPleaseEnterQuery": "Please enter your query",
+  "helpQueryMinLength": "Please enter at least 10 characters",
+  "helpAttachmentAdded": "Attachment added",
+  "helpRemove": "Remove",
+  "helpUploading": "Uploading...",
+  "helpSubmitRequestTitle": "Submit support request?",
+  "helpSubmitRequestConfirm": "Please confirm you want to send this help support request.",
+  "helpYourRequests": "Your Requests",
+  "helpNoSentTickets": "No sent tickets yet",
+  "helpNoSentTicketsHint": "Your submitted support requests will appear here.",
+  "helpDeleteTicketTitle": "Delete ticket?",
+  "helpDeleteTicketConfirm": "This support ticket will be removed from your sent requests.",
+  "deviceManagement": "Device Management",
+  "deviceNoActiveDevices": "No active devices found.",
+  "deviceRefresh": "Refresh",
+  "deviceCurrentDevice": "Current device",
+  "deviceOs": "OS",
+  "deviceAuthorization": "Authorization",
+  "deviceBlocked": "Blocked",
+  "deviceAuthorized": "Authorized",
+  "deviceUnknown": "Unknown",
+  "deviceRemoveDevice": "Remove Device",
+  "deviceRemoveDeviceTitle": "Remove device?",
+  "deviceRemoveDeviceConfirm": "This device will no longer be authorized for protected playback.",
+  "deviceRemovedSuccessfully": "Device removed successfully.",
+  "pickerBirthMonthInFuture": "Birth month cannot be in the future",
+  "pickerSelectBirthMonthYear": "Select Birth Month & Year",
+  "pickerSelectedMonthYear": "Selected: {month} {year}",
+  "@pickerSelectedMonthYear": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "pickerJanuary": "January",
+  "pickerFebruary": "February",
+  "pickerMarch": "March",
+  "pickerApril": "April",
+  "pickerMay": "May",
+  "pickerJune": "June",
+  "pickerJuly": "July",
+  "pickerAugust": "August",
+  "pickerSeptember": "September",
+  "pickerOctober": "October",
+  "pickerNovember": "November",
+  "pickerDecember": "December",
+  "walletNoTransactions": "No transactions",
+  "walletEnterAmount": "Enter amount",
+  "payProcessing": "Processing...",
+  "payProceedToPay": "Proceed to pay",
+  "walletEnterValidAmount": "Enter a valid amount",
+  "walletMinimumRechargeAmountRs": "Minimum recharge amount is Rs {amount}",
+  "@walletMinimumRechargeAmountRs": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "walletMaximumRechargeAmountRs": "Maximum recharge amount is Rs {amount}",
+  "@walletMaximumRechargeAmountRs": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "walletRechargedSuccessfully": "Wallet recharged successfully.",
+  "walletUpdatingBalance": "Updating wallet balance...",
+  "payPreparingSecureCheckout": "Preparing secure checkout...",
+  "payReadyToOpenRazorpayCheckout": "Ready to open secure Razorpay checkout.",
+  "payCheckoutUnsupportedPlatform": "Razorpay checkout is only available on web, Android, and iOS.",
+  "payLoginAgainToContinue": "Please log in again to continue payment.",
+  "payCreatingRazorpayOrder": "Creating Razorpay order...",
+  "payCreatingStripeCheckoutSession": "Creating Stripe checkout session...",
+  "payOpeningRazorpayCheckout": "Opening Razorpay checkout...",
+  "payOpeningStripeCheckout": "Opening Stripe checkout...",
+  "payOpenCheckout": "Open Checkout",
+  "billingPriceAmount": "Price: ₹ {price}",
+  "@billingPriceAmount": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "billingPriceTimesGifts": "₹ {price} × {count} Gifts",
+  "@billingPriceTimesGifts": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "billingTotalAmount": "Total: ₹ {amount}",
+  "@billingTotalAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "billingWalletAmount": "Wallet: ₹ {amount}",
+  "@billingWalletAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "billingProceedToPay": "Proceed to Pay",
+  "billingHaveTitleGiftCard": "Have a {title} Gift Card?",
+  "@billingHaveTitleGiftCard": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "walletNoTransactionsYet": "No transactions yet",
+  "billingConfirmPurchase": "Confirm Purchase",
+  "billingConfirmPurchaseQuestion": "Do you want to confirm the purchase?",
+  "billingConfirmAndPay": "Confirm & Pay",
+  "walletInsufficientBalanceRecharge": "Insufficient wallet balance. Please recharge your wallet.",
+  "giftPurchaseFailed": "Gift purchase failed.",
+  "billingUnableToGrantAccess": "Unable to grant {contentType, select, series{series} other{movie}} access.",
+  "@billingUnableToGrantAccess": {
+    "placeholders": {
+      "contentType": {
+        "type": "String"
+      }
+    }
+  },
+  "walletDeductionFailed": "Wallet deduction failed.",
+  "paySuccessfulEnjoyContent": "Payment successful! Enjoy your content 🎬",
+  "billingProcessingPurchase": "Processing purchase...",
+  "billingPurchaseNotCompletedTryLater": "Purchase could not be completed. Please try again in a moment.",
+  "billingPurchaseFailedTryAgain": "Purchase failed. Please try again.",
+  "billingInvoiceGenerationFailed": "Purchase completed, but invoice generation failed.",
+  "billingSeasonPurchase": "Season Purchase",
+  "billingEpisodePurchase": "Episode Purchase",
+  "billingAmountRupees": "Amount: ₹ {amount}",
+  "@billingAmountRupees": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "billingSeasonNumber": "Season {number}",
+  "@billingSeasonNumber": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "billingEpisodeNumber": "Episode {number}",
+  "@billingEpisodeNumber": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "billingPurchaseSuccessful": "Purchase successful",
+  "billingItem": "Item",
+  "billingCoinsDeducted": "Coins Deducted",
+  "billingNewBalance": "New Balance",
+  "billingInvoice": "Invoice",
+  "billingAvailable": "Available",
+  "billingNotAvailable": "Not available",
+  "giftEnterGiftCardNumber": "Enter Gift Card Number",
+  "giftEnter16DigitNumber": "Enter 16 Digit Number",
+  "giftRedeem": "Redeem",
+  "giftCopiedText": "Copied: {text}",
+  "@giftCopiedText": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "giftShareMessage": "You have received a Filmytell gift: {movieTitle}\n\nClaim gift:\n{giftLink}\n\nFallback link:\n{fallbackLink}\n\nGift code: {couponCode}",
+  "@giftShareMessage": {
+    "placeholders": {
+      "movieTitle": {
+        "type": "String"
+      },
+      "giftLink": {
+        "type": "String"
+      },
+      "fallbackLink": {
+        "type": "String"
+      },
+      "couponCode": {
+        "type": "String"
+      }
+    }
+  },
+  "giftShareSubject": "Filmytell movie gift",
+  "giftNoHistoryAvailable": "No gift history available.",
+  "giftMovieNumber": "Movie #{id}",
+  "@giftMovieNumber": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "giftDateNotAvailable": "Date not available",
+  "giftThisMovie": "this movie",
+  "giftGiftedLabel": "Gifted: ",
+  "giftRemainingLabel": "Remaining: ",
+  "giftPriceLabel": "Price: ",
+  "giftTotalPaidLabel": "Total Paid: ",
+  "giftCopyCouponCode": "Copy coupon code",
+  "giftShareGiftLink": "Share gift link",
+  "giftShareClaimLink": "Share gift claim link",
+  "giftMovieDetails": "Movie details",
+  "giftDetails": "Gift Details",
+  "giftNoDetailsFound": "No gift details found",
+  "giftPriceRupees": "Price: ₹{price}",
+  "@giftPriceRupees": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "giftDescriptionValue": "Description: {description}",
+  "@giftDescriptionValue": {
+    "placeholders": {
+      "description": {
+        "type": "String"
+      }
+    }
+  },
+  "giftCreatedDate": "Created Date",
+  "giftTotalGiftCount": "Total Gift Count",
+  "giftRemaining": "Remaining",
+  "giftUsed": "Used",
+  "giftTotalPaid": "Total Paid",
+  "giftUsersWhoClaimed": "Users who claimed",
+  "giftNoUsersClaimedYet": "No users have claimed this gift yet.",
+  "watchlistDeleteDownloadTitle": "Delete download?",
+  "watchlistDeleteDownloadMessage": "Delete {title} from this device? You can download it again later.",
+  "@watchlistDeleteDownloadMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "watchlistDownloadDeleted": "Download deleted.",
+  "watchlistCouldNotDeleteDownload": "Could not delete the download: {error}",
+  "@watchlistCouldNotDeleteDownload": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "watchlistGifted": "Gifted",
+  "watchlistExpired": "Expired",
+  "watchlistOffline": "Offline",
+  "watchlistDeleteDownload": "Delete download",
+  "watchlistNoDownloadedContentFound": "No downloaded content found",
+  "bookmarkMyBookmarks": "My Bookmarks",
+  "bookmarkNoBookmarksAdded": "No bookmarks added",
+  "bookmarkNoBookmarksFound": "No bookmarks found",
+  "tourLanguageTitle": "Choose Your Language",
+  "tourLanguageDescription": "Select app content language according to your preference.",
+  "tourWalletDescription": "Add/View your balance and view transactions.",
+  "tourProfileTitle": "Your Profile",
+  "tourProfileDescription": "Manage account settings, preferences, and personal information.",
+  "tourSearchTitle": "Find Content Faster",
+  "tourSearchDescription": "Search by movies, series, genres, language and rating instantly.",
+  "tourNotificationsTitle": "Stay Updated",
+  "tourNotificationsDescription": "Receive updates about new releases, recommendations, rewards, and important announcements.",
+  "tourMoreActionsTitle": "More Actions",
+  "tourMoreActionsDescription": "Access additional options like Bookmark, Share and Gift.",
+  "tourWatchlistTitle": "Save for Later",
+  "tourWatchlistDescription": "Add content to your watchlist and access it anytime.",
+  "tourDownloadTitle": "Watch Offline",
+  "tourDownloadDescription": "Download your favorite content and watch it later without an internet connection.",
+  "msgGiftPurchaseInProgress": "Gift purchase already in progress. Please wait.",
+  "msgUserNotLoggedIn": "User not logged in",
+  "msgGiftSavedSuccessfully": "Gift saved successfully",
+  "msgFailedToSaveGift": "Failed to save gift",
+  "msgServerErrorCode": "Server error: {statusCode}",
+  "@msgServerErrorCode": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
+  "msgFailedToLoadGiftHistory": "Failed to load gift history",
+  "msgGiftDetailsNotFound": "Gift details not found",
+  "msgErrorCode": "Error: {statusCode}",
+  "@msgErrorCode": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
+  "msgGiftClaimInProgress": "Gift claim already in progress. Please wait.",
+  "msgGiftClaimTimeout": "The server is taking too long to respond. Please check your gift cards before trying again.",
+  "msgGiftClaimNetworkError": "Unable to claim the gift card. Please check your internet connection and try again.",
+  "msgGiftClaimFailed": "Something went wrong while claiming the gift card. Please try again later.",
+  "msgPurchaseFailed": "Purchase failed",
+  "msgPurchaseInProgress": "Purchase already in progress. Please wait.",
+  "msgServerErrorTryLater": "Server error ({statusCode}). Please try again later.",
+  "@msgServerErrorTryLater": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
+  "msgSomethingWentWrongTryAgain": "Something went wrong. Please try again.",
+  "msgUserNotFoundPeriod": "User not found.",
+  "msgPurchaseHistoryLoaded": "Purchase history loaded.",
+  "msgFailedToLoadPurchaseHistory": "Failed to load purchase history.",
+  "msgLatestMiniSeries": "Latest Mini Series",
+  "msgTrendingMiniSeries": "Trending Mini Series",
+  "msgUnableToLoadMiniSeries": "Unable to load Mini Series. Please try again.",
+  "msgUnableToLoadRegisteredDevices": "Unable to load registered devices.",
+  "msgUnableToRemoveDevice": "Unable to remove this device.",
+  "msgVideoNotAvailableForDownload": "Video is not available for download.",
+  "msgDownloadAlreadyInProgress": "Download already in progress.",
+  "msgFailedToDownloadMovie": "Failed to download movie.",
+  "msgMovieDownloadedForOffline": "Movie downloaded for offline playback.",
+  "msgOfflineCopyNotFound": "Offline copy was not found.",
+  "msgDownloadRemovedFromAppList": "Download removed from app list.",
+  "msgOfflineCopyRemoved": "Offline copy removed.",
+  "msgContentAlreadyDownloaded": "Content is already downloaded for offline playback.",
+  "msgContentDownloadedForBrowser": "Content downloaded for offline browser playback.",
+  "msgFailedToDownloadContentOffline": "Failed to download content for offline playback.",
+  "msgQueryMinLength": "Query must be at least 10 characters",
+  "msgUserDetailsNotFound": "User details not found",
+  "msgTicketRaisedSuccessfully": "Ticket raised successfully",
+  "msgNoDataReturned": "No data returned",
+  "msgErrorInResponse": "Error in response",
+  "msgSomethingWentWrongExclaim": "Something went wrong!",
+  "msgErrorAddingUser": "An error occurred while adding user",
+  "msgTicketDeletedSuccessfully": "Ticket deleted successfully",
+  "msgUnableToDeleteTicket": "Unable to delete ticket",
+  "msgErrorDeletingTicket": "An error occurred while deleting ticket",
+  "msgUserDataNotAvailable": "User data is not available.",
+  "msgDataLoadedSuccessfully": "Data loaded successfully",
+  "msgErrorParsingData": "Error while parsing data",
+  "msgLoadedCachedPurchaseContent": "Loaded cached purchase content.",
+  "msgErrorFetchingContent": "An error occurred while fetching content",
+  "msgWalletRefreshedSuccessfully": "Wallet refreshed successfully.",
+  "msgFailedToRefreshWallet": "Failed to refresh wallet",
+  "msgRechargeInProgress": "Recharge already in progress. Please wait.",
+  "msgWalletBalanceNotUpdatedYet": "Payment was verified, but the wallet balance has not updated yet. Please check again in a moment.",
+  "msgLoginAgainToUpdateWallet": "Please log in again to update your wallet balance.",
+  "msgWalletCreditFailedContactSupport": "Payment was successful, but wallet credit failed. Please contact support.",
+  "msgWalletCreditInvalidResponse": "Payment was successful, but wallet credit returned an invalid response.",
+  "msgWalletCreditFailed": "Payment was successful, but wallet credit failed.",
+  "msgPaymentInProgress": "Payment already in progress. Please wait.",
+  "msgPaymentSuccessful": "Payment successful",
+  "msgWalletPaymentNotCompleted": "Wallet payment could not be completed. Please try again in a moment.",
+  "msgWalletPaymentFailed": "Wallet payment failed. Please try again.",
+  "msgSecurePlaybackNotPrepared": "Secure playback could not be prepared.",
+  "msgSecurePlaybackNotRefreshed": "Secure playback could not be refreshed. Please retry.",
+  "msgUserCreatedSuccessfully": "User created successfully",
+  "msgUserNotFound": "User not found",
+  "msgErrorUpdatingUser": "An error occurred while update user",
+  "msgLocationServicesDisabled": "Location services are disabled on your device. Please enable location services in Settings.",
+  "msgLocationPermissionPermanentlyDenied": "Location permission is permanently denied. Please grant permission in App Settings, or tap Cancel.",
+  "msgLocationPermissionDenied": "Location permission was denied. Tap Use Current Location to try again, or Cancel to continue.",
+  "locationEnable": "Enable Location",
+  "locationEnterManually": "Enter Location Manually",
+  "msgUnableToDetermineGpsLocation": "Unable to determine GPS location. Please check your GPS and try again.",
+  "msgReverseGeocodingStatusCode": "Reverse geocoding service returned status code {statusCode}.",
+  "@msgReverseGeocodingStatusCode": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
+  "msgUnableToResolveAddress": "Unable to resolve address ({reason}).",
+  "@msgUnableToResolveAddress": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "msgNoAddressDetailsFound": "No address details found for your current coordinates.",
+  "msgUnexpectedLocationError": "An unexpected error occurred while fetching location.",
+  "msgOtpSent": "OTP sent",
+  "msgUnableToSendOtp": "Unable to send OTP. Please try again.",
+  "msgUserLoggedInSuccessfully": "User logged in successfully",
+  "msgNoInternetConnection": "No internet connection. Please check your network and try again.",
+  "msgServerTimeout": "The server is taking too long to respond. Please try again.",
+  "msgServerErrorTryAgainLater": "Server error. Please try again later.",
+  "sysPaymentStripeCheckoutUnsupportedPlatform": "Stripe checkout is only available on web, Android, and iOS.",
+  "sysPaymentInvalidStripeCheckoutUrl": "Invalid Stripe checkout URL returned from server.",
+  "sysPaymentInvalidStripeCheckoutLink": "Invalid Stripe checkout link.",
+  "sysPaymentUnableLaunchStripeCheckout": "Unable to launch Stripe checkout.",
+  "sysPaymentStripeCheckoutError": "Stripe checkout error.",
+  "sysPaymentVerifiedSuccessfully": "Payment verified successfully.",
+  "sysPaymentVerificationFailedContactSupport": "Payment verification failed. Please contact support if money was deducted.",
+  "sysPaymentVerificationInvalidResponse": "Payment verification returned an invalid response. Please contact support if money was deducted.",
+  "sysPaymentConfigureRazorpayKey": "Configure your Razorpay key before using checkout.",
+  "sysPaymentVerificationDataIncomplete": "Payment completed, but verification data is incomplete.",
+  "sysPaymentVerificationFailed": "Payment verification failed.",
+  "sysPaymentCancelledOrFailed": "Payment cancelled or failed.",
+  "sysPaymentUnableOpenRazorpayCheckout": "Unable to open Razorpay checkout.",
+  "sysPaymentExternalWalletPending": "External wallet selected ({walletName}). Verification is pending.",
+  "@sysPaymentExternalWalletPending": {
+    "placeholders": {
+      "walletName": {
+        "type": "String"
+      }
+    }
+  },
+  "sysPaymentUnknownWallet": "unknown",
+  "sysRazorpayWebCheckoutUnavailable": "Razorpay web checkout is unavailable on this platform.",
+  "sysRazorpayWebCheckoutEmptyResponse": "Unexpected empty response from Razorpay web checkout.",
+  "sysRazorpayWebCheckoutUnexpectedResponse": "Unexpected response from Razorpay web checkout.",
+  "sysPlaybackDeviceListUnreadable": "The registered device list could not be read.",
+  "sysPlaybackSecureConnectionRequired": "A secure connection is required for playback.",
+  "sysPlaybackServiceNoResponse": "The secure playback service did not respond. Please retry.",
+  "sysPlaybackCheckConnectionRetry": "Check your internet connection and retry.",
+  "sysPlaybackDeviceLimitReached": "The maximum registered-device limit has been reached. Remove an old device and retry.",
+  "sysPlaybackNotAllowed": "Playback is not allowed for this account or device.",
+  "sysPlaybackContentOrSessionNotFound": "The requested content or playback session was not found.",
+  "sysPlaybackTooManyRequests": "Too many playback requests. Please wait and retry.",
+  "sysPlaybackNotConfiguredForPlatform": "Secure playback is not configured for this platform.",
+  "sysPlaybackNoSecureSource": "This content does not have a secure playback source.",
+  "sysDownloadNotEnoughStorage": "Not enough storage available for this download.",
+  "sysDownloadHlsMovieFailed": "Failed to download HLS movie.",
+  "sysWalletBalanceUpdatedHistoryPending": "Wallet balance updated. Transaction history will refresh shortly.",
+  "sysSessionReplacedOnOtherDevice": "Your session has expired because you logged in from another device.",
+  "sysContentShareMessage": "🎬 {title}\n\nWatch now 👇\n{link}\n\n📲 Download App:\niOS App Store: {appStoreLink}\nAndroid Play Store: {playStoreLink}\nWeb: {webLink}",
+  "@sysContentShareMessage": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "link": {
+        "type": "String"
+      },
+      "appStoreLink": {
+        "type": "String"
+      },
+      "playStoreLink": {
+        "type": "String"
+      },
+      "webLink": {
+        "type": "String"
+      }
+    }
+  },
+  "sysShareLabelMovie": "movie",
+  "sysShareLabelShortFilm": "short film",
+  "sysShareLabelSeries": "series",
+  "sysShareLabelMiniSeries": "mini series",
+  "sysShareLabelShort": "short",
+  "sysShareLabelGift": "gift",
+  "sysShareLabelReferral": "referral",
+  "sysInvoiceReady": "Invoice ready",
+  "sysInvoiceGeneratedChooseShare": "Invoice {invoiceNumber} has been generated. Choose where to share it.",
+  "@sysInvoiceGeneratedChooseShare": {
+    "placeholders": {
+      "invoiceNumber": {
+        "type": "String"
+      }
+    }
+  },
+  "sysInvoiceSendOnWhatsApp": "Send on WhatsApp",
+  "sysInvoiceSendByEmail": "Send by Email",
+  "sysInvoiceMoreSharingOptions": "More sharing options",
+  "sysInvoiceSelectWhatsApp": "Select WhatsApp to share this invoice.",
+  "sysInvoiceSelectEmailApp": "Select your email app to send this invoice.",
+  "sysInvoiceShareHint": "Share invoice",
+  "sysDeepLinkMovieUnavailable": "Movie details are not available or have been removed",
+  "sysDeepLinkSeriesUnavailable": "Series details are not available or have been removed",
+  "sysDeepLinkContentUnavailable": "Content details are not available or have been removed",
+  "sysGiftSignInToClaim": "Please sign in to claim your gift ({code})",
+  "@sysGiftSignInToClaim": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "fieldPhoneRequired": "Phone number is required",
+  "fieldMobileMinDigits": "Mobile number cannot be less than 10 digits",
+  "fieldMobileMaxDigits": "Mobile number cannot be greater than 10 digits",
+  "fieldEmailRequired": "Email is required",
+  "fieldInvalidEmail": "Invalid email address",
+  "fieldOnlyAlphabets": "Only alphabets are allowed",
+  "fieldOnlyDigits": "Only digits are allowed",
+  "fieldRequired": "This field is required",
+  "giftClaimAlreadyClaimed": "This gift card has already been claimed.",
+  "giftClaimExpired": "This gift card has expired.",
+  "giftClaimInvalidCode": "Invalid gift card code. Please check and try again.",
+  "genreAction": "Action",
+  "genreComedy": "Comedy",
+  "genreThriller": "Thriller",
+  "genreHorror": "Horror",
+  "genreRomance": "Romance",
+  "genreFantasy": "Fantasy",
+  "genreMystery": "Mystery",
+  "genreDocumentary": "Documentary",
+  "genreAnimation": "Animation",
+  "genreAdventure": "Adventure",
+  "genreMusical": "Musical",
+  "genreHistorical": "Historical",
+  "genreCrime": "Crime",
+  "genreSciFi": "Sci-Fi",
+  "newsTitle": "News",
+  "newsNoMessageBody": "No message body",
+  "newsPayload": "Payload",
+  "routeMovieNotFound": "Movie not found",
+  "routeInvalidMovieLink": "The shared movie link is invalid or incomplete."
 }

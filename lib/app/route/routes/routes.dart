@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:ott/app/core/constant/prefrense_constant.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/session_manager.dart';
@@ -127,11 +128,7 @@ class RouteGenerator {
       case AppRoutes.news:
         final args = settings.arguments is NewsScreenArgs
             ? settings.arguments as NewsScreenArgs
-            : const NewsScreenArgs(
-                title: 'News',
-                body: 'Opened from notification',
-                payload: <String, dynamic>{},
-              );
+            : const NewsScreenArgs(payload: <String, dynamic>{});
         return buildRoute(NewsScreen(args: args), settings: settings);
 
       case AppRoutes.movieDetails:
@@ -261,16 +258,16 @@ class RouteGenerator {
   static Route<dynamic> _invalidMovieRoute(RouteSettings settings) {
     return MaterialPageRoute(
       settings: settings,
-      builder: (_) => Scaffold(
+      builder: (context) => Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: !kIsWeb,
-          title: const Text('Movie not found'),
+          title: Text(AppLocalizations.of(context)!.routeMovieNotFound),
         ),
-        body: const Center(
+        body: Center(
           child: Padding(
-            padding: EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
             child: Text(
-              'The shared movie link is invalid or incomplete.',
+              AppLocalizations.of(context)!.routeInvalidMovieLink,
               textAlign: TextAlign.center,
             ),
           ),

@@ -12,6 +12,7 @@ import 'package:video_player/video_player.dart' as native_video;
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:ott/app/widgets/video_skip_controls.dart';
+import 'package:ott/l10n/app_localizations.dart';
 
 import '../../../../data/models/content.dart';
 import '../../../core/constant/api_constant.dart';
@@ -390,14 +391,15 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
     return Scaffold(
       backgroundColor: Colors.black,
       body: !_hasUrl
-          ? const Center(
-              child: Text("No trailer available",
-                  style: TextStyle(color: Colors.white)),
+          ? Center(
+              child: Text(AppLocalizations.of(context)!.trailerNotAvailable,
+                  style: const TextStyle(color: Colors.white)),
             )
           : _hasError
-              ? const Center(
-                  child: Text("Trailer unavailable",
-                      style: TextStyle(color: Colors.white)),
+              ? Center(
+                  child: Text(
+                      AppLocalizations.of(context)!.playerTrailerUnavailable,
+                      style: const TextStyle(color: Colors.white)),
                 )
               : !_initialized
                   ? Center(
@@ -1080,7 +1082,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
         aspectRatio: 16 / 9,
         child: Center(
           child: Text(
-            "Trailer unavailable",
+            AppLocalizations.of(context)!.playerTrailerUnavailable,
             style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
           ),
         ),

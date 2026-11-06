@@ -1,3 +1,4 @@
+import 'package:ott/app/core/payment/models/payment_result.dart' as gateway;
 import 'dart:async';
 import 'dart:convert';
 
@@ -41,6 +42,7 @@ class PaymentResult {
     this.paymentId,
     this.signature,
     this.errorCode,
+    this.cancelled = false,
   });
 
   final bool success;
@@ -50,6 +52,10 @@ class PaymentResult {
   final String? signature;
   final int? errorCode;
 
+  /// True when the user closed/cancelled checkout (read by
+  /// `paymentFailureMessage` to show "Payment cancelled" instead of a failure).
+  final bool cancelled;
+
   Map<String, Object?> toMap() {
     return {
       'success': success,
@@ -58,6 +64,7 @@ class PaymentResult {
       'paymentId': paymentId,
       'signature': signature,
       'errorCode': errorCode,
+      'cancelled': cancelled,
     };
   }
 }
@@ -75,8 +82,7 @@ class PaymentService {
   Razorpay? _razorpay;
 
   static bool get isSupportedPlatform =>
-      kIsWeb ||
-      defaultTargetPlatform == TargetPlatform.android;
+      kIsWeb || defaultTargetPlatform == TargetPlatform.android;
 
   Completer<PaymentResult>? _paymentCompleter;
   PaymentOrder? _activeOrder;
@@ -189,8 +195,7 @@ class PaymentService {
     if (!isSupportedPlatform) {
       return PaymentResult(
         success: false,
-        message:
-            'Razorpay checkout is only available on web and Android.',
+        message: 'Razorpay checkout is only available on web and Android.',
       );
     }
     final user = await _getUser();
@@ -294,10 +299,8 @@ class PaymentService {
 
     init();
     try {
-
       _razorpay!.open(options);
     } catch (error) {
-
       return PaymentResult(
         success: false,
         message: 'Unable to open Razorpay checkout: $error',
@@ -413,11 +416,18 @@ class PaymentService {
       return;
     }
 
+    // Razorpay often reports a cancel as a JSON payload whose description is
+    // "undefined"; use the stable build's parser for a readable message.
+    final cancelled = response.code == Razorpay.PAYMENT_CANCELLED ||
+        gateway.PaymentResult.looksCancelled(response.message);
     completer.complete(
       PaymentResult(
         success: false,
-        message: response.message ?? 'Payment cancelled or failed.',
+        message:
+            gateway.PaymentResult.readableGatewayMessage(response.message) ??
+                'Payment cancelled or failed.',
         errorCode: response.code,
+        cancelled: cancelled,
       ),
     );
   }

@@ -12,6 +12,7 @@ import 'package:ott/app/core/services/razorpay_web_checkout.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/user.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class RazorpayPaymentService {
   RazorpayPaymentService({
@@ -138,26 +139,26 @@ class RazorpayPaymentService {
     }
 
     if (!isSupportedPlatform) {
-      return const PaymentResult(
+      return PaymentResult(
         success: false,
-        message: 'Razorpay checkout is only available on web, Android, and iOS.',
+        message: appL10n().payCheckoutUnsupportedPlatform,
         gateway: PaymentGatewayType.razorpay,
       );
     }
     final user = await _getUser();
     if (user?.id == null) {
-      return const PaymentResult(
+      return PaymentResult(
         success: false,
-        message: 'User not found',
+        message: appL10n().msgUserNotFound,
         gateway: PaymentGatewayType.razorpay,
       );
     }
 
     final razorpayKey = RazorpayConfig.keyId;
     if (razorpayKey.isEmpty) {
-      return const PaymentResult(
+      return PaymentResult(
         success: false,
-        message: 'Configure your Razorpay key before using checkout.',
+        message: appL10n().sysPaymentConfigureRazorpayKey,
         gateway: PaymentGatewayType.razorpay,
       );
     }
@@ -207,9 +208,9 @@ class RazorpayPaymentService {
         final signature = webResult['signature']?.toString();
 
         if (paymentId == null || signature == null) {
-          return const PaymentResult(
+          return PaymentResult(
             success: false,
-            message: 'Payment completed, but verification data is incomplete.',
+            message: appL10n().sysPaymentVerificationDataIncomplete,
             gateway: PaymentGatewayType.razorpay,
           );
         }
@@ -224,9 +225,10 @@ class RazorpayPaymentService {
             plan: plan,
           );
         } catch (error) {
+          debugPrint('Payment verification failed: $error');
           return PaymentResult(
             success: false,
-            message: 'Payment verification failed: $error',
+            message: appL10n().sysPaymentVerificationFailed,
             orderId: orderId,
             paymentId: paymentId,
             signature: signature,
@@ -235,10 +237,15 @@ class RazorpayPaymentService {
         }
       }
 
+      final rawWebMessage = webResult['message']?.toString();
+      final webCancelled = PaymentResult.looksCancelled(rawWebMessage);
       return PaymentResult(
         success: false,
-        message:
-            webResult['message']?.toString() ?? 'Payment cancelled or failed.',
+        cancelled: webCancelled,
+        message: PaymentResult.readableGatewayMessage(rawWebMessage) ??
+            (webCancelled
+                ? PaymentResult.defaultCancelledMessage
+                : appL10n().sysPaymentCancelledOrFailed),
         orderId: webResult['orderId']?.toString(),
         paymentId: webResult['paymentId']?.toString(),
         errorCode: webResult['errorCode'] is int
@@ -252,9 +259,10 @@ class RazorpayPaymentService {
     try {
       _razorpay!.open(options);
     } catch (error) {
+      debugPrint('Unable to open Razorpay checkout: $error');
       return PaymentResult(
         success: false,
-        message: 'Unable to open Razorpay checkout: $error',
+        message: appL10n().sysPaymentUnableOpenRazorpayCheckout,
         gateway: PaymentGatewayType.razorpay,
       );
     }
@@ -303,8 +311,8 @@ class RazorpayPaymentService {
       success: success,
       message: message ??
           (success
-              ? 'Payment verified successfully.'
-              : 'Payment verification failed. Please contact support if money was deducted.'),
+              ? appL10n().sysPaymentVerifiedSuccessfully
+              : appL10n().sysPaymentVerificationFailedContactSupport),
       orderId: razorPayOrderId,
       paymentId: transactionId,
       signature: signature,
@@ -322,8 +330,7 @@ class RazorpayPaymentService {
 
     return {
       'success': false,
-      'message':
-          'Payment verification returned an invalid response. Please contact support if money was deducted.',
+      'message': appL10n().sysPaymentVerificationInvalidResponse,
     };
   }
 
@@ -344,9 +351,9 @@ class RazorpayPaymentService {
         response.paymentId == null ||
         response.signature == null) {
       completer.complete(
-        const PaymentResult(
+        PaymentResult(
           success: false,
-          message: 'Payment completed, but verification data is incomplete.',
+          message: appL10n().sysPaymentVerificationDataIncomplete,
           gateway: PaymentGatewayType.razorpay,
         ),
       );
@@ -364,11 +371,11 @@ class RazorpayPaymentService {
       );
       completer.complete(result);
     } catch (error) {
+      debugPrint('Payment verification failed: $error');
       completer.complete(
         PaymentResult(
           success: false,
-          message:
-              'Payment verification failed. Please contact support if money was deducted. ${error.toString()}',
+          message: appL10n().sysPaymentVerificationFailedContactSupport,
           orderId: response.orderId,
           paymentId: response.paymentId,
           signature: response.signature,
@@ -384,10 +391,17 @@ class RazorpayPaymentService {
       return;
     }
 
+    final cancelled = response.code == Razorpay.PAYMENT_CANCELLED ||
+        PaymentResult.looksCancelled(response.message);
     completer.complete(
       PaymentResult(
         success: false,
-        message: response.message ?? 'Payment cancelled or failed.',
+        cancelled: cancelled,
+        // Razorpay often sends "undefined" or a raw JSON payload here.
+        message: PaymentResult.readableGatewayMessage(response.message) ??
+            (cancelled
+                ? PaymentResult.defaultCancelledMessage
+                : appL10n().sysPaymentCancelledOrFailed),
         errorCode: response.code,
         gateway: PaymentGatewayType.razorpay,
       ),
@@ -403,8 +417,9 @@ class RazorpayPaymentService {
     completer.complete(
       PaymentResult(
         success: false,
-        message:
-            'External wallet selected (${response.walletName ?? 'unknown'}). Verification is pending.',
+        message: appL10n().sysPaymentExternalWalletPending(
+          response.walletName ?? appL10n().sysPaymentUnknownWallet,
+        ),
         gateway: PaymentGatewayType.razorpay,
       ),
     );

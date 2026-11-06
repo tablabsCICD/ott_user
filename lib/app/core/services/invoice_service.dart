@@ -9,6 +9,8 @@ import 'package:share_plus/share_plus.dart';
 
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/data/models/user.dart';
+import 'package:ott/l10n/app_localizations.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 enum InvoiceShareTarget { whatsapp, email, general }
 
@@ -114,9 +116,9 @@ class InvoiceService {
     required InvoiceShareTarget target,
   }) {
     final channelHint = switch (target) {
-      InvoiceShareTarget.whatsapp => 'Select WhatsApp to share this invoice.',
-      InvoiceShareTarget.email => 'Select your email app to send this invoice.',
-      InvoiceShareTarget.general => 'Share invoice',
+      InvoiceShareTarget.whatsapp => appL10n().sysInvoiceSelectWhatsApp,
+      InvoiceShareTarget.email => appL10n().sysInvoiceSelectEmailApp,
+      InvoiceShareTarget.general => appL10n().sysInvoiceShareHint,
     };
 
     return SharePlus.instance.share(
@@ -147,6 +149,7 @@ class InvoiceService {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetContext) {
+        final l10n = AppLocalizations.of(sheetContext)!;
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -154,17 +157,16 @@ class InvoiceService {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Invoice ready',
-                  style: TextStyle(
+                Text(
+                  l10n.sysInvoiceReady,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Invoice ${invoice.invoiceNumber} has been generated. '
-                  'Choose where to share it.',
+                  l10n.sysInvoiceGeneratedChooseShare(invoice.invoiceNumber),
                   style: TextStyle(
                     color: Colors.grey.shade700,
                   ),
@@ -172,7 +174,7 @@ class InvoiceService {
                 const SizedBox(height: 20),
                 _ShareActionTile(
                   icon: Icons.chat,
-                  title: 'Send on WhatsApp',
+                  title: l10n.sysInvoiceSendOnWhatsApp,
                   onTap: () async {
                     Navigator.pop(sheetContext);
                     await shareInvoice(
@@ -183,7 +185,7 @@ class InvoiceService {
                 ),
                 _ShareActionTile(
                   icon: Icons.email_outlined,
-                  title: 'Send by Email',
+                  title: l10n.sysInvoiceSendByEmail,
                   onTap: () async {
                     Navigator.pop(sheetContext);
                     await shareInvoice(
@@ -194,7 +196,7 @@ class InvoiceService {
                 ),
                 _ShareActionTile(
                   icon: Icons.share_outlined,
-                  title: 'More sharing options',
+                  title: l10n.sysInvoiceMoreSharingOptions,
                   onTap: () async {
                     Navigator.pop(sheetContext);
                     await shareInvoice(

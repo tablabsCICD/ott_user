@@ -12,6 +12,7 @@ import 'package:ott/app/pages/news page/NewsScreen.dart';
 import 'package:ott/app/route/navigation_service.dart';
 import 'package:ott/app/route/routes/app_routes.dart';
 import 'package:ott/firebase_options.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 const AndroidNotificationChannel _highImportanceChannel =
     AndroidNotificationChannel(
@@ -277,7 +278,7 @@ class NotificationService {
 
     await _localNotifications.show(
       id: notification.hashCode,
-      title: notification.title ?? 'Notification',
+      title: notification.title ?? appL10n().notification,
       body: notification.body ?? '',
       notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(

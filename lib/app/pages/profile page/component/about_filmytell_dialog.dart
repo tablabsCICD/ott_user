@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 class AboutFilmytellScreen extends StatelessWidget {
@@ -12,14 +13,15 @@ class AboutFilmytellScreen extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     final selectedThemeData = themeProvider.getTheme;
     final subText = theme.hintColor;
+    final lang = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: theme.primaryColor,
-        title: const Text(
-          'About Filmytell',
-          style: TextStyle(color: Colors.white),
+        title: Text(
+          lang.aboutFilmytell,
+          style: const TextStyle(color: Colors.white),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -30,14 +32,14 @@ class AboutFilmytellScreen extends StatelessWidget {
           children: [
             /// 🎬 HERO
             Text(
-              'Filmytell – Rent Movies & Series',
+              lang.profileAboutHeadline,
               style: theme.textTheme.titleLarge
                   ?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
 
             Text(
-              'No ads. No subscriptions. Just pure cinema.',
+              lang.profileAboutSubheadline,
               style: theme.textTheme.bodyMedium?.copyWith(color: subText),
             ),
 
@@ -47,9 +49,9 @@ class AboutFilmytellScreen extends StatelessWidget {
             Wrap(
               spacing: 8,
               children: [
-                _Badge('Pay Per View', selectedThemeData.primaryColor),
-                _Badge('No Ads', selectedThemeData.primaryColor),
-                _Badge('Exclusive', selectedThemeData.primaryColor),
+                _Badge(lang.profilePayPerView, selectedThemeData.primaryColor),
+                _Badge(lang.profileNoAds, selectedThemeData.primaryColor),
+                _Badge(lang.profileExclusive, selectedThemeData.primaryColor),
               ],
             ),
 
@@ -57,41 +59,40 @@ class AboutFilmytellScreen extends StatelessWidget {
 
             /// 📝 INTRO
             Text(
-              'Your personal theatre in your pocket.\n'
-              'Watch movies, web series & mini series anytime, anywhere.',
+              lang.profileAboutIntro,
               style: theme.textTheme.bodyMedium,
             ),
 
             const SizedBox(height: 24),
 
             /// ⭐ FEATURES
-            _title(context, 'Why Filmytell'),
+            _title(context, lang.profileWhyFilmytell),
 
             const SizedBox(height: 12),
 
             _FeatureTile(
               icon: Icons.payments_outlined,
-              title: 'Pay Per View',
-              subtitle: 'Only pay for what you watch',
+              title: lang.profilePayPerView,
+              subtitle: lang.profilePayPerViewSubtitle,
               color: selectedThemeData.primaryColor,
             ),
             _FeatureTile(
               icon: Icons.block,
-              title: 'No Ads',
-              subtitle: 'Uninterrupted experience',
+              title: lang.profileNoAds,
+              subtitle: lang.profileNoAdsSubtitle,
               color: selectedThemeData.primaryColor,
             ),
             _FeatureTile(
               icon: Icons.public,
-              title: 'Exclusive Content',
-              subtitle: 'Independent & unique stories',
+              title: lang.profileExclusiveContent,
+              subtitle: lang.profileExclusiveContentSubtitle,
               color: selectedThemeData.primaryColor,
             ),
 
             const SizedBox(height: 24),
 
             /// 🎞 CONTENT
-            _title(context, 'Watch'),
+            _title(context, lang.profileWatch),
 
             const SizedBox(height: 10),
 
@@ -99,30 +100,30 @@ class AboutFilmytellScreen extends StatelessWidget {
                 ? Wrap(
                     spacing: 10,
                     runSpacing: 10,
-                    children: const [
-                      _Chip('Movies'),
-                      _Chip('Web Series'),
-                      _Chip('Mini Series'),
-                      _Chip('Regional'),
+                    children: [
+                      _Chip(lang.moviesLabel),
+                      _Chip(lang.profileWebSeries),
+                      _Chip(lang.minSeries),
+                      _Chip(lang.profileRegional),
                     ],
                   )
                 : Column(
-                    children: const [
+                    children: [
                       Wrap(
                         spacing: 10,
                         runSpacing: 10,
                         children: [
-                          _Chip('Movies'),
-                          _Chip('Web Series'),
+                          _Chip(lang.moviesLabel),
+                          _Chip(lang.profileWebSeries),
                         ],
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       Wrap(
                         spacing: 10,
                         runSpacing: 10,
                         children: [
-                          _Chip('Mini Series'),
-                          _Chip('Regional'),
+                          _Chip(lang.minSeries),
+                          _Chip(lang.profileRegional),
                         ],
                       ),
                     ],
@@ -132,18 +133,18 @@ class AboutFilmytellScreen extends StatelessWidget {
 
             /// 👥 CARDS
             Row(
-              children: const [
+              children: [
                 Expanded(
                   child: _MiniCard(
-                    title: 'Viewers',
-                    content: 'Watch anytime\nNo commitment',
+                    title: lang.profileViewers,
+                    content: lang.profileViewersContent,
                   ),
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Expanded(
                   child: _MiniCard(
-                    title: 'Creators',
-                    content: 'Reach global audience',
+                    title: lang.profileCreators,
+                    content: lang.profileCreatorsContent,
                   ),
                 ),
               ],

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:ott/app/provider/onboarding_tour_provider.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 class FeatureTourTarget extends StatefulWidget {
@@ -204,6 +205,8 @@ class _TourCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isLast = index == count - 1;
+    final lang = AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('en'));
 
     return FocusTraversalGroup(
       child: Material(
@@ -262,7 +265,7 @@ class _TourCard extends StatelessWidget {
                   TextButton(
                     onPressed: onSkip,
                     child: Text(
-                      'Skip',
+                      lang.skip,
                       style: TextStyle(color: theme.canvasColor),
                     ),
                   ),
@@ -281,7 +284,7 @@ class _TourCard extends StatelessWidget {
                       ),
                     ),
                     onPressed: onNext,
-                    child: Text(isLast ? 'Done' : 'Next'),
+                    child: Text(isLast ? lang.done : lang.next),
                   ),
                 ],
               ),

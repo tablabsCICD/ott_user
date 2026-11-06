@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:ott/app/core/payment/payment_result_message.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:ott/app/pages/wallet page/AppleWalletRechargeScreen.dart';
@@ -42,7 +44,8 @@ class _WalletPageState extends State<WalletPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Provider.of<ThemeProvider>(context, listen: false).getTheme;
+    final theme = Provider.of<ThemeProvider>(context).getTheme;
+    final lang = AppLocalizations.of(context)!;
     final horizontal = ResponsiveWidget.isDesktop(context)
         ? 200.0
         : ResponsiveWidget.isTablet(context)
@@ -120,9 +123,9 @@ class _WalletPageState extends State<WalletPage> {
 
                               const SizedBox(height: 4),
 
-                              const Text(
-                                "Available Balance",
-                                style: TextStyle(
+                              Text(
+                                lang.availableBalance,
+                                style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 14,
                                 ),
@@ -146,10 +149,10 @@ class _WalletPageState extends State<WalletPage> {
                                   ),
                                   onPressed: _handleRechargeTap,
                                   icon: const Icon(Icons.add),
-                                  label: const Text(
-                                    "Recharge Wallet",
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.bold),
+                                  label: Text(
+                                    lang.rechargeWallet,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold),
                                   ),
                                 ),
                                 onTap: _handleRechargeTap,
@@ -180,9 +183,13 @@ class _WalletPageState extends State<WalletPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    "Transaction History",
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  Text(
+                    lang.transactionHistory,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: theme.canvasColor,
+                    ),
                   ),
                   //_buildFilterBar(context),
                 ],
@@ -196,9 +203,16 @@ class _WalletPageState extends State<WalletPage> {
               final list = p.filteredTransactionHistory;
 
               if (list.isEmpty) {
-                return const SliverFillRemaining(
+                return SliverFillRemaining(
                   hasScrollBody: false,
-                  child: Center(child: Text("No transactions")),
+                  child: Center(
+                    child: Text(
+                      lang.walletNoTransactions,
+                      style: TextStyle(
+                        color: theme.canvasColor.withOpacity(0.7),
+                      ),
+                    ),
+                  ),
                 );
               }
 
@@ -440,12 +454,13 @@ class _WalletPageState extends State<WalletPage> {
             return Consumer<WalletProvider>(
               builder: (_, provider, __) {
                 final isBusy = isProcessing || provider.isAddingBalance;
+                final lang = AppLocalizations.of(context)!;
 
                 return AlertDialog(
                   backgroundColor: Theme.of(context).cardColor,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
-                  title: const Text("Recharge Wallet"),
+                  title: Text(lang.rechargeWallet),
                   content: SizedBox(
                     width: ResponsiveWidget.isTabletOrTv(dialogContext)
                         ? 460
@@ -457,9 +472,9 @@ class _WalletPageState extends State<WalletPage> {
                       textInputAction: TextInputAction.done,
                       onSubmitted: (_) =>
                           FocusScope.of(dialogContext).nextFocus(),
-                      decoration: const InputDecoration(
-                        labelText: "Enter amount",
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: lang.walletEnterAmount,
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                   ),
@@ -467,7 +482,7 @@ class _WalletPageState extends State<WalletPage> {
                     TextButton(
                         onPressed:
                             isBusy ? null : () => Navigator.pop(dialogContext),
-                        child: const Text("Cancel")),
+                        child: Text(lang.cancel)),
                     ElevatedButton(
                       onPressed: isBusy
                           ? null
@@ -480,7 +495,8 @@ class _WalletPageState extends State<WalletPage> {
                                   setState(() => isProcessing = value);
                                 },
                               ),
-                      child: Text(isBusy ? "Processing..." : "Proceed to pay"),
+                      child: Text(
+                          isBusy ? lang.payProcessing : lang.payProceedToPay),
                     )
                   ],
                 );
@@ -512,11 +528,12 @@ class _WalletPageState extends State<WalletPage> {
     required BuildContext pageContext,
     required ValueChanged<bool> setProcessing,
   }) async {
+    final lang = AppLocalizations.of(pageContext)!;
     final amt = double.tryParse(controller.text);
     if (amt == null) {
       CustomToast.show(
         pageContext,
-        "Enter a valid amount",
+        lang.walletEnterValidAmount,
         isSuccess: false,
       );
       return;
@@ -524,7 +541,8 @@ class _WalletPageState extends State<WalletPage> {
     if (amt < _minimumRechargeAmount) {
       CustomToast.show(
         pageContext,
-        "Minimum recharge amount is Rs ${_minimumRechargeAmount.toStringAsFixed(0)}",
+        lang.walletMinimumRechargeAmountRs(
+            _minimumRechargeAmount.toStringAsFixed(0)),
         isSuccess: false,
       );
       return;
@@ -532,7 +550,8 @@ class _WalletPageState extends State<WalletPage> {
     if (amt > _maximumRechargeAmount) {
       CustomToast.show(
         pageContext,
-        "Maximum recharge amount is Rs ${_maximumRechargeAmount.toStringAsFixed(0)}",
+        lang.walletMaximumRechargeAmountRs(
+            _maximumRechargeAmount.toStringAsFixed(0)),
         isSuccess: false,
       );
       return;
@@ -572,16 +591,17 @@ class _WalletPageState extends State<WalletPage> {
       }
       CustomToast.show(
         pageContext,
-        result['message']?.toString() ?? "Wallet recharged successfully.",
+        result['message']?.toString() ?? lang.walletRechargedSuccessfully,
         isSuccess: result['success'] == true,
       );
     } else {
       CustomToast.show(
         pageContext,
-        paymentResult is Map
-            ? paymentResult['message']?.toString() ??
-                "Recharge failed. Please try again."
-            : "Recharge failed. Please try again.",
+        paymentFailureMessage(
+          pageContext,
+          paymentResult,
+          fallback: lang.rechargeFailedTryAgain,
+        ),
         isSuccess: false,
       );
     }
@@ -591,16 +611,18 @@ class _WalletPageState extends State<WalletPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         content: Row(
           children: [
-            SizedBox(
+            const SizedBox(
               width: 24,
               height: 24,
               child: CircularProgressIndicator(strokeWidth: 2.5),
             ),
-            SizedBox(width: 16),
-            Expanded(child: Text("Updating wallet balance...")),
+            const SizedBox(width: 16),
+            Expanded(
+                child: Text(
+                    AppLocalizations.of(dialogContext)!.walletUpdatingBalance)),
           ],
         ),
       ),

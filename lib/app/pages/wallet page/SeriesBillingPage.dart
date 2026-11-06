@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:ott/app/core/payment/payment_result_message.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/pages/wallet%20page/PaymentPage.dart';
 import 'package:ott/app/pages/wallet%20page/AppleWalletRechargeScreen.dart';
@@ -55,6 +57,7 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context).getTheme;
+    final lang = AppLocalizations.of(context)!;
     final horizontal = ResponsiveWidget.isDesktop(context)
         ? 200.0
         : ResponsiveWidget.isTablet(context)
@@ -109,9 +112,9 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const Text(
-                            "Available Balance",
-                            style: TextStyle(color: Colors.white70),
+                          Text(
+                            lang.availableBalance,
+                            style: const TextStyle(color: Colors.white70),
                           ),
                           const SizedBox(height: 10),
                         ],
@@ -142,14 +145,15 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                         children: [
                           Text(
                             widget.isSeason
-                                ? "Season Purchase"
-                                : "Episode Purchase",
+                                ? lang.billingSeasonPurchase
+                                : lang.billingEpisodePurchase,
                             style: const TextStyle(
                                 fontSize: 22, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            "Amount: ₹ ${totalCoins.toStringAsFixed(0)}",
+                            lang.billingAmountRupees(
+                                totalCoins.toStringAsFixed(0)),
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -171,7 +175,9 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      "Wallet: ₹ ${provider.walletBalance.toStringAsFixed(2)}",
+                                      lang.billingWalletAmount(provider
+                                          .walletBalance
+                                          .toStringAsFixed(2)),
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
@@ -199,9 +205,9 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                                   ),
                                   icon: const Icon(Icons.check,
                                       color: Colors.white),
-                                  label: const Text(
-                                    "Proceed to Pay",
-                                    style: TextStyle(
+                                  label: Text(
+                                    lang.billingProceedToPay,
+                                    style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold),
                                   ),
@@ -222,9 +228,9 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                                   ),
                                   icon: const Icon(Icons.add_circle,
                                       color: Colors.white),
-                                  label: const Text(
-                                    "Recharge Wallet",
-                                    style: TextStyle(
+                                  label: Text(
+                                    lang.rechargeWallet,
+                                    style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold),
                                   ),
@@ -256,23 +262,24 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
             return Consumer<SeriesProvider>(
               builder: (_, provider, __) {
                 final isBusy = isProcessing || provider.isPurchasing;
+                final lang = AppLocalizations.of(context)!;
 
                 return AlertDialog(
                   backgroundColor: theme.cardColor,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
-                  title: const Text("Confirm Purchase"),
+                  title: Text(lang.billingConfirmPurchase),
                   content: SizedBox(
                     width: ResponsiveWidget.isTabletOrTv(dialogContext)
                         ? 460
                         : null,
-                    child: const Text("Do you want to confirm the purchase?"),
+                    child: Text(lang.billingConfirmPurchaseQuestion),
                   ),
                   actions: [
                     TextButton(
                       onPressed:
                           isBusy ? null : () => Navigator.pop(dialogContext),
-                      child: const Text("Cancel"),
+                      child: Text(lang.cancel),
                     ),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -309,13 +316,13 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                                 final msg = result.message.isNotEmpty
                                     ? result.message
                                     : (provider.error ??
-                                        "Purchase failed. Please try again.");
+                                        lang.billingPurchaseFailedTryAgain);
                                 CustomToast.show(pageContext, msg,
                                     isSuccess: false);
                               }
                             },
                       child: Text(
-                        isBusy ? "Processing..." : "Confirm & Pay",
+                        isBusy ? lang.payProcessing : lang.billingConfirmAndPay,
                         style: const TextStyle(color: Colors.white),
                       ),
                     ),
@@ -352,12 +359,13 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
             return Consumer<WalletProvider>(
               builder: (_, walletProvider, __) {
                 final isBusy = isProcessing || walletProvider.isAddingBalance;
+                final lang = AppLocalizations.of(context)!;
 
                 return AlertDialog(
                   backgroundColor: theme.cardColor,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
-                  title: const Text("Recharge Wallet"),
+                  title: Text(lang.rechargeWallet),
                   content: SizedBox(
                     width: ResponsiveWidget.isTabletOrTv(dialogContext)
                         ? 460
@@ -369,9 +377,9 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                       textInputAction: TextInputAction.done,
                       onSubmitted: (_) =>
                           FocusScope.of(dialogContext).nextFocus(),
-                      decoration: const InputDecoration(
-                        labelText: "Enter amount",
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: lang.walletEnterAmount,
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                   ),
@@ -379,7 +387,7 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                     TextButton(
                       onPressed:
                           isBusy ? null : () => Navigator.pop(dialogContext),
-                      child: const Text("Cancel"),
+                      child: Text(lang.cancel),
                     ),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -394,7 +402,7 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                               if (amount <= 0) {
                                 CustomToast.show(
                                   pageContext,
-                                  "Enter a valid amount",
+                                  lang.walletEnterValidAmount,
                                   isSuccess: false,
                                 );
                                 return;
@@ -402,7 +410,9 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                               if (amount < _minimumRechargeAmount) {
                                 CustomToast.show(
                                   pageContext,
-                                  "Minimum recharge amount is Rs ${_minimumRechargeAmount.toStringAsFixed(0)}",
+                                  lang.walletMinimumRechargeAmountRs(
+                                      _minimumRechargeAmount
+                                          .toStringAsFixed(0)),
                                   isSuccess: false,
                                 );
                                 return;
@@ -410,7 +420,9 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                               if (amount > _maximumRechargeAmount) {
                                 CustomToast.show(
                                   pageContext,
-                                  "Maximum recharge amount is Rs ${_maximumRechargeAmount.toStringAsFixed(0)}",
+                                  lang.walletMaximumRechargeAmountRs(
+                                      _maximumRechargeAmount
+                                          .toStringAsFixed(0)),
                                   isSuccess: false,
                                 );
                                 return;
@@ -429,12 +441,11 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                               if (!mounted) return;
                               if (result is Map && result['success'] == true) {
                                 _showWalletReflectLoader(pageContext);
-                                final addResult =
-                                    await walletProvider
-                                        .onPaymentVerified(
-                                          expectedAmount: amount,
-                                        )
-                                        .whenComplete(() {
+                                final addResult = await walletProvider
+                                    .onPaymentVerified(
+                                  expectedAmount: amount,
+                                )
+                                    .whenComplete(() {
                                   if (mounted) {
                                     Navigator.of(pageContext,
                                             rootNavigator: true)
@@ -444,7 +455,7 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
 
                                 if (!mounted) return;
                                 final msg = addResult['message']?.toString() ??
-                                    "Recharge failed. Please try again.";
+                                    lang.rechargeFailedTryAgain;
                                 CustomToast.show(
                                   pageContext,
                                   msg,
@@ -453,16 +464,17 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                               } else {
                                 CustomToast.show(
                                   pageContext,
-                                  result is Map
-                                      ? result['message']?.toString() ??
-                                          "Payment failed. Please try again."
-                                      : "Payment failed. Please try again.",
+                                  paymentFailureMessage(
+                                    pageContext,
+                                    result,
+                                    fallback: lang.paymentFailedTryAgain,
+                                  ),
                                   isSuccess: false,
                                 );
                               }
                             },
                       child: Text(
-                        isBusy ? "Processing..." : "Proceed to Pay",
+                        isBusy ? lang.payProcessing : lang.billingProceedToPay,
                         style: const TextStyle(color: Colors.white),
                       ),
                     ),
@@ -480,16 +492,18 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         content: Row(
           children: [
-            SizedBox(
+            const SizedBox(
               width: 24,
               height: 24,
               child: CircularProgressIndicator(strokeWidth: 2.5),
             ),
-            SizedBox(width: 16),
-            Expanded(child: Text("Updating wallet balance...")),
+            const SizedBox(width: 16),
+            Expanded(
+                child: Text(
+                    AppLocalizations.of(dialogContext)!.walletUpdatingBalance)),
           ],
         ),
       ),
@@ -510,12 +524,13 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
       ),
       builder: (sheetContext) {
         final theme = Theme.of(sheetContext);
+        final lang = AppLocalizations.of(sheetContext)!;
         final invoiceUrl = result.invoiceUrl?.trim() ?? '';
         final hasInvoiceUrl = invoiceUrl.isNotEmpty;
         final purchasedItem = widget.itemTitle ??
             (widget.isSeason
-                    ? 'Season ${result.seasonId ?? ''}'
-                    : 'Episode ${result.episodeId ?? ''}')
+                    ? lang.billingSeasonNumber('${result.seasonId ?? ''}')
+                    : lang.billingEpisodeNumber('${result.episodeId ?? ''}'))
                 .trim();
 
         return SafeArea(
@@ -558,9 +573,9 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Purchase successful',
-                              style: TextStyle(
+                            Text(
+                              lang.billingPurchaseSuccessful,
+                              style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -589,28 +604,30 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildInvoiceRow(
-                          'Series',
-                          widget.seriesTitle ?? 'Series',
+                          lang.seriesLabel,
+                          widget.seriesTitle ?? lang.seriesLabel,
                         ),
                         _buildInvoiceRow(
-                          'Item',
+                          lang.billingItem,
                           purchasedItem.isEmpty
                               ? (widget.isSeason
-                                  ? 'Season Purchase'
-                                  : 'Episode Purchase')
+                                  ? lang.billingSeasonPurchase
+                                  : lang.billingEpisodePurchase)
                               : purchasedItem,
                         ),
                         _buildInvoiceRow(
-                          'Coins Deducted',
+                          lang.billingCoinsDeducted,
                           '${result.coinsDeducted ?? widget.amount.toInt()}',
                         ),
                         _buildInvoiceRow(
-                          'New Balance',
-                          '${result.newBalance ?? 'N/A'}',
+                          lang.billingNewBalance,
+                          '${result.newBalance ?? lang.searchNotAvailable}',
                         ),
                         _buildInvoiceRow(
-                          'Invoice',
-                          hasInvoiceUrl ? 'Available' : 'Not available',
+                          lang.billingInvoice,
+                          hasInvoiceUrl
+                              ? lang.billingAvailable
+                              : lang.billingNotAvailable,
                           isLast: !hasInvoiceUrl,
                         ),
                         if (hasInvoiceUrl)
@@ -624,7 +641,7 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                                       mode: LaunchMode.externalApplication);
                                 }
                               },
-                              child: Text("View Invoice"),
+                              child: Text(lang.viewInvoice),
                             ),
                           ),
                       ],
@@ -645,10 +662,10 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                         onPressed: () async {
                           await SharePlus.instance.share(
                             ShareParams(
-                              title: 'Purchase Invoice',
-                              subject: 'Purchase Invoice',
+                              title: lang.purchaseInvoice,
+                              subject: lang.purchaseInvoice,
                               text:
-                                  'Here is your invoice for ${widget.seriesTitle ?? 'Series'}.\n$invoiceUrl',
+                                  '${lang.invoiceShareText(widget.seriesTitle ?? lang.seriesLabel)}\n$invoiceUrl',
                             ),
                           );
                         },
@@ -656,9 +673,9 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                           Icons.share_outlined,
                           color: Colors.white,
                         ),
-                        label: const Text(
-                          'Share Invoice',
-                          style: TextStyle(
+                        label: Text(
+                          lang.shareInvoice,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
@@ -676,7 +693,7 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                         ),
                       ),
                       onPressed: () => Navigator.pop(sheetContext),
-                      child: const Text('Done'),
+                      child: Text(lang.done),
                     ),
                   ),
                 ],

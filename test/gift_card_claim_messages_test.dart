@@ -207,7 +207,7 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
     });
 
-    testWidgets('Empty or short code displays invalid gift card error without calling API', (tester) async {
+    testWidgets('Empty or short code keeps Redeem disabled and never calls API', (tester) async {
       final mockProvider = _MockGiftProvider();
 
       await tester.pumpWidget(_buildTestApp(
@@ -219,19 +219,21 @@ void main() {
       await tester.tap(find.text('Open Claim Dialog'));
       await tester.pumpAndSettle();
 
-      // Tap Redeem with empty code
-      await tester.tap(find.text('Redeem'));
+      // Redeem is disabled while the code is empty
+      final redeem = tester.widget<ElevatedButton>(
+          find.widgetWithText(ElevatedButton, 'Redeem'));
+      expect(redeem.onPressed, isNull);
+      await tester.tap(find.text('Redeem'), warnIfMissed: false);
       await tester.pump();
 
       expect(mockProvider.callCount, 0);
-      expect(find.text('Invalid gift card code. Please check and try again.'), findsOneWidget);
       expect(find.text('Gift card claimed successfully!'), findsNothing);
       expect(find.text('Enter Gift Card Number'), findsOneWidget);
 
       await tester.pump(const Duration(seconds: 4));
     });
 
-    testWidgets('Invalid gift card response from backend displays invalid error message', (tester) async {
+    testWidgets('Invalid gift card response shows the exact backend message', (tester) async {
       final mockProvider = _MockGiftProvider();
       mockProvider.mockUseGiftByCoupon = (code) => {
         "success": false,
@@ -253,14 +255,14 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(mockProvider.callCount, 1);
-      expect(find.text('Invalid gift card code. Please check and try again.'), findsOneWidget);
+      expect(find.text('Invalid coupon code'), findsOneWidget);
       expect(find.text('Gift card claimed successfully!'), findsNothing);
       expect(find.text('Enter Gift Card Number'), findsOneWidget);
 
       await tester.pump(const Duration(seconds: 4));
     });
 
-    testWidgets('Already claimed gift card displays already claimed error message', (tester) async {
+    testWidgets('Already claimed gift card shows the exact backend message', (tester) async {
       final mockProvider = _MockGiftProvider();
       mockProvider.mockUseGiftByCoupon = (code) => {
         "success": false,
@@ -282,7 +284,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(mockProvider.callCount, 1);
-      expect(find.text('This gift card has already been claimed.'), findsOneWidget);
+      expect(find.text('Gift card has already been claimed'), findsOneWidget);
       expect(find.text('Gift card claimed successfully!'), findsNothing);
       expect(find.text('Enter Gift Card Number'), findsOneWidget);
 
@@ -294,7 +296,7 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
     });
 
-    testWidgets('Expired gift card displays expired error message', (tester) async {
+    testWidgets('Expired gift card shows the exact backend message', (tester) async {
       final mockProvider = _MockGiftProvider();
       mockProvider.mockUseGiftByCoupon = (code) => {
         "success": false,
@@ -316,7 +318,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(mockProvider.callCount, 1);
-      expect(find.text('This gift card has expired.'), findsOneWidget);
+      expect(find.text('Gift card has expired'), findsOneWidget);
       expect(find.text('Gift card claimed successfully!'), findsNothing);
       expect(find.text('Enter Gift Card Number'), findsOneWidget);
 

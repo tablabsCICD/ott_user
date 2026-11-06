@@ -26,6 +26,7 @@ import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/review_input_field.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
@@ -257,8 +258,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
           );
           if (response.statusCode == 200) {
             final resBody = jsonDecode(response.body);
-            final extracted =
-                _extractCastAndCrew(resBody, seasonId: seasonId > 0 ? seasonId : null);
+            final extracted = _extractCastAndCrew(resBody,
+                seasonId: seasonId > 0 ? seasonId : null);
             parsedCast = extracted.cast;
             parsedCrew = extracted.crew;
           }
@@ -445,7 +446,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                       const SizedBox(height: 8),
                       Text(
                         provider.error ??
-                            'This content is currently unavailable. Please try again later.',
+                            AppLocalizations.of(context)!
+                                .detailsContentUnavailable,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: theme.canvasColor.withValues(alpha: 0.7),
@@ -481,7 +483,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                         _buildTitleBlock(series, theme),
                         const SizedBox(height: 24),
                         Text(
-                          'No seasons available yet',
+                          AppLocalizations.of(context)!.detailsNoSeasonsYet,
                           style: TextStyle(
                             color: theme.canvasColor.withValues(alpha: 0.7),
                             fontSize: 16,
@@ -552,7 +554,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                           padding: const EdgeInsets.symmetric(vertical: 24.0),
                           child: Center(
                             child: Text(
-                              'No episodes available yet',
+                              AppLocalizations.of(context)!.detailsNoEpisodesYet,
                               style: TextStyle(
                                 color: theme.canvasColor.withOpacity(0.68),
                                 fontSize: 15,
@@ -655,9 +657,15 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (seasons.isEmpty)
-                          _buildTvSectionTitle(theme, 'Episodes coming soon')
+                          _buildTvSectionTitle(
+                              theme,
+                              AppLocalizations.of(context)!
+                                  .detailsEpisodesComingSoon)
                         else ...[
-                          _buildTvSectionTitle(theme, 'Seasons & Episodes'),
+                          _buildTvSectionTitle(
+                              theme,
+                              AppLocalizations.of(context)!
+                                  .detailsSeasonsAndEpisodes),
                           const SizedBox(height: 14),
                           _buildTvSeasonSelector(seasons, theme),
                           const SizedBox(height: 22),
@@ -668,7 +676,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                         if (_seasonCastList.isNotEmpty ||
                             _seasonCrewList.isNotEmpty ||
                             (widget.content.castList?.isNotEmpty ?? false) ||
-                            (widget.content.directorList?.isNotEmpty ?? false) ||
+                            (widget.content.directorList?.isNotEmpty ??
+                                false) ||
                             (_isLoadingSeasonCast &&
                                 _loadedSeasonId == season?.seasonId)) ...[
                           const SizedBox(height: 34),
@@ -684,7 +693,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                         ],
                         if (_isPaidUser(context.watch<SeriesProvider>())) ...[
                           const SizedBox(height: 28),
-                          _buildRatingAndReviewsSection(context, widget.content),
+                          _buildRatingAndReviewsSection(
+                              context, widget.content),
                         ],
                       ],
                     ),
@@ -846,14 +856,15 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
         .join(' / ');
 
     final items = <String>[
-      '${(widget.content.ratings ?? 0).toStringAsFixed(1)} rating',
+      AppLocalizations.of(context)!
+          .detailsRatingValue((widget.content.ratings ?? 0).toStringAsFixed(1)),
       if (releaseYear.isNotEmpty) releaseYear,
       if (genres.isNotEmpty) genres,
       if (languages.isNotEmpty) languages,
       if ((widget.content.ageRating ?? '').trim().isNotEmpty)
         widget.content.ageRating!.trim(),
-      '${seasons.length} ${seasons.length == 1 ? 'season' : 'seasons'}',
-      '$totalEpisodes ${totalEpisodes == 1 ? 'episode' : 'episodes'}',
+      AppLocalizations.of(context)!.detailsSeasonsCount(seasons.length),
+      AppLocalizations.of(context)!.detailsEpisodesCount(totalEpisodes),
     ];
 
     return Wrap(
@@ -915,14 +926,17 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
       children: [
         _tvActionButton(
           theme: theme,
-          label: resume == null ? 'Watch Now' : 'Resume Watching',
+          label: resume == null
+              ? AppLocalizations.of(context)!.watchNow
+              : AppLocalizations.of(context)!.detailsResumeWatching,
           icon: resume == null ? Icons.play_arrow_rounded : Icons.restart_alt,
           emphasized: true,
           onPressed: () {
             final target = resume ?? firstPlayable;
             if (target != null) {
               _playEpisode(context, target.season, target.episode);
-            } else if (seasons.isNotEmpty && seasons.first.episodes.isNotEmpty) {
+            } else if (seasons.isNotEmpty &&
+                seasons.first.episodes.isNotEmpty) {
               if (showEpisodePurchaseOption) {
                 _purchaseEpisode(
                     context, seasons.first, seasons.first.episodes.first);
@@ -936,26 +950,27 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
         ),
         _tvActionButton(
           theme: theme,
-          label: 'Watch Trailer',
+          label: AppLocalizations.of(context)!.watchTrailer,
           icon: Icons.movie_creation_outlined,
           onPressed: _openTrailer,
         ),
         _buildDownloadButton(context, theme),
         _tvActionButton(
           theme: theme,
-          label: 'Share',
+          label: AppLocalizations.of(context)!.cardShare,
           icon: Icons.ios_share_rounded,
           onPressed: () => showContentShareSheet(
             context,
             widget.content,
             contentType: DeepLinkContentType.series,
-            unavailableMessage: "Series details are not available yet",
+            unavailableMessage:
+                AppLocalizations.of(context)!.detailsSeriesDetailsUnavailable,
           ),
         ),
         if (!WalletPlatform.isIOS)
           _tvActionButton(
             theme: theme,
-            label: 'Gift',
+            label: AppLocalizations.of(context)!.cardGift,
             icon: LucideIcons.gift,
             onPressed: () => _showGiftDialog(context, widget.content),
           ),
@@ -971,11 +986,11 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
     if (!canDownload) {
       return _tvActionButton(
         theme: theme,
-        label: 'Download',
+        label: AppLocalizations.of(context)!.detailsDownload,
         icon: Icons.download_rounded,
         onPressed: () => CustomToast.show(
           context,
-          'Download is not available for this series.',
+          AppLocalizations.of(context)!.detailsDownloadNotAvailableSeries,
           isSuccess: false,
         ),
       );
@@ -989,10 +1004,11 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
         return _tvActionButton(
           theme: theme,
           label: isDownloading
-              ? 'Downloading ${(progress * 100).clamp(0, 100).toStringAsFixed(0)}%'
+              ? AppLocalizations.of(context)!.detailsDownloadingPercent(
+                  (progress * 100).clamp(0, 100).toStringAsFixed(0))
               : isDownloaded
-                  ? 'Downloaded'
-                  : 'Download',
+                  ? AppLocalizations.of(context)!.detailsDownloaded
+                  : AppLocalizations.of(context)!.detailsDownload,
           icon: isDownloaded ? Icons.download_done_rounded : Icons.download,
           onPressed: isDownloading
               ? null
@@ -1003,7 +1019,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                   if (!context.mounted) return;
                   CustomToast.show(
                     context,
-                    result['message']?.toString() ?? 'Download updated',
+                    result['message']?.toString() ??
+                        AppLocalizations.of(context)!.detailsDownloadUpdated,
                     isSuccess: result['success'] == true,
                   );
                 },
@@ -1058,7 +1075,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
             },
             child: ChoiceChip(
               selected: selected,
-              label: Text('Season ${seasons[index].seasonNumber}'),
+              label: Text(AppLocalizations.of(context)!
+                  .detailsSeasonN(seasons[index].seasonNumber)),
               selectedColor: theme.primaryColor,
               backgroundColor: Colors.red.withValues(alpha: 0.1),
               labelStyle: TextStyle(
@@ -1090,7 +1108,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
         (widget.content.isRental == true) || season.isSeasonPurchased;
     final effectiveSeasonPrice = season.price > 0
         ? season.price.toDouble()
-        : (widget.content.price != null ? widget.content.price!.toDouble() : 0.0);
+        : (widget.content.price != null
+            ? widget.content.price!.toDouble()
+            : 0.0);
     final canPurchaseSeason = !isSeasonPurchased && effectiveSeasonPrice > 0;
     final priceLabel =
         effectiveSeasonPrice.truncateToDouble() == effectiveSeasonPrice
@@ -1105,7 +1125,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Season ${season.seasonNumber}: ${season.title}',
+                AppLocalizations.of(context)!
+                    .detailsSeasonTitle(season.seasonNumber, season.title),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -1133,7 +1154,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
         else if (canPurchaseSeason)
           _tvActionButton(
             theme: theme,
-            label: 'Rent Season ₹$priceLabel',
+            label: AppLocalizations.of(context)!
+                .detailsRentSeasonPrice(priceLabel),
             icon: Icons.lock_open_rounded,
             emphasized: true,
             onPressed: () => _purchaseSeason(context, season),
@@ -1149,8 +1171,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
   ) {
     if (season.episodes.isEmpty) {
       return Text(
-        'No episodes available yet',
-        style: TextStyle(color: theme.canvasColor.withOpacity(0.7), fontSize: 16),
+        AppLocalizations.of(context)!.detailsNoEpisodesYet,
+        style:
+            TextStyle(color: theme.canvasColor.withOpacity(0.7), fontSize: 16),
       );
     }
 
@@ -1180,8 +1203,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
   ) {
     final isSeasonPurchased =
         (widget.content.isRental == true) || season.isSeasonPurchased;
-    final canPlay =
-        isSeasonPurchased || episode.isPurchased || episode.isFree;
+    final canPlay = isSeasonPurchased || episode.isPurchased || episode.isFree;
     final progress = _episodeProgress(context, season, episode);
     final hasProgress = progress > 0.02;
 
@@ -1301,8 +1323,11 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                   const SizedBox(height: 6),
                   Text(
                     hasProgress
-                        ? 'Continue watching - ${(progress * 100).round()}%'
-                        : 'Episode ${episode.episodeNumber}',
+                        ? AppLocalizations.of(context)!
+                            .detailsContinueWatchingPercent(
+                                (progress * 100).round())
+                        : AppLocalizations.of(context)!
+                            .detailsEpisodeN(episode.episodeNumber),
                     style: TextStyle(
                       color: hasProgress
                           ? theme.primaryColor
@@ -1427,7 +1452,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
             ),
             const SizedBox(height: 10),
             Text(
-              content.title ?? 'Untitled',
+              content.title ?? AppLocalizations.of(context)!.detailsUntitled,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -1466,10 +1491,15 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
 
   String _railTitle(String? category) {
     final raw = category?.trim();
-    if (raw == null || raw.isEmpty) return 'More Like This';
-    if (raw.toLowerCase().contains('trending')) return 'Trending';
-    if (raw.toLowerCase().contains('latest')) return 'Recommended Series';
-    if (raw.toLowerCase().contains('upcoming')) return 'Related Content';
+    final lang = AppLocalizations.of(context)!;
+    if (raw == null || raw.isEmpty) return lang.detailsMoreLikeThis;
+    if (raw.toLowerCase().contains('trending')) return lang.detailsTrending;
+    if (raw.toLowerCase().contains('latest')) {
+      return lang.detailsRecommendedSeries;
+    }
+    if (raw.toLowerCase().contains('upcoming')) {
+      return lang.detailsRelatedContent;
+    }
     return raw;
   }
 
@@ -1616,7 +1646,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
     if (videoUrl == null || videoUrl.isEmpty) {
       CustomToast.show(
         context,
-        "Episode video is not available at the moment.",
+        AppLocalizations.of(context)!.cardEpisodeVideoNotAvailable,
         isSuccess: false,
       );
       return;
@@ -1691,7 +1721,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
     );
 
     if (result == true && context.mounted) {
-      CustomToast.show(context, "Episode unlocked! Enjoy watching 🎬",
+      CustomToast.show(
+          context, AppLocalizations.of(context)!.detailsEpisodeUnlocked,
           isSuccess: true);
       await context.read<SeriesProvider>().fetchSeriesDetails(widget.seriesId);
     }
@@ -1723,7 +1754,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
     );
 
     if (result == true && context.mounted) {
-      CustomToast.show(context, "Season unlocked! Enjoy watching 🎬",
+      CustomToast.show(
+          context, AppLocalizations.of(context)!.detailsSeasonUnlocked,
           isSuccess: true);
       await context.read<SeriesProvider>().fetchSeriesDetails(widget.seriesId);
     }
@@ -1772,7 +1804,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                           color: theme.primaryColor, size: 28),
                       const SizedBox(width: 10),
                       Text(
-                        "Gift This Series",
+                        AppLocalizations.of(context)!.detailsGiftThisSeries,
                         style: theme.textTheme.titleLarge
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
@@ -1780,7 +1812,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    "Enter how many people you'd like to gift this series to.",
+                    AppLocalizations.of(context)!
+                        .detailsGiftSeriesRecipientsPrompt,
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(color: theme.canvasColor),
                   ),
@@ -1789,7 +1822,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                     backgroundColor: theme.scaffoldBackgroundColor,
                     isDigits: true,
                     controller: countController,
-                    hintText: "Number of recipients",
+                    hintText:
+                        AppLocalizations.of(context)!.detailsNumberOfRecipients,
                     textInputType: TextInputType.number,
                   ),
                   const SizedBox(height: 24),
@@ -1798,7 +1832,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                     children: [
                       TextButton(
                         onPressed: () => Navigator.pop(dialogContext),
-                        child: Text("Cancel",
+                        child: Text(AppLocalizations.of(context)!.cancel,
                             style: TextStyle(color: theme.canvasColor)),
                       ),
                       const SizedBox(width: 12),
@@ -1815,7 +1849,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                           if (count == null || count <= 0) {
                             CustomToast.show(
                               dialogContext,
-                              'Please enter valid number',
+                              AppLocalizations.of(context)!
+                                  .detailsEnterValidNumber,
                               isSuccess: false,
                             );
                             return;
@@ -1833,8 +1868,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                             ),
                           );
                         },
-                        child: const Text("Continue",
-                            style: TextStyle(color: Colors.white)),
+                        child: Text(
+                            AppLocalizations.of(context)!.homeContinue,
+                            style: const TextStyle(color: Colors.white)),
                       ),
                     ],
                   ),
@@ -2020,13 +2056,14 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
           runSpacing: 12,
           children: [
             ActionButtonWidget(
-              label: 'Share',
+              label: AppLocalizations.of(context)!.cardShare,
               icon: Icons.qr_code_2_rounded,
               onTap: () => showContentShareSheet(
                 context,
                 widget.content,
                 contentType: DeepLinkContentType.series,
-                unavailableMessage: "Series details are not available yet",
+                unavailableMessage: AppLocalizations.of(context)!
+                    .detailsSeriesDetailsUnavailable,
               ),
             ),
             _buildGifting(context, widget.content),
@@ -2042,7 +2079,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
     final TextEditingController countController = TextEditingController();
 
     return ActionButtonWidget(
-      label: 'Gift Series',
+      label: AppLocalizations.of(context)!.detailsGiftSeries,
       icon: LucideIcons.gift,
       onTap: () {
         showDialog(
@@ -2086,7 +2123,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                               ),
                               const SizedBox(width: 10),
                               Text(
-                                "Gift This Series",
+                                AppLocalizations.of(context)!
+                                    .detailsGiftThisSeries,
                                 style: theme.textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -2095,7 +2133,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            "Enter how many people you'd like to gift this series to.",
+                            AppLocalizations.of(context)!
+                                .detailsGiftSeriesRecipientsPrompt,
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: theme.canvasColor,
                             ),
@@ -2105,7 +2144,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                             backgroundColor: theme.scaffoldBackgroundColor,
                             isDigits: true,
                             controller: countController,
-                            hintText: "Number of recipients",
+                            hintText: AppLocalizations.of(context)!
+                                .detailsNumberOfRecipients,
                             textInputType: TextInputType.number,
                           ),
                           const SizedBox(height: 24),
@@ -2115,7 +2155,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                               TextButton(
                                 onPressed: () => Navigator.pop(dialogContext),
                                 child: Text(
-                                  "Cancel",
+                                  AppLocalizations.of(context)!.cancel,
                                   style: TextStyle(color: theme.canvasColor),
                                 ),
                               ),
@@ -2137,7 +2177,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                                   if (count == null || count <= 0) {
                                     CustomToast.show(
                                       dialogContext,
-                                      'Please enter valid number',
+                                      AppLocalizations.of(context)!
+                                          .detailsEnterValidNumber,
                                       isSuccess: false,
                                     );
                                     return;
@@ -2155,9 +2196,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                                     ),
                                   );
                                 },
-                                child: const Text(
-                                  "Continue",
-                                  style: TextStyle(color: Colors.white),
+                                child: Text(
+                                  AppLocalizations.of(context)!.homeContinue,
+                                  style: const TextStyle(color: Colors.white),
                                 ),
                               ),
                             ],
@@ -2198,7 +2239,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                "Season ${seasons[i].seasonNumber}",
+                AppLocalizations.of(context)!
+                    .detailsSeasonN(seasons[i].seasonNumber),
                 style: TextStyle(
                   color: selected
                       ? Colors.white
@@ -2238,7 +2280,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Season ${season.seasonNumber}: ${season.title}",
+                AppLocalizations.of(context)!
+                    .detailsSeasonTitle(season.seasonNumber, season.title),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -2275,7 +2318,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
-                                "Rent complete Season ₹$priceLabel",
+                                AppLocalizations.of(context)!
+                                    .detailsRentCompleteSeasonPrice(priceLabel),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -2301,9 +2345,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
     final theme = Theme.of(context);
     dynamic rawDate;
     if (item is SeasonEntity) {
-      rawDate = item.releaseDate > 0
-          ? item.releaseDate
-          : widget.content.releaseDate;
+      rawDate =
+          item.releaseDate > 0 ? item.releaseDate : widget.content.releaseDate;
     } else if (item is Content) {
       rawDate = item.releaseDate;
     } else {
@@ -2312,8 +2355,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
 
     final releaseDateText = formatReleaseDate(rawDate).trim();
     final displayText = (releaseDateText.isNotEmpty)
-        ? 'Release On: $releaseDateText'
-        : 'Release On: Coming Soon';
+        ? AppLocalizations.of(context)!.detailsReleaseOn(releaseDateText)
+        : AppLocalizations.of(context)!.detailsReleaseOnComingSoon;
 
     final child = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -2395,9 +2438,13 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (hasCast) _buildCastOrCrewRow(context, "Cast", effectiveCast, theme),
+        if (hasCast)
+          _buildCastOrCrewRow(context, AppLocalizations.of(context)!.cast,
+              effectiveCast, theme),
         if (hasCast && hasCrew) const SizedBox(height: 16),
-        if (hasCrew) _buildCastOrCrewRow(context, "Crew", effectiveCrew, theme),
+        if (hasCrew)
+          _buildCastOrCrewRow(context,
+              AppLocalizations.of(context)!.searchCrew, effectiveCrew, theme),
       ],
     );
   }
@@ -2613,7 +2660,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "Ep. ${ep.episodeNumber} • ${_formatRuntimeToHms(ep.runtime)}",
+                          AppLocalizations.of(context)!.detailsEpisodeRuntime(
+                              ep.episodeNumber,
+                              _formatRuntimeToHms(ep.runtime)),
                           style: TextStyle(
                             fontSize: 12,
                             color: theme.canvasColor.withValues(alpha: 0.7),
@@ -2718,18 +2767,20 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                   : 'N/A',
               titleStyle,
               contentStyle),
-          _buildTableRow(lang.runtime, _formatRuntimeToHms(movie.runtime), titleStyle,
-              contentStyle),
+          _buildTableRow(lang.runtime, _formatRuntimeToHms(movie.runtime),
+              titleStyle, contentStyle),
           () {
             final seasons = context.read<SeriesProvider>().series?.seasons;
-            final selectedSeason = (seasons != null &&
-                    _selectedSeasonIndex < seasons.length)
-                ? seasons[_selectedSeasonIndex]
-                : (seasons != null && seasons.isNotEmpty ? seasons.first : null);
-            final double? seasonPrice = selectedSeason?.price != null &&
-                    selectedSeason!.price > 0
-                ? selectedSeason.price.toDouble()
-                : null;
+            final selectedSeason =
+                (seasons != null && _selectedSeasonIndex < seasons.length)
+                    ? seasons[_selectedSeasonIndex]
+                    : (seasons != null && seasons.isNotEmpty
+                        ? seasons.first
+                        : null);
+            final double? seasonPrice =
+                selectedSeason?.price != null && selectedSeason!.price > 0
+                    ? selectedSeason.price.toDouble()
+                    : null;
             final num? effectivePrice =
                 (movie.price != null && movie.price! > 0)
                     ? movie.price
@@ -2817,12 +2868,12 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
     return Consumer<VideoProvider>(
       builder: (context, provider, child) => Column(
         children: [
-          const Text(
-            "Rate your experience",
+          Text(
+            AppLocalizations.of(context)!.detailsRateYourExperience,
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 18,
-              color: Colors.white,
+              color: Theme.of(context).canvasColor,
             ),
           ),
           StarRating(
@@ -2831,21 +2882,10 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                 setState(() => provider.rating = rating),
           ),
           const SizedBox(height: 7),
-          Container(
-            height: 90,
-            margin: const EdgeInsets.all(10.0),
-            padding: const EdgeInsets.only(bottom: 16.0),
-            child: TextField(
-              maxLines: 9,
-              textCapitalization: TextCapitalization.sentences,
-              inputFormatters: [CapitalizeSentencesTextInputFormatter()],
-              style: const TextStyle(color: Colors.white),
-              controller: provider.reviewController,
-              decoration: const InputDecoration(
-                hintText: "Your Feedback!",
-                border: OutlineInputBorder(),
-              ),
-            ),
+          ReviewInputField(
+            controller: provider.reviewController,
+            hintText: AppLocalizations.of(context)!.detailsYourFeedback,
+            inputFormatters: [CapitalizeSentencesTextInputFormatter()],
           ),
           const SizedBox(height: 7),
           ElevatedButton(
@@ -2859,7 +2899,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
             onPressed: () async {
               final contentId = content.id ?? widget.seriesId;
               if (provider.rating == 0) {
-                CustomToast.show(context, "Please select rating..",
+                CustomToast.show(context,
+                    AppLocalizations.of(context)!.detailsPleaseSelectRating,
                     isSuccess: false);
                 return;
               }
@@ -2873,7 +2914,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                   context,
                   message != null && message.isNotEmpty
                       ? message
-                      : "something went wrong to submit review",
+                      : AppLocalizations.of(context)!.detailsReviewSubmitFailed,
                   isSuccess: false,
                 );
                 return;
@@ -2883,15 +2924,15 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                 context,
                 message != null && message.isNotEmpty
                     ? message
-                    : 'review submitted successfully',
+                    : AppLocalizations.of(context)!.detailsReviewSubmitted,
                 isSuccess: true,
               );
               await context.read<VideoProvider>().getRatingReview(contentId);
             },
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8.0),
-              child:
-                  Text("Submit Review", style: TextStyle(color: Colors.white)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(AppLocalizations.of(context)!.detailsSubmitReview,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ),
         ],
@@ -2920,7 +2961,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                 DateFormat('yyyy-MM-dd HH:mm:ss').format(date);
             final username = provider.reviewList[index].username;
             final displayName = username == null || username == "null null"
-                ? "Anonymous User"
+                ? AppLocalizations.of(context)!.detailsAnonymousUser
                 : username;
 
             return Container(
@@ -2949,10 +2990,10 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                       Expanded(
                         child: Text(
                           displayName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
-                            color: Colors.white,
+                            color: Theme.of(context).canvasColor,
                           ),
                         ),
                       ),
@@ -2966,10 +3007,10 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                       Flexible(
                         child: Text(
                           formattedDate,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.normal,
                             fontSize: 12,
-                            color: Colors.white,
+                            color: Theme.of(context).canvasColor,
                           ),
                         ),
                       ),
@@ -2978,10 +3019,10 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                   const SizedBox(height: 10),
                   Text(
                     provider.reviewList[index].title.toString(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.normal,
                       fontSize: 12,
-                      color: Colors.white,
+                      color: Theme.of(context).canvasColor,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -3011,7 +3052,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Gallery",
+          AppLocalizations.of(context)!.detailsGallery,
           style: TextStyle(
             color: theme.primaryColor,
             fontSize: 18,

@@ -9,6 +9,7 @@ import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/core/utils/content_type.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/content.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:ott/data/models/response/SeriesDetailsResponse.dart';
 import 'package:ott/data/models/seriesModel.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
@@ -212,7 +213,7 @@ class _ContinueWatchingBannerState extends State<ContinueWatchingBanner> {
       if (videoUrl == null || videoUrl.isEmpty) {
         CustomToast.show(
           context,
-          "Episode video is not available at the moment.",
+          AppLocalizations.of(context)!.cardEpisodeVideoNotAvailable,
           isSuccess: false,
         );
         return;
@@ -230,7 +231,8 @@ class _ContinueWatchingBannerState extends State<ContinueWatchingBanner> {
         contentUrl: videoUrl,
       );
 
-      navigator.push(
+      navigator
+          .push(
         MaterialPageRoute(
           builder: (_) => PlayMediaPage(
             videoUrl: videoUrl,
@@ -240,7 +242,8 @@ class _ContinueWatchingBannerState extends State<ContinueWatchingBanner> {
             seasons: allSeasons,
           ),
         ),
-      ).then((_) {
+      )
+          .then((_) {
         if (!mounted) return;
         dashboardProvider.getContinueWatchedMovieList(widget.selectedType);
         widget.onPlaybackFinished?.call();
@@ -270,13 +273,14 @@ class _ContinueWatchingBannerState extends State<ContinueWatchingBanner> {
     if (contentUrl == null || contentUrl.trim().isEmpty) {
       CustomToast.show(
         context,
-        "Video is not available",
+        AppLocalizations.of(context)!.cardVideoNotAvailable,
         isSuccess: false,
       );
       return;
     }
 
-    navigator.push(
+    navigator
+        .push(
       MaterialPageRoute(
         builder: (_) => PlayMediaPage(
           videoUrl: contentUrl!,
@@ -286,7 +290,8 @@ class _ContinueWatchingBannerState extends State<ContinueWatchingBanner> {
           seasons: null,
         ),
       ),
-    ).then((_) {
+    )
+        .then((_) {
       if (!mounted) return;
       dashboardProvider.getContinueWatchedMovieList(widget.selectedType);
       widget.onPlaybackFinished?.call();
@@ -413,13 +418,15 @@ class _ContinueWatchingBannerState extends State<ContinueWatchingBanner> {
                 : null));
 
     final int percentage = (movie.watchedPercentage ?? 0).clamp(0, 100);
-    final String? genre = (movie.genreList != null && movie.genreList!.isNotEmpty)
-        ? movie.genreList!.first
-        : null;
+    final String? genre =
+        (movie.genreList != null && movie.genreList!.isNotEmpty)
+            ? movie.genreList!.first
+            : null;
 
+    final lang = AppLocalizations.of(context)!;
     final String progressGenreText = (genre != null && genre.trim().isNotEmpty)
-        ? '$percentage% watched | $genre'
-        : '$percentage% watched';
+        ? '${lang.cardPercentWatched(percentage)} | $genre'
+        : lang.cardPercentWatched(percentage);
 
     final double progressFraction = (percentage / 100.0).clamp(0.0, 1.0);
 
@@ -515,164 +522,167 @@ class _ContinueWatchingBannerState extends State<ContinueWatchingBanner> {
               alignment: Alignment.centerLeft,
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxWidth: infoWidth - (isNarrow ? 26.0 : (isMobile ? 30.0 : 38.0)),
+                  maxWidth:
+                      infoWidth - (isNarrow ? 26.0 : (isMobile ? 30.0 : 38.0)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                // 1. Section heading: Continue Watching
-                Text(
-                  'Continue Watching',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: isNarrow
-                        ? 11.5
-                        : (isMobile ? 13.0 : (isTablet ? 14.0 : 15.0)),
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white.withValues(alpha: 0.88),
-                    letterSpacing: 0.2,
-                  ),
-                ),
-
-                SizedBox(height: isNarrow ? 3.0 : (isMobile ? 4.0 : 6.0)),
-
-                // 2. Movie/Episode Title (prominent, bold, max 2 lines with ellipsis)
-                Text(
-                  movie.displayTitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: isNarrow
-                        ? 20.0
-                        : (isMobile ? 24.0 : (isTablet ? 28.0 : 32.0)),
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    height: 1.15,
-                  ),
-                ),
-
-                SizedBox(height: isNarrow ? 4.0 : (isMobile ? 6.0 : 8.0)),
-
-                // 3. Watching progress and genre
-                Text(
-                  progressGenreText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: isNarrow
-                        ? 11.5
-                        : (isMobile ? 12.5 : (isTablet ? 13.0 : 14.0)),
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white70,
-                  ),
-                ),
-
-                SizedBox(height: isNarrow ? 6.0 : (isMobile ? 8.0 : 10.0)),
-
-                // 4. Horizontal playback progress bar (constrained width matching column)
-                SizedBox(
-                  width: progressBarWidth,
-                  height: 4.0,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.22),
-                      borderRadius: BorderRadius.circular(999),
+                    // 1. Section heading: Continue Watching
+                    Text(
+                      lang.continueWatching,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: isNarrow
+                            ? 11.5
+                            : (isMobile ? 13.0 : (isTablet ? 14.0 : 15.0)),
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withValues(alpha: 0.88),
+                        letterSpacing: 0.2,
+                      ),
                     ),
-                    child: FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: progressFraction,
+
+                    SizedBox(height: isNarrow ? 3.0 : (isMobile ? 4.0 : 6.0)),
+
+                    // 2. Movie/Episode Title (prominent, bold, max 2 lines with ellipsis)
+                    Text(
+                      movie.displayTitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: isNarrow
+                            ? 20.0
+                            : (isMobile ? 24.0 : (isTablet ? 28.0 : 32.0)),
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        height: 1.15,
+                      ),
+                    ),
+
+                    SizedBox(height: isNarrow ? 4.0 : (isMobile ? 6.0 : 8.0)),
+
+                    // 3. Watching progress and genre
+                    Text(
+                      progressGenreText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: isNarrow
+                            ? 11.5
+                            : (isMobile ? 12.5 : (isTablet ? 13.0 : 14.0)),
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white70,
+                      ),
+                    ),
+
+                    SizedBox(height: isNarrow ? 6.0 : (isMobile ? 8.0 : 10.0)),
+
+                    // 4. Horizontal playback progress bar (constrained width matching column)
+                    SizedBox(
+                      width: progressBarWidth,
+                      height: 4.0,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: _brandRed,
+                          color: Colors.white.withValues(alpha: 0.22),
                           borderRadius: BorderRadius.circular(999),
                         ),
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: progressFraction,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: _brandRed,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
 
-                SizedBox(height: isNarrow ? 10.0 : (isMobile ? 14.0 : 18.0)),
+                    SizedBox(
+                        height: isNarrow ? 10.0 : (isMobile ? 14.0 : 18.0)),
 
-                // 5. Resume button (circular red play button + white Resume label)
-                Semantics(
-                  button: true,
-                  label: 'Resume ${movie.displayTitle}',
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _playContent(context, movie),
-                      borderRadius: BorderRadius.circular(24),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 4.0,
-                          horizontal: 2.0,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: isNarrow
-                                  ? 32.0
-                                  : (isMobile
-                                      ? 36.0
-                                      : (isTablet ? 40.0 : 42.0)),
-                              height: isNarrow
-                                  ? 32.0
-                                  : (isMobile
-                                      ? 36.0
-                                      : (isTablet ? 40.0 : 42.0)),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _brandRed,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: _brandRed.withValues(alpha: 0.45),
-                                    blurRadius: 10,
-                                    spreadRadius: 1,
-                                    offset: const Offset(0, 2),
+                    // 5. Resume button (circular red play button + white Resume label)
+                    Semantics(
+                      button: true,
+                      label: lang.cardResumeTitle(movie.displayTitle),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _playContent(context, movie),
+                          borderRadius: BorderRadius.circular(24),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 4.0,
+                              horizontal: 2.0,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: isNarrow
+                                      ? 32.0
+                                      : (isMobile
+                                          ? 36.0
+                                          : (isTablet ? 40.0 : 42.0)),
+                                  height: isNarrow
+                                      ? 32.0
+                                      : (isMobile
+                                          ? 36.0
+                                          : (isTablet ? 40.0 : 42.0)),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: _brandRed,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            _brandRed.withValues(alpha: 0.45),
+                                        blurRadius: 10,
+                                        spreadRadius: 1,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                              child: Icon(
-                                Icons.play_arrow_rounded,
-                                color: Colors.white,
-                                size: isNarrow
-                                    ? 20.0
-                                    : (isMobile
-                                        ? 22.0
-                                        : (isTablet ? 25.0 : 27.0)),
-                              ),
+                                  child: Icon(
+                                    Icons.play_arrow_rounded,
+                                    color: Colors.white,
+                                    size: isNarrow
+                                        ? 20.0
+                                        : (isMobile
+                                            ? 22.0
+                                            : (isTablet ? 25.0 : 27.0)),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  lang.cardResume,
+                                  style: GoogleFonts.inter(
+                                    fontSize: isNarrow
+                                        ? 13.5
+                                        : (isMobile
+                                            ? 15.0
+                                            : (isTablet ? 15.5 : 16.5)),
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 10),
-                            Text(
-                              'Resume',
-                              style: GoogleFonts.inter(
-                                fontSize: isNarrow
-                                    ? 13.5
-                                    : (isMobile
-                                        ? 15.0
-                                        : (isTablet ? 15.5 : 16.5)),
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
-      ),
-    ),
       ],
     );
   }
@@ -735,57 +745,57 @@ class ContinueWatchingBannerShimmer extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                      ShimmerLoader(
-                        width: isMobile ? 110 : 130,
-                        height: 14,
-                        borderRadius: 4,
-                      ),
-                      const SizedBox(height: 10),
-                      ShimmerLoader(
-                        width: isMobile ? 140 : 180,
-                        height: isMobile ? 18 : 22,
-                        borderRadius: 4,
-                      ),
-                      const SizedBox(height: 6),
-                      ShimmerLoader(
-                        width: isMobile ? 100 : 130,
-                        height: isMobile ? 18 : 22,
-                        borderRadius: 4,
-                      ),
-                      const SizedBox(height: 10),
-                      ShimmerLoader(
-                        width: isMobile ? 90 : 110,
-                        height: 12,
-                        borderRadius: 4,
-                      ),
-                      const SizedBox(height: 10),
-                      ShimmerLoader(
-                        width: progressBarWidth,
-                        height: 4.0,
-                        borderRadius: 999,
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          ShimmerLoader(
-                            width: isMobile ? 36 : 40,
-                            height: isMobile ? 36 : 40,
-                            borderRadius: 999,
-                            shape: BoxShape.circle,
-                          ),
-                          const SizedBox(width: 10),
-                          const ShimmerLoader(
-                            width: 60,
-                            height: 16,
-                            borderRadius: 4,
-                          ),
-                        ],
-                      ),
-                    ],
+                        ShimmerLoader(
+                          width: isMobile ? 110 : 130,
+                          height: 14,
+                          borderRadius: 4,
+                        ),
+                        const SizedBox(height: 10),
+                        ShimmerLoader(
+                          width: isMobile ? 140 : 180,
+                          height: isMobile ? 18 : 22,
+                          borderRadius: 4,
+                        ),
+                        const SizedBox(height: 6),
+                        ShimmerLoader(
+                          width: isMobile ? 100 : 130,
+                          height: isMobile ? 18 : 22,
+                          borderRadius: 4,
+                        ),
+                        const SizedBox(height: 10),
+                        ShimmerLoader(
+                          width: isMobile ? 90 : 110,
+                          height: 12,
+                          borderRadius: 4,
+                        ),
+                        const SizedBox(height: 10),
+                        ShimmerLoader(
+                          width: progressBarWidth,
+                          height: 4.0,
+                          borderRadius: 999,
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            ShimmerLoader(
+                              width: isMobile ? 36 : 40,
+                              height: isMobile ? 36 : 40,
+                              borderRadius: 999,
+                              shape: BoxShape.circle,
+                            ),
+                            const SizedBox(width: 10),
+                            const ShimmerLoader(
+                              width: 60,
+                              height: 16,
+                              borderRadius: 4,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
             ],
           ),
         );

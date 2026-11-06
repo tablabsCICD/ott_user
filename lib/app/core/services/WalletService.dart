@@ -9,6 +9,7 @@ import 'package:ott/data/models/response/getWalletAmount.dart';
 import 'package:ott/data/models/response/walletHistory.dart';
 import 'package:ott/data/models/response/withdrawAmountResponse.dart';
 import 'package:ott/data/models/user.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class AppleIapWalletVerificationResult {
   const AppleIapWalletVerificationResult({
@@ -263,7 +264,6 @@ class WalletService {
         historyResponse = await getTransactionHistory();
       } catch (error) {
         historyError = error;
-
       }
 
       return {
@@ -273,11 +273,10 @@ class WalletService {
         'transactions': historyResponse?.data ?? <Transactions>[],
         'historyUpdated': historyError == null,
         'message': historyError == null
-            ? 'Wallet refreshed successfully.'
-            : 'Wallet balance updated. Transaction history will refresh shortly.',
+            ? appL10n().msgWalletRefreshedSuccessfully
+            : appL10n().sysWalletBalanceUpdatedHistoryPending,
       };
     } catch (error) {
-
       return {
         'success': false,
         'message': error.toString(),

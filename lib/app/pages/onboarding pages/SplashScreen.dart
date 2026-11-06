@@ -15,6 +15,7 @@ import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/route/routes/app_routes.dart';
 import 'package:ott/app/route/routes/web_navigation_routes.dart';
 import 'package:ott/presentation/web_landing/screens/web_landing_screen.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constant/prefrense_constant.dart';
@@ -51,7 +52,9 @@ class _SplashScreenState extends State<SplashScreen> {
     // Recover any deferred install referral code on cold start / first launch
     unawaited(ReferralService.instance.checkDeferredInstallReferrer());
     unawaited(GiftDeepLinkService.instance.checkDeferredGiftInstall());
-    unawaited(DeepLinkService.instance.checkDeferredContentInstall());
+    await DeepLinkService.instance
+        .checkDeferredContentInstall()
+        .timeout(const Duration(seconds: 2), onTimeout: () => null);
 
     final loggedIn =
         await _prefs.getBool(SharedPreferencesConstant.isUserLoggedIn);
@@ -177,17 +180,18 @@ class _SplashScreenState extends State<SplashScreen> {
       barrierDismissible: false,
       builder: (dialogContext) {
         final theme = Theme.of(dialogContext);
+        final lang = AppLocalizations.of(dialogContext)!;
         return AlertDialog(
           backgroundColor: theme.cardColor,
-          title: const Text('Update Available'),
+          title: Text(lang.onboardingUpdateAvailable),
           content: Text(
-            'A newer version is available (${updateInfo.latestVersion}). Please update for the best experience.',
+            lang.onboardingUpdateAvailableMessage(updateInfo.latestVersion),
           ),
           actions: [
             TextButton(
               onPressed: () =>
                   Navigator.of(dialogContext, rootNavigator: true).pop(),
-              child: const Text('Later'),
+              child: Text(lang.onboardingLater),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -197,7 +201,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   Navigator.of(dialogContext, rootNavigator: true).pop();
                 }
               },
-              child: const Text('Update Now'),
+              child: Text(lang.onboardingUpdateNow),
             ),
           ],
         );

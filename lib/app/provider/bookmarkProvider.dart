@@ -8,6 +8,7 @@ import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/data/models/user.dart';
 import 'baseProvider.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class BookmarkProvider extends BaseProvider {
   bool _isLoading = false;
@@ -250,7 +251,7 @@ class BookmarkProvider extends BaseProvider {
   Future<User?> _getUser() async {
     final user = await LocalSharePreferences.localSharePreferences.getUser();
     if (user == null) {
-      _errorMessage = "User not logged in";
+      _errorMessage = appL10n().msgUserNotLoggedIn;
     }
     return user;
   }

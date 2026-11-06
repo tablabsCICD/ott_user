@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:developer';
 import 'dart:math' as math;
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/app/widgets/content_type_chip.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
@@ -37,6 +39,7 @@ import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/movieCard.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/app/widgets/edit_address_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../core/services/referral_service.dart';
@@ -304,7 +307,7 @@ class _HomePageState extends State<HomePage>
         stage2ProfilePopUp(context);
         break;
       case StagedRegistrationStep.location:
-        userLocationPopUp(context);
+        _startLocationStep(context);
         break;
       case StagedRegistrationStep.none:
         break;
@@ -628,223 +631,220 @@ class _HomePageState extends State<HomePage>
                                               : selectedType == 'MADIOO'
                                                   ? MadiooPage(
                                                       useParentScroll: true)
-                                                  : ListView.builder(
-                                                      shrinkWrap: true,
-                                                      physics:
-                                                          NeverScrollableScrollPhysics(),
-                                                      padding: EdgeInsets.zero,
-                                                      scrollDirection:
-                                                          Axis.vertical,
-                                                      itemCount:
-                                                          dashboardProvider
-                                                              .dashboardData
-                                                              .length,
-                                                      itemBuilder:
-                                                          (context, index) {
-                                                        DashboardData
-                                                            dashboardData =
-                                                            dashboardProvider
-                                                                    .dashboardData[
-                                                                index];
-
-                                                        _rowControllers.putIfAbsent(
-                                                            index,
-                                                            () =>
-                                                                ScrollController());
-                                                        _rowActiveIndexes
-                                                            .putIfAbsent(
-                                                                index,
-                                                                () => ValueNotifier<
-                                                                        int?>(
-                                                                    null));
-                                                        _rowItemCounts[index] =
-                                                            dashboardData.movies
-                                                                    ?.length ??
-                                                                0;
-                                                        _rowItems[index] =
-                                                            dashboardData
-                                                                    .movies ??
-                                                                const <Content>[];
-                                                        _scheduleVisibleUpdate();
-                                                        _rowKeys.putIfAbsent(
-                                                            index,
-                                                            () => GlobalKey());
-
-                                                        final controller =
-                                                            _rowControllers[
-                                                                index]!;
-                                                        final activeIndex =
-                                                            _rowActiveIndexes[
-                                                                index]!;
-                                                        final rowKey =
-                                                            _rowKeys[index]!;
-
-                                                        // Attach listener only once.
-                                                        if (!controller
-                                                            .hasListeners) {
-                                                          controller
-                                                              .addListener(() {
-                                                            _scheduleVisibleUpdate();
-
-                                                            if (controller
-                                                                    .position
-                                                                    .pixels >=
-                                                                controller
-                                                                        .position
-                                                                        .maxScrollExtent -
-                                                                    200) {
-                                                              if (_userId !=
-                                                                  null) {
+                                                  : _hasNoDashboardContent(
+                                                          dashboardProvider)
+                                                      ? _buildNoLanguageContent(
+                                                          context,
+                                                          selectedThemeData)
+                                                      : ListView.builder(
+                                                          shrinkWrap: true,
+                                                          physics:
+                                                              NeverScrollableScrollPhysics(),
+                                                          padding:
+                                                              EdgeInsets.zero,
+                                                          scrollDirection:
+                                                              Axis.vertical,
+                                                          itemCount:
+                                                              dashboardProvider
+                                                                  .dashboardData
+                                                                  .length,
+                                                          itemBuilder:
+                                                              (context, index) {
+                                                            DashboardData
+                                                                dashboardData =
                                                                 dashboardProvider
-                                                                    .loadMoreRowData(
-                                                                        dashboardData,
-                                                                        selectedType,
-                                                                        _userId!)
-                                                                    .whenComplete(
-                                                                        _scheduleVisibleUpdate);
-                                                              }
-                                                            }
-                                                          });
-                                                        }
+                                                                        .dashboardData[
+                                                                    index];
 
-                                                        return KeyedSubtree(
-                                                          key: rowKey,
-                                                          child: Column(
-                                                            crossAxisAlignment:
-                                                                CrossAxisAlignment
-                                                                    .start,
-                                                            children: [
-                                                              (dashboardData.movies ==
-                                                                          null ||
-                                                                      dashboardData
-                                                                          .movies!
-                                                                          .isEmpty)
-                                                                  ? SizedBox
-                                                                      .shrink()
-                                                                  : InkWell(
-                                                                      splashColor:
-                                                                          Colors
-                                                                              .transparent,
-                                                                      onTap:
-                                                                          () {
-                                                                        Navigator
-                                                                            .push(
-                                                                          context,
-                                                                          MaterialPageRoute(
-                                                                            builder: (_) =>
-                                                                                CategoryContentPage(
-                                                                              categoryTitle: "${dashboardData.language} - ${dashboardData.category}",
-                                                                              contents: dashboardData.movies ?? [],
-                                                                            ),
-                                                                          ),
-                                                                        );
-                                                                      },
-                                                                      child:
-                                                                          Padding(
-                                                                        padding: const EdgeInsets
-                                                                            .symmetric(
-                                                                            horizontal:
-                                                                                4.0,
-                                                                            vertical:
-                                                                                8.0),
-                                                                        child:
-                                                                            Row(
-                                                                          children: [
-                                                                            Expanded(
-                                                                              child: Text(
-                                                                                "${dashboardData.language} - ${dashboardData.category}",
-                                                                                overflow: TextOverflow.ellipsis,
-                                                                                style: GoogleFonts.inter(
-                                                                                  fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
-                                                                                  fontWeight: FontWeight.bold,
-                                                                                  color: selectedThemeData.canvasColor,
+                                                            _rowControllers
+                                                                .putIfAbsent(
+                                                                    index,
+                                                                    () =>
+                                                                        ScrollController());
+                                                            _rowActiveIndexes
+                                                                .putIfAbsent(
+                                                                    index,
+                                                                    () => ValueNotifier<
+                                                                            int?>(
+                                                                        null));
+                                                            _rowItemCounts[
+                                                                    index] =
+                                                                dashboardData
+                                                                        .movies
+                                                                        ?.length ??
+                                                                    0;
+                                                            _rowItems[index] =
+                                                                dashboardData
+                                                                        .movies ??
+                                                                    const <Content>[];
+                                                            _scheduleVisibleUpdate();
+                                                            _rowKeys.putIfAbsent(
+                                                                index,
+                                                                () =>
+                                                                    GlobalKey());
+
+                                                            final controller =
+                                                                _rowControllers[
+                                                                    index]!;
+                                                            final activeIndex =
+                                                                _rowActiveIndexes[
+                                                                    index]!;
+                                                            final rowKey =
+                                                                _rowKeys[
+                                                                    index]!;
+
+                                                            // Attach listener only once.
+                                                            if (!controller
+                                                                .hasListeners) {
+                                                              controller
+                                                                  .addListener(
+                                                                      () {
+                                                                _scheduleVisibleUpdate();
+
+                                                                if (controller
+                                                                        .position
+                                                                        .pixels >=
+                                                                    controller
+                                                                            .position
+                                                                            .maxScrollExtent -
+                                                                        200) {
+                                                                  if (_userId !=
+                                                                      null) {
+                                                                    dashboardProvider
+                                                                        .loadMoreRowData(
+                                                                            dashboardData,
+                                                                            selectedType,
+                                                                            _userId!)
+                                                                        .whenComplete(
+                                                                            _scheduleVisibleUpdate);
+                                                                  }
+                                                                }
+                                                              });
+                                                            }
+
+                                                            return KeyedSubtree(
+                                                              key: rowKey,
+                                                              child: Column(
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment
+                                                                        .start,
+                                                                children: [
+                                                                  (dashboardData.movies ==
+                                                                              null ||
+                                                                          dashboardData
+                                                                              .movies!
+                                                                              .isEmpty)
+                                                                      ? SizedBox
+                                                                          .shrink()
+                                                                      : InkWell(
+                                                                          splashColor:
+                                                                              Colors.transparent,
+                                                                          onTap:
+                                                                              () {
+                                                                            Navigator.push(
+                                                                              context,
+                                                                              MaterialPageRoute(
+                                                                                builder: (_) => CategoryContentPage(
+                                                                                  categoryTitle: "${dashboardData.language} - ${dashboardData.category}",
+                                                                                  contents: dashboardData.movies ?? [],
                                                                                 ),
                                                                               ),
-                                                                            ),
-                                                                            Row(
-                                                                              mainAxisSize: MainAxisSize.min,
+                                                                            );
+                                                                          },
+                                                                          child:
+                                                                              Padding(
+                                                                            padding:
+                                                                                const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
+                                                                            child:
+                                                                                Row(
                                                                               children: [
-                                                                                Text(
-                                                                                  "See All",
-                                                                                  style: GoogleFonts.inter(
-                                                                                    fontSize: 14,
-                                                                                    fontWeight: FontWeight.bold,
-                                                                                    color: const Color(0xFFE50914),
+                                                                                Expanded(
+                                                                                  child: Text(
+                                                                                    "${dashboardData.language} - ${dashboardData.category}",
+                                                                                    overflow: TextOverflow.ellipsis,
+                                                                                    style: GoogleFonts.inter(
+                                                                                      fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
+                                                                                      fontWeight: FontWeight.bold,
+                                                                                      color: selectedThemeData.canvasColor,
+                                                                                    ),
                                                                                   ),
                                                                                 ),
-                                                                                const SizedBox(width: 4),
-                                                                                const Icon(
-                                                                                  Icons.arrow_forward_ios_rounded,
-                                                                                  size: 12,
-                                                                                  color: Color(0xFFE50914),
+                                                                                Row(
+                                                                                  mainAxisSize: MainAxisSize.min,
+                                                                                  children: [
+                                                                                    Text(
+                                                                                      AppLocalizations.of(context)!.homeSeeAll,
+                                                                                      style: GoogleFonts.inter(
+                                                                                        fontSize: 14,
+                                                                                        fontWeight: FontWeight.bold,
+                                                                                        color: const Color(0xFFE50914),
+                                                                                      ),
+                                                                                    ),
+                                                                                    const SizedBox(width: 4),
+                                                                                    const Icon(
+                                                                                      Icons.arrow_forward_ios_rounded,
+                                                                                      size: 12,
+                                                                                      color: Color(0xFFE50914),
+                                                                                    ),
+                                                                                  ],
                                                                                 ),
                                                                               ],
                                                                             ),
-                                                                          ],
+                                                                          ),
                                                                         ),
-                                                                      ),
-                                                                    ),
-                                                              (dashboardData.movies ==
-                                                                          null ||
-                                                                      dashboardData
-                                                                          .movies!
-                                                                          .isEmpty)
-                                                                  ? SizedBox
-                                                                      .shrink()
-                                                                  : SizedBox(
-                                                                      height: MovieCard
-                                                                          .standardHeight,
-                                                                      child: ListView
-                                                                          .builder(
-                                                                        controller:
-                                                                            controller,
-                                                                        scrollDirection:
-                                                                            Axis.horizontal,
-                                                                        //padding: EdgeInsets.zero,
-                                                                        itemCount: dashboardData.movies!.length +
-                                                                            (dashboardData.isRowLoading
-                                                                                ? 1
-                                                                                : 0),
-                                                                        itemBuilder:
-                                                                            (context,
-                                                                                i) {
-                                                                          if (i <
-                                                                              dashboardData.movies!.length) {
-                                                                            return MovieCard(
-                                                                                movie: dashboardData.movies![i],
-                                                                                index: i,
-                                                                                isShortFilmTab: ContentType.normalize(selectedType) == ContentType.shortFilm,
-                                                                                activeIndexListenable: activeIndex);
-                                                                          } else if (dashboardData.isRowLoading) {
-                                                                            return Padding(
-                                                                              padding: const EdgeInsets.all(12),
-                                                                              child: SizedBox(
-                                                                                width: 40,
-                                                                                height: 40,
-                                                                                child: CircularProgressIndicator(strokeWidth: 2),
-                                                                              ),
-                                                                            );
-                                                                          } else {
-                                                                            return const SizedBox.shrink();
-                                                                          }
-                                                                        },
-                                                                      ),
-                                                                    ),
-                                                              (dashboardData.movies ==
-                                                                          null ||
-                                                                      dashboardData
-                                                                          .movies!
-                                                                          .isEmpty)
-                                                                  ? SizedBox
-                                                                      .shrink()
-                                                                  : SizedBox(
-                                                                      height:
-                                                                          20),
-                                                            ],
-                                                          ),
-                                                        );
-                                                      },
-                                                    ),
+                                                                  (dashboardData.movies ==
+                                                                              null ||
+                                                                          dashboardData
+                                                                              .movies!
+                                                                              .isEmpty)
+                                                                      ? SizedBox
+                                                                          .shrink()
+                                                                      : SizedBox(
+                                                                          height:
+                                                                              MovieCard.standardHeight,
+                                                                          child:
+                                                                              ListView.builder(
+                                                                            controller:
+                                                                                controller,
+                                                                            scrollDirection:
+                                                                                Axis.horizontal,
+                                                                            //padding: EdgeInsets.zero,
+                                                                            itemCount:
+                                                                                dashboardData.movies!.length + (dashboardData.isRowLoading ? 1 : 0),
+                                                                            itemBuilder:
+                                                                                (context, i) {
+                                                                              if (i < dashboardData.movies!.length) {
+                                                                                return MovieCard(movie: dashboardData.movies![i], index: i, isShortFilmTab: ContentType.normalize(selectedType) == ContentType.shortFilm, activeIndexListenable: activeIndex);
+                                                                              } else if (dashboardData.isRowLoading) {
+                                                                                return Padding(
+                                                                                  padding: const EdgeInsets.all(12),
+                                                                                  child: SizedBox(
+                                                                                    width: 40,
+                                                                                    height: 40,
+                                                                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                                                                  ),
+                                                                                );
+                                                                              } else {
+                                                                                return const SizedBox.shrink();
+                                                                              }
+                                                                            },
+                                                                          ),
+                                                                        ),
+                                                                  (dashboardData.movies ==
+                                                                              null ||
+                                                                          dashboardData
+                                                                              .movies!
+                                                                              .isEmpty)
+                                                                      ? SizedBox
+                                                                          .shrink()
+                                                                      : SizedBox(
+                                                                          height:
+                                                                              20),
+                                                                ],
+                                                              ),
+                                                            );
+                                                          },
+                                                        ),
                                         ],
                                       ),
                               ],
@@ -1089,7 +1089,9 @@ class _HomePageState extends State<HomePage>
       if (formatReleaseDate(item.releaseDate).isNotEmpty)
         formatReleaseDate(item.releaseDate),
       if (genres != null && genres.isNotEmpty) genres,
-      if (item.ratings != null) '${item.ratings!.toStringAsFixed(0)} star',
+      if (item.ratings != null)
+        AppLocalizations.of(context)!
+            .homeStarRating(item.ratings!.toStringAsFixed(0)),
     ].join('  -  ');
 
     return Column(
@@ -1103,7 +1105,7 @@ class _HomePageState extends State<HomePage>
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
-            '#${index + 1} Trending',
+            AppLocalizations.of(context)!.homeTrendingRank(index + 1),
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w800,
@@ -1163,8 +1165,8 @@ class _HomePageState extends State<HomePage>
               ),
               onPressed: () => _openContentDetails(item),
               icon: const Icon(Icons.play_arrow_rounded),
-              label: const Text(
-                'Watch Now',
+              label: Text(
+                AppLocalizations.of(context)!.watchNow,
                 style: TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
@@ -1180,8 +1182,8 @@ class _HomePageState extends State<HomePage>
               ),
               onPressed: () => _openContentDetails(item),
               icon: const Icon(Icons.movie_filter_rounded),
-              label: const Text(
-                'Trailer',
+              label: Text(
+                AppLocalizations.of(context)!.homeTrailer,
                 style: TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
@@ -1297,6 +1299,7 @@ class _HomePageState extends State<HomePage>
       stretch: true,
       surfaceTintColor: Colors.transparent,
       backgroundColor: selectedThemeData.primaryColor,
+      foregroundColor: Colors.white,
       title: Align(
         alignment: Alignment.centerLeft,
         child: InkWell(
@@ -1441,10 +1444,89 @@ class _HomePageState extends State<HomePage>
     );
   }
 
+  /// True when the content load finished and no row has any content for the
+  /// user's selected languages (Movie / Short Film / Series tabs).
+  bool _hasNoDashboardContent(DashboardProvider dashboardProvider) {
+    if (dashboardProvider.isLoading || _isOffline) return false;
+    if (!ContentType.isMovieLike(selectedType) &&
+        !ContentType.isSeries(selectedType)) {
+      return false;
+    }
+    return dashboardProvider.dashboardData
+        .every((row) => (row.movies ?? const <Content>[]).isEmpty);
+  }
+
+  Widget _buildNoLanguageContent(BuildContext context, ThemeData theme) {
+    final lang = AppLocalizations.of(context)!;
+    final languages = Provider.of<UserProvider>(context, listen: false)
+            .userObject
+            .selectedLanguages ??
+        const <String>[];
+    final languageText = languages.where((l) => l.trim().isNotEmpty).join(', ');
+    final isMovies = ContentType.normalize(selectedType) == ContentType.movie;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 16),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: theme.primaryColor.withValues(alpha: 0.1),
+                ),
+                child: Icon(
+                  Icons.movie_filter_outlined,
+                  size: 46,
+                  color: theme.primaryColor,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                isMovies
+                    ? lang.noMoviesInSelectedLanguage
+                    : lang.noContentInSelectedLanguage,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: theme.canvasColor,
+                ),
+              ),
+              if (languageText.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '${lang.selectedLanguagesLabel}: $languageText',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: theme.canvasColor.withValues(alpha: 0.65),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 6),
+              Text(
+                lang.tryAnotherLanguageHint,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: theme.canvasColor.withValues(alpha: 0.65),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFilterButtons(
       BuildContext context, DashboardProvider dashboardProvider) {
     final lang = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
       child: Row(
@@ -1455,7 +1537,17 @@ class _HomePageState extends State<HomePage>
           final isSelected = selectedType == type;
           return Padding(
             padding: const EdgeInsets.only(right: 8.0),
-            child: GestureDetector(
+            child: ContentTypeChip(
+              selected: isSelected,
+              label: type == ContentType.movie
+                  ? lang.movie
+                  : type == ContentType.series
+                      ? lang.series
+                      : type == ContentType.shortFilm
+                          ? lang.shortFilm
+                          : type == ContentType.miniSeries
+                              ? lang.minSeries
+                              : ContentType.displayLabel(type),
               onTap: () async {
                 if (selectedType == type) return;
                 setState(() {
@@ -1479,37 +1571,6 @@ class _HomePageState extends State<HomePage>
                       dashboardProvider, selectedType, selectedLanguages);
                 }
               },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? theme.primaryColor
-                      : theme.cardColor,
-                  border: Border.all(
-                    color: isSelected
-                        ? theme.primaryColor
-                        : theme.dividerColor.withOpacity(0.2),
-                    width: 1,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding:
-                    const EdgeInsets.symmetric(vertical: 8, horizontal: 18),
-                child: Text(
-                  type == ContentType.movie
-                      ? lang.movie
-                      : type == ContentType.series
-                          ? lang.series
-                          : ContentType.displayLabel(type),
-                  style: GoogleFonts.inter(
-                    color: isSelected
-                        ? Colors.white
-                        : theme.canvasColor,
-                    fontSize: 14,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                  ),
-                ),
-              ),
             ),
           );
         }).toList(),
@@ -1735,8 +1796,8 @@ class _HomePageState extends State<HomePage>
                               value: selectedMonth,
                               isExpanded: true,
                               decoration: InputDecoration(
-                                labelText: 'Birth Month *',
-                                hintText: 'Month',
+                                labelText: lang.homeBirthMonthRequired,
+                                hintText: lang.homeMonth,
                                 isDense: true,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
@@ -1780,14 +1841,14 @@ class _HomePageState extends State<HomePage>
                                     },
                               validator: (val) {
                                 if (val == null || val.trim().isEmpty) {
-                                  return 'Select month';
+                                  return lang.homeSelectMonth;
                                 }
                                 if (selectedYear == currentYear &&
                                     val.isNotEmpty) {
                                   final monthIndex =
                                       kBirthMonths.indexOf(val) + 1;
                                   if (monthIndex > currentMonth) {
-                                    return 'Invalid month';
+                                    return lang.homeInvalidMonth;
                                   }
                                 }
                                 return null;
@@ -1802,8 +1863,8 @@ class _HomePageState extends State<HomePage>
                               value: selectedYear,
                               isExpanded: true,
                               decoration: InputDecoration(
-                                labelText: 'Birth Year *',
-                                hintText: 'Year',
+                                labelText: lang.homeBirthYearRequired,
+                                hintText: lang.homeYear,
                                 isDense: true,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
@@ -1841,10 +1902,10 @@ class _HomePageState extends State<HomePage>
                                     },
                               validator: (val) {
                                 if (val == null) {
-                                  return 'Select year';
+                                  return lang.homeSelectYear;
                                 }
                                 if (val > currentYear) {
-                                  return 'Invalid year';
+                                  return lang.homeInvalidYear;
                                 }
                                 return null;
                               },
@@ -1876,7 +1937,8 @@ class _HomePageState extends State<HomePage>
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Birth Date: $selectedMonth $selectedYear',
+                                lang.homeBirthDateValue(
+                                    '$selectedMonth', '$selectedYear'),
                                 style: TextStyle(
                                   color: selectedThemeData.canvasColor,
                                   fontWeight: FontWeight.w600,
@@ -1894,7 +1956,7 @@ class _HomePageState extends State<HomePage>
                         controller: provider.emailController,
                         isEmail: false,
                         isValidator: false,
-                        label: '${lang.email} (Optional)',
+                        label: lang.homeEmailOptional,
                         hintText: lang.enterEmail,
                         textInputType: TextInputType.emailAddress,
                         validator: (val) {
@@ -1990,7 +2052,7 @@ class _HomePageState extends State<HomePage>
                             if (context.mounted) {
                               CustomToast.show(
                                 context,
-                                'Failure: ${result['message']}',
+                                lang.homeFailureMessage('${result['message']}'),
                                 isSuccess: false,
                               );
                             }
@@ -2006,8 +2068,8 @@ class _HomePageState extends State<HomePage>
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            'Continue',
+                        : Text(
+                            lang.homeContinue,
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -2073,8 +2135,8 @@ class _HomePageState extends State<HomePage>
                       CustomTextField(
                         controller: nameController,
                         isName: true,
-                        label: 'Name (Optional)',
-                        hintText: 'Enter your name',
+                        label: lang.homeNameOptional,
+                        hintText: lang.homeEnterYourName,
                         isValidator: false,
                         textInputType: TextInputType.name,
                         capitalization: TextCapitalization.words,
@@ -2082,7 +2144,7 @@ class _HomePageState extends State<HomePage>
                           if (val != null &&
                               val.trim().isNotEmpty &&
                               val.trim().length < 2) {
-                            return 'Please enter a valid name';
+                            return lang.homeEnterValidName;
                           }
                           return null;
                         },
@@ -2202,7 +2264,8 @@ class _HomePageState extends State<HomePage>
                                   if (context.mounted) {
                                     CustomToast.show(
                                       context,
-                                      'Failure: ${result['message']}',
+                                      lang.homeFailureMessage(
+                                          '${result['message']}'),
                                       isSuccess: false,
                                     );
                                   }
@@ -2217,8 +2280,8 @@ class _HomePageState extends State<HomePage>
                                   color: Colors.white,
                                 ),
                               )
-                            : const Text(
-                                'Continue',
+                            : Text(
+                                lang.homeContinue,
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
@@ -2237,8 +2300,52 @@ class _HomePageState extends State<HomePage>
     StagedRegistrationService.instance.setDialogActive(false);
   }
 
-  // STAGE 3: Third App Open / Location Popup (Current Location Only with Cancel)
-  Future<void> userLocationPopUp(BuildContext context) async {
+  static const String _stagedLocationPermissionRequestedKey =
+      'staged_location_permission_requested';
+
+  /// STAGE 3 entry: on Android/iOS, check location permission and show the
+  /// native permission dialog (once — never re-prompted automatically) before
+  /// the existing location pop-up. The pop-up opens whatever the user chose,
+  /// so manual entry stays available when permission is denied.
+  Future<void> _startLocationStep(BuildContext context) async {
+    final staged = StagedRegistrationService.instance;
+    // Block other staged dialogs while the native permission dialog is up.
+    staged.setDialogActive(true);
+    var permanentlyDenied = false;
+
+    final isMobileOs = !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+    if (isMobileOs && !ResponsiveWidget.isTv(context)) {
+      try {
+        var permission = await Geolocator.checkPermission();
+        final prefs = await SharedPreferences.getInstance();
+        if (permission == LocationPermission.denied &&
+            !(prefs.getBool(_stagedLocationPermissionRequestedKey) ?? false)) {
+          await prefs.setBool(_stagedLocationPermissionRequestedKey, true);
+          permission = await Geolocator.requestPermission();
+        }
+        permanentlyDenied = permission == LocationPermission.deniedForever;
+      } catch (error) {
+        log('Location permission check failed: $error');
+      }
+    }
+
+    if (!context.mounted) {
+      staged.setDialogActive(false);
+      return;
+    }
+    await userLocationPopUp(
+      context,
+      permissionPermanentlyDenied: permanentlyDenied,
+    );
+  }
+
+  // STAGE 3: Third App Open / Location Popup (Current Location or Manual Entry, with Cancel)
+  Future<void> userLocationPopUp(
+    BuildContext context, {
+    bool permissionPermanentlyDenied = false,
+  }) async {
     final lang = AppLocalizations.of(context)!;
 
     if (!context.mounted) return;
@@ -2247,8 +2354,12 @@ class _HomePageState extends State<HomePage>
 
     bool isFetching = false;
     bool isSaving = false;
-    String? locationError;
-    bool isPermanentlyDenied = false;
+    // Permanently denied: show the existing message + Open App Settings now.
+    String? locationError = permissionPermanentlyDenied
+        ? lang.msgLocationPermissionPermanentlyDenied
+        : null;
+    bool isPermanentlyDenied = permissionPermanentlyDenied;
+    bool isServiceDisabled = false;
     bool locationDetected = false;
     String detectedSummary = '';
 
@@ -2293,7 +2404,7 @@ class _HomePageState extends State<HomePage>
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Share your current location to get regional content and personalized recommendations.',
+                      lang.homeShareLocationPrompt,
                       style: TextStyle(
                         fontSize: 14,
                         color: selectedThemeData.canvasColor
@@ -2327,7 +2438,7 @@ class _HomePageState extends State<HomePage>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Location Detected',
+                                    lang.homeLocationDetected,
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: selectedThemeData.canvasColor,
@@ -2376,7 +2487,23 @@ class _HomePageState extends State<HomePage>
                             await Geolocator.openAppSettings();
                           },
                           icon: const Icon(Icons.settings, size: 16),
-                          label: const Text('Open App Settings'),
+                          label: Text(lang.homeOpenAppSettings),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: selectedThemeData.primaryColor,
+                            side: BorderSide(
+                              color: selectedThemeData.primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (isServiceDisabled) ...[
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            await Geolocator.openLocationSettings();
+                          },
+                          icon: const Icon(Icons.location_on, size: 16),
+                          label: Text(lang.locationEnable),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: selectedThemeData.primaryColor,
                             side: BorderSide(
@@ -2387,6 +2514,37 @@ class _HomePageState extends State<HomePage>
                       ],
                       const SizedBox(height: 12),
                     ],
+                    // ENTER LOCATION MANUALLY (existing address form)
+                    OutlinedButton.icon(
+                      onPressed: isFetching || isSaving
+                          ? null
+                          : () async {
+                              final saved =
+                                  await showEditAddressDialog(context);
+                              if (!saved) return;
+                              await StagedRegistrationService.instance
+                                  .markStepCompleted(
+                                step: StagedRegistrationStep.location,
+                                userId: provider.userObject.id,
+                              );
+                              if (dialogCtx.mounted) {
+                                Navigator.of(dialogCtx).pop();
+                              }
+                            },
+                      icon: const Icon(Icons.edit_location_alt_outlined,
+                          size: 18),
+                      label: Text(lang.locationEnterManually),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: selectedThemeData.canvasColor,
+                        side: BorderSide(
+                          color: selectedThemeData.dividerColor,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -2417,7 +2575,7 @@ class _HomePageState extends State<HomePage>
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         child: Text(
-                          'Cancel',
+                          lang.cancel,
                           style: TextStyle(
                             color: selectedThemeData.canvasColor,
                             fontSize: 14,
@@ -2470,7 +2628,7 @@ class _HomePageState extends State<HomePage>
                                     setDialogState(() {
                                       locationError =
                                           saveResult['message']?.toString() ??
-                                              'Failed to save location';
+                                              lang.homeFailedToSaveLocation;
                                     });
                                   }
                                 } else {
@@ -2479,6 +2637,7 @@ class _HomePageState extends State<HomePage>
                                     isFetching = true;
                                     locationError = null;
                                     isPermanentlyDenied = false;
+                                    isServiceDisabled = false;
                                   });
 
                                   final fetchResult = await provider
@@ -2503,7 +2662,7 @@ class _HomePageState extends State<HomePage>
                                           ? summary
                                           : (fetchResult['formattedAddress']
                                                   ?.toString() ??
-                                              'Current Location');
+                                              lang.homeCurrentLocation);
                                       isSaving = true;
                                     });
 
@@ -2532,7 +2691,7 @@ class _HomePageState extends State<HomePage>
                                       setDialogState(() {
                                         locationError = saveResult['message']
                                                 ?.toString() ??
-                                            'Failed to save location to profile';
+                                            lang.homeFailedToSaveLocationToProfile;
                                       });
                                     }
                                   } else {
@@ -2540,9 +2699,12 @@ class _HomePageState extends State<HomePage>
                                       isFetching = false;
                                       locationError = fetchResult['error']
                                               ?.toString() ??
-                                          'Could not determine your location';
+                                          lang.homeCouldNotDetermineLocation;
                                       isPermanentlyDenied =
                                           fetchResult['isPermanentlyDenied'] ==
+                                              true;
+                                      isServiceDisabled =
+                                          fetchResult['isServiceDisabled'] ==
                                               true;
                                     });
                                   }
@@ -2559,8 +2721,8 @@ class _HomePageState extends State<HomePage>
                               )
                             : Text(
                                 locationDetected
-                                    ? 'Save Location'
-                                    : 'Use Current Location',
+                                    ? lang.homeSaveLocation
+                                    : lang.homeUseCurrentLocation,
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,

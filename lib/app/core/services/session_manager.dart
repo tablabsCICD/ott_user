@@ -18,6 +18,7 @@ import 'package:ott/app/provider/secure_playback_controller.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/route/navigation_service.dart';
 import 'package:ott/presentation/web_landing/utils/post_logout_navigation.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class SessionManager {
   SessionManager._();
@@ -89,7 +90,7 @@ class SessionManager {
       _clearProviders(context);
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
+        SnackBar(content: Text(_displayMessage(message))),
       );
     }
 
@@ -101,6 +102,12 @@ class SessionManager {
       _handlingForcedLogout = false;
     });
   }
+
+  /// The backend's replacement-session text is matched in English, so show
+  /// the localized equivalent instead of the raw English message.
+  String _displayMessage(String message) => message == replacementSessionMessage
+      ? appL10n().sysSessionReplacedOnOtherDevice
+      : message;
 
   bool isReplacementSessionResponse(http.Response response) {
     if (response.statusCode != 401) return false;

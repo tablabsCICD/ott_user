@@ -7,6 +7,7 @@ import 'package:ott/app/pages/movie%20details%20page/component/actionButtonWidge
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/content.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -15,12 +16,13 @@ Future<void> showContentShareSheet(
   BuildContext context,
   Content content, {
   DeepLinkContentType contentType = DeepLinkContentType.movie,
-  String unavailableMessage = 'Content details are not available yet',
+  String? unavailableMessage,
 }) async {
   if (content.id == null || content.id! <= 0) {
     CustomToast.show(
       context,
-      unavailableMessage,
+      unavailableMessage ??
+          AppLocalizations.of(context)!.cardContentDetailsNotAvailable,
       isSuccess: false,
     );
     return;
@@ -61,8 +63,9 @@ Future<void> showContentShareSheet(
                               color: selectedThemeData.primaryColor,
                             ),
                             const SizedBox(height: 16),
-                            const Text(
-                              'Generating share QR code...',
+                            Text(
+                              AppLocalizations.of(context)!
+                                  .cardGeneratingShareQr,
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -80,13 +83,14 @@ Future<void> showContentShareSheet(
                                   size: 36,
                                 ),
                                 const SizedBox(height: 12),
-                                const Text(
-                                  'Unable to prepare this share right now. Please try again.',
+                                Text(
+                                  AppLocalizations.of(context)!
+                                      .cardUnableToPrepareShare,
                                   textAlign: TextAlign.center,
                                 ),
                                 const SizedBox(height: 16),
                                 ActionButtonWidget(
-                                  label: 'Close',
+                                  label: AppLocalizations.of(context)!.navClose,
                                   icon: Icons.close,
                                   onTap: () {
                                     Navigator.of(sheetContext).pop();
@@ -122,6 +126,7 @@ class _ContentShareSheetBody extends StatelessWidget {
     final selectedThemeData =
         Provider.of<ThemeProvider>(context, listen: false).getTheme;
     final universalLinkStr = data.qrLink.toString();
+    final lang = AppLocalizations.of(context)!;
 
     return SingleChildScrollView(
       child: Column(
@@ -132,7 +137,7 @@ class _ContentShareSheetBody extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  data.movie.title ?? 'Share Content',
+                  data.movie.title ?? lang.cardShareContent,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -183,7 +188,7 @@ class _ContentShareSheetBody extends StatelessWidget {
           const SizedBox(height: 14),
 
           Text(
-            "Scan to watch on Filmytell",
+            lang.cardScanToWatch,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
@@ -226,7 +231,8 @@ class _ContentShareSheetBody extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: selectedThemeData.primaryColor,
                       side: BorderSide(
-                        color: selectedThemeData.primaryColor.withValues(alpha: 0.8),
+                        color: selectedThemeData.primaryColor
+                            .withValues(alpha: 0.8),
                         width: 1.5,
                       ),
                       shape: RoundedRectangleBorder(
@@ -240,14 +246,14 @@ class _ContentShareSheetBody extends StatelessWidget {
                       if (!context.mounted) return;
                       CustomToast.show(
                         context,
-                        "Universal link copied to clipboard",
+                        lang.cardUniversalLinkCopied,
                         isSuccess: true,
                       );
                     },
                     icon: const Icon(Icons.copy_rounded, size: 18),
-                    label: const Text(
-                      "Copy Link",
-                      style: TextStyle(
+                    label: Text(
+                      lang.cardCopyLink,
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -272,9 +278,9 @@ class _ContentShareSheetBody extends StatelessWidget {
                       await _shareUniversalContent(context, data);
                     },
                     icon: const Icon(Icons.share_rounded, size: 18),
-                    label: const Text(
-                      "Share",
-                      style: TextStyle(
+                    label: Text(
+                      lang.cardShare,
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -323,7 +329,7 @@ class _ContentShareSheetBody extends StatelessWidget {
         if (!context.mounted) return;
         CustomToast.show(
           context,
-          "Share link copied to clipboard",
+          AppLocalizations.of(context)!.cardShareLinkCopied,
           isSuccess: true,
         );
         return;
@@ -332,7 +338,7 @@ class _ContentShareSheetBody extends StatelessWidget {
       if (!context.mounted) return;
       CustomToast.show(
         context,
-        "Failed to share content",
+        AppLocalizations.of(context)!.cardFailedToShare,
         isSuccess: false,
       );
     }

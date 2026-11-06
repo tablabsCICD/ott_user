@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/services/legal_document_service.dart';
@@ -113,7 +114,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (!opened && mounted) {
         CustomToast.show(
           context,
-          'Unable to open privacy policy page right now.',
+          AppLocalizations.of(context)!.profileUnableOpenPrivacyPolicy,
           isSuccess: false,
         );
       }
@@ -121,7 +122,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (!mounted) return;
       CustomToast.show(
         context,
-        'Unable to open privacy policy page right now.',
+        AppLocalizations.of(context)!.profileUnableOpenPrivacyPolicy,
         isSuccess: false,
       );
     }
@@ -139,7 +140,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (!opened && mounted) {
         CustomToast.show(
           context,
-          'Unable to open terms and condition right now.',
+          AppLocalizations.of(context)!.profileUnableOpenTerms,
           isSuccess: false,
         );
       }
@@ -147,7 +148,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (!mounted) return;
       CustomToast.show(
         context,
-        'Unable to open terms and condition right now.',
+        AppLocalizations.of(context)!.profileUnableOpenTerms,
         isSuccess: false,
       );
     }
@@ -174,7 +175,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (!launched && mounted) {
         CustomToast.show(
           context,
-          'Unable to open rating page right now.',
+          AppLocalizations.of(context)!.profileUnableOpenRating,
           isSuccess: false,
         );
       }
@@ -182,7 +183,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (!mounted) return;
       CustomToast.show(
         context,
-        'Unable to open rating page right now.',
+        AppLocalizations.of(context)!.profileUnableOpenRating,
         isSuccess: false,
       );
     }
@@ -192,7 +193,6 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     var walletProvider = Provider.of<WalletProvider>(context);
     double walletBalance = walletProvider.walletBalance;
-    final theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
     var themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     var selectedThemeData = themeProvider.getTheme;
@@ -238,9 +238,9 @@ class _ProfilePageState extends State<ProfilePage> {
                               [
                                 ProfileOption(
                                   icon: Icons.bookmark,
-                                  title: "Bookmarks",
-                                  onTap: () =>
-                                      _openDetail('Bookmarks', BookmarkPage()),
+                                  title: lang.profileBookmarks,
+                                  onTap: () => _openDetail(
+                                      lang.profileBookmarks, BookmarkPage()),
                                 ),
                                 ProfileOption(
                                   icon: Icons.history,
@@ -299,32 +299,38 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 ProfileOption(
                                   icon: Icons.devices_other_outlined,
-                                  title: 'Registered Devices',
+                                  title: lang.profileRegisteredDevices,
                                   onTap: () {
-                                    _openDetail('Registered Devices',
+                                    _openDetail(lang.profileRegisteredDevices,
                                         const DeviceManagementPage());
                                   },
                                 ),
                               ],
                             ),
-                            // profileCard(
-                            //   lang.gifts,
-                            //   [
-                            //     ProfileOption(
-                            //       icon: Icons.history_sharp,
-                            //       title: lang.giftedByYou,
-                            //       onTap: () => _openDetail(
-                            //           lang.giftedByYou, GiftedMoviesPage()),
-                            //     ),
-                            //     ProfileOption(
-                            //       icon: LucideIcons.gift,
-                            //       title: lang.claimGiftCard,
-                            //       onTap: () {
-                            //         showGiftClaimDialog(context);
-                            //       },
-                            //     ),
-                            //   ],
-                            // ),
+                            // Gifting is hidden in the native iOS app (Apple
+                            // guideline); other platforms keep the gifts card.
+                            if (!WalletPlatform.isGiftingHidden)
+                              profileCard(
+                                lang.gifts,
+                                [
+                                  ProfileOption(
+                                    icon: Icons.history_sharp,
+                                    title: lang.giftedByYou,
+                                    onTap: () => _openDetail(
+                                        lang.giftedByYou, GiftedMoviesPage()),
+                                  ),
+                                  ProfileOption(
+                                    icon: LucideIcons.gift,
+                                    title: lang.claimGiftCard,
+                                    onTap: () {
+                                      showGiftClaimDialog(
+                                        context,
+                                        isFromDeepLink: false,
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
                             profileCard(
                               lang.feedbackAndInformation,
                               [
@@ -336,7 +342,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 ProfileOption(
                                   icon: Icons.tour_rounded,
-                                  title: 'App Tour',
+                                  title: lang.profileAppTour,
                                   onTap: () {
                                     Navigator.of(context).pushReplacement(
                                       MaterialPageRoute(
@@ -351,14 +357,14 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 ProfileOption(
                                   icon: Icons.file_copy,
-                                  title: "Privacy Policy",
+                                  title: lang.privacyPolicy,
                                   onTap: () {
                                     _openPrivacyPolicy();
                                   },
                                 ),
                                 ProfileOption(
                                   icon: Icons.file_copy,
-                                  title: "Terms & Condition",
+                                  title: lang.profileTermsCondition,
                                   onTap: () {
                                     _openTerms();
                                   },
@@ -390,35 +396,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 250),
-                            Opacity(
-                              opacity: 0.4,
-                              child: CircleAvatar(
-                                backgroundColor: theme.scaffoldBackgroundColor,
-                                foregroundColor: theme.scaffoldBackgroundColor,
-                                foregroundImage: AssetImage(ImageConstant.logo),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            const SizedBox(height: 2),
-                            Text(
-                              "Version - ${AppConstant.appVersion}",
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              "Copyright Filmytell - All Rights Reserved.",
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 8,
-                              ),
-                            ),
                             const SizedBox(height: 20),
+                            const _ProfileBrandingFooter(),
                           ],
                         ),
                       ),
@@ -458,7 +437,7 @@ class _ProfilePageState extends State<ProfilePage> {
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
-        title: Text('Are you sure you want Logout?'),
+        title: Text(lang.navLogoutConfirm),
         actions: [
           CupertinoDialogAction(
             textStyle: TextStyle(color: theme.canvasColor),
@@ -539,12 +518,22 @@ class _ProfilePageState extends State<ProfilePage> {
     final profilePhotoUrl =
         normalizeNetworkImageUrl(userProvider.userObj.profilePhoto);
 
+    // Back arrow visibility comes from [shouldShowBackButton] (computed in
+    // build): shown when Profile was pushed as its own screen, hidden when it
+    // is embedded as a navigation tab.
+    // On mobile the red header panel spans the full width behind the toolbar,
+    // so its icons are white in both themes. On wider screens the panel is a
+    // centred card and the toolbar icons sit on the page background.
+    final toolbarForeground = ResponsiveWidget.isMobile(context)
+        ? Colors.white
+        : theme.canvasColor;
+
     return SliverAppBar(
       automaticallyImplyLeading: false,
       leading: shouldShowBackButton
           ? IconButton(
               icon: const Icon(Icons.arrow_back_ios_new_rounded),
-              color: theme.canvasColor,
+              color: toolbarForeground,
               tooltip: MaterialLocalizations.of(context).backButtonTooltip,
               onPressed: () {
                 if (Navigator.of(context).canPop()) {
@@ -563,13 +552,13 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: theme.scaffoldBackgroundColor,
       centerTitle: ResponsiveWidget.isDesktop(context) ? true : false,
       actions: [
-        LanguageDropdown(),
+        LanguageDropdown(foregroundColor: toolbarForeground),
         IconButton(
           icon: Icon(
             isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round,
-            color: theme.canvasColor,
+            color: toolbarForeground,
           ),
-          tooltip: "Toggle Theme",
+          tooltip: lang.navToggleTheme,
           onPressed: () {
             themeProvider.toggleTheme();
           },
@@ -578,10 +567,10 @@ class _ProfilePageState extends State<ProfilePage> {
           onPressed: () {
             _showCupertinoDialog(context);
           },
-          tooltip: "Logout",
+          tooltip: lang.logout,
           icon: Icon(
             Icons.logout,
-            color: theme.canvasColor,
+            color: toolbarForeground,
           ),
         ),
       ],
@@ -665,7 +654,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     final first = (userProvider.userObj.firstName ?? '').trim();
                     final last = (userProvider.userObj.lastName ?? '').trim();
                     final full = '$first $last'.trim();
-                    return full.isNotEmpty ? full : 'User';
+                    return full.isNotEmpty ? full : lang.profileUserFallback;
                   })(),
                   style: const TextStyle(
                     color: Colors.white,
@@ -765,6 +754,111 @@ class _ProfileOptionState extends State<ProfileOption> {
       borderRadius: 12,
       scale: 1.025,
       child: option,
+    );
+  }
+}
+
+/// Logo, copyright, app version and technical-partner credit shown below the
+/// Logout card. Colours follow the active theme (canvasColor is the app's
+/// foreground colour in both Light and Dark themes).
+class _ProfileBrandingFooter extends StatefulWidget {
+  const _ProfileBrandingFooter();
+
+  @override
+  State<_ProfileBrandingFooter> createState() => _ProfileBrandingFooterState();
+}
+
+class _ProfileBrandingFooterState extends State<_ProfileBrandingFooter> {
+  late final Future<String> _version = _loadVersion();
+
+  static Future<String> _loadVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (info.version.trim().isNotEmpty) return info.version;
+    } catch (_) {}
+    return AppConstant.appVersion;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
+    final muted = theme.canvasColor.withValues(alpha: 0.55);
+    final subtle = theme.canvasColor.withValues(alpha: 0.42);
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        bottom: 24 + MediaQuery.of(context).padding.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Opacity(
+            opacity: 0.5,
+            child: CircleAvatar(
+              radius: 22,
+              backgroundColor: theme.scaffoldBackgroundColor,
+              foregroundImage: AssetImage(ImageConstant.logo),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            lang.profileCopyright,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: muted,
+              fontWeight: FontWeight.bold,
+              fontSize: 8,
+            ),
+          ),
+          const SizedBox(height: 2),
+          FutureBuilder<String>(
+            future: _version,
+            initialData: AppConstant.appVersion,
+            builder: (context, snapshot) => Text(
+              lang.profileVersion(snapshot.data ?? AppConstant.appVersion),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: muted,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: 48,
+            child: Divider(
+              height: 1,
+              thickness: 1,
+              color: theme.canvasColor.withValues(alpha: 0.12),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            lang.profileTechnicalPartner,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: subtle,
+              fontSize: 8,
+              letterSpacing: 0.4,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            'Tablabs Technologies Pvt. Ltd.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: muted,
+              fontWeight: FontWeight.w600,
+              fontSize: 11,
+              letterSpacing: 0.6,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -6,6 +6,7 @@ import 'package:ott/app/core/services/device_integrity_service.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/anti_piracy_models.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class SecurePlaybackRepository {
   SecurePlaybackRepository({
@@ -60,9 +61,9 @@ class SecurePlaybackRepository {
         'DEVICE',
         'Platform is unsupported by the current backend device contract.',
       );
-      throw const SecurePlaybackException(
+      throw SecurePlaybackException(
         SecurePlaybackFailure.unsupportedPlatform,
-        'Secure playback is not configured for this platform.',
+        appL10n().sysPlaybackNotConfiguredForPlatform,
       );
     }
     try {
@@ -115,15 +116,15 @@ class SecurePlaybackRepository {
     if (source == null ||
         (source.scheme != 'https' && source.scheme != 'http') ||
         source.host.isEmpty) {
-      throw const SecurePlaybackException(
+      throw SecurePlaybackException(
         SecurePlaybackFailure.invalidResponse,
-        'This content does not have a secure playback source.',
+        appL10n().sysPlaybackNoSecureSource,
       );
     }
     if (contentId.trim().isEmpty) {
-      throw const SecurePlaybackException(
+      throw SecurePlaybackException(
         SecurePlaybackFailure.notFound,
-        'The requested content was not found.',
+        appL10n().playerContentNotFound,
       );
     }
 
@@ -177,8 +178,8 @@ class SecurePlaybackRepository {
       if (localEmail.isNotEmpty) {
         return WatermarkData(
           userId: localUser?.id?.toString() ?? '',
-          userName:
-              '${localUser?.firstName ?? ''} ${localUser?.lastName ?? ''}'.trim(),
+          userName: '${localUser?.firstName ?? ''} ${localUser?.lastName ?? ''}'
+              .trim(),
           email: localEmail,
           deviceId: current.deviceId,
           timestamp: DateTime.now(),

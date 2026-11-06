@@ -12,6 +12,7 @@ import 'package:ott/app/widgets/responsive_poster_image.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/shorts.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 class BookmarkPosterCard extends StatelessWidget {
@@ -109,8 +110,10 @@ class BookmarkPosterCard extends StatelessWidget {
                     CustomToast.show(
                       context,
                       isBookmarked
-                          ? "${movie.title} removed from bookmarks"
-                          : "${movie.title} added to bookmarks",
+                          ? AppLocalizations.of(context)!
+                              .cardRemovedFromBookmarks('${movie.title}')
+                          : AppLocalizations.of(context)!
+                              .cardAddedToBookmarks('${movie.title}'),
                       isSuccess: true,
                       duration: Duration(
                         seconds: 1,
@@ -221,8 +224,10 @@ class ShortBookmarkPosterCard extends StatelessWidget {
                   CustomToast.show(
                     context,
                     isBookmarked
-                        ? "${short.title} removed from bookmarks"
-                        : "${short.title} added to bookmarks",
+                        ? AppLocalizations.of(context)!
+                            .cardRemovedFromBookmarks(short.title)
+                        : AppLocalizations.of(context)!
+                            .cardAddedToBookmarks(short.title),
                     isSuccess: true,
                     duration: const Duration(seconds: 1),
                   );

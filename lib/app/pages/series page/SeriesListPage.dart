@@ -305,7 +305,8 @@ class _SeriesListViewState extends State<_SeriesListView>
                             height: MediaQuery.of(context).size.height * 0.65,
                             child: Center(
                               child: Text(
-                                'No series available',
+                                AppLocalizations.of(context)!
+                                    .seriesPageNoSeriesAvailable,
                                 style: TextStyle(
                                   color: selectedThemeData.canvasColor,
                                   fontWeight: FontWeight.w600,
@@ -358,6 +359,8 @@ class _SeriesListViewState extends State<_SeriesListView>
       backgroundColor: useTransparentAppBar
           ? selectedThemeData.scaffoldBackgroundColor
           : selectedThemeData.primaryColor,
+      foregroundColor:
+          useTransparentAppBar ? selectedThemeData.canvasColor : Colors.white,
       titleSpacing: 10,
       title: useTransparentAppBar
           ? Text(
@@ -442,7 +445,8 @@ class _SeriesListViewState extends State<_SeriesListView>
                         ? selectedThemeData.canvasColor
                         : Colors.white,
                   ),
-                  tooltip: '₹ ${walletProvider.walletBalance.toStringAsFixed(2)}',
+                  tooltip:
+                      '₹ ${walletProvider.walletBalance.toStringAsFixed(2)}',
                   style: _appBarIconStyle(context),
                   onPressed: () => Navigator.push(
                     context,

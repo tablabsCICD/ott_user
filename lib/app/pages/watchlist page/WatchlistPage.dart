@@ -1,9 +1,10 @@
-import 'package:ott/app/widgets/responsive_poster_image.dart';
 import 'dart:async';
 
 import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/offline_download_provider.dart';
@@ -122,6 +123,28 @@ class _WatchlistPageState extends State<WatchlistPage> {
     );
   }
 
+  /// Gifted items are routed by content type: movies and short films play
+  /// directly, series and mini-series open their detail screen (they have no
+  /// single video to play). Other tabs keep their existing behavior.
+  void _openContent(Content item) {
+    if (selectedFilter == WatchlistFilter.gifted && item.id != null) {
+      final type = ContentType.normalize(item.type);
+      if (type == ContentType.series ||
+          type == ContentType.miniSeries ||
+          type == 'MINI_SERIES') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                SeriesDetailsPage(seriesId: item.id!, content: item),
+          ),
+        );
+        return;
+      }
+    }
+    _playContent(item);
+  }
+
   Future<void> _playContent(Content item) async {
     if (item.id == null) return;
 
@@ -173,7 +196,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
     if (contentUrl == null || contentUrl.trim().isEmpty) {
       CustomToast.show(
         context,
-        "Video is not available",
+        AppLocalizations.of(context)!.cardVideoNotAvailable,
         isSuccess: false,
       );
       return;
@@ -200,6 +223,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
     final confirmed = await _confirmDeleteDownload(item);
     if (confirmed != true || !mounted) return;
 
+    final lang = AppLocalizations.of(context)!;
     setState(() => _deletingDownloadIds.add(contentId));
     Map<String, Object> result;
     try {
@@ -209,7 +233,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
     } catch (error) {
       result = {
         'success': false,
-        'message': 'Failed to remove download: $error',
+        'message': lang.watchlistCouldNotDeleteDownload('$error'),
       };
     }
 
@@ -217,31 +241,32 @@ class _WatchlistPageState extends State<WatchlistPage> {
     setState(() => _deletingDownloadIds.remove(contentId));
     CustomToast.show(
       context,
-      result['message']?.toString() ?? 'Download removed.',
+      result['message']?.toString() ?? lang.watchlistDownloadDeleted,
       isSuccess: result['success'] == true,
     );
   }
 
   Future<bool?> _confirmDeleteDownload(Content item) {
+    final lang = AppLocalizations.of(context)!;
     final title = item.title?.trim().isNotEmpty == true
         ? item.title!.trim()
-        : 'this movie';
+        : lang.giftThisMovie;
 
     return showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Remove download?'),
+        title: Text(lang.watchlistDeleteDownloadTitle),
         content: Text(
-          'This will delete the offline copy of "$title" from this device.',
+          lang.watchlistDeleteDownloadMessage(title),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: Text(lang.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Remove'),
+            child: Text(lang.profileDelete),
           ),
         ],
       ),
@@ -310,12 +335,13 @@ class _WatchlistPageState extends State<WatchlistPage> {
 
   // 🔁 Segmented Toggle
   Widget _segmentedToggle(ThemeData theme) {
+    final lang = AppLocalizations.of(context)!;
     final items = <({WatchlistFilter value, String label})>[
-      (value: WatchlistFilter.available, label: "Available"),
-      (value: WatchlistFilter.downloaded, label: "Downloaded"),
+      (value: WatchlistFilter.available, label: lang.billingAvailable),
+      (value: WatchlistFilter.downloaded, label: lang.detailsDownloaded),
       if (!WalletPlatform.isGiftingHidden)
-        (value: WatchlistFilter.gifted, label: "Gifted"),
-      (value: WatchlistFilter.expired, label: "Expired"),
+        (value: WatchlistFilter.gifted, label: lang.watchlistGifted),
+      (value: WatchlistFilter.expired, label: lang.watchlistExpired),
     ];
 
     return Padding(
@@ -461,6 +487,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
 
   Widget _netflixCard(BuildContext context, _WatchlistEntry content) {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
     final item = content.movie;
 
     final card = ClipRRect(
@@ -508,7 +535,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
                     const Icon(Icons.schedule, size: 12, color: Colors.white70),
                     const SizedBox(width: 4),
                     Text(
-                      item.rentlDuration ?? 'NA',
+                      item.rentlDuration ?? lang.cardNotApplicable,
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 12,
@@ -526,9 +553,9 @@ class _WatchlistPageState extends State<WatchlistPage> {
               child: Container(
                 color: Colors.black.withValues(alpha: 0.55),
                 alignment: Alignment.center,
-                child: const Text(
-                  "Expired",
-                  style: TextStyle(
+                child: Text(
+                  lang.watchlistExpired,
+                  style: const TextStyle(
                     color: Colors.redAccent,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -548,9 +575,9 @@ class _WatchlistPageState extends State<WatchlistPage> {
                   color: theme.primaryColor,
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text(
-                  'Gifted',
-                  style: TextStyle(
+                child: Text(
+                  lang.watchlistGifted,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -573,15 +600,15 @@ class _WatchlistPageState extends State<WatchlistPage> {
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(color: Colors.white24),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.download_done_rounded,
+                        const Icon(Icons.download_done_rounded,
                             color: Colors.white, size: 12),
-                        SizedBox(width: 4),
+                        const SizedBox(width: 4),
                         Text(
-                          'Offline',
-                          style: TextStyle(
+                          lang.watchlistOffline,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -614,13 +641,13 @@ class _WatchlistPageState extends State<WatchlistPage> {
 
     if (ResponsiveWidget.isMobile(context)) {
       return GestureDetector(
-        onTap: content.active == true ? () => _playContent(item) : null,
+        onTap: content.active == true ? () => _openContent(item) : null,
         child: card,
       );
     }
 
     return OttTvFocus(
-      onTap: content.active == true ? () => _playContent(item) : null,
+      onTap: content.active == true ? () => _openContent(item) : null,
       borderRadius: 16,
       scale: 1.035,
       child: card,
@@ -633,7 +660,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
         contentId != null && _deletingDownloadIds.contains(contentId);
 
     return Tooltip(
-      message: 'Remove download',
+      message: AppLocalizations.of(context)!.watchlistDeleteDownload,
       child: Material(
         color: Colors.black87,
         shape: const CircleBorder(),
@@ -691,7 +718,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
               color: Colors.white70, size: 42),
           const SizedBox(height: 10),
           Text(
-            item.title ?? 'Movie',
+            item.title ?? AppLocalizations.of(context)!.cardTypeMovie,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
@@ -706,9 +733,10 @@ class _WatchlistPageState extends State<WatchlistPage> {
   }
 
   Widget _emptyState(ThemeData theme, {bool showSegmentedToggle = true}) {
+    final lang = AppLocalizations.of(context)!;
     final emptyTitle = isOffline || selectedFilter == WatchlistFilter.downloaded
-        ? "No downloaded content found"
-        : "No content found";
+        ? lang.watchlistNoDownloadedContentFound
+        : lang.noContentFound;
     return Column(
       children: [
         if (showSegmentedToggle) _segmentedToggle(theme),

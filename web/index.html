@@ -368,7 +368,7 @@
           }
         }
 
-        // On mobile for content links, if autoRedirect is requested or app not installed
+        // On mobile for content links, redirect to store and preserve content information
         if (contentMatch && !preferWeb) {
           var contentType = contentMatch[1].toLowerCase();
           var contentId = contentMatch[2];
@@ -380,29 +380,48 @@
             contentReferrer += "&referralCode=" + encodeURIComponent(referralCode);
           }
 
-          var autoRedirect = searchParams.get("redirect") === "store" ||
-            searchParams.get("store") === "true" ||
-            searchParams.get("app") === "download";
-
-          if (autoRedirect) {
-            if (isAndroid) {
-              var targetPlayStoreUrl = playStoreBase + "&referrer=" + encodeURIComponent(contentReferrer);
-              window.location.replace(targetPlayStoreUrl);
-              return;
-            }
-
-            if (isIOS) {
-              if (window.navigator.clipboard && window.navigator.clipboard.writeText) {
-                window.navigator.clipboard.writeText(canonicalUrl).catch(function () { });
-              }
-              window.location.replace(appStoreUrl);
-              return;
-            }
+          if (isAndroid) {
+            var targetPlayStoreUrl = playStoreBase + "&referrer=" + encodeURIComponent(contentReferrer);
+            window.location.replace(targetPlayStoreUrl);
+            return;
           }
 
-          // If iOS, copy deep link to clipboard for instant detection upon app install
-          if (isIOS && window.navigator.clipboard && window.navigator.clipboard.writeText) {
-            window.navigator.clipboard.writeText(canonicalUrl).catch(function () { });
+          if (isIOS) {
+            // Safari requires a user gesture. Display smart copy panel before redirecting.
+            var panel = document.createElement("section");
+            panel.style.cssText = "position:fixed;inset:0;z-index:2147483647;background:radial-gradient(circle at 50% 20%, #1e1014 0%, #0a0a0c 100%);color:white;padding:32px 20px;overflow:auto;font:16px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,sans-serif;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;box-sizing:border-box";
+            var heading = document.createElement("h1");
+            heading.textContent = "Watch on Filmytell";
+            heading.style.cssText = "font-size:24px;font-weight:700;margin:0 0 12px 0;color:#ffffff";
+            var message = document.createElement("p");
+            message.textContent = "Install Filmytell from the App Store. When you first open the app, this content will be automatically detected.";
+            message.style.cssText = "color:rgba(255,255,255,0.8);line-height:1.5;max-width:360px;margin:0 0 20px 0;white-space:pre-line";
+            var button = document.createElement("button");
+            button.textContent = "Install Filmytell & Watch";
+            button.style.cssText = "padding:16px 28px;font:inherit;font-weight:600;font-size:16px;border-radius:14px;border:0;background:linear-gradient(135deg, #e53741 0%, #b81d24 100%);color:white;cursor:pointer;box-shadow:0 4px 16px rgba(229,55,65,0.4);width:100%;max-width:320px";
+            var status = document.createElement("p");
+            status.setAttribute("role", "status");
+            status.style.cssText = "color:#ff8585;font-size:14px;margin:12px 0;min-height:20px;max-width:320px";
+            button.onclick = async function () {
+              button.disabled = true;
+              try {
+                if (window.navigator.clipboard && window.navigator.clipboard.writeText) {
+                  await window.navigator.clipboard.writeText(canonicalUrl);
+                }
+                window.location.assign(appStoreUrl);
+              } catch (_) {
+                status.textContent = "Could not copy automatically. You can install, then reopen your original link.";
+              } finally {
+                button.disabled = false;
+              }
+            };
+            var install = document.createElement("a");
+            install.href = appStoreUrl;
+            install.textContent = "Install without copying link";
+            install.style.cssText = "color:rgba(255,255,255,0.6);font-size:14px;text-decoration:underline;margin-top:8px";
+            panel.append(heading, message, button, status, install);
+            document.body.appendChild(panel);
+            return;
           }
         }
       } catch (e) {

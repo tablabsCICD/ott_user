@@ -54,7 +54,7 @@ class _NotificationPageState extends State<NotificationPage> {
       final user = await LocalSharePreferences.localSharePreferences.getUser();
       final userId = user?.id;
       if (userId == null) {
-        throw Exception('Please log in again to view notifications.');
+        throw Exception(AppLocalizations.of(context)!.notifLoginAgain);
       }
 
       final response = await ApiHelper().getApi(
@@ -66,8 +66,8 @@ class _NotificationPageState extends State<NotificationPage> {
       );
 
       final responseBody = _decodeBody(response.body);
-      final apiMessage =
-          responseBody['message']?.toString().trim() ?? 'Request failed.';
+      final apiMessage = responseBody['message']?.toString().trim() ??
+          AppLocalizations.of(context)!.notifRequestFailed;
 
       if (response.statusCode != 200) {
         throw Exception(apiMessage);
@@ -80,7 +80,8 @@ class _NotificationPageState extends State<NotificationPage> {
 
       final pageData = parsed.data;
       if (pageData == null) {
-        throw Exception(parsed.message ?? 'No notification data returned.');
+        throw Exception(parsed.message ??
+            AppLocalizations.of(context)!.notifNoDataReturned);
       }
 
       if (!mounted) return;
@@ -112,7 +113,7 @@ class _NotificationPageState extends State<NotificationPage> {
       return decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
     } catch (_) {
       return <String, dynamic>{
-        'message': 'Invalid server response. Please try again.',
+        'message': AppLocalizations.of(context)!.notifInvalidServerResponse,
       };
     }
   }
@@ -120,7 +121,7 @@ class _NotificationPageState extends State<NotificationPage> {
   String _cleanError(Object error) {
     final message = error.toString().replaceFirst('Exception: ', '').trim();
     return message.isEmpty
-        ? 'Unable to fetch notifications. Please try again.'
+        ? AppLocalizations.of(context)!.notifUnableToFetch
         : message;
   }
 
@@ -183,7 +184,7 @@ class _NotificationPageState extends State<NotificationPage> {
           Center(
             child: ElevatedButton(
               onPressed: () => _loadNotifications(),
-              child: const Text('Retry'),
+              child: Text(AppLocalizations.of(context)!.retry),
             ),
           ),
         ],
@@ -193,14 +194,14 @@ class _NotificationPageState extends State<NotificationPage> {
     if (_notifications.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 220),
-          Icon(Icons.notifications_off, size: 80, color: Colors.grey),
-          SizedBox(height: 10),
+        children: [
+          const SizedBox(height: 220),
+          const Icon(Icons.notifications_off, size: 80, color: Colors.grey),
+          const SizedBox(height: 10),
           Center(
             child: Text(
-              'No Notifications',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
+              AppLocalizations.of(context)!.notifNoNotifications,
+              style: const TextStyle(fontSize: 18, color: Colors.grey),
             ),
           ),
         ],
@@ -224,7 +225,7 @@ class _NotificationPageState extends State<NotificationPage> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Load more'),
+                  : Text(AppLocalizations.of(context)!.loadMore),
             ),
           );
         }

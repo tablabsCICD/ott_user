@@ -7,6 +7,7 @@ import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/response/purchase_history_response.dart';
 import 'baseProvider.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class PurchaseHistoryProvider extends BaseProvider {
   final ApiHelper _apiHelper = ApiHelper();
@@ -44,7 +45,7 @@ class PurchaseHistoryProvider extends BaseProvider {
     if (!_isValidDateRange(_selectedFromDate, _selectedToDate)) {
       _isLoading = false;
       _items = <PurchaseHistoryItem>[];
-      _error = 'Start date should be less than end date.';
+      _error = appL10n().startDateBeforeEndDate;
       notifyListeners();
       return {'success': false, 'message': _error!};
     }
@@ -57,7 +58,7 @@ class PurchaseHistoryProvider extends BaseProvider {
       final user = await LocalSharePreferences.localSharePreferences.getUser();
       if (user?.id == null) {
         _items = <PurchaseHistoryItem>[];
-        _error = 'User not found.';
+        _error = appL10n().msgUserNotFoundPeriod;
         return {'success': false, 'message': _error!};
       }
 
@@ -75,16 +76,16 @@ class PurchaseHistoryProvider extends BaseProvider {
         _items = parsed.data;
         return {
           'success': true,
-          'message': parsed.message ?? 'Purchase history loaded.',
+          'message': parsed.message ?? appL10n().msgPurchaseHistoryLoaded,
         };
       }
 
       _items = <PurchaseHistoryItem>[];
-      _error = 'Failed to load purchase history.';
+      _error = appL10n().msgFailedToLoadPurchaseHistory;
       return {'success': false, 'message': _error!};
     } catch (error) {
       _items = <PurchaseHistoryItem>[];
-      _error = 'Failed to load purchase history: $error';
+      _error = appL10n().msgFailedToLoadPurchaseHistory;
       return {'success': false, 'message': _error!};
     } finally {
       _isLoading = false;

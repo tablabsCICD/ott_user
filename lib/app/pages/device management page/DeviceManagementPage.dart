@@ -6,6 +6,7 @@ import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/anti_piracy_models.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/l10n/app_localizations.dart';
 
 class DeviceManagementPage extends StatefulWidget {
   const DeviceManagementPage({super.key});
@@ -28,13 +29,14 @@ class _DeviceManagementPageState extends State<DeviceManagementPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isMobile = ResponsiveWidget.isMobile(context);
+    final lang = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: theme.scaffoldBackgroundColor,
         foregroundColor: theme.canvasColor,
-        title: const Text('Device Management'),
+        title: Text(lang.deviceManagement),
       ),
       body: Consumer<SessionDeviceProvider>(
         builder: (context, provider, child) {
@@ -46,7 +48,7 @@ class _DeviceManagementPageState extends State<DeviceManagementPage> {
             return _StateMessage(
               icon: Icons.error_outline,
               title: provider.errorMessage!,
-              actionLabel: 'Retry',
+              actionLabel: lang.retry,
               onAction: provider.fetchDevices,
             );
           }
@@ -54,8 +56,8 @@ class _DeviceManagementPageState extends State<DeviceManagementPage> {
           if (provider.devices.isEmpty) {
             return _StateMessage(
               icon: Icons.devices_other,
-              title: 'No active devices found.',
-              actionLabel: 'Refresh',
+              title: lang.deviceNoActiveDevices,
+              actionLabel: lang.deviceRefresh,
               onAction: provider.fetchDevices,
             );
           }
@@ -90,6 +92,7 @@ class _DeviceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isMobile = ResponsiveWidget.isMobile(context);
+    final lang = AppLocalizations.of(context)!;
 
     return Container(
       padding: EdgeInsets.all(isMobile ? 16 : 22),
@@ -139,21 +142,21 @@ class _DeviceCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     if (device.current)
                       Text(
-                        'Current device',
+                        lang.deviceCurrentDevice,
                         style: TextStyle(
                           color: theme.primaryColor,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                     const SizedBox(height: 10),
-                    _MetaLine(label: 'OS', value: device.osVersion),
+                    _MetaLine(label: lang.deviceOs, value: device.osVersion),
                     _MetaLine(
-                      label: 'Authorization',
+                      label: lang.deviceAuthorization,
                       value: device.blocked
-                          ? 'Blocked'
+                          ? lang.deviceBlocked
                           : device.authorized
-                              ? 'Authorized'
-                              : 'Unknown',
+                              ? lang.deviceAuthorized
+                              : lang.deviceUnknown,
                     ),
                   ],
                 ),
@@ -173,7 +176,7 @@ class _DeviceCard extends StatelessWidget {
                     ? null
                     : () => _confirmRemoveDevice(context, device.deviceId),
                 icon: const Icon(Icons.delete_outline, size: 18),
-                label: const Text('Remove Device'),
+                label: Text(lang.deviceRemoveDevice),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.primaryColor,
                   foregroundColor: Colors.white,
@@ -200,18 +203,19 @@ class _DeviceCard extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Remove device?'),
-        content: const Text(
-          'This device will no longer be authorized for protected playback.',
+        title:
+            Text(AppLocalizations.of(dialogContext)!.deviceRemoveDeviceTitle),
+        content: Text(
+          AppLocalizations.of(dialogContext)!.deviceRemoveDeviceConfirm,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(dialogContext)!.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Remove'),
+            child: Text(AppLocalizations.of(dialogContext)!.helpRemove),
           ),
         ],
       ),
@@ -222,7 +226,9 @@ class _DeviceCard extends StatelessWidget {
     if (!context.mounted) return;
     CustomToast.show(
       context,
-      success ? 'Device removed successfully.' : provider.errorMessage ?? '',
+      success
+          ? AppLocalizations.of(context)!.deviceRemovedSuccessfully
+          : provider.errorMessage ?? '',
       isSuccess: success,
     );
   }

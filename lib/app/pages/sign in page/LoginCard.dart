@@ -344,7 +344,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     );
     setState(() {
       _otpAutoFilled = true;
-      _otpHelperText = 'OTP detected automatically.';
+      _otpHelperText =
+          AppLocalizations.of(context)!.authOtpDetectedAutomatically;
     });
 
     Future<void>.delayed(const Duration(milliseconds: 250), () {
@@ -513,7 +514,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                       const SizedBox(width: 6),
                                       Flexible(
                                         child: Text(
-                                          'Gift Code: $_pendingGiftCode',
+                                          lang.authGiftCodeLabel(
+                                              _pendingGiftCode!),
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
                                             fontSize: 12,
@@ -549,7 +551,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                       const SizedBox(width: 6),
                                       Flexible(
                                         child: Text(
-                                          'Referral Code: $_pendingReferralCode',
+                                          lang.authReferralCodeLabel(
+                                              _pendingReferralCode!),
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
                                             fontSize: 12,
@@ -613,7 +616,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                       ),
                                       validator: (value) {
                                         if (value == null || value.isEmpty) {
-                                          return 'Please enter a valid mobile number';
+                                          return lang
+                                              .authEnterValidMobileNumber;
                                         }
 
                                         return null;
@@ -650,8 +654,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                         filled: true,
                                         fillColor: theme.cardColor,
                                         counterText: '',
-                                        hintText:
-                                            'Search by country name and code ..',
+                                        hintText: lang.authSearchCountryHint,
                                         hintStyle:
                                             const TextStyle(fontSize: 14),
                                         // Border properties for search in dropdown
@@ -686,7 +689,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                   initialCountryCode: 'IN', // Default to India
                                   validator: (phone) {
                                     if (phone == null || phone.number.isEmpty) {
-                                      return 'Please enter a valid mobile number';
+                                      return lang.authEnterValidMobileNumber;
                                     }
 
                                     return null;
@@ -807,8 +810,11 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                         : _resendOtp,
                                     child: Text(
                                       _resendSecondsRemaining > 0
-                                          ? 'Resend OTP in ${_formatResendTime(_resendSecondsRemaining)}'
-                                          : 'Resend OTP',
+                                          ? lang.authResendOtpIn(
+                                              _formatResendTime(
+                                                  _resendSecondsRemaining),
+                                            )
+                                          : lang.authResendOtp,
                                     ),
                                   ),
                                 ),
@@ -935,7 +941,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     if (mobile.length < 10) {
       CustomToast.show(
         context,
-        'Please enter a valid mobile number',
+        AppLocalizations.of(context)!.authEnterValidMobileNumber,
         isSuccess: false,
       );
       _authRequestInFlight = false;
@@ -955,7 +961,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         if (!mounted) return;
 
         final bool success = result?['success'] == true;
-        final String message = result?['message'] ?? 'Something went wrong';
+        final String message =
+            result?['message'] ?? lang.authSomethingWentWrong;
 
         if (success) {
           CustomToast.show(
@@ -977,7 +984,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         } else {
           CustomToast.show(
             context,
-            'Failure: $message',
+            message,
             isSuccess: false,
           );
         }
@@ -985,7 +992,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         final otp = _digitsOnly(_otpController.text);
 
         if (otp.length != _otpLength) {
-          CustomToast.show(context, 'Invalid OTP', isSuccess: false);
+          CustomToast.show(context, lang.authInvalidOtp, isSuccess: false);
           return;
         }
 
@@ -1001,7 +1008,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         if (!mounted) return;
 
         final bool success = result['success'] == true;
-        final String message = result['message'] ?? 'Something went wrong';
+        final String message = result['message'] ?? lang.authSomethingWentWrong;
 
         if (success) {
           await _stopOtpAutoFillListener();
@@ -1029,14 +1036,15 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
             'Post OTP navigation scheduled in ${navigationWatch.elapsedMilliseconds}ms',
           );
         } else {
-          CustomToast.show(context, 'Failure: $message', isSuccess: false);
+          CustomToast.show(context, message, isSuccess: false);
         }
       }
     } catch (e) {
       if (!mounted) return;
+      log('Login request failed: $e');
       CustomToast.show(
         context,
-        'An error occurred: ${e.toString()}',
+        lang.authUnableToLogin,
         isSuccess: false,
       );
     } finally {
@@ -1053,7 +1061,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     if (mobile.length < 10) {
       CustomToast.show(
         context,
-        'Please enter a valid mobile number',
+        AppLocalizations.of(context)!.authEnterValidMobileNumber,
         isSuccess: false,
       );
       return;
@@ -1064,7 +1072,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     _authRequestInFlight = true;
     setState(() {
       isLoading = true;
-      _otpHelperText = 'Requesting a new OTP...';
+      _otpHelperText = lang.authRequestingNewOtp;
     });
 
     try {
@@ -1072,9 +1080,10 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
       if (!mounted) return;
 
       final success = result?['success'] == true;
-      final message = result?['message']?.toString() ?? 'Something went wrong';
+      final message =
+          result?['message']?.toString() ?? lang.authSomethingWentWrong;
       if (!success) {
-        CustomToast.show(context, 'Failure: $message', isSuccess: false);
+        CustomToast.show(context, message, isSuccess: false);
         setState(() => _otpHelperText = null);
         return;
       }
@@ -1090,13 +1099,13 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         isSuccess: true,
       );
       if (mounted) {
-        setState(() => _otpHelperText = 'Waiting for OTP SMS...');
+        setState(() => _otpHelperText = lang.authWaitingForOtpSms);
       }
     } catch (_) {
       if (!mounted) return;
       CustomToast.show(
         context,
-        'Unable to resend OTP. Please try again.',
+        lang.authUnableToResendOtp,
         isSuccess: false,
       );
     } finally {
@@ -1121,15 +1130,14 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         unawaited(_stopOtpAutoFillListener());
         if (mounted && otpSent && _otpController.text.length < _otpLength) {
           setState(() {
-            _otpHelperText =
-                'Auto-fill timed out. Please enter the OTP manually.';
+            _otpHelperText = AppLocalizations.of(context)!.authAutoFillTimedOut;
           });
         }
       });
       if (mounted) {
         setState(() {
           _isListeningForOtp = true;
-          _otpHelperText = 'Waiting for OTP SMS...';
+          _otpHelperText = AppLocalizations.of(context)!.authWaitingForOtpSms;
         });
       }
     } catch (error) {
@@ -1138,7 +1146,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         setState(() {
           _isListeningForOtp = false;
           _otpHelperText =
-              'Auto-fill is unavailable. Please enter the OTP manually.';
+              AppLocalizations.of(context)!.authAutoFillUnavailable;
         });
       }
     }

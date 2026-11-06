@@ -5,6 +5,7 @@ import 'package:ott/app/widgets/movieCard.dart';
 import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/l10n/app_localizations.dart';
 
 class CategoryContentPage extends StatefulWidget {
   final String categoryTitle;
@@ -116,9 +117,11 @@ class _CategoryContentPageState extends State<CategoryContentPage>
         (viewStart / rowExtent).floor().clamp(0, totalRows - 1).toInt();
     final lastRow =
         ((viewEnd - 0.001) / rowExtent).floor().clamp(0, totalRows - 1).toInt();
-    final first = (firstRow * crossCount).clamp(0, _contents.length - 1).toInt();
-    final last =
-        (((lastRow + 1) * crossCount) - 1).clamp(0, _contents.length - 1).toInt();
+    final first =
+        (firstRow * crossCount).clamp(0, _contents.length - 1).toInt();
+    final last = (((lastRow + 1) * crossCount) - 1)
+        .clamp(0, _contents.length - 1)
+        .toInt();
     int? index;
     double bestVisibility = 0;
     for (var candidate = first; candidate <= last; candidate++) {
@@ -185,8 +188,8 @@ class _CategoryContentPageState extends State<CategoryContentPage>
         ),
       ),
       body: _contents.isEmpty
-          ? const Center(
-              child: Text('No content available'),
+          ? Center(
+              child: Text(AppLocalizations.of(context)!.noContentAvailable),
             )
           : Padding(
               padding: const EdgeInsets.symmetric(vertical: 10.0),
@@ -293,8 +296,8 @@ class _CategoryContentPageState extends State<CategoryContentPage>
 
                   // Keep card dimensions stable within each breakpoint:
                   // Center the grid of consistently sized cards, absorbing remaining space into side padding
-                  final totalGridWidth =
-                      (crossAxisCount * cardWidth) + ((crossAxisCount - 1) * gap);
+                  final totalGridWidth = (crossAxisCount * cardWidth) +
+                      ((crossAxisCount - 1) * gap);
                   final centeringPadding =
                       math.max(0.0, (availableWidth - totalGridWidth) / 2);
                   final effectiveHorizontalPadding =

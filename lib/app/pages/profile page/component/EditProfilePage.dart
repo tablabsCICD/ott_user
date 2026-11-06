@@ -5,6 +5,7 @@ import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../provider/userProvider.dart';
@@ -63,6 +64,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     var themeProvider = Provider.of<ThemeProvider>(context);
     var selectedThemeData = themeProvider.getTheme;
     UserProvider userProvider = Provider.of<UserProvider>(context);
+    final lang = AppLocalizations.of(context)!;
     final cachedPhoto = userProvider.userObj.profilePhoto ?? '';
     final ImageProvider avatarImage =
         userProvider.profileController.text.isNotEmpty
@@ -75,8 +77,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
       backgroundColor: selectedThemeData.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: selectedThemeData.primaryColor,
-        title: const Text(
-          "Edit Profile",
+        title: Text(
+          lang.editProfile,
           style: TextStyle(color: Colors.white),
         ),
         leading: IconButton(
@@ -86,18 +88,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
               context: context,
               builder: (BuildContext context) {
                 return CupertinoAlertDialog(
-                  title: const Text("Discard Changes?"),
+                  title: Text(lang.profileDiscardChangesTitle),
                   content: Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: const Text(
-                      "Are you sure you want to go back?",
+                    child: Text(
+                      lang.profileDiscardChangesBody,
                     ),
                   ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(false),
                       child: Text(
-                        "Cancel",
+                        lang.cancel,
                         style: TextStyle(color: selectedThemeData.canvasColor),
                       ),
                     ),
@@ -113,7 +115,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         Navigator.of(context).pop(true);
                       },
                       child: Text(
-                        "Discard",
+                        lang.profileDiscard,
                         style: TextStyle(color: selectedThemeData.primaryColor),
                       ),
                     ),
@@ -188,7 +190,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     const SizedBox(height: 20),
                     CustomTextField(
                       controller: userProvider.nameController,
-                      label: 'Name',
+                      label: lang.profileName,
                       isName: true,
                       hintText: (() {
                         final first =
@@ -198,7 +200,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         final fullName = '$first $last'.trim();
                         return fullName.isNotEmpty
                             ? fullName
-                            : 'Enter your name';
+                            : lang.homeEnterYourName;
                       })(),
                       isValidator: false,
                       textInputType: TextInputType.name,
@@ -206,7 +208,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ),
                     CustomTextField(
                       controller: userProvider.emailController,
-                      label: 'Email (Optional)',
+                      label: lang.homeEmailOptional,
                       isEmail: false,
                       isValidator: false,
                       validator: (val) {
@@ -214,13 +216,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           final emailRegex =
                               RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}\$');
                           if (!emailRegex.hasMatch(val.trim())) {
-                            return 'Enter valid email';
+                            return lang.profileEnterValidEmail;
                           }
                         }
                         return null;
                       },
-                      hintText:
-                          userProvider.userObj.emailId ?? 'Enter valid email',
+                      hintText: userProvider.userObj.emailId ??
+                          lang.profileEnterValidEmail,
                       textInputType: TextInputType.emailAddress,
                     ),
                     /*  CustomTextField(
@@ -237,15 +239,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ), */
                     CustomTextField(
                       controller: userProvider.dobController,
-                      label: 'Birth Date (Month & Year)',
+                      label: lang.profileBirthDateMonthYear,
                       isValidator: false,
                       readOnly: true,
                       suffixIcon: Icons.calendar_today_outlined,
                       hintText: userProvider.userObj.dob != null
                           ? userProvider.userObj.dob!.isNotEmpty
                               ? userProvider.userObj.dob!
-                              : 'Select birth month and year'
-                          : 'Select birth month and year',
+                              : lang.profileSelectBirthMonthYear
+                          : lang.profileSelectBirthMonthYear,
                       textInputType: TextInputType.datetime,
                       onTap: () => _selectDate(userProvider),
                     ),
@@ -260,61 +262,63 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       onPressed: userProvider.isUploading
                           ? null
                           : () async {
-                        if (userProvider.profileController.text.isEmpty) {
-                          userProvider.profileController.text =
-                              userProvider.userObj.profilePhoto ?? '';
-                        }
-                        if (userProvider.emailController.text.isEmpty) {
-                          userProvider.emailController.text =
-                              userProvider.userObj.emailId ?? '';
-                        }
-                        final fullName =
-                            userProvider.nameController.text.trim();
-                        if (fullName.isNotEmpty) {
-                          final parts = fullName.split(RegExp(r'\s+'));
-                          userProvider.firstNameController.text = parts.first;
-                          userProvider.lastNameController.text =
-                              parts.length > 1
-                                  ? parts.sublist(1).join(' ')
-                                  : '';
-                        } else {
-                          userProvider.firstNameController.text = '';
-                          userProvider.lastNameController.text = '';
-                        }
-                        if (userProvider.mobileController.text.isEmpty) {
-                          userProvider.mobileController.text =
-                              userProvider.userObj.mobileNumber ?? '';
-                        }
-                        if (userProvider.dobController.text.isEmpty) {
-                          userProvider.dobController.text =
-                              userProvider.userObj.dob ?? '';
-                        }
-                        if (!_formKey.currentState!.validate()) return;
-                        var result = await userProvider.updateUser();
-                        if (!mounted) return;
-                        if (result['success'] == true) {
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setBool('isLoggedIn', true);
-                          if (!mounted) return;
+                              if (userProvider.profileController.text.isEmpty) {
+                                userProvider.profileController.text =
+                                    userProvider.userObj.profilePhoto ?? '';
+                              }
+                              if (userProvider.emailController.text.isEmpty) {
+                                userProvider.emailController.text =
+                                    userProvider.userObj.emailId ?? '';
+                              }
+                              final fullName =
+                                  userProvider.nameController.text.trim();
+                              if (fullName.isNotEmpty) {
+                                final parts = fullName.split(RegExp(r'\s+'));
+                                userProvider.firstNameController.text =
+                                    parts.first;
+                                userProvider.lastNameController.text =
+                                    parts.length > 1
+                                        ? parts.sublist(1).join(' ')
+                                        : '';
+                              } else {
+                                userProvider.firstNameController.text = '';
+                                userProvider.lastNameController.text = '';
+                              }
+                              if (userProvider.mobileController.text.isEmpty) {
+                                userProvider.mobileController.text =
+                                    userProvider.userObj.mobileNumber ?? '';
+                              }
+                              if (userProvider.dobController.text.isEmpty) {
+                                userProvider.dobController.text =
+                                    userProvider.userObj.dob ?? '';
+                              }
+                              if (!_formKey.currentState!.validate()) return;
+                              var result = await userProvider.updateUser();
+                              if (!mounted) return;
+                              if (result['success'] == true) {
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+                                await prefs.setBool('isLoggedIn', true);
+                                if (!mounted) return;
 
-                          CustomToast.show(
-                            context,
-                            "Profile updated successfully!",
-                            isSuccess: true,
-                          );
-                          Navigator.of(context).pop();
-                        } else {
-                          CustomToast.show(
-                            context,
-                            'Failure: ${result['message']}',
-                            isSuccess: false,
-                          );
-                        }
-                      },
-                      child: const Center(
+                                CustomToast.show(
+                                  context,
+                                  lang.profileUpdatedSuccessfully,
+                                  isSuccess: true,
+                                );
+                                Navigator.of(context).pop();
+                              } else {
+                                CustomToast.show(
+                                  context,
+                                  lang.homeFailureMessage('${result['message']}'),
+                                  isSuccess: false,
+                                );
+                              }
+                            },
+                      child: Center(
                         child: Text(
-                          "Save",
-                          style: TextStyle(
+                          lang.save,
+                          style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.white),

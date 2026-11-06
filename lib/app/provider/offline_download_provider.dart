@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'baseProvider.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 enum OfflineDownloadStatus { idle, downloading, completed, failed }
 
@@ -265,13 +266,13 @@ class OfflineDownloadProvider extends BaseProvider {
     if (contentId == null || videoUrl.isEmpty) {
       return {
         'success': false,
-        'message': 'Video is not available for download.',
+        'message': appL10n().msgVideoNotAvailableForDownload,
       };
     }
     if (_downloadingContentIds.contains(contentId)) {
       return {
         'success': false,
-        'message': 'Download already in progress.',
+        'message': appL10n().msgDownloadAlreadyInProgress,
       };
     }
     if (kIsWeb) {
@@ -291,7 +292,7 @@ class OfflineDownloadProvider extends BaseProvider {
       notifyListeners();
       return {
         'success': true,
-        'message': 'Movie is already downloaded.',
+        'message': appL10n().playerMovieAlreadyDownloaded,
         'path': file.path,
       };
     }
@@ -334,7 +335,7 @@ class OfflineDownloadProvider extends BaseProvider {
         notifyListeners();
         return {
           'success': false,
-          'message': result.message ?? 'Failed to download movie.',
+          'message': result.message ?? appL10n().msgFailedToDownloadMovie,
         };
       }
 
@@ -351,7 +352,7 @@ class OfflineDownloadProvider extends BaseProvider {
 
       return {
         'success': true,
-        'message': 'Movie downloaded for offline playback.',
+        'message': appL10n().msgMovieDownloadedForOffline,
         'path': result.filePath,
       };
     } catch (error) {
@@ -364,7 +365,7 @@ class OfflineDownloadProvider extends BaseProvider {
       await _persistDownloadedContents();
       return {
         'success': false,
-        'message': 'Failed to download movie: $error',
+        'message': appL10n().msgFailedToDownloadMovie,
       };
     } finally {
       _downloadingContentIds.remove(contentId);
@@ -384,7 +385,7 @@ class OfflineDownloadProvider extends BaseProvider {
     if (contentId == null) {
       return {
         'success': false,
-        'message': 'Offline copy was not found.',
+        'message': appL10n().msgOfflineCopyNotFound,
       };
     }
     if (kIsWeb) {
@@ -397,7 +398,7 @@ class OfflineDownloadProvider extends BaseProvider {
       notifyListeners();
       return {
         'success': true,
-        'message': 'Download removed from app list.',
+        'message': appL10n().msgDownloadRemovedFromAppList,
       };
     }
 
@@ -423,7 +424,7 @@ class OfflineDownloadProvider extends BaseProvider {
 
     return {
       'success': true,
-      'message': 'Offline copy removed.',
+      'message': appL10n().msgOfflineCopyRemoved,
     };
   }
 
@@ -483,7 +484,7 @@ class OfflineDownloadProvider extends BaseProvider {
         notifyListeners();
         return {
           'success': true,
-          'message': 'Content is already downloaded for offline playback.',
+          'message': appL10n().msgContentAlreadyDownloaded,
         };
       }
     }
@@ -509,7 +510,7 @@ class OfflineDownloadProvider extends BaseProvider {
 
       return {
         'success': true,
-        'message': 'Content downloaded for offline browser playback.',
+        'message': appL10n().msgContentDownloadedForBrowser,
       };
     } catch (error) {
       _downloadMetadata[contentId] = _metadataForContent(
@@ -520,7 +521,7 @@ class OfflineDownloadProvider extends BaseProvider {
       await _persistDownloadedContents();
       return {
         'success': false,
-        'message': 'Failed to download content for offline playback: $error',
+        'message': appL10n().msgFailedToDownloadContentOffline,
       };
     } finally {
       _downloadingContentIds.remove(contentId);

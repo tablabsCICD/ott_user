@@ -7,6 +7,7 @@ import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/anti_piracy_models.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 enum SecurePlaybackFailure {
   unauthenticated,
@@ -71,9 +72,9 @@ class AntiPiracyApiClient {
       raw = data is Map ? data['devices'] : data ?? decoded['devices'];
     }
     if (raw is! List) {
-      throw const SecurePlaybackException(
+      throw SecurePlaybackException(
         SecurePlaybackFailure.invalidResponse,
-        'The registered device list could not be read.',
+        appL10n().sysPlaybackDeviceListUnreadable,
       );
     }
     return raw
@@ -125,9 +126,9 @@ class AntiPiracyApiClient {
         'API',
         'Signed playback response parsing failed; invalid format.',
       );
-      throw const SecurePlaybackException(
+      throw SecurePlaybackException(
         SecurePlaybackFailure.invalidResponse,
-        'Secure playback could not be prepared.',
+        appL10n().msgSecurePlaybackNotPrepared,
       );
     }
   }
@@ -158,9 +159,9 @@ class AntiPiracyApiClient {
     Duration timeout = const Duration(seconds: 10),
   }) async {
     if (uri.scheme != 'https' && uri.scheme != 'http') {
-      throw const SecurePlaybackException(
+      throw SecurePlaybackException(
         SecurePlaybackFailure.invalidResponse,
-        'A secure connection is required for playback.',
+        appL10n().sysPlaybackSecureConnectionRequired,
       );
     }
     final token = (await _tokenProvider())?.trim();
@@ -169,9 +170,9 @@ class AntiPiracyApiClient {
         'AUTH',
         'JWT is missing; secure API request was not sent.',
       );
-      throw const SecurePlaybackException(
+      throw SecurePlaybackException(
         SecurePlaybackFailure.unauthenticated,
-        'Your session has expired. Please sign in again.',
+        appL10n().playerSessionExpired,
       );
     }
 
@@ -221,27 +222,27 @@ class AntiPiracyApiClient {
       rethrow;
     } on TimeoutException {
       SecurityDebugLog.event('API', 'Secure API request timed out.');
-      throw const SecurePlaybackException(
+      throw SecurePlaybackException(
         SecurePlaybackFailure.network,
-        'The secure playback service did not respond. Please retry.',
+        appL10n().sysPlaybackServiceNoResponse,
       );
     } on http.ClientException {
       SecurityDebugLog.event(
         'API',
         'Secure API request failed because of a network or CORS error.',
       );
-      throw const SecurePlaybackException(
+      throw SecurePlaybackException(
         SecurePlaybackFailure.network,
-        'Check your internet connection and retry.',
+        appL10n().sysPlaybackCheckConnectionRetry,
       );
     } catch (_) {
       SecurityDebugLog.event(
         'API',
         'Secure API request failed before a valid response was available.',
       );
-      throw const SecurePlaybackException(
+      throw SecurePlaybackException(
         SecurePlaybackFailure.network,
-        'Check your internet connection and retry.',
+        appL10n().sysPlaybackCheckConnectionRetry,
       );
     }
   }
@@ -271,9 +272,8 @@ class AntiPiracyApiClient {
       'Content-Type': 'application/json',
       ...?extraHeaders,
     };
-    final printableBody = body == null
-        ? '<none>'
-        : jsonEncode(_redactSensitiveFields(body));
+    final printableBody =
+        body == null ? '<none>' : jsonEncode(_redactSensitiveFields(body));
     SecurityDebugLog.diagnostic(
       'REQUEST $method ${_diagnosticEndpoint(uri)} '
       'headers=${jsonEncode(printableHeaders)} body=$printableBody',
@@ -334,36 +334,36 @@ class AntiPiracyApiClient {
   SecurePlaybackException _mapStatus(int statusCode, String responseBody) {
     switch (statusCode) {
       case 401:
-        return const SecurePlaybackException(
+        return SecurePlaybackException(
           SecurePlaybackFailure.unauthenticated,
-          'Your session has expired. Please sign in again.',
+          appL10n().playerSessionExpired,
         );
       case 403:
       case 409:
         if (_isDeviceLimitResponse(responseBody)) {
-          return const SecurePlaybackException(
+          return SecurePlaybackException(
             SecurePlaybackFailure.accessDenied,
-            'The maximum registered-device limit has been reached. Remove an old device and retry.',
+            appL10n().sysPlaybackDeviceLimitReached,
           );
         }
-        return const SecurePlaybackException(
+        return SecurePlaybackException(
           SecurePlaybackFailure.accessDenied,
-          'Playback is not allowed for this account or device.',
+          appL10n().sysPlaybackNotAllowed,
         );
       case 404:
-        return const SecurePlaybackException(
+        return SecurePlaybackException(
           SecurePlaybackFailure.notFound,
-          'The requested content or playback session was not found.',
+          appL10n().sysPlaybackContentOrSessionNotFound,
         );
       case 429:
-        return const SecurePlaybackException(
+        return SecurePlaybackException(
           SecurePlaybackFailure.rateLimited,
-          'Too many playback requests. Please wait and retry.',
+          appL10n().sysPlaybackTooManyRequests,
         );
       default:
-        return const SecurePlaybackException(
+        return SecurePlaybackException(
           SecurePlaybackFailure.server,
-          'Secure playback could not be prepared.',
+          appL10n().msgSecurePlaybackNotPrepared,
         );
     }
   }
@@ -388,9 +388,9 @@ class AntiPiracyApiClient {
     try {
       return jsonDecode(body);
     } catch (_) {
-      throw const SecurePlaybackException(
+      throw SecurePlaybackException(
         SecurePlaybackFailure.invalidResponse,
-        'Secure playback could not be prepared.',
+        appL10n().msgSecurePlaybackNotPrepared,
       );
     }
   }
@@ -401,9 +401,9 @@ class AntiPiracyApiClient {
       final data = map['data'];
       return data is Map ? data.cast<String, dynamic>() : map;
     }
-    throw const SecurePlaybackException(
+    throw SecurePlaybackException(
       SecurePlaybackFailure.invalidResponse,
-      'Secure playback could not be prepared.',
+      appL10n().msgSecurePlaybackNotPrepared,
     );
   }
 }

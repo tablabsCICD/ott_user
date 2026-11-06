@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/services/wallet_platform.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'baseProvider.dart';
@@ -32,55 +33,81 @@ class OnboardingTourProvider extends BaseProvider {
   static const String _completedKey = 'feature_tour_completed';
   static const String _skippedKey = 'feature_tour_skipped';
 
-  static const List<FeatureTourStep> defaultSteps = [
-    FeatureTourStep(
-      id: FeatureTourStepId.language,
-      title: 'Choose Your Language',
-      description: 'Select app content language according to your preference.',
-    ),
-    FeatureTourStep(
-      id: FeatureTourStepId.wallet,
-      title: 'Wallet',
-      description: 'Add/View your balance and view transactions.',
-    ),
-    /*   FeatureTourStep(
-      id: FeatureTourStepId.profile,
-      title: 'Your Profile',
-      description:
-          'Manage account settings, preferences, and personal information.',
-    ), */
-    FeatureTourStep(
-      id: FeatureTourStepId.search,
-      title: 'Find Content Faster',
-      description:
-          'Search by movies, series, genres, language and rating instantly.',
-    ),
-    FeatureTourStep(
-      id: FeatureTourStepId.notifications,
-      title: 'Stay Updated',
-      description:
-          'Receive updates about new releases, recommendations, rewards, and important announcements.',
-    ),
-    FeatureTourStep(
-      id: FeatureTourStepId.moreActions,
-      title: 'More Actions',
-      description: 'Access additional options like Bookmark, Share and Gift.',
-    ),
-    /*  FeatureTourStep(
-      id: FeatureTourStepId.watchlist,
-      title: 'Save for Later',
-      description: 'Add content to your watchlist and access it anytime.',
-    ),
-    FeatureTourStep(
-      id: FeatureTourStepId.download,
-      title: 'Watch Offline',
-      description:
-          'Download your favorite content and watch it later without an internet connection.',
-    ), */
+  /// Tour steps in display order. Built on every access so the text follows
+  /// the currently selected app language.
+  static List<FeatureTourStep> get defaultSteps =>
+      _defaultStepIds.map(_buildStep).toList(growable: false);
+
+  static const List<FeatureTourStepId> _defaultStepIds = [
+    FeatureTourStepId.language,
+    FeatureTourStepId.wallet,
+    // FeatureTourStepId.profile,
+    FeatureTourStepId.search,
+    FeatureTourStepId.notifications,
+    FeatureTourStepId.moreActions,
+    // FeatureTourStepId.watchlist,
+    // FeatureTourStepId.download,
   ];
 
+  static FeatureTourStep _buildStep(FeatureTourStepId id) {
+    final l10n = appL10n();
+    switch (id) {
+      case FeatureTourStepId.language:
+        return FeatureTourStep(
+          id: id,
+          title: l10n.tourLanguageTitle,
+          description: l10n.tourLanguageDescription,
+        );
+      case FeatureTourStepId.wallet:
+        return FeatureTourStep(
+          id: id,
+          title: l10n.wallet,
+          description: l10n.tourWalletDescription,
+        );
+      case FeatureTourStepId.profile:
+        return FeatureTourStep(
+          id: id,
+          title: l10n.tourProfileTitle,
+          description: l10n.tourProfileDescription,
+        );
+      case FeatureTourStepId.search:
+        return FeatureTourStep(
+          id: id,
+          title: l10n.tourSearchTitle,
+          description: l10n.tourSearchDescription,
+        );
+      case FeatureTourStepId.notifications:
+        return FeatureTourStep(
+          id: id,
+          title: l10n.tourNotificationsTitle,
+          description: l10n.tourNotificationsDescription,
+        );
+      case FeatureTourStepId.moreActions:
+        return FeatureTourStep(
+          id: id,
+          title: l10n.tourMoreActionsTitle,
+          // Gifting is temporarily hidden on iOS: drop "Gift" from the copy.
+          description: WalletPlatform.isGiftingHidden
+              ? 'Access additional options like Bookmark and Share.'
+              : l10n.tourMoreActionsDescription,
+        );
+      case FeatureTourStepId.watchlist:
+        return FeatureTourStep(
+          id: id,
+          title: l10n.tourWatchlistTitle,
+          description: l10n.tourWatchlistDescription,
+        );
+      case FeatureTourStepId.download:
+        return FeatureTourStep(
+          id: id,
+          title: l10n.tourDownloadTitle,
+          description: l10n.tourDownloadDescription,
+        );
+    }
+  }
+
   final Map<FeatureTourStepId, Rect> _targetRects = {};
-  List<FeatureTourStep> _activeSteps = defaultSteps;
+  List<FeatureTourStepId> _activeStepIds = _defaultStepIds;
   bool _initialized = false;
   bool _isActive = false;
   bool _completed = false;
@@ -94,8 +121,9 @@ class OnboardingTourProvider extends BaseProvider {
   bool get skipped => _skipped;
   int get currentIndex => _currentIndex;
   int get targetRefreshRevision => _targetRefreshRevision;
-  List<FeatureTourStep> get activeSteps => List.unmodifiable(_activeSteps);
-  FeatureTourStep get currentStep => _activeSteps[_currentIndex];
+  List<FeatureTourStep> get activeSteps =>
+      List.unmodifiable(_activeStepIds.map(_buildStep));
+  FeatureTourStep get currentStep => _buildStep(_activeStepIds[_currentIndex]);
   Rect? rectFor(FeatureTourStepId id) => _targetRects[id];
 
   Future<void> initialize() async {
@@ -120,7 +148,7 @@ class OnboardingTourProvider extends BaseProvider {
       return;
     }
     if (_completed || _skipped || _isActive) return;
-    _activeSteps = _stepsForContext(context);
+    _activeStepIds = _stepsForContext(context);
     _start();
   }
 
@@ -130,33 +158,22 @@ class OnboardingTourProvider extends BaseProvider {
       _track('Tour replay aborted: context unmounted');
       return;
     }
-    _activeSteps = _stepsForContext(context);
+    _activeStepIds = _stepsForContext(context);
     _start();
   }
 
-  List<FeatureTourStep> _stepsForContext(BuildContext? context) {
+  List<FeatureTourStepId> _stepsForContext(BuildContext? context) {
     if (context != null && !context.mounted) {
-      return defaultSteps;
+      return _defaultStepIds;
     }
     final removeFifthStep =
         kIsWeb || (context != null && ResponsiveWidget.isTv(context));
-    if (!removeFifthStep) {
-      if (!WalletPlatform.isGiftingHidden) return defaultSteps;
-      // Gifting is temporarily hidden on iOS: drop "Gift" from the copy.
-      return defaultSteps
-          .map((step) => step.id == FeatureTourStepId.moreActions
-              ? FeatureTourStep(
-                  id: step.id,
-                  title: step.title,
-                  description:
-                      'Access additional options like Bookmark and Share.',
-                )
-              : step)
-          .toList();
-    }
+    // iOS gifting copy is handled in _buildStep (steps are built lazily so
+    // they follow the selected app language).
+    if (!removeFifthStep) return _defaultStepIds;
 
-    return defaultSteps
-        .where((step) => step.id != FeatureTourStepId.moreActions)
+    return _defaultStepIds
+        .where((id) => id != FeatureTourStepId.moreActions)
         .toList();
   }
 
@@ -172,7 +189,7 @@ class OnboardingTourProvider extends BaseProvider {
 
   Future<void> next() async {
     if (!_isActive || isDisposed) return;
-    if (_currentIndex >= _activeSteps.length - 1) {
+    if (_currentIndex >= _activeStepIds.length - 1) {
       await complete();
       return;
     }
@@ -213,14 +230,16 @@ class OnboardingTourProvider extends BaseProvider {
     final previous = _targetRects[id];
     if (previous == rect) return;
     _targetRects[id] = rect;
-    if (_isActive && currentStep.id == id) {
+    if (_isActive && _activeStepIds[_currentIndex] == id) {
       notifyListeners();
     }
   }
 
   void unregisterTarget(FeatureTourStepId id) {
     if (isDisposed) return;
-    if (_targetRects.remove(id) != null && _isActive && currentStep.id == id) {
+    if (_targetRects.remove(id) != null &&
+        _isActive &&
+        _activeStepIds[_currentIndex] == id) {
       notifyListeners();
     }
   }

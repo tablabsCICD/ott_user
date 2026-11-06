@@ -26,6 +26,7 @@ import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/app/widgets/video_skip_controls.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import '../../../provider/offline_download_provider.dart';
 import '../../../provider/playMediaProvider.dart';
 
@@ -396,7 +397,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         'FLOW',
         'Secure playback stopped because the media source is empty.',
       );
-      _showPlaybackError('Video unavailable');
+      _showPlaybackError();
       return;
     }
 
@@ -428,7 +429,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         'FLOW',
         'Signed API was not called because the content ID is missing.',
       );
-      _showPlaybackError('The requested content was not found.');
+      _showPlaybackError((lang) => lang.playerContentNotFound);
       return;
     }
     SecurityDebugLog.event(
@@ -518,7 +519,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       _handlingSecureAuthenticationFailure = true;
       unawaited(
         SessionManager.instance.handleSessionExpired(
-            'Your session has expired. Please sign in again.'),
+            AppLocalizations.of(context)!.playerSessionExpired),
       );
     }
     setState(() {
@@ -625,13 +626,15 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     _youtubeController?.pause();
   }
 
-  void _showPlaybackError([String message = 'Video unavailable']) {
+  void _showPlaybackError([String Function(AppLocalizations lang)? message]) {
     if (!mounted || _isDisposed) return;
+    final lang = AppLocalizations.of(context)!;
 
     setState(() {
       _loading = false;
       _hasPlaybackError = true;
-      _playbackMessage = message;
+      _playbackMessage =
+          message != null ? message(lang) : lang.playerVideoUnavailable;
     });
   }
 
@@ -691,7 +694,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           'PLAYER',
           'YouTube player reported a sanitized playback error.',
         );
-        _showPlaybackError('Failed to load video');
+        _showPlaybackError((lang) => lang.playerFailedToLoadVideo);
       }
 
       if (value.playerState == youtube.PlayerState.ended) {
@@ -837,7 +840,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           );
           return;
         }
-        _showPlaybackError('Failed to load video');
+        _showPlaybackError((lang) => lang.playerFailedToLoadVideo);
       }
       return;
     }
@@ -940,7 +943,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         if (isForbidden && _securePlaybackController != null) {
           unawaited(_securePlaybackController!.handlePlayerHttp403());
         } else {
-          _showPlaybackError('Failed to load video');
+          _showPlaybackError((lang) => lang.playerFailedToLoadVideo);
         }
       }
 
@@ -1183,7 +1186,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           return;
         }
         if (mounted) {
-          _showPlaybackError('Failed to load video');
+          _showPlaybackError((lang) => lang.playerFailedToLoadVideo);
         }
       }));
   }
@@ -1422,7 +1425,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     _handlingEnd = false;
     final nextUrl = next.videoUrl?.trim() ?? "";
     if (nextUrl.isEmpty) {
-      _showPlaybackError('Video unavailable');
+      _showPlaybackError();
       return;
     }
 
@@ -1635,13 +1638,13 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(20, 18, 20, 8),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Playback speed',
-                      style: TextStyle(
+                      AppLocalizations.of(context)!.playerPlaybackSpeed,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -1872,20 +1875,15 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     return _player?.state.playing ?? false;
   }
 
+  /// Progress-bar time label, always HH:MM:SS (e.g. 00:30:00, 01:30:00).
   String _formatPlaybackTime(Duration value) {
     final safeValue = value.isNegative ? Duration.zero : value;
     final totalSeconds = safeValue.inSeconds;
     final hours = totalSeconds ~/ 3600;
     final minutes = (totalSeconds % 3600) ~/ 60;
     final seconds = totalSeconds % 60;
-    final twoDigitMinutes = minutes.toString().padLeft(2, '0');
-    final twoDigitSeconds = seconds.toString().padLeft(2, '0');
-
-    if (hours > 0) {
-      final twoDigitHours = hours.toString().padLeft(2, '0');
-      return '$twoDigitHours:$twoDigitMinutes:$twoDigitSeconds';
-    }
-    return '$twoDigitMinutes:$twoDigitSeconds';
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(hours)}:${two(minutes)}:${two(seconds)}';
   }
 
   @override
@@ -1982,7 +1980,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             const Icon(Icons.lock_outline, color: Colors.white70, size: 42),
             const SizedBox(height: 12),
             Text(
-              _playbackMessage ?? 'Video unavailable',
+              _playbackMessage ??
+                  AppLocalizations.of(context)!.playerVideoUnavailable,
               style: const TextStyle(color: Colors.white),
               textAlign: TextAlign.center,
             ),
@@ -1990,7 +1989,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => unawaited(_securePlaybackController!.start()),
-                child: const Text('Retry'),
+                child: Text(AppLocalizations.of(context)!.retry),
               ),
             ],
           ],
@@ -2023,7 +2022,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           final result = offlineProvider.isDownloaded(contentId)
               ? <String, Object>{
                   'success': true,
-                  'message': 'Movie is already downloaded.',
+                  'message': AppLocalizations.of(context)!
+                      .playerMovieAlreadyDownloaded,
                 }
               : await offlineProvider.downloadContent(
                   content,
@@ -2034,7 +2034,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                result['message']?.toString() ?? 'Download updated',
+                result['message']?.toString() ??
+                    AppLocalizations.of(context)!.detailsDownloadUpdated,
               ),
               backgroundColor: result['success'] == true
                   ? Colors.green.shade700
@@ -2179,7 +2180,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           icon: Icons.replay_10_rounded,
           size: skipSize,
           iconSize: compact ? 34 : 38,
-          tooltip: 'Rewind 10 seconds',
+          tooltip: AppLocalizations.of(context)!.playerRewind10Seconds,
           onTap: () => _seekBy(const Duration(seconds: -10)),
         ),
         SizedBox(width: gap),
@@ -2189,7 +2190,9 @@ class _PlayMediaPageState extends State<PlayMediaPage>
               : Icons.play_arrow_rounded,
           size: playSize,
           iconSize: compact ? 46 : 52,
-          tooltip: _isPlaybackPlaying ? 'Pause' : 'Play',
+          tooltip: _isPlaybackPlaying
+              ? AppLocalizations.of(context)!.playerPause
+              : AppLocalizations.of(context)!.playerPlay,
           onTap: _togglePlayback,
           opacity: 0.28,
         ),
@@ -2198,7 +2201,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           icon: Icons.forward_10_rounded,
           size: skipSize,
           iconSize: compact ? 34 : 38,
-          tooltip: 'Forward 10 seconds',
+          tooltip: AppLocalizations.of(context)!.playerForward10Seconds,
           onTap: () => _seekBy(const Duration(seconds: 10)),
         ),
       ],
@@ -2245,6 +2248,16 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     final sliderValue = durationMs > 0
         ? position.inMilliseconds.clamp(0, durationMs).toDouble()
         : 0.0;
+    // Left label: watched time. Right label: remaining time (total - watched),
+    // shown with a minus sign while playback is in progress. Unknown/invalid
+    // duration -> no remaining time is shown as negative.
+    final remaining = durationMs > 0
+        ? Duration(
+            milliseconds: durationMs - position.inMilliseconds.clamp(0, durationMs))
+        : Duration.zero;
+    final remainingLabel = remaining.inSeconds > 0
+        ? '-${_formatPlaybackTime(remaining)}'
+        : _formatPlaybackTime(Duration.zero);
 
     return Container(
       height: 40,
@@ -2305,16 +2318,16 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             ),
           ),
           const SizedBox(width: 10),
-          _timeLabel(_formatPlaybackTime(duration)),
+          _timeLabel(remainingLabel),
         ],
       ),
     );
   }
 
   Widget _timeLabel(String value) {
-    final width = value.length > 5 ? 68.0 : 54.0;
+    // Fixed width fits "-00:00:00" so the labels don't shift as time changes.
     return SizedBox(
-      width: width,
+      width: 76,
       child: FittedBox(
         fit: BoxFit.scaleDown,
         alignment: Alignment.center,
@@ -2404,7 +2417,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       if (_hasPlaybackError) {
         return Center(
           child: Text(
-            _playbackMessage ?? 'Video unavailable',
+            _playbackMessage ??
+                AppLocalizations.of(context)!.playerVideoUnavailable,
             style: const TextStyle(color: Colors.white),
             textAlign: TextAlign.center,
           ),

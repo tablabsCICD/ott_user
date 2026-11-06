@@ -8,6 +8,7 @@ import 'package:ott/data/models/response/SeriesDetailsResponse.dart';
 import 'package:ott/data/models/seriesModel.dart';
 import 'package:ott/data/models/user.dart';
 import 'baseProvider.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class SeriesPurchaseResult {
   const SeriesPurchaseResult({
@@ -40,7 +41,8 @@ class SeriesPurchaseResult {
     return SeriesPurchaseResult(
       success: json['success'] == true || json['isSuccess'] == true,
       message:
-          (data['message'] ?? json['message'] ?? 'Purchase failed').toString(),
+          (data['message'] ?? json['message'] ?? appL10n().msgPurchaseFailed)
+              .toString(),
       coinsDeducted: _asInt(data['coinsDeducted']),
       newBalance: _asInt(data['newBalance']),
       seriesId: _asInt(data['seriesId']),
@@ -108,6 +110,7 @@ class SeriesProvider extends BaseProvider {
       _series = data.toEntity();
     } catch (e, st) {
       log('SeriesProvider.fetchSeriesDetails error: $e', stackTrace: st);
+      // iOS branch: consistent "unavailable" state and clear stale data.
       _error = 'Content currently unavailable';
       _series = null;
     } finally {
@@ -123,7 +126,7 @@ class SeriesProvider extends BaseProvider {
     final user = await LocalSharePreferences.localSharePreferences.getUser();
 
     if (_isPurchasing) {
-      _error = 'Purchase already in progress. Please wait.';
+      _error = appL10n().msgPurchaseInProgress;
       notifyListeners();
       return SeriesPurchaseResult.failure(_error!);
     }
@@ -141,8 +144,7 @@ class SeriesProvider extends BaseProvider {
       log('Purchase Episode Raw: ${response.body}');
 
       if (response.statusCode != 200) {
-        _error =
-            'Server error (${response.statusCode}). Please try again later.';
+        _error = appL10n().msgServerErrorTryLater(response.statusCode);
         notifyListeners();
         return SeriesPurchaseResult.failure(_error!);
       }
@@ -161,7 +163,7 @@ class SeriesProvider extends BaseProvider {
       return result;
     } catch (e, st) {
       log('purchaseEpisode exception: $e', stackTrace: st);
-      _error = 'Something went wrong. Please try again.';
+      _error = appL10n().msgSomethingWentWrongTryAgain;
       notifyListeners();
       return SeriesPurchaseResult.failure(_error!);
     } finally {
@@ -177,7 +179,7 @@ class SeriesProvider extends BaseProvider {
     final user = await LocalSharePreferences.localSharePreferences.getUser();
 
     if (_isPurchasing) {
-      _error = 'Purchase already in progress. Please wait.';
+      _error = appL10n().msgPurchaseInProgress;
       notifyListeners();
       return SeriesPurchaseResult.failure(_error!);
     }
@@ -195,8 +197,7 @@ class SeriesProvider extends BaseProvider {
       log('Purchase Season Raw: ${response.body}');
 
       if (response.statusCode != 200) {
-        _error =
-            'Server error (${response.statusCode}). Please try again later.';
+        _error = appL10n().msgServerErrorTryLater(response.statusCode);
         notifyListeners();
         return SeriesPurchaseResult.failure(_error!);
       }
@@ -215,7 +216,7 @@ class SeriesProvider extends BaseProvider {
       return result;
     } catch (e, st) {
       log('purchaseSeason exception: $e', stackTrace: st);
-      _error = 'Something went wrong. Please try again.';
+      _error = appL10n().msgSomethingWentWrongTryAgain;
       notifyListeners();
       return SeriesPurchaseResult.failure(_error!);
     } finally {

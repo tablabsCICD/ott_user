@@ -77,7 +77,8 @@ class ContinueWatchMovieCard extends StatefulWidget {
   }
 
   /// Resolves the standardized item extent (card width + margins).
-  static double cardExtentFor(BuildContext context, [double margin = itemMargin]) {
+  static double cardExtentFor(BuildContext context,
+      [double margin = itemMargin]) {
     return cardWidthFor(context) + (margin * 2);
   }
 
@@ -285,7 +286,8 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
           ?.removeListener(_handleActiveIndexChanged);
       widget.activeIndexListenable?.addListener(_handleActiveIndexChanged);
       _handleActiveIndexChanged();
-    } else if (widget.enableTrailerPreview && (oldWidget.index != widget.index || movieChanged)) {
+    } else if (widget.enableTrailerPreview &&
+        (oldWidget.index != widget.index || movieChanged)) {
       _handleActiveIndexChanged();
     }
   }
@@ -598,7 +600,9 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
               bottom: 5,
               child: Semantics(
                 button: true,
-                label: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                label: _isMuted
+                    ? AppLocalizations.of(context)!.cardUnmuteTrailer
+                    : AppLocalizations.of(context)!.cardMuteTrailer,
                 child: Material(
                   color: Colors.black54,
                   shape: const CircleBorder(),
@@ -607,7 +611,9 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                     constraints:
                         const BoxConstraints(minWidth: 20, minHeight: 20),
                     iconSize: 12,
-                    tooltip: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                    tooltip: _isMuted
+                        ? AppLocalizations.of(context)!.cardUnmuteTrailer
+                        : AppLocalizations.of(context)!.cardMuteTrailer,
                     icon: Icon(
                       _isMuted ? Icons.volume_off : Icons.volume_up,
                       color: Colors.white,
@@ -649,7 +655,8 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
 
   Widget _buildContentSection(ThemeData theme, AppLocalizations lang) {
     final movie = widget.movie;
-    final title = movie.displayTitle.isNotEmpty ? movie.displayTitle : 'No Title';
+    final title =
+        movie.displayTitle.isNotEmpty ? movie.displayTitle : lang.noTitle;
     final percentage = movie.watchedPercentage;
     final rating = movie.ratings ?? 0.0;
     final price = movie.price ?? 0;
@@ -681,7 +688,8 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                                 " (${movie.ratingCount ?? 0})",
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: theme.canvasColor.withValues(alpha: 0.7),
+                                  color:
+                                      theme.canvasColor.withValues(alpha: 0.7),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -723,11 +731,14 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                     ),
                     children: [
                       if (percentage != null && percentage > 0) ...[
-                        TextSpan(text: '${percentage.toInt()}% watched'),
-                        if (movie.genreList != null && movie.genreList!.isNotEmpty)
+                        TextSpan(
+                            text: lang.cardPercentWatched(percentage.toInt())),
+                        if (movie.genreList != null &&
+                            movie.genreList!.isNotEmpty)
                           const TextSpan(text: ' | '),
                       ],
-                      if (movie.genreList != null && movie.genreList!.isNotEmpty)
+                      if (movie.genreList != null &&
+                          movie.genreList!.isNotEmpty)
                         TextSpan(text: movie.genreList!.join(', '))
                       else if (movie.releaseDate != null)
                         TextSpan(text: formatReleaseDate(movie.releaseDate)),
@@ -741,15 +752,15 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
             const SizedBox(width: 6),
             movie.isFeatured == true
                 ? Container(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 6, horizontal: 10),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
                       color: theme.primaryColor.withValues(alpha: 0.9),
                     ),
-                    child: const Text(
-                      "Watch Trailer",
-                      style: TextStyle(
+                    child: Text(
+                      lang.watchTrailer,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -785,14 +796,14 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
         child: Text(
           movie.type!.toLowerCase() == 'series'
               ? isRental
-                  ? (isShortFilm ? 'Watch Now' : 'Watch Series')
-                  : 'Rent Series'
+                  ? (isShortFilm ? lang.watchNow : lang.watchSeries)
+                  : lang.cardRentSeries
               : isRental
                   ? isShortFilm
-                  ? 'Watch Now'
-                  : movie.type?.toLowerCase() == "movie"
-                  ? lang.watchMovie
-                  : lang.watchSeries
+                      ? lang.watchNow
+                      : movie.type?.toLowerCase() == "movie"
+                          ? lang.watchMovie
+                          : lang.watchSeries
                   : "₹ $price",
           style: const TextStyle(
             fontSize: 12,
@@ -921,7 +932,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
       if (videoUrl == null || videoUrl.isEmpty) {
         CustomToast.show(
           context,
-          "Episode video is not available at the moment.",
+          AppLocalizations.of(context)!.cardEpisodeVideoNotAvailable,
           isSuccess: false,
         );
         return;
@@ -955,9 +966,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
         ),
       ).then((_) {
         if (!mounted) return;
-        context
-            .read<DashboardProvider>()
-            .getContinueWatchedMovieList("SERIES");
+        context.read<DashboardProvider>().getContinueWatchedMovieList("SERIES");
       });
       return;
     }
@@ -985,7 +994,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     if (contentUrl == null || contentUrl.trim().isEmpty) {
       CustomToast.show(
         context,
-        "Video is not available",
+        AppLocalizations.of(context)!.cardVideoNotAvailable,
         isSuccess: false,
       );
       return;
@@ -1031,7 +1040,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
           children: [
             const SizedBox(height: 10),
             Text(
-              '${lang.rentDuration}: ${movie.rentlDuration ?? 'NA'}',
+              '${lang.rentDuration}: ${movie.rentlDuration ?? lang.cardNotApplicable}',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -1040,7 +1049,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
             ),
             const SizedBox(height: 10),
             Text(
-              'Do you want to rent ${movie.title ?? ''}?',
+              lang.cardRentConfirm(movie.title ?? ''),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -1052,12 +1061,12 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
         actions: [
           CupertinoDialogAction(
             textStyle: TextStyle(color: theme.canvasColor),
-            child: const Text('Cancel'),
+            child: Text(lang.cancel),
             onPressed: () => Navigator.pop(context),
           ),
           CupertinoDialogAction(
             textStyle: TextStyle(color: theme.primaryColor),
-            child: const Text("Continue"),
+            child: Text(lang.homeContinue),
             onPressed: () {
               Navigator.pop(context);
               Navigator.push(
@@ -1093,6 +1102,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
 
   Widget _optionButton(BuildContext context, Content movie) {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
     final bool isSeries = movie.type?.toLowerCase() == "series";
 
     final bookmarkProvider = context.watch<BookmarkProvider>();
@@ -1123,7 +1133,9 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
           movie.isRental!
               ? SpeedDialChild()
               : SpeedDialChild(
-                  label: isBookmarked ? "Remove Bookmark" : "Bookmark",
+                  label: isBookmarked
+                      ? lang.cardRemoveBookmark
+                      : lang.cardBookmark,
                   labelBackgroundColor: theme.cardColor,
                   labelStyle: TextStyle(
                     color: theme.canvasColor,
@@ -1144,8 +1156,8 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                     CustomToast.show(
                       context,
                       wasBookmarked
-                          ? "${movie.title} removed from bookmarks"
-                          : "${movie.title} added to bookmarks",
+                          ? lang.cardRemovedFromBookmarks('${movie.title}')
+                          : lang.cardAddedToBookmarks('${movie.title}'),
                       isSuccess: true,
                     );
 
@@ -1155,7 +1167,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
 
           /// 🔗 Share
           SpeedDialChild(
-            label: "Share",
+            label: lang.cardShare,
             labelBackgroundColor: theme.cardColor,
             labelStyle: TextStyle(
               color: theme.canvasColor,
@@ -1172,7 +1184,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
           /// 🎁 Gift (movies only; temporarily hidden on iOS)
           if (!isSeries && !WalletPlatform.isGiftingHidden)
             SpeedDialChild(
-              label: "Gift",
+              label: lang.cardGift,
               labelBackgroundColor: theme.cardColor,
               labelStyle: TextStyle(
                 color: theme.canvasColor,
@@ -1195,7 +1207,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     if (movie.id == null || movie.id! <= 0) {
       CustomToast.show(
         context,
-        "Content details are not available yet",
+        AppLocalizations.of(context)!.cardContentDetailsNotAvailable,
         isSuccess: false,
       );
       return;
@@ -1223,6 +1235,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     TextEditingController countController,
   ) {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
@@ -1247,16 +1260,16 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                       Icon(LucideIcons.gift,
                           color: theme.primaryColor, size: 20),
                       const SizedBox(width: 8),
-                      const Text(
-                        "Gift Movie",
-                        style: TextStyle(
+                      Text(
+                        lang.cardGiftMovie,
+                        style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    "How many people do you want to gift this movie to?",
+                    lang.cardGiftHowMany,
                     style: TextStyle(
                       fontSize: 13,
                       color: theme.canvasColor.withValues(alpha: 0.7),
@@ -1265,7 +1278,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                   const SizedBox(height: 10),
                   CustomTextField(
                     controller: countController,
-                    hintText: "Recipients",
+                    hintText: lang.cardRecipients,
                     isDigits: true,
                     textInputType: TextInputType.number,
                     backgroundColor: theme.scaffoldBackgroundColor,
@@ -1276,7 +1289,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                     children: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text("Cancel"),
+                        child: Text(lang.cancel),
                       ),
                       const SizedBox(width: 10),
                       ElevatedButton(
@@ -1294,7 +1307,7 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                           if (count == null || count <= 0) {
                             CustomToast.show(
                               context,
-                              'Enter a valid number',
+                              lang.cardEnterValidNumber,
                               isSuccess: false,
                             );
                             return;
@@ -1311,9 +1324,10 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                             ),
                           );
                         },
-                        child: const Text(
-                          "Continue",
-                          style: TextStyle(color: Colors.white, fontSize: 13),
+                        child: Text(
+                          lang.homeContinue,
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 13),
                         ),
                       ),
                     ],

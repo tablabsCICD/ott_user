@@ -1,8 +1,9 @@
 // ignore: file_names
+import 'package:ott/app/core/payment/payment_result_message.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:ott/app/core/services/invoice_service.dart';
 import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
@@ -12,7 +13,7 @@ import 'package:ott/app/pages/wallet%20page/PaymentPage.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
-import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/gift_claim_dialog.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
@@ -62,6 +63,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context).getTheme;
+    final lang = AppLocalizations.of(context)!;
     final horizontal = ResponsiveWidget.isDesktop(context)
         ? 200.0
         : ResponsiveWidget.isTablet(context)
@@ -71,6 +73,10 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
     moviePrice = double.tryParse(widget.movie.price.toString()) ?? 0.0;
     final totalCoins =
         moviePrice * (widget.giftCount == 0 ? 1 : widget.giftCount);
+    // Split the localized sentence around the title so it can be highlighted.
+    const titleMarker = '\u0001';
+    final giftCardPromptParts =
+        lang.billingHaveTitleGiftCard(titleMarker).split(titleMarker);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -123,9 +129,9 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const Text(
-                            "Available Balance",
-                            style: TextStyle(color: Colors.white70),
+                          Text(
+                            lang.availableBalance,
+                            style: const TextStyle(color: Colors.white70),
                           ),
                           const SizedBox(height: 10),
                         ],
@@ -158,17 +164,21 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                           const SizedBox(height: 12),
                           widget.giftCount == 0
                               ? Text(
-                                  "Price: ₹ ${moviePrice.toStringAsFixed(0)}",
+                                  lang.billingPriceAmount(
+                                      moviePrice.toStringAsFixed(0)),
                                   style: const TextStyle(fontSize: 16),
                                 )
                               : Text(
-                                  "₹ ${moviePrice.toStringAsFixed(0)} × ${widget.giftCount} Gifts",
+                                  lang.billingPriceTimesGifts(
+                                      moviePrice.toStringAsFixed(0),
+                                      widget.giftCount),
                                   style: const TextStyle(
                                       fontSize: 14, color: Colors.grey),
                                 ),
                           const SizedBox(height: 6),
                           Text(
-                            "Total: ₹ ${totalCoins.toStringAsFixed(0)}",
+                            lang.billingTotalAmount(
+                                totalCoins.toStringAsFixed(0)),
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -192,7 +202,9 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   //const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
-                                      "Wallet: ₹ ${provider.walletBalance.toStringAsFixed(2)}",
+                                      lang.billingWalletAmount(provider
+                                          .walletBalance
+                                          .toStringAsFixed(2)),
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
@@ -221,9 +233,9 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   ),
                                   icon: const Icon(Icons.check,
                                       color: Colors.white),
-                                  label: const Text(
-                                    "Proceed to Pay",
-                                    style: TextStyle(
+                                  label: Text(
+                                    lang.billingProceedToPay,
+                                    style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -248,9 +260,9 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   ),
                                   icon: const Icon(Icons.add_circle,
                                       color: Colors.white),
-                                  label: const Text(
-                                    "Recharge Wallet",
-                                    style: TextStyle(
+                                  label: Text(
+                                    lang.rechargeWallet,
+                                    style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -269,13 +281,16 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   TextSpan(
                                     style: TextStyle(color: theme.canvasColor),
                                     children: [
-                                      const TextSpan(text: 'Have a '),
+                                      TextSpan(text: giftCardPromptParts.first),
                                       TextSpan(
                                         text: widget.movie.title ?? "",
                                         style: TextStyle(
                                             color: theme.primaryColor),
                                       ),
-                                      const TextSpan(text: ' Gift Card?')
+                                      TextSpan(
+                                          text: giftCardPromptParts.length > 1
+                                              ? giftCardPromptParts.last
+                                              : '')
                                     ],
                                   ),
                                 ),
@@ -306,6 +321,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
       builder: (context, walletProvider, themeProvider, _) {
         final transactions = walletProvider.filteredTransactionHistory;
         final theme = themeProvider.getTheme;
+        final lang = AppLocalizations.of(context)!;
 
         return Card(
           color: theme.cardColor,
@@ -319,15 +335,15 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Transaction History",
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  Text(lang.transactionHistory,
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold)),
                   const Divider(),
                   Expanded(
                     child: transactions.isEmpty
-                        ? const Center(
-                            child: Text("No transactions yet",
-                                style: TextStyle(color: Colors.grey)),
+                        ? Center(
+                            child: Text(lang.walletNoTransactionsYet,
+                                style: const TextStyle(color: Colors.grey)),
                           )
                         : ListView.separated(
                             itemCount: transactions.length,
@@ -343,7 +359,8 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                               return ListTile(
                                 // leading:
                                 //     Image.asset(ImageConstant.coin, width: 22),
-                                title: Text(tx.status ?? "NA",
+                                title: Text(
+                                    tx.status ?? lang.cardNotApplicable,
                                     style: const TextStyle(
                                         fontWeight: FontWeight.w600)),
                                 subtitle: Text(
@@ -371,109 +388,15 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
   }
 
   // ---------------- Gift Dialog ----------------
-  void _showGiftDialog() {
+  Future<void> _showGiftDialog() async {
     if (WalletPlatform.isIOS) return;
-    final theme = Theme.of(context);
-    final couponCodeController = TextEditingController();
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return Dialog(
-          backgroundColor: theme.cardColor,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          insetPadding:
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: SizedBox(
-              width: ResponsiveWidget.isMobile(context) ? double.infinity : 400,
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: 1,
-                    left: 1,
-                    right: 1,
-                    bottom: 1,
-                    child: Icon(
-                      LucideIcons.gift,
-                      size: 200,
-                      color: theme.canvasColor.withValues(alpha: 0.1),
-                    ),
-                  ),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text("Enter Gift Card Number"),
-                      const SizedBox(height: 6),
-                      CustomTextField(
-                        backgroundColor: theme.scaffoldBackgroundColor,
-                        isDigits: true,
-                        controller: couponCodeController,
-                        autofocus: ResponsiveWidget.isTabletOrTv(context),
-                        textInputAction: TextInputAction.done,
-                        hintText: "Enter 16 Digit Number",
-                        textInputType: TextInputType.text,
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text("Cancel"),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton(
-                            onPressed: () async {
-                              final provider = Provider.of<GiftProvider>(
-                                  context,
-                                  listen: false);
-
-                              if (couponCodeController.text.trim().length !=
-                                  16) {
-                                CustomToast.show(
-                                  context,
-                                  "Coupon code is invalid",
-                                  isSuccess: false,
-                                );
-                                return;
-                              }
-
-                              final result = await provider.useGiftByCoupon(
-                                  couponCodeController.text.trim());
-
-                              if (result["success"] == true) {
-                                CustomToast.show(
-                                  context,
-                                  "Coupon applied successfully",
-                                  isSuccess: true,
-                                );
-                                Navigator.pop(context, true);
-                              } else {
-                                CustomToast.show(
-                                  context,
-                                  "Failed to apply coupon",
-                                  isSuccess: false,
-                                );
-                              }
-                            },
-                            child: const Text("Redeem"),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
+    // Reuse the shared gift claim dialog: it disables the button and shows a
+    // loader while the request runs, sends only one request, shows the
+    // backend error, and closes only after a confirmed success.
+    final claimed = await showGiftClaimDialog(context);
+    if (claimed != true || !mounted) return;
+    await Provider.of<WalletProvider>(context, listen: false)
+        .refreshWalletData();
   }
 
   // ---------------- Confirmation ----------------
@@ -507,22 +430,23 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                     walletProvider.isDeductingBalance ||
                     giftProvider.isSavingGift ||
                     purchaseProvider.isSavingContent;
+                final lang = AppLocalizations.of(context)!;
                 return AlertDialog(
                   backgroundColor: theme.cardColor,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
-                  title: const Text("Confirm Purchase"),
+                  title: Text(lang.billingConfirmPurchase),
                   content: SizedBox(
                     width: ResponsiveWidget.isTabletOrTv(dialogContext)
                         ? 460
                         : null,
-                    child: const Text("Do you want to confirm the purchase?"),
+                    child: Text(lang.billingConfirmPurchaseQuestion),
                   ),
                   actions: [
                     TextButton(
                       onPressed:
                           isBusy ? null : () => Navigator.pop(dialogContext),
-                      child: const Text("Cancel"),
+                      child: Text(lang.cancel),
                     ),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -538,7 +462,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                 await provider.getBalance();
                                 if (provider.walletBalance < coins) {
                                   throw Exception(
-                                    'Insufficient wallet balance. Please recharge your wallet.',
+                                    lang.walletInsufficientBalanceRecharge,
                                   );
                                 }
 
@@ -551,7 +475,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   if (giftResult['success'] != true) {
                                     throw Exception(
                                       giftResult['message']?.toString() ??
-                                          'Gift purchase failed.',
+                                          lang.giftPurchaseFailed,
                                     );
                                   }
                                 } else {
@@ -563,7 +487,8 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   if (purchaseResult['success'] != true) {
                                     throw Exception(
                                       purchaseResult['message']?.toString() ??
-                                          'Unable to grant $_contentLabel access.',
+                                          lang.billingUnableToGrantAccess(
+                                              _contentLabel),
                                     );
                                   }
                                 }
@@ -576,7 +501,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                 if (walletResult['success'] != true) {
                                   throw Exception(
                                     walletResult['message']?.toString() ??
-                                        'Wallet deduction failed.',
+                                        lang.walletDeductionFailed,
                                   );
                                 }
 
@@ -595,7 +520,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                 _hidePurchaseLoader(pageContext);
                                 CustomToast.show(
                                   pageContext,
-                                  "Payment successful! Enjoy your content 🎬",
+                                  lang.paySuccessfulEnjoyContent,
                                   isSuccess: true,
                                 );
 
@@ -619,13 +544,13 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                 _hidePurchaseLoader(pageContext);
                                 CustomToast.show(
                                   pageContext,
-                                  _cleanPurchaseScreenError(error),
+                                  _cleanPurchaseScreenError(error, lang),
                                   isSuccess: false,
                                 );
                               }
                             },
                       child: Text(
-                        isBusy ? "Processing..." : "Confirm & Pay",
+                        isBusy ? lang.payProcessing : lang.billingConfirmAndPay,
                         style: const TextStyle(color: Colors.white),
                       ),
                     ),
@@ -670,10 +595,10 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                 children: [
                   CircularProgressIndicator(color: theme.primaryColor),
                   const SizedBox(height: 14),
-                  const Text(
-                    'Processing purchase...',
+                  Text(
+                    AppLocalizations.of(context)!.billingProcessingPurchase,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       decoration: TextDecoration.none,
@@ -694,16 +619,16 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
     _purchaseLoaderVisible = false;
   }
 
-  String _cleanPurchaseScreenError(Object error) {
+  String _cleanPurchaseScreenError(Object error, AppLocalizations lang) {
     final message = error.toString().replaceFirst('Exception: ', '').trim();
     final normalized = message.toLowerCase();
     if (normalized.contains('transactionrequiredexception') ||
         normalized.contains('no entitymanager with actual transaction') ||
         normalized.contains("cannot reliably process 'remove' call") ||
         normalized.contains('nested exception is javax.persistence')) {
-      return 'Purchase could not be completed. Please try again in a moment.';
+      return lang.billingPurchaseNotCompletedTryLater;
     }
-    return message.isEmpty ? 'Purchase failed. Please try again.' : message;
+    return message.isEmpty ? lang.billingPurchaseFailedTryAgain : message;
   }
 
   // ---------------- Recharge ----------------
@@ -730,12 +655,13 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
             return Consumer<WalletProvider>(
               builder: (_, provider, __) {
                 final isBusy = isProcessing || provider.isAddingBalance;
+                final lang = AppLocalizations.of(context)!;
 
                 return AlertDialog(
                   backgroundColor: theme.cardColor,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
-                  title: const Text("Recharge Wallet"),
+                  title: Text(lang.rechargeWallet),
                   content: SizedBox(
                     width: ResponsiveWidget.isTabletOrTv(dialogContext)
                         ? 460
@@ -747,9 +673,9 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                       textInputAction: TextInputAction.done,
                       onSubmitted: (_) =>
                           FocusScope.of(dialogContext).nextFocus(),
-                      decoration: const InputDecoration(
-                        labelText: "Enter amount",
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: lang.walletEnterAmount,
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                   ),
@@ -757,7 +683,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                     TextButton(
                       onPressed:
                           isBusy ? null : () => Navigator.pop(dialogContext),
-                      child: const Text("Cancel"),
+                      child: Text(lang.cancel),
                     ),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -772,7 +698,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                               if (amount <= 0) {
                                 CustomToast.show(
                                   pageContext,
-                                  "Enter a valid amount",
+                                  lang.walletEnterValidAmount,
                                   isSuccess: false,
                                 );
                                 return;
@@ -780,7 +706,9 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                               if (amount < _minimumRechargeAmount) {
                                 CustomToast.show(
                                   pageContext,
-                                  "Minimum recharge amount is Rs ${_minimumRechargeAmount.toStringAsFixed(0)}",
+                                  lang.walletMinimumRechargeAmountRs(
+                                      _minimumRechargeAmount
+                                          .toStringAsFixed(0)),
                                   isSuccess: false,
                                 );
                                 return;
@@ -788,7 +716,9 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                               if (amount > _maximumRechargeAmount) {
                                 CustomToast.show(
                                   pageContext,
-                                  "Maximum recharge amount is Rs ${_maximumRechargeAmount.toStringAsFixed(0)}",
+                                  lang.walletMaximumRechargeAmountRs(
+                                      _maximumRechargeAmount
+                                          .toStringAsFixed(0)),
                                   isSuccess: false,
                                 );
                                 return;
@@ -821,7 +751,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
 
                                 if (!mounted) return;
                                 final msg = addResult['message']?.toString() ??
-                                    "Recharge failed. Please try again.";
+                                    lang.rechargeFailedTryAgain;
                                 CustomToast.show(
                                   pageContext,
                                   msg,
@@ -830,16 +760,17 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                               } else {
                                 CustomToast.show(
                                   pageContext,
-                                  result is Map
-                                      ? result['message']?.toString() ??
-                                          "Payment failed. Please try again."
-                                      : "Payment failed. Please try again.",
+                                  paymentFailureMessage(
+                                    pageContext,
+                                    result,
+                                    fallback: lang.paymentFailedTryAgain,
+                                  ),
                                   isSuccess: false,
                                 );
                               }
                             },
                       child: Text(
-                        isBusy ? "Processing..." : "Proceed to Pay",
+                        isBusy ? lang.payProcessing : lang.billingProceedToPay,
                         style: const TextStyle(color: Colors.white),
                       ),
                     ),
@@ -857,16 +788,18 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         content: Row(
           children: [
-            SizedBox(
+            const SizedBox(
               width: 24,
               height: 24,
               child: CircularProgressIndicator(strokeWidth: 2.5),
             ),
-            SizedBox(width: 16),
-            Expanded(child: Text("Updating wallet balance...")),
+            const SizedBox(width: 16),
+            Expanded(
+                child: Text(
+                    AppLocalizations.of(dialogContext)!.walletUpdatingBalance)),
           ],
         ),
       ),
@@ -903,7 +836,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
       if (!mounted) return;
       CustomToast.show(
         pageContext,
-        'Purchase completed, but invoice generation failed.',
+        AppLocalizations.of(pageContext)!.billingInvoiceGenerationFailed,
         isSuccess: false,
       );
       debugPrint('Invoice generation error: $error');

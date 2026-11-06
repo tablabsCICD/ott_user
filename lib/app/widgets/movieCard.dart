@@ -515,7 +515,6 @@ class _MovieCardState extends State<MovieCard> {
     }
   }
 
-
   void _activatePreview() {
     if (_activePreviewState == this) return;
     final previous = _activePreviewState;
@@ -708,7 +707,9 @@ class _MovieCardState extends State<MovieCard> {
               bottom: 5,
               child: Semantics(
                 button: true,
-                label: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                label: _isMuted
+                    ? AppLocalizations.of(context)!.cardUnmuteTrailer
+                    : AppLocalizations.of(context)!.cardMuteTrailer,
                 child: Material(
                   color: Colors.black54,
                   shape: const CircleBorder(),
@@ -717,7 +718,9 @@ class _MovieCardState extends State<MovieCard> {
                     constraints:
                         const BoxConstraints(minWidth: 20, minHeight: 20),
                     iconSize: 12,
-                    tooltip: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                    tooltip: _isMuted
+                        ? AppLocalizations.of(context)!.cardUnmuteTrailer
+                        : AppLocalizations.of(context)!.cardMuteTrailer,
                     icon: Icon(
                       _isMuted ? Icons.volume_off : Icons.volume_up,
                       color: Colors.white,
@@ -759,7 +762,9 @@ class _MovieCardState extends State<MovieCard> {
               bottom: 5,
               child: Semantics(
                 button: true,
-                label: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                label: _isMuted
+                    ? AppLocalizations.of(context)!.cardUnmuteTrailer
+                    : AppLocalizations.of(context)!.cardMuteTrailer,
                 child: Material(
                   color: Colors.black54,
                   shape: const CircleBorder(),
@@ -768,7 +773,9 @@ class _MovieCardState extends State<MovieCard> {
                     constraints:
                         const BoxConstraints(minWidth: 25, minHeight: 25),
                     iconSize: 20,
-                    tooltip: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                    tooltip: _isMuted
+                        ? AppLocalizations.of(context)!.cardUnmuteTrailer
+                        : AppLocalizations.of(context)!.cardMuteTrailer,
                     icon: Icon(
                       _isMuted ? Icons.volume_off : Icons.volume_up,
                       color: Colors.white,
@@ -814,7 +821,7 @@ class _MovieCardState extends State<MovieCard> {
     final price = movie.price ?? 0;
     final genreStr = (movie.genreList != null && movie.genreList!.isNotEmpty)
         ? movie.genreList!.join(', ')
-        : 'Drama';
+        : lang.cardDefaultGenre;
     final metadataText = genreStr;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
@@ -831,7 +838,7 @@ class _MovieCardState extends State<MovieCard> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    movie.title ?? 'No Title',
+                    movie.title ?? lang.noTitle,
                     style: GoogleFonts.inter(
                       fontSize: 12.5,
                       fontWeight: FontWeight.bold,
@@ -865,9 +872,9 @@ class _MovieCardState extends State<MovieCard> {
                     borderRadius: BorderRadius.circular(6),
                     color: const Color(0xFFE50914),
                   ),
-                  child: const Text(
-                    "Watch Now",
-                    style: TextStyle(
+                  child: Text(
+                    lang.watchNow,
+                    style: const TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
@@ -905,7 +912,7 @@ class _MovieCardState extends State<MovieCard> {
           color: const Color(0xFFE50914),
         ),
         child: Text(
-          shouldShowWatchNow ? 'Watch Now' : '₹ $price',
+          shouldShowWatchNow ? lang.watchNow : '₹ $price',
           style: const TextStyle(
             fontSize: 11.5,
             fontWeight: FontWeight.bold,
@@ -994,7 +1001,7 @@ class _MovieCardState extends State<MovieCard> {
       );
       CustomToast.show(
         context,
-        "Video is not available",
+        AppLocalizations.of(context)!.cardVideoNotAvailable,
         isSuccess: false,
       );
       return;
@@ -1014,9 +1021,7 @@ class _MovieCardState extends State<MovieCard> {
         ),
       ).then((_) {
         if (!mounted) return;
-        context
-            .read<DashboardProvider>()
-            .getContinueWatchedMovieList("SERIES");
+        context.read<DashboardProvider>().getContinueWatchedMovieList("SERIES");
       });
       return;
     }
@@ -1078,7 +1083,7 @@ class _MovieCardState extends State<MovieCard> {
           children: [
             const SizedBox(height: 10),
             Text(
-              '${lang.rentDuration}: ${movie.rentlDuration ?? 'NA'}',
+              '${lang.rentDuration}: ${movie.rentlDuration ?? lang.cardNotApplicable}',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -1087,7 +1092,7 @@ class _MovieCardState extends State<MovieCard> {
             ),
             const SizedBox(height: 10),
             Text(
-              'Do you want to rent ${movie.title ?? ''}?',
+              lang.cardRentConfirm(movie.title ?? ''),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -1099,12 +1104,12 @@ class _MovieCardState extends State<MovieCard> {
         actions: [
           CupertinoDialogAction(
             textStyle: TextStyle(color: theme.canvasColor),
-            child: const Text('Cancel'),
+            child: Text(lang.cancel),
             onPressed: () => Navigator.pop(context),
           ),
           CupertinoDialogAction(
             textStyle: TextStyle(color: theme.primaryColor),
-            child: const Text("Continue"),
+            child: Text(lang.homeContinue),
             onPressed: () {
               Navigator.pop(context);
               Navigator.push(
@@ -1159,6 +1164,7 @@ class _MovieCardState extends State<MovieCard> {
 
   Widget _optionButton(BuildContext context, Content movie) {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
     final bool isSeries = movie.type?.toLowerCase() == "series";
     final double cardWidth = widget.cardWidth ?? MovieCard.itemWidth;
     final bool compactOverlay =
@@ -1196,7 +1202,9 @@ class _MovieCardState extends State<MovieCard> {
             (movie.isRental ?? false)
                 ? SpeedDialChild()
                 : SpeedDialChild(
-                    label: isBookmarked ? "Remove Bookmark" : "Bookmark",
+                    label: isBookmarked
+                        ? lang.cardRemoveBookmark
+                        : lang.cardBookmark,
                     labelBackgroundColor: theme.cardColor,
                     labelStyle: TextStyle(
                       color: theme.canvasColor,
@@ -1217,8 +1225,8 @@ class _MovieCardState extends State<MovieCard> {
                       CustomToast.show(
                         context,
                         wasBookmarked
-                            ? "${movie.title} removed from bookmarks"
-                            : "${movie.title} added to bookmarks",
+                            ? lang.cardRemovedFromBookmarks('${movie.title}')
+                            : lang.cardAddedToBookmarks('${movie.title}'),
                         isSuccess: true,
                       );
 
@@ -1228,7 +1236,7 @@ class _MovieCardState extends State<MovieCard> {
 
             /// 🔗 Share
             SpeedDialChild(
-              label: "Share",
+              label: lang.cardShare,
               labelBackgroundColor: theme.cardColor,
               labelStyle: TextStyle(
                 color: theme.canvasColor,
@@ -1242,7 +1250,7 @@ class _MovieCardState extends State<MovieCard> {
                   context,
                   movie,
                   contentType: _shareContentTypeFor(movie),
-                  unavailableMessage: "Content details are not available yet",
+                  unavailableMessage: lang.cardContentDetailsNotAvailable,
                 );
               },
             ),
@@ -1250,7 +1258,7 @@ class _MovieCardState extends State<MovieCard> {
             /// 🎁 Gift (movies only; temporarily hidden on iOS)
             if (!isSeries && !WalletPlatform.isGiftingHidden)
               SpeedDialChild(
-                label: "Gift",
+                label: lang.cardGift,
                 labelBackgroundColor: theme.cardColor,
                 labelStyle: TextStyle(
                   color: theme.canvasColor,
@@ -1285,6 +1293,7 @@ class _MovieCardState extends State<MovieCard> {
     TextEditingController countController,
   ) {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
@@ -1309,16 +1318,16 @@ class _MovieCardState extends State<MovieCard> {
                       Icon(LucideIcons.gift,
                           color: theme.primaryColor, size: 20),
                       const SizedBox(width: 8),
-                      const Text(
-                        "Gift Movie",
-                        style: TextStyle(
+                      Text(
+                        lang.cardGiftMovie,
+                        style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    "How many people do you want to gift this movie to?",
+                    lang.cardGiftHowMany,
                     style: TextStyle(
                       fontSize: 13,
                       color: theme.canvasColor.withValues(alpha: 0.7),
@@ -1327,7 +1336,7 @@ class _MovieCardState extends State<MovieCard> {
                   const SizedBox(height: 10),
                   CustomTextField(
                     controller: countController,
-                    hintText: "Recipients",
+                    hintText: lang.cardRecipients,
                     isDigits: true,
                     textInputType: TextInputType.number,
                     backgroundColor: theme.scaffoldBackgroundColor,
@@ -1338,7 +1347,7 @@ class _MovieCardState extends State<MovieCard> {
                     children: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text("Cancel"),
+                        child: Text(lang.cancel),
                       ),
                       const SizedBox(width: 10),
                       ElevatedButton(
@@ -1356,7 +1365,7 @@ class _MovieCardState extends State<MovieCard> {
                           if (count == null || count <= 0) {
                             CustomToast.show(
                               context,
-                              'Enter a valid number',
+                              lang.cardEnterValidNumber,
                               isSuccess: false,
                             );
                             return;
@@ -1373,9 +1382,10 @@ class _MovieCardState extends State<MovieCard> {
                             ),
                           );
                         },
-                        child: const Text(
-                          "Continue",
-                          style: TextStyle(color: Colors.white, fontSize: 13),
+                        child: Text(
+                          lang.homeContinue,
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 13),
                         ),
                       ),
                     ],

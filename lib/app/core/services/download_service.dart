@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class DownloadResult {
   const DownloadResult({
@@ -56,7 +58,7 @@ class DownloadService {
           success: false,
           filePath: destination.path,
           totalBytes: contentLength,
-          message: 'Not enough storage available for this download.',
+          message: appL10n().sysDownloadNotEnoughStorage,
         );
       }
     }
@@ -83,7 +85,8 @@ class DownloadService {
       }
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw HttpException('Download failed with status ${response.statusCode}');
+        throw HttpException(
+            'Download failed with status ${response.statusCode}');
       }
 
       final canResume = existingBytes > 0 && response.statusCode == 206;
@@ -94,7 +97,8 @@ class DownloadService {
         } catch (_) {}
       }
 
-      sink = partial.openWrite(mode: canResume ? FileMode.append : FileMode.write);
+      sink =
+          partial.openWrite(mode: canResume ? FileMode.append : FileMode.write);
       final totalBytes = _resolveTotalBytes(
         response: response,
         alreadyReceived: startBytes,
@@ -134,11 +138,12 @@ class DownloadService {
         await sink?.close();
       } catch (_) {}
 
+      debugPrint('Failed to download movie: $error');
       return DownloadResult(
         success: false,
         filePath: destination.path,
         totalBytes: contentLength ?? 0,
-        message: 'Failed to download movie: $error',
+        message: appL10n().msgFailedToDownloadMovie,
       );
     } finally {
       client.close();
@@ -177,9 +182,8 @@ class DownloadService {
       for (var index = 0; index < resources.length; index++) {
         final resource = resources[index];
         final extension = _resourceExtension(resource.uri, resource.isKey);
-        final fileName = resource.isKey
-            ? 'key_$index$extension'
-            : 'media_$index$extension';
+        final fileName =
+            resource.isKey ? 'key_$index$extension' : 'media_$index$extension';
         final localFile = File(
           '${assetsDirectory.path}${Platform.pathSeparator}$fileName',
         );
@@ -219,11 +223,12 @@ class DownloadService {
           await assetsDirectory.delete(recursive: true);
         }
       } catch (_) {}
+      debugPrint('Failed to download HLS movie: $error');
       return DownloadResult(
         success: false,
         filePath: destination.path,
         totalBytes: 0,
-        message: 'Failed to download HLS movie: $error',
+        message: appL10n().sysDownloadHlsMovieFailed,
       );
     } finally {
       client.close();
@@ -277,8 +282,7 @@ class DownloadService {
         ));
         continue;
       }
-      if (line.startsWith('#EXT-X-KEY:') ||
-          line.startsWith('#EXT-X-MAP:')) {
+      if (line.startsWith('#EXT-X-KEY:') || line.startsWith('#EXT-X-MAP:')) {
         final match = attributePattern.firstMatch(line);
         final reference = match?.group(1);
         if (reference == null || reference.isEmpty) continue;
@@ -333,7 +337,8 @@ class DownloadService {
   Future<int?> _remoteContentLength(Uri uri) async {
     final client = http.Client();
     try {
-      final response = await client.head(uri).timeout(const Duration(seconds: 8));
+      final response =
+          await client.head(uri).timeout(const Duration(seconds: 8));
       if (response.statusCode < 200 || response.statusCode >= 400) return null;
       final value = response.headers['content-length'];
       if (value == null) return null;

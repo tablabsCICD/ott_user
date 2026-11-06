@@ -10,6 +10,7 @@ import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/QRService.dart';
 import 'package:ott/data/models/content.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class PreparedMovieShareData {
   const PreparedMovieShareData({
@@ -156,40 +157,43 @@ class ShareService {
     required Uri deepLink,
   }) {
     final contentLabel = _contentLabel(contentType);
-    final buffer = StringBuffer()
-      ..writeln('🎬 ${movie.title ?? contentLabel}')
-      ..writeln()
-      ..writeln(movie.description?.trim().isNotEmpty == true
-          ? movie.description!.trim()
-          : 'Open this $contentLabel in the Filmytell app.')
-      ..writeln()
-      ..writeln('Watch now 👇')
-      ..writeln(deepLink.toString())
-      ..writeln()
-      ..writeln('📲 Download App:')
-      ..writeln('iOS App Store: ${AppConstant.appStoreLink}')
-      ..writeln('Android Play Store: ${AppConstant.playStoreLink}')
-      ..writeln('Web: ${AppConstant.webAppLink}');
-
-    return buffer.toString().trim();
+    // Stable: localized share template. iOS branch: description paragraph
+    // after the title line.
+    final description = movie.description?.trim().isNotEmpty == true
+        ? movie.description!.trim()
+        : 'Open this $contentLabel in the Filmytell app.';
+    final message = appL10n()
+        .sysContentShareMessage(
+          movie.title ?? contentLabel,
+          deepLink.toString(),
+          AppConstant.appStoreLink,
+          AppConstant.playStoreLink,
+          AppConstant.webAppLink,
+        )
+        .trim();
+    final titleEnd = message.indexOf('\n\n');
+    if (titleEnd < 0) return '$message\n\n$description';
+    return '${message.substring(0, titleEnd)}\n\n$description'
+        '${message.substring(titleEnd)}';
   }
 
   String _contentLabel(DeepLinkContentType contentType) {
+    final l10n = appL10n();
     switch (contentType) {
       case DeepLinkContentType.movie:
-        return 'movie';
+        return l10n.sysShareLabelMovie;
       case DeepLinkContentType.shortFilm:
-        return 'short film';
+        return l10n.sysShareLabelShortFilm;
       case DeepLinkContentType.series:
-        return 'series';
+        return l10n.sysShareLabelSeries;
       case DeepLinkContentType.miniSeries:
-        return 'mini series';
+        return l10n.sysShareLabelMiniSeries;
       case DeepLinkContentType.short:
-        return 'short';
+        return l10n.sysShareLabelShort;
       case DeepLinkContentType.gift:
-        return 'gift';
+        return l10n.sysShareLabelGift;
       case DeepLinkContentType.register:
-        return 'referral';
+        return l10n.sysShareLabelReferral;
     }
   }
 }

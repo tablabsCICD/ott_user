@@ -66,33 +66,39 @@ class _OttTvAppShellState extends State<OttTvAppShell> {
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb || ResponsiveWidget.isMobile(context)) {
+    if (kIsWeb) {
       return widget.child;
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && FocusManager.instance.primaryFocus == null) {
-        _keyboardNode.requestFocus();
-      }
-    });
+    final isTvOrTablet = ResponsiveWidget.isTabletOrTv(context);
+
+    if (isTvOrTablet) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && FocusManager.instance.primaryFocus == null) {
+          _keyboardNode.requestFocus();
+        }
+      });
+    }
 
     final shortcuts = Shortcuts(
-      shortcuts: const <ShortcutActivator, Intent>{
-        SingleActivator(LogicalKeyboardKey.arrowUp):
-            DirectionalFocusIntent(TraversalDirection.up),
-        SingleActivator(LogicalKeyboardKey.arrowDown):
-            DirectionalFocusIntent(TraversalDirection.down),
-        SingleActivator(LogicalKeyboardKey.arrowLeft):
-            DirectionalFocusIntent(TraversalDirection.left),
-        SingleActivator(LogicalKeyboardKey.arrowRight):
-            DirectionalFocusIntent(TraversalDirection.right),
-        SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
-        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
-        SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
-        SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
-        SingleActivator(LogicalKeyboardKey.goBack): DismissIntent(),
-        SingleActivator(LogicalKeyboardKey.browserBack): DismissIntent(),
-      },
+      shortcuts: isTvOrTablet
+          ? const <ShortcutActivator, Intent>{
+              SingleActivator(LogicalKeyboardKey.arrowUp):
+                  DirectionalFocusIntent(TraversalDirection.up),
+              SingleActivator(LogicalKeyboardKey.arrowDown):
+                  DirectionalFocusIntent(TraversalDirection.down),
+              SingleActivator(LogicalKeyboardKey.arrowLeft):
+                  DirectionalFocusIntent(TraversalDirection.left),
+              SingleActivator(LogicalKeyboardKey.arrowRight):
+                  DirectionalFocusIntent(TraversalDirection.right),
+              SingleActivator(LogicalKeyboardKey.select): ActivateIntent(),
+              SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+              SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+              SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
+              SingleActivator(LogicalKeyboardKey.goBack): DismissIntent(),
+              SingleActivator(LogicalKeyboardKey.browserBack): DismissIntent(),
+            }
+          : const <ShortcutActivator, Intent>{},
       child: Actions(
         actions: <Type, Action<Intent>>{
           DismissIntent: CallbackAction<DismissIntent>(
@@ -105,21 +111,18 @@ class _OttTvAppShellState extends State<OttTvAppShell> {
         },
         child: FocusTraversalGroup(
           policy: ReadingOrderTraversalPolicy(),
-          child: FocusScope(
-            autofocus: true,
-            child: widget.child,
-          ),
+          child: widget.child,
         ),
       ),
     );
 
     return RawKeyboardListener(
       focusNode: _keyboardNode,
-      autofocus: true,
-      onKey: _handleRawKey,
+      autofocus: isTvOrTablet,
+      onKey: isTvOrTablet ? _handleRawKey : null,
       child: Focus(
-        autofocus: true,
-        onKeyEvent: _handleFocusKey,
+        autofocus: isTvOrTablet,
+        onKeyEvent: isTvOrTablet ? _handleFocusKey : null,
         child: shortcuts,
       ),
     );
