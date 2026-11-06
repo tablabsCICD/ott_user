@@ -49,6 +49,9 @@ class _MockVideoProvider extends VideoProvider {
 
 final _navigatorKey = GlobalKey<NavigatorState>();
 
+/// Marker for the Series page's mobile (phone) layout.
+const _mobileHero = ValueKey('seriesDetailHero');
+
 SeriesEntity _series() => SeriesEntity(
       id: 301,
       title: 'Route Lifecycle Series',
@@ -184,7 +187,7 @@ void main() {
       await tester.pumpWidget(_app(_series()));
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.byType(SliverAppBar), findsOneWidget);
+      expect(find.byKey(_mobileHero), findsOneWidget);
       final before = _trailerState(tester);
 
       // Open a full-screen route (stands in for the episode player).
@@ -199,7 +202,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.byType(SliverAppBar, skipOffstage: false), findsOneWidget,
+      expect(find.byKey(_mobileHero, skipOffstage: false), findsOneWidget,
           reason: 'covered page must keep its mobile layout');
       expect(identical(_trailerState(tester), before), isTrue,
           reason: 'trailer must not be recreated while covered');
@@ -211,7 +214,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 
-      expect(find.byType(SliverAppBar), findsOneWidget);
+      expect(find.byKey(_mobileHero), findsOneWidget);
       expect(identical(_trailerState(tester), before), isTrue,
           reason: 'returning must reuse the same trailer instance');
 
@@ -242,13 +245,13 @@ void main() {
       _navigatorKey.currentState!.pop();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
-      expect(find.byType(SliverAppBar, skipOffstage: false), findsOneWidget);
+      expect(find.byKey(_mobileHero, skipOffstage: false), findsOneWidget);
 
       _setSize(tester, const Size(400, 800));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 
-      expect(find.byType(SliverAppBar), findsOneWidget);
+      expect(find.byKey(_mobileHero), findsOneWidget);
       expect(identical(_trailerState(tester), before), isTrue);
 
       await tester.pump(const Duration(seconds: 3));
@@ -262,12 +265,12 @@ void main() {
 
       await tester.pumpWidget(_app(_series()));
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.byType(SliverAppBar), findsOneWidget);
+      expect(find.byKey(_mobileHero), findsOneWidget);
 
       _setSize(tester, const Size(1200, 800));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.byType(SliverAppBar), findsNothing,
+      expect(find.byKey(_mobileHero), findsNothing,
           reason: 'visible page switches to the wide layout as before');
 
       await tester.pump(const Duration(seconds: 3));

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:ott/app/core/utils/app_orientation.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -41,6 +42,10 @@ import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // iOS: open in portrait, then allow manual rotation. Also clears a
+  // landscape-only lock that survived a Dart restart (native state), which
+  // left the login screen rendered sideways. No-op on other platforms.
+  unawaited(AppOrientation.applyLaunchDefault());
   MediaKit.ensureInitialized();
   if (!kIsWeb) {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);

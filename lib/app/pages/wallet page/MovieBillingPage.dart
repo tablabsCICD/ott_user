@@ -20,6 +20,7 @@ import 'package:provider/provider.dart';
 import '../../provider/themeProvider.dart';
 import '../../provider/dashboardProvider.dart';
 import '../../widgets/show_toast.dart';
+import 'package:ott/app/widgets/filmytell_app_bar.dart';
 
 class MovieBillingPage extends StatefulWidget {
   final Content movie;
@@ -84,6 +85,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
         slivers: [
           /// -------- Extended Curved Header --------
           SliverAppBar(
+            toolbarHeight: FilmytellAppBarMetrics.compact,
             automaticallyImplyLeading:
                 !(kIsWeb || ResponsiveWidget.isTv(context)),
             pinned: true,

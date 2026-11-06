@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:http/http.dart' as http;
+import 'package:ott/app/core/utils/app_orientation.dart';
 import 'package:ott/app/core/network/anti_piracy_api_client.dart';
 import 'package:ott/app/core/services/anti_piracy_service.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
@@ -318,18 +319,14 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   Future<void> _enterLandscapePlayback() async {
-    await SystemChrome.setPreferredOrientations(const [
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
+    await AppOrientation.lockLandscape();
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   Future<void> _restorePortraitPlayback() async {
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    await SystemChrome.setPreferredOrientations(const [
-      DeviceOrientation.portraitUp,
-    ]);
+    // Portrait on exit; on iOS manual rotation is re-enabled afterwards.
+    await AppOrientation.restoreDefault();
     await AntiPiracyService.instance.disableScreenProtection();
   }
 

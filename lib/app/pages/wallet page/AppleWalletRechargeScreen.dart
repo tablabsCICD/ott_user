@@ -8,6 +8,7 @@ import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
+import 'package:ott/app/widgets/filmytell_app_bar.dart';
 
 class AppleWalletRechargeScreen extends StatefulWidget {
   const AppleWalletRechargeScreen({
@@ -132,11 +133,7 @@ class _AppleWalletRechargeScreenState extends State<AppleWalletRechargeScreen> {
 
         return Scaffold(
           backgroundColor: theme.scaffoldBackgroundColor,
-          appBar: AppBar(
-            title: const Text('Recharge Wallet'),
-            backgroundColor: theme.primaryColor,
-            foregroundColor: Colors.white,
-          ),
+          appBar: FilmytellAppBar(title: 'Recharge Wallet'),
           body: body,
         );
       },

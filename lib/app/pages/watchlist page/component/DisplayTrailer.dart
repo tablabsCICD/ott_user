@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:ott/app/core/utils/app_orientation.dart';
 import 'package:ott/app/core/utils/direct_trailer_source.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/route/route_observer.dart';
@@ -381,7 +382,8 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
     WakelockPlus.disable();
 
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    // Portrait on exit; on iOS manual rotation is re-enabled afterwards.
+    unawaited(AppOrientation.restoreDefault());
 
     super.dispose();
   }

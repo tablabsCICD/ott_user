@@ -38,6 +38,7 @@ import 'package:provider/provider.dart';
 import '../../provider/playMediaProvider.dart';
 import '../movie details page/component/displayStar.dart';
 import '../movie details page/component/starRating.dart';
+import 'package:ott/app/widgets/content_detail_app_bar.dart';
 
 class SeriesDetailsPage extends StatefulWidget {
   final int seriesId;
@@ -394,9 +395,22 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>().getTheme;
+    // Series & Mini Series share this page. Phones / tablets: the shared
+    // compact red detail app bar (same as Movie & Short Film). Large
+    // landscape (TV / desktop) keeps the cinematic hero with its own back
+    // button.
+    final showDetailAppBar = !ResponsiveWidget.isTv(context);
+    final loadedTitle =
+        context.select<SeriesProvider, String?>((p) => p.series?.title);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: showDetailAppBar
+          ? ContentDetailAppBar(
+              title: loadedTitle ?? widget.content.title,
+              rating: widget.content.ratings,
+            )
+          : null,
       body: NotificationListener<ScrollNotification>(
         onNotification: (notification) {
           _handleTrailerScrollNotification(notification);
@@ -413,7 +427,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
           if (provider.error != null || provider.series == null) {
             return Scaffold(
               backgroundColor: theme.scaffoldBackgroundColor,
-              appBar: AppBar(
+              appBar: showDetailAppBar
+                  ? null
+                  : AppBar(
                 leading: IconButton(
                   icon: const Icon(Icons.arrow_back_ios_new_rounded),
                   color: Colors.white,
@@ -759,11 +775,12 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
                 ),
               ),
             ),
-            Positioned(
-              left: ResponsiveWidget.isDesktop(context) ? 64 : 32,
-              top: MediaQuery.of(context).padding.top + 24,
-              child: _buildTvBackButton(theme),
-            ),
+            if (ResponsiveWidget.isTv(context))
+              Positioned(
+                left: ResponsiveWidget.isDesktop(context) ? 64 : 32,
+                top: MediaQuery.of(context).padding.top + 24,
+                child: _buildTvBackButton(theme),
+              ),
             Positioned(
               left: ResponsiveWidget.isDesktop(context) ? 64 : 32,
               right: size.width * 0.42,
@@ -1902,23 +1919,26 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage>
 
   // ---------------- HERO ----------------
 
-  SliverAppBar _buildHero(series, ThemeData theme) {
+  Widget _buildHero(series, ThemeData theme) {
     final bool isMobile = _isMobileLayout(context);
     final bool isTablet = ResponsiveWidget.isTablet(context);
 
-    return SliverAppBar(
-      automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
-      pinned: true,
-      expandedHeight: isMobile
-          ? 250
-          : isTablet
-              ? 420
-              : 560,
-      forceMaterialTransparency: true,
-      backgroundColor: theme.scaffoldBackgroundColor,
-      foregroundColor: theme.canvasColor,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
+    // Poster band with the trailer, laid out below the shared detail app bar
+    // (which stays fixed). Mobile height = 16:9 trailer inset 12pt on each
+    // side + 12pt above and below.
+    final mobileTrailerHeight =
+        (MediaQuery.sizeOf(context).width - 24) * 9 / 16;
+    final heroHeight = isMobile
+        ? mobileTrailerHeight + 24
+        : isTablet
+            ? 420.0
+            : 560.0;
+
+    return SliverToBoxAdapter(
+      key: const ValueKey('seriesDetailHero'),
+      child: SizedBox(
+        height: heroHeight,
+        child: Stack(
           fit: StackFit.expand,
           children: [
             /// 🎬 Background Poster
