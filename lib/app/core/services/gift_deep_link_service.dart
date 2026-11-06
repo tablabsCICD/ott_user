@@ -10,6 +10,7 @@ import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/widgets/gift_claim_dialog.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 /// Centralized service handling gift deep links, deferred installation deep linking,
 /// temporary gift persistence, authentication readiness, and gift claim popup display.
@@ -616,7 +617,7 @@ class GiftDeepLinkService {
       if (context.mounted) {
         CustomToast.show(
           context,
-          'Please sign in to claim your gift ($normalized)',
+          appL10n().sysGiftSignInToClaim(normalized),
           isSuccess: true,
         );
         Navigator.push(

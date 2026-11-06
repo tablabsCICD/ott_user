@@ -22,6 +22,7 @@ import 'package:ott/data/models/shorts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uni_links/uni_links.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class MovieDetailsRouteArgs {
   const MovieDetailsRouteArgs({
@@ -116,7 +117,8 @@ class DeepLinkService {
   static const String httpsHost = 'filmytell.com'; // Canonical host
   static const String httpsWwwHost = 'www.filmytell.com';
   static const String httpsLegacyHost = 'filmytell.in'; // Legacy host
-  static const String httpsInHost = 'filmytell.in'; // Kept for backward compatibility
+  static const String httpsInHost =
+      'filmytell.in'; // Kept for backward compatibility
   static const String httpsWwwInHost = 'www.filmytell.in';
   static const String ottPathPrefix = 'ott';
   static const String androidPackageName = 'com.filmytell.ott';
@@ -696,7 +698,8 @@ class DeepLinkService {
       return;
     }
 
-    final isLoggedIn = await LocalSharePreferences.localSharePreferences.getBool(
+    final isLoggedIn =
+        await LocalSharePreferences.localSharePreferences.getBool(
       SharedPreferencesConstant.isUserLoggedIn,
     );
 
@@ -774,7 +777,8 @@ class DeepLinkService {
       name: 'DeepLinkService',
     );
 
-    if (target?.type == DeepLinkContentType.gift && target?.couponCode != null) {
+    if (target?.type == DeepLinkContentType.gift &&
+        target?.couponCode != null) {
       final coupon = target!.couponCode!;
       if (await GiftDeepLinkService.instance.isGiftCodeClaimed(coupon)) {
         developer.log(
@@ -824,7 +828,8 @@ class DeepLinkService {
       return true;
     }
 
-    final isLoggedIn = await LocalSharePreferences.localSharePreferences.getBool(
+    final isLoggedIn =
+        await LocalSharePreferences.localSharePreferences.getBool(
       SharedPreferencesConstant.isUserLoggedIn,
     );
     if (!isLoggedIn && _isContentTarget(target)) {
@@ -982,7 +987,7 @@ class DeepLinkService {
       if (navigator.mounted) {
         CustomToast.show(
           navigator.context,
-          'Movie details are not available or have been removed',
+          appL10n().sysDeepLinkMovieUnavailable,
           isSuccess: false,
         );
       }
@@ -1025,7 +1030,7 @@ class DeepLinkService {
       if (navigator.mounted) {
         CustomToast.show(
           navigator.context,
-          'Series details are not available or have been removed',
+          appL10n().sysDeepLinkSeriesUnavailable,
           isSuccess: false,
         );
       }
@@ -1064,7 +1069,7 @@ class DeepLinkService {
       if (navigator.mounted) {
         CustomToast.show(
           navigator.context,
-          'Content details are not available or have been removed',
+          appL10n().sysDeepLinkContentUnavailable,
           isSuccess: false,
         );
       }

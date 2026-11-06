@@ -5,6 +5,7 @@ import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 class ShortsPage extends StatefulWidget {
@@ -29,6 +30,9 @@ class _ShortsPageState extends State<ShortsPage> {
         backgroundColor: ResponsiveWidget.isDesktop(context)
             ? theme.scaffoldBackgroundColor
             : theme.primaryColor,
+        foregroundColor: ResponsiveWidget.isDesktop(context)
+            ? theme.canvasColor
+            : Colors.white,
         forceMaterialTransparency:
             ResponsiveWidget.isDesktop(context) ? true : false,
         centerTitle: true,
@@ -40,7 +44,7 @@ class _ShortsPageState extends State<ShortsPage> {
                   : double.infinity,
           child: CustomTextField(
             controller: TextEditingController(),
-            hintText: 'Search',
+            hintText: AppLocalizations.of(context)!.search,
             prefixIcon: const Icon(Icons.search),
             textInputType: TextInputType.text,
           ),

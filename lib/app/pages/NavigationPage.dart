@@ -83,7 +83,7 @@ class _NavigationPageState extends State<NavigationPage> {
         final detail = _profileDetail;
         if (detail != null) {
           return ProfileDetailShell(
-            title: _profileDetailTitle ?? 'Profile',
+            title: _profileDetailTitle ?? AppLocalizations.of(context)!.profile,
             onBack: _closeProfileDetail,
             child: detail,
           );
@@ -215,7 +215,7 @@ class _NavigationPageState extends State<NavigationPage> {
                   ),
                   BottomNavigationBarItem(
                     icon: Icon(Icons.video_library),
-                    label: 'Short Film',
+                    label: lang.shortFilm,
                   ),
                   /*   BottomNavigationBarItem(
                     icon: Icon(Icons.play_circle),
@@ -351,6 +351,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
   Future<bool?> _showExitConfirmationDialog() {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
 
     return showDialog<bool>(
       context: context,
@@ -361,14 +362,14 @@ class _NavigationPageState extends State<NavigationPage> {
             borderRadius: BorderRadius.circular(14),
           ),
           title: Text(
-            'Close app?',
+            lang.navCloseAppTitle,
             style: TextStyle(
               color: theme.canvasColor,
               fontWeight: FontWeight.bold,
             ),
           ),
           content: Text(
-            'Are you sure you want to close the app?',
+            lang.navCloseAppMessage,
             style: TextStyle(
               color: theme.canvasColor.withOpacity(0.75),
             ),
@@ -377,7 +378,7 @@ class _NavigationPageState extends State<NavigationPage> {
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
               child: Text(
-                'Cancel',
+                lang.cancel,
                 style: TextStyle(color: theme.canvasColor),
               ),
             ),
@@ -387,7 +388,7 @@ class _NavigationPageState extends State<NavigationPage> {
                 foregroundColor: Colors.white,
               ),
               onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Close'),
+              child: Text(lang.navClose),
             ),
           ],
         );
@@ -403,8 +404,7 @@ class _NavigationPageState extends State<NavigationPage> {
     String? homeContentType,
     VoidCallback? onTap,
   }) {
-    final selectedThemeData =
-        Provider.of<ThemeProvider>(context).getTheme;
+    final selectedThemeData = Provider.of<ThemeProvider>(context).getTheme;
     final isSelected = index == _currentIndex &&
         (homeContentType == null || homeContentType == _homeContentType);
     void handleTap() {
@@ -412,7 +412,7 @@ class _NavigationPageState extends State<NavigationPage> {
         onTap();
         return;
       }
-      if (title == "Profile") {
+      if (index == 5) {
         Provider.of<UserProvider>(context, listen: false).setValue();
       }
       _navigateTo(index, homeContentType: homeContentType);
@@ -558,7 +558,7 @@ class _NavigationPageState extends State<NavigationPage> {
                 ),
               ),
               IconButton(
-                tooltip: "Toggle Theme",
+                tooltip: lang.navToggleTheme,
                 icon: Icon(
                   isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round,
                   color: selectedThemeData.canvasColor,
@@ -586,11 +586,11 @@ class _NavigationPageState extends State<NavigationPage> {
         _buildDrawerTile(context,
             index: 4, icon: Icons.movie, title: lang.watchlist),
         _buildDrawerTile(context,
-            index: 8, icon: Icons.download_rounded, title: "Downloads"),
+            index: 8, icon: Icons.download_rounded, title: lang.downloads),
         _buildDrawerTile(context,
             index: 5, icon: Icons.person, title: lang.profile),
         _buildDrawerTile(context,
-            index: 9, icon: Icons.settings, title: "Settings"),
+            index: 9, icon: Icons.settings, title: lang.navSettings),
         _buildDrawerTile(context,
             index: 10, icon: Icons.support_agent_sharp, title: lang.help),
         _buildDrawerTile(
@@ -617,7 +617,7 @@ class _NavigationPageState extends State<NavigationPage> {
             borderRadius: BorderRadius.circular(14),
           ),
           title: Text(
-            'Are you sure you want Logout?',
+            lang.navLogoutConfirm,
             style: TextStyle(color: theme.canvasColor),
           ),
           actions: [

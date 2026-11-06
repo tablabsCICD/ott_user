@@ -11,6 +11,7 @@ import 'package:video_player/video_player.dart' as native_video;
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:ott/app/widgets/video_skip_controls.dart';
+import 'package:ott/l10n/app_localizations.dart';
 
 import '../../../../data/models/content.dart';
 import '../../../core/constant/api_constant.dart';
@@ -166,7 +167,6 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
         }
         return;
       } catch (error) {
-
         await controller.dispose();
         if (mounted) setState(() => _hasError = true);
         return;
@@ -195,7 +195,6 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
           if (mounted) setState(() {});
         }))
         ..add(player.stream.error.listen((error) {
-
           if (mounted) setState(() => _hasError = true);
         }));
 
@@ -221,7 +220,6 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
       }
       _scheduleControlsHide();
     } catch (error) {
-
       await player.dispose();
       if (mounted) setState(() => _hasError = true);
     }
@@ -432,8 +430,9 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
             else
               Center(
                 child: _hasError || !_hasUrl
-                    ? const Text('Unable to play this trailer.',
-                        style: TextStyle(color: Colors.white))
+                    ? Text(
+                        AppLocalizations.of(context)!.playerUnableToPlayTrailer,
+                        style: const TextStyle(color: Colors.white))
                     : CircularProgressIndicator(
                         color: Theme.of(context).primaryColor),
               ),
@@ -1183,7 +1182,9 @@ class _TrailerPreviewState extends State<TrailerPreview>
       bottom: bottomOffset,
       child: Semantics(
         button: true,
-        label: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+        label: _isMuted
+            ? AppLocalizations.of(context)!.cardUnmuteTrailer
+            : AppLocalizations.of(context)!.cardMuteTrailer,
         child: Material(
           color: Colors.black54,
           shape: const CircleBorder(),
@@ -1191,7 +1192,9 @@ class _TrailerPreviewState extends State<TrailerPreview>
             padding: const EdgeInsets.all(4),
             constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
             iconSize: 16,
-            tooltip: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+            tooltip: _isMuted
+                ? AppLocalizations.of(context)!.cardUnmuteTrailer
+                : AppLocalizations.of(context)!.cardMuteTrailer,
             onPressed: _toggleMute,
             icon: Icon(
               _isMuted ? Icons.volume_off : Icons.volume_up,
@@ -1209,12 +1212,12 @@ class _TrailerPreviewState extends State<TrailerPreview>
       bottom: 8,
       child: Semantics(
         button: true,
-        label: 'Play trailer fullscreen',
+        label: AppLocalizations.of(context)!.playerPlayTrailerFullscreen,
         child: Material(
           color: Colors.black54,
           shape: const CircleBorder(),
           child: IconButton(
-            tooltip: 'Fullscreen trailer',
+            tooltip: AppLocalizations.of(context)!.playerFullscreenTrailer,
             onPressed: _openFullscreenTrailer,
             icon: const Icon(Icons.fullscreen, color: Colors.white),
           ),
@@ -1228,7 +1231,9 @@ class _TrailerPreviewState extends State<TrailerPreview>
     return Center(
       child: Semantics(
         button: true,
-        label: playing ? 'Pause trailer' : 'Play trailer',
+        label: playing
+            ? AppLocalizations.of(context)!.playerPauseTrailer
+            : AppLocalizations.of(context)!.playerPlayTrailerAction,
         child: Material(
           color: Colors.black.withOpacity(0.45),
           shape: const CircleBorder(),
@@ -1261,7 +1266,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
           children: [
             Center(
               child: Text(
-                "Trailer unavailable",
+                AppLocalizations.of(context)!.playerTrailerUnavailable,
                 style: TextStyle(color: Colors.white.withOpacity(0.7)),
               ),
             ),

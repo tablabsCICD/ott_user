@@ -3,6 +3,7 @@ import 'package:ott/app/core/services/PaymentService.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/l10n/app_localizations.dart';
 
 class PaymentPage extends StatefulWidget {
   const PaymentPage({
@@ -23,7 +24,7 @@ class PaymentPage extends StatefulWidget {
 class _PaymentPageState extends State<PaymentPage> {
   final PaymentService _paymentService = PaymentService();
   bool _isLoading = true;
-  String _status = 'Preparing secure checkout...';
+  String? _status;
   bool _checkoutStarted = false;
 
   @override
@@ -36,7 +37,8 @@ class _PaymentPageState extends State<PaymentPage> {
       } else {
         setState(() {
           _isLoading = false;
-          _status = 'Ready to open secure Razorpay checkout.';
+          _status =
+              AppLocalizations.of(context)!.payReadyToOpenRazorpayCheckout;
         });
       }
     });
@@ -45,12 +47,13 @@ class _PaymentPageState extends State<PaymentPage> {
   Future<void> _startPaymentFlow() async {
     if (_checkoutStarted) return;
     _checkoutStarted = true;
+    final lang = AppLocalizations.of(context)!;
 
     try {
       if (mounted) {
         setState(() {
           _isLoading = true;
-          _status = 'Preparing secure checkout...';
+          _status = lang.payPreparingSecureCheckout;
         });
       }
 
@@ -58,8 +61,7 @@ class _PaymentPageState extends State<PaymentPage> {
         _finish(
           PaymentResult(
             success: false,
-            message:
-                'Razorpay checkout is only available on web, Android, and iOS.',
+            message: lang.payCheckoutUnsupportedPlatform,
           ),
         );
         return;
@@ -68,9 +70,9 @@ class _PaymentPageState extends State<PaymentPage> {
       final user = await LocalSharePreferences.localSharePreferences.getUser();
       if (user?.id == null) {
         _finish(
-          const PaymentResult(
+          PaymentResult(
             success: false,
-            message: 'Please log in again to continue payment.',
+            message: lang.payLoginAgainToContinue,
           ),
         );
         return;
@@ -85,8 +87,8 @@ class _PaymentPageState extends State<PaymentPage> {
 
       setState(() {
         _status = isRazorpay
-            ? 'Creating Razorpay order...'
-            : 'Creating Stripe checkout session...';
+            ? lang.payCreatingRazorpayOrder
+            : lang.payCreatingStripeCheckoutSession;
       });
 
       final order = await _paymentService.createOrder(
@@ -101,8 +103,8 @@ class _PaymentPageState extends State<PaymentPage> {
 
       setState(() {
         _status = isRazorpay
-            ? 'Opening Razorpay checkout...'
-            : 'Opening Stripe checkout...';
+            ? lang.payOpeningRazorpayCheckout
+            : lang.payOpeningStripeCheckout;
       });
 
       final result = await _paymentService.openCheckout(
@@ -149,6 +151,7 @@ class _PaymentPageState extends State<PaymentPage> {
   Widget build(BuildContext context) {
     final isTvLayout = ResponsiveWidget.isTabletOrTv(context);
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: isTvLayout ? theme.scaffoldBackgroundColor : null,
@@ -177,7 +180,7 @@ class _PaymentPageState extends State<PaymentPage> {
                       CircularProgressIndicator(color: theme.primaryColor),
                     if (_isLoading) const SizedBox(height: 16),
                     Text(
-                      _status,
+                      _status ?? lang.payPreparingSecureCheckout,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: theme.canvasColor,
@@ -204,16 +207,17 @@ class _PaymentPageState extends State<PaymentPage> {
                               ),
                               onPressed: _startPaymentFlow,
                               icon: const Icon(Icons.payment_rounded),
-                              label: const Text('Open Checkout'),
+                              label: Text(lang.payOpenCheckout),
                             ),
                           ),
                           const SizedBox(width: 16),
                           OttTvFocus(
                             onTap: () => Navigator.pop(
                               context,
-                              PaymentResult(
+                              const PaymentResult(
                                 success: false,
-                                message: 'Payment cancelled.',
+                                cancelled: true,
+                                message: PaymentResult.defaultCancelledMessage,
                               ).toMap(),
                             ),
                             child: OutlinedButton(
@@ -225,12 +229,14 @@ class _PaymentPageState extends State<PaymentPage> {
                               ),
                               onPressed: () => Navigator.pop(
                                 context,
-                                PaymentResult(
+                                const PaymentResult(
                                   success: false,
-                                  message: 'Payment cancelled.',
+                                  cancelled: true,
+                                  message:
+                                      PaymentResult.defaultCancelledMessage,
                                 ).toMap(),
                               ),
-                              child: const Text('Cancel'),
+                              child: Text(lang.cancel),
                             ),
                           ),
                         ],

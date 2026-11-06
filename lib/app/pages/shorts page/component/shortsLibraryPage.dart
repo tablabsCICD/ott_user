@@ -10,6 +10,7 @@ import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 class ShortsLibraryPage extends StatefulWidget {
@@ -56,6 +57,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
 
     return Consumer<ShortProvider>(
       builder: (context, provider, _) {
@@ -79,7 +81,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                   height: 300,
                 ),
                 Text(
-                  provider.errorMessage ?? "No Mini Series available",
+                  provider.errorMessage ?? lang.shortsNoMiniSeriesAvailable,
                   style: TextStyle(
                     color: theme.canvasColor.withOpacity(0.6),
                   ),
@@ -87,7 +89,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                 if (provider.errorMessage != null)
                   TextButton(
                     onPressed: _loadShortRows,
-                    child: const Text('Retry'),
+                    child: Text(lang.retry),
                   ),
               ],
             ),
@@ -106,7 +108,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                   height: 300,
                 ),
                 Text(
-                  "No Mini Series available",
+                  lang.shortsNoMiniSeriesAvailable,
                   style: TextStyle(
                     color: theme.canvasColor.withOpacity(0.6),
                   ),
@@ -179,6 +181,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
 
   Widget _shortCard(BuildContext context, ShortModel short) {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
 
     return GestureDetector(
       onTap: () async {
@@ -234,9 +237,9 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                     color: theme.primaryColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Text(
-                    "TRENDING",
-                    style: TextStyle(
+                  child: Text(
+                    lang.shortsTrending,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
@@ -273,7 +276,10 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                     ),
                   ),
                   Text(
-                    "₹ ${short.coinsPerPart} /part | ${(short.languageList.map((e) => e.language)).join(', ')}",
+                    lang.shortsPricePerPartWithLanguages(
+                      short.coinsPerPart,
+                      (short.languageList.map((e) => e.language)).join(', '),
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -291,7 +297,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                       ),
                       const SizedBox(width: 2),
                       Text(
-                        "${short.totalParts} Parts",
+                        lang.shortsPartsCount(short.totalParts),
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 11,
@@ -338,6 +344,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
 
   Widget _optionButton(BuildContext context, ShortModel short) {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
 
     final bookmarkProvider = context.watch<BookmarkProvider>();
     final bool isBookmarked =
@@ -364,7 +371,8 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
         spacing: 2,
         children: [
           SpeedDialChild(
-            label: isBookmarked ? "Remove Bookmark" : "Bookmark",
+            label:
+                isBookmarked ? lang.cardRemoveBookmark : lang.cardBookmark,
             labelBackgroundColor: theme.cardColor,
             labelStyle: TextStyle(
               color: theme.canvasColor,
@@ -385,8 +393,8 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
               CustomToast.show(
                 context,
                 wasBookmarked
-                    ? "${short.title} removed from bookmarks"
-                    : "${short.title} added to bookmarks",
+                    ? lang.cardRemovedFromBookmarks(short.title)
+                    : lang.cardAddedToBookmarks(short.title),
                 isSuccess: true,
               );
 
@@ -396,7 +404,7 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
 
           /// 🔗 Share
           SpeedDialChild(
-            label: "Share",
+            label: lang.cardShare,
             labelBackgroundColor: theme.cardColor,
             labelStyle: TextStyle(
               color: theme.canvasColor,
@@ -419,7 +427,8 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
       context,
       short.toShareContent(),
       contentType: DeepLinkContentType.short,
-      unavailableMessage: "Mini series details are not available yet",
+      unavailableMessage:
+          AppLocalizations.of(context)!.shortsMiniSeriesDetailsUnavailable,
     );
   }
 }

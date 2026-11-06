@@ -10,6 +10,7 @@ import 'package:ott/data/models/giftMasterModel.dart' hide User;
 import 'package:ott/data/models/giftRecordModel.dart';
 import 'package:ott/data/models/user.dart';
 import 'baseProvider.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class GiftProvider extends BaseProvider {
   bool _isLoading = false;
@@ -34,10 +35,7 @@ class GiftProvider extends BaseProvider {
   Future<Map<String, dynamic>> saveUserGift(
       Content content, int giftCount) async {
     if (_isSavingGift) {
-      return {
-        "success": false,
-        "message": "Gift purchase already in progress. Please wait."
-      };
+      return {"success": false, "message": appL10n().msgGiftPurchaseInProgress};
     }
 
     _isSavingGift = true;
@@ -49,7 +47,7 @@ class GiftProvider extends BaseProvider {
     try {
       User? user = await LocalSharePreferences.localSharePreferences.getUser();
       if (user == null) {
-        return {"success": false, "message": "User not logged in"};
+        return {"success": false, "message": appL10n().msgUserNotLoggedIn};
       }
 
       double totalPaid = (content.price ?? 0) * giftCount;
@@ -73,23 +71,24 @@ class GiftProvider extends BaseProvider {
         if (responseBody["success"] == true) {
           return {
             "success": true,
-            "message": responseBody["message"] ?? "Gift saved successfully"
+            "message":
+                responseBody["message"] ?? appL10n().msgGiftSavedSuccessfully
           };
         } else {
           return {
             "success": false,
-            "message": responseBody["message"] ?? "Failed to save gift"
+            "message": responseBody["message"] ?? appL10n().msgFailedToSaveGift
           };
         }
       } else {
         return {
           "success": false,
-          "message": "Server error: ${response.statusCode}"
+          "message": appL10n().msgServerErrorCode(response.statusCode)
         };
       }
     } catch (error, stack) {
       log("Error in saveUserGift => $error", stackTrace: stack);
-      return {"success": false, "message": "Something went wrong: $error"};
+      return {"success": false, "message": appL10n().authSomethingWentWrong};
     } finally {
       _isSavingGift = false;
       notifyListeners();
@@ -105,7 +104,7 @@ class GiftProvider extends BaseProvider {
     try {
       User? user = await LocalSharePreferences.localSharePreferences.getUser();
       if (user == null) {
-        _errorMessage = "User not logged in";
+        _errorMessage = appL10n().msgUserNotLoggedIn;
         _isLoading = false;
         notifyListeners();
         return;
@@ -144,14 +143,14 @@ class GiftProvider extends BaseProvider {
               records.map((e) => GiftRecordModel.fromJson(e)).toList();
         } else {
           _errorMessage =
-              responseBody["message"] ?? "Failed to load gift history";
+              responseBody["message"] ?? appL10n().msgFailedToLoadGiftHistory;
         }
       } else {
-        _errorMessage = "Server error: ${response.statusCode}";
+        _errorMessage = appL10n().msgServerErrorCode(response.statusCode);
       }
     } catch (e, stack) {
       log("Error in fetchGiftHistory => $e", stackTrace: stack);
-      _errorMessage = e.toString();
+      _errorMessage = appL10n().msgSomethingWentWrongTryAgain;
     }
 
     _isLoading = false;
@@ -179,14 +178,15 @@ class GiftProvider extends BaseProvider {
           giftMaster =
               GiftMasterModel.fromJson(responseBody["data"]["giftUsage"]);
         } else {
-          _errorMessage = responseBody["message"] ?? "Gift details not found";
+          _errorMessage =
+              responseBody["message"] ?? appL10n().msgGiftDetailsNotFound;
         }
       } else {
-        _errorMessage = "Error: ${response.statusCode}";
+        _errorMessage = appL10n().msgErrorCode(response.statusCode);
       }
     } catch (e, stack) {
       log("Error in getByMasterId => $e", stackTrace: stack);
-      _errorMessage = e.toString();
+      _errorMessage = appL10n().msgSomethingWentWrongTryAgain;
     }
 
     _isLoading = false;
@@ -196,10 +196,7 @@ class GiftProvider extends BaseProvider {
   /// use gift by coupon
   Future<Map<String, dynamic>> useGiftByCoupon(String couponCode) async {
     if (_isClaimingGift) {
-      return {
-        "success": false,
-        "message": "Gift claim already in progress. Please wait."
-      };
+      return {"success": false, "message": appL10n().msgGiftClaimInProgress};
     }
 
     _isClaimingGift = true;
@@ -209,7 +206,7 @@ class GiftProvider extends BaseProvider {
       User? user = await LocalSharePreferences.localSharePreferences.getUser();
 
       if (user == null) {
-        return {"success": false, "message": "User not logged in"};
+        return {"success": false, "message": appL10n().msgUserNotLoggedIn};
       }
       final String apiUrl = ApiConstant.useGiftByCoupon(user.id, couponCode);
       log("API URL => $apiUrl");
@@ -230,7 +227,13 @@ class GiftProvider extends BaseProvider {
         // (null when the backend sent none).
         final backendMessage = _extractMessage(responseBody);
         if (responseBody["success"] == true || responseBody["status"] == true) {
-          return {"success": true, "message": backendMessage};
+          return {
+            "success": true,
+            "message": backendMessage,
+            // Passed through untouched so the gift-link flow can open the
+            // gifted content after a successful claim.
+            "data": responseBody["data"],
+          };
         } else {
           log("Gift Claim Error Response Received => $backendMessage");
           return {
@@ -255,8 +258,7 @@ class GiftProvider extends BaseProvider {
       log("Gift Claim Error Response Received => $error");
       return {
         "success": false,
-        "message":
-            "The server is taking too long to respond. Please check your gift cards before trying again.",
+        "message": appL10n().msgGiftClaimTimeout,
       };
     } catch (error, stack) {
       log("Gift Claim Error Response Received => $error", stackTrace: stack);
@@ -270,8 +272,8 @@ class GiftProvider extends BaseProvider {
       return {
         "success": false,
         "message": isNetwork
-            ? "Unable to claim the gift card. Please check your internet connection and try again."
-            : "Something went wrong while claiming the gift card. Please try again later.",
+            ? appL10n().msgGiftClaimNetworkError
+            : appL10n().msgGiftClaimFailed,
         "error": error,
       };
     } finally {

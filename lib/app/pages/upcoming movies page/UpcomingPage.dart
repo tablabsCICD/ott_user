@@ -190,7 +190,8 @@ class _UpcomingPageState extends State<UpcomingPage> {
                       onPressed: () {
                         CustomToast.show(
                           context,
-                          "You’ll be notified on release day",
+                          AppLocalizations.of(context)!
+                              .upcomingNotifiedOnRelease,
                           isSuccess: true,
                         );
                       },
@@ -232,7 +233,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
               size: 80, color: theme.canvasColor.withOpacity(0.6)),
           const SizedBox(height: 12),
           Text(
-            "No upcoming content",
+            AppLocalizations.of(context)!.upcomingNoContent,
             style: TextStyle(
               color: theme.canvasColor,
               fontSize: 16,

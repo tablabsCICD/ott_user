@@ -49,7 +49,7 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
     if (provider.selectedLanguages.isEmpty) {
       CustomToast.show(
         context,
-        'Please select at least one language.',
+        AppLocalizations.of(context)!.langSelectAtLeastOne,
         isSuccess: false,
       );
       return;
@@ -66,7 +66,7 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
     if (result['success'] == true) {
       CustomToast.show(
         context,
-        'Language updated successfully.',
+        AppLocalizations.of(context)!.langUpdatedSuccessfully,
         isSuccess: true,
       );
 
@@ -78,7 +78,7 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
     } else {
       CustomToast.show(
         context,
-        "${result['message'] ?? 'Update failed'}",
+        "${result['message'] ?? AppLocalizations.of(context)!.langUpdateFailed}",
         isSuccess: false,
       );
     }
@@ -181,6 +181,8 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
           child: Text(
             title,
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: isSelected ? Colors.white : theme.canvasColor,
               fontWeight: FontWeight.bold,
@@ -202,8 +204,8 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          "Preferred Languages",
-          style: TextStyle(
+          lang.langPreferredLanguages,
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -225,7 +227,7 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
             if (provider.error != null) {
               return Center(
                 child: Text(
-                  'Failed to load languages',
+                  lang.langFailedToLoad,
                   style: TextStyle(
                     color: theme.canvasColor,
                   ),
@@ -235,71 +237,74 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
 
             final languageSections = [
               {
-                'title': 'Major Indian Languages',
+                'title': lang.langMajorIndianLanguages,
                 'items': provider.majorIndianLanguages,
               },
               {
-                'title': 'Other Indian Languages',
+                'title': lang.langOtherIndianLanguages,
                 'items': provider.otherIndianLanguages,
               },
               {
-                'title': 'Foreign Languages',
+                'title': lang.langForeignLanguages,
                 'items': provider.foreignLanguages,
               },
             ];
             final currentSection = languageSections[_selectedTabIndex];
 
-            return Stack(
-              children: [
-                SingleChildScrollView(
-                  child: Column(
+            return SingleChildScrollView(
+              child: Column(
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          _buildLanguageTab(
-                            'Major Indian Languages',
-                            0,
-                            theme,
-                          ),
-                          _buildLanguageTab(
-                            'Other Indian Languages',
-                            1,
-                            theme,
-                          ),
-                          _buildLanguageTab(
-                            'Foreign Languages',
-                            2,
-                            theme,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(
-                        height: 10,
-                      ),
-                      _buildSection(
-                        currentSection['title'] as String,
-                        currentSection['items'] as List,
-                        provider,
+                      _buildLanguageTab(
+                        lang.langMajorIndianLanguages,
+                        0,
                         theme,
                       ),
-                      const SizedBox(
-                        height: 80,
+                      _buildLanguageTab(
+                        lang.langOtherIndianLanguages,
+                        1,
+                        theme,
+                      ),
+                      _buildLanguageTab(
+                        lang.langForeignLanguages,
+                        2,
+                        theme,
                       ),
                     ],
                   ),
-                ),
-                Positioned(
-                  bottom: 20,
-                  left: ResponsiveWidget.isMobile(context)
-                      ? 90
-                      : ResponsiveWidget.isTablet(context)
-                          ? 200
-                          : 300,
-                  right: ResponsiveWidget.isMobile(context)
-                      ? 90
-                      : ResponsiveWidget.isTablet(context)
-                          ? 200
-                          : 300,
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  _buildSection(
+                    currentSection['title'] as String,
+                    currentSection['items'] as List,
+                    provider,
+                    theme,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+      // Save sits in the bottom bar inside a SafeArea so it is always above
+      // the system navigation buttons (and never hidden behind them).
+      bottomNavigationBar: Consumer<LanguageProvider>(
+        builder: (context, provider, _) {
+          if (provider.loading || provider.error != null) {
+            return const SizedBox.shrink();
+          }
+          return SafeArea(
+            top: false,
+            minimum: const EdgeInsets.only(bottom: 8),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: Center(
+                heightFactor: 1,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
                   child: SizedBox(
                     width: double.infinity,
                     height: 48,
@@ -307,21 +312,25 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.primaryColor,
                         foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       onPressed: _saving
                           ? null
-                          : () => _saveLanguages(
-                                userProvider,
-                                provider,
-                              ),
+                          : () => _saveLanguages(userProvider, provider),
                       child: _saving
-                          ? CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: theme.primaryColor,
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
                           : Text(
                               lang.save,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -329,10 +338,10 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
                     ),
                   ),
                 ),
-              ],
-            );
-          },
-        ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

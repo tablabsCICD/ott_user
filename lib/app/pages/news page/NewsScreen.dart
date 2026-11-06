@@ -1,24 +1,27 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/l10n/app_localizations.dart';
 
 class NewsScreenArgs {
   const NewsScreenArgs({
-    required this.title,
-    required this.body,
+    this.title,
+    this.body,
     required this.payload,
   });
 
-  final String title;
-  final String body;
+  /// Notification title/body; null when the notification had none (a
+  /// localized fallback is shown on screen).
+  final String? title;
+  final String? body;
   final Map<String, dynamic> payload;
 
   factory NewsScreenArgs.fromMap(Map<String, dynamic> map) {
     final rawPayload = map['payload'];
 
     return NewsScreenArgs(
-      title: map['title']?.toString() ?? 'News',
-      body: map['body']?.toString() ?? 'No message body',
+      title: map['title']?.toString(),
+      body: map['body']?.toString(),
       payload: rawPayload is Map<String, dynamic>
           ? rawPayload
           : rawPayload is Map
@@ -38,10 +41,11 @@ class NewsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
-        title: const Text('News'),
+        title: Text(lang.newsTitle),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -49,17 +53,17 @@ class NewsScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              args.title,
+              args.title ?? lang.newsTitle,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 12),
             Text(
-              args.body,
+              args.body ?? lang.newsNoMessageBody,
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             const SizedBox(height: 24),
             Text(
-              'Payload',
+              lang.newsPayload,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),

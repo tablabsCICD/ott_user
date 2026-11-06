@@ -84,7 +84,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                         final query = provider.ticketList[index];
                         final ticketDate = provider.ticketList[index].date;
                         final formattedDate = ticketDate == null
-                            ? 'Date unavailable'
+                            ? lang.helpDateUnavailable
                             : DateFormat('dd MMM yyyy, hh:mm a').format(
                                 DateTime.fromMillisecondsSinceEpoch(ticketDate),
                               );
@@ -184,9 +184,9 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  "We typically respond within 24 hours. Add details for faster help.",
-                  style: TextStyle(
+                Text(
+                  lang.helpResponseTimeInfo,
+                  style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 13,
                     height: 1.3,
@@ -211,14 +211,14 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
           child: Icon(Icons.tour_rounded, color: theme.primaryColor),
         ),
         title: Text(
-          'App Tour',
+          AppLocalizations.of(context)!.profileAppTour,
           style: TextStyle(
             color: theme.canvasColor,
             fontWeight: FontWeight.w800,
           ),
         ),
         subtitle: Text(
-          'Replay the quick guide to important app features.',
+          AppLocalizations.of(context)!.helpAppTourSubtitle,
           style: TextStyle(color: theme.canvasColor.withOpacity(0.68)),
         ),
         trailing: Icon(Icons.arrow_forward_ios_rounded,
@@ -243,7 +243,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Raise a Ticket",
+                lang.helpRaiseTicket,
                 style: TextStyle(
                   color: theme.canvasColor,
                   fontSize: 16,
@@ -259,10 +259,10 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                 validator: (value) {
                   final query = value?.trim() ?? '';
                   if (query.isEmpty) {
-                    return 'Please enter your query';
+                    return lang.helpPleaseEnterQuery;
                   }
                   if (query.length < 10) {
-                    return 'Please enter at least 10 characters';
+                    return lang.helpQueryMinLength;
                   }
                   return null;
                 },
@@ -289,7 +289,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Attachment added",
+                                lang.helpAttachmentAdded,
                                 style: TextStyle(
                                   color: theme.canvasColor,
                                   fontWeight: FontWeight.w600,
@@ -301,7 +301,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                                 icon: Icon(Icons.delete,
                                     color: theme.primaryColor),
                                 label: Text(
-                                  'Remove',
+                                  lang.helpRemove,
                                   style: TextStyle(color: theme.primaryColor),
                                 ),
                               ),
@@ -334,7 +334,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                           : const Icon(Icons.attach_file),
                       label: Text(
                         provider.isUploading
-                            ? 'Uploading...'
+                            ? lang.helpUploading
                             : lang.attachImage,
                       ),
                     ),
@@ -360,7 +360,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                           CustomToast.show(
                             context,
                             result['message']?.toString() ??
-                                'Something went wrong',
+                                lang.authSomethingWentWrong,
                             isSuccess: result['success'] == true,
                           );
 
@@ -407,18 +407,18 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
             borderRadius: BorderRadius.circular(12),
           ),
           title: Text(
-            'Submit support request?',
+            AppLocalizations.of(dialogContext)!.helpSubmitRequestTitle,
             style: TextStyle(color: theme.canvasColor),
           ),
           content: Text(
-            'Please confirm you want to send this help support request.',
+            AppLocalizations.of(dialogContext)!.helpSubmitRequestConfirm,
             style: TextStyle(color: theme.canvasColor),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
               child: Text(
-                'Cancel',
+                AppLocalizations.of(dialogContext)!.cancel,
                 style: TextStyle(color: theme.canvasColor),
               ),
             ),
@@ -431,7 +431,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                 ),
               ),
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Submit'),
+              child: Text(AppLocalizations.of(dialogContext)!.submit),
             ),
           ],
         );
@@ -444,7 +444,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "Your Requests",
+          lang.helpYourRequests,
           style: TextStyle(
             color: theme.canvasColor,
             fontSize: 16,
@@ -496,7 +496,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
           ),
           const SizedBox(height: 10),
           Text(
-            'No sent tickets yet',
+            AppLocalizations.of(context)!.helpNoSentTickets,
             style: TextStyle(
               color: theme.canvasColor,
               fontSize: 15,
@@ -505,7 +505,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Your submitted support requests will appear here.',
+            AppLocalizations.of(context)!.helpNoSentTicketsHint,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: theme.canvasColor.withOpacity(0.65),
@@ -630,7 +630,8 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
 
                       CustomToast.show(
                         context,
-                        result['message']?.toString() ?? 'Something went wrong',
+                        result['message']?.toString() ??
+                            lang.authSomethingWentWrong,
                         isSuccess: result['success'] == true,
                       );
                     },
@@ -651,14 +652,14 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
             borderRadius: BorderRadius.circular(14),
           ),
           title: Text(
-            'Delete ticket?',
+            AppLocalizations.of(dialogContext)!.helpDeleteTicketTitle,
             style: TextStyle(
               color: theme.canvasColor,
               fontWeight: FontWeight.bold,
             ),
           ),
           content: Text(
-            'This support ticket will be removed from your sent requests.',
+            AppLocalizations.of(dialogContext)!.helpDeleteTicketConfirm,
             style: TextStyle(
               color: theme.canvasColor.withOpacity(0.75),
             ),
@@ -667,7 +668,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
               child: Text(
-                'Cancel',
+                AppLocalizations.of(dialogContext)!.cancel,
                 style: TextStyle(color: theme.canvasColor),
               ),
             ),
@@ -677,7 +678,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                 foregroundColor: Colors.white,
               ),
               onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Delete'),
+              child: Text(AppLocalizations.of(dialogContext)!.profileDelete),
             ),
           ],
         );

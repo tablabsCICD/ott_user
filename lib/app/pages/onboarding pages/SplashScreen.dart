@@ -14,6 +14,7 @@ import 'package:ott/app/pages/onboarding pages/selectLanguagePage.dart';
 import 'package:ott/app/route/routes/web_navigation_routes.dart';
 import 'package:ott/presentation/web_landing/screens/web_landing_screen.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constant/prefrense_constant.dart';
@@ -162,17 +163,18 @@ class _SplashScreenState extends State<SplashScreen> {
       barrierDismissible: false,
       builder: (dialogContext) {
         final theme = Theme.of(dialogContext);
+        final lang = AppLocalizations.of(dialogContext)!;
         return AlertDialog(
           backgroundColor: theme.cardColor,
-          title: const Text('Update Available'),
+          title: Text(lang.onboardingUpdateAvailable),
           content: Text(
-            'A newer version is available (${updateInfo.latestVersion}). Please update for the best experience.',
+            lang.onboardingUpdateAvailableMessage(updateInfo.latestVersion),
           ),
           actions: [
             TextButton(
               onPressed: () =>
                   Navigator.of(dialogContext, rootNavigator: true).pop(),
-              child: const Text('Later'),
+              child: Text(lang.onboardingLater),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -182,7 +184,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   Navigator.of(dialogContext, rootNavigator: true).pop();
                 }
               },
-              child: const Text('Update Now'),
+              child: Text(lang.onboardingUpdateNow),
             ),
           ],
         );

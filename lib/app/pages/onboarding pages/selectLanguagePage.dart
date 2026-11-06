@@ -19,73 +19,78 @@ class SelectLocaleLanguagePage extends StatelessWidget {
         builder: (context, constraints) {
           final isMobile = ResponsiveWidget.isMobile(context);
 
-          return Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: isMobile ? 20 : 60),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Hero(
-                    tag: "logo",
-                    child: ClipRRect(
-                      borderRadius: BorderRadiusGeometry.circular(25),
-                      child: Image.asset(
-                        ImageConstant.logo,
-                        width: ResponsiveWidget.isMobile(context) ? 100 : 150,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 80),
-                  Text(
-                    lang.selectPreferredLanguage,
-                    style: TextStyle(
-                      color: theme.canvasColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 5,
-                      horizontal: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.cardColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const LanguageDropdown(isTitle: false),
-                  ),
-                  const SizedBox(height: 40),
-                  ElevatedButton(
-                    autofocus: ResponsiveWidget.isTabletOrTv(context),
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => LoginCard(),
+          return SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 20 : 60,
+                  vertical: 24,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Hero(
+                      tag: "logo",
+                      child: ClipRRect(
+                        borderRadius: BorderRadiusGeometry.circular(25),
+                        child: Image.asset(
+                          ImageConstant.logo,
+                          width: ResponsiveWidget.isMobile(context) ? 100 : 150,
+                          fit: BoxFit.contain,
                         ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 30),
-                      backgroundColor: theme.primaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    child: Text(
-                      lang.next,
+                    SizedBox(height: constraints.maxHeight < 560 ? 32 : 80),
+                    Text(
+                      lang.selectPreferredLanguage,
                       style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
+                        color: theme.canvasColor,
                         fontWeight: FontWeight.bold,
                       ),
+                      textAlign: TextAlign.center,
                     ),
-                  )
-                ],
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 5,
+                        horizontal: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const LanguageDropdown(isTitle: false),
+                    ),
+                    const SizedBox(height: 40),
+                    ElevatedButton(
+                      autofocus: ResponsiveWidget.isTabletOrTv(context),
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => LoginCard(),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 30),
+                        backgroundColor: theme.primaryColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        lang.next,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
+                  ],
+                ),
               ),
             ),
           );

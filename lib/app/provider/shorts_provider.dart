@@ -7,6 +7,7 @@ import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/data/models/user.dart';
 import 'baseProvider.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class ShortsSectionData {
   final String language;
@@ -57,14 +58,14 @@ class ShortProvider extends BaseProvider {
         sections.add(
           ShortsSectionData(
             language: lang,
-            category: "Latest Mini Series",
+            category: appL10n().msgLatestMiniSeries,
             shorts: latest.content,
           ),
         );
         sections.add(
           ShortsSectionData(
             language: lang,
-            category: "Trending Mini Series",
+            category: appL10n().msgTrendingMiniSeries,
             shorts: trending.content,
           ),
         );
@@ -73,10 +74,9 @@ class ShortProvider extends BaseProvider {
       _shortSections = sections;
       shorts = sections.expand((row) => row.shorts).toList();
     } catch (e) {
-
       _shortSections = [];
       shorts = [];
-      errorMessage = 'Unable to load Mini Series. Please try again.';
+      errorMessage = appL10n().msgUnableToLoadMiniSeries;
     }
 
     isLoading = false;
@@ -154,9 +154,7 @@ class ShortProvider extends BaseProvider {
       shortDetail = ShortDetailModel.fromJson(
         decoded['data'] as Map<String, dynamic>,
       );
-    } catch (e) {
-
-    }
+    } catch (e) {}
 
     isLoading = false;
     notifyListeners();
@@ -210,7 +208,6 @@ class ShortProvider extends BaseProvider {
 
       return false;
     } catch (e) {
-
       return false;
     } finally {
       _isLiking = false;
@@ -231,7 +228,6 @@ class ShortProvider extends BaseProvider {
       }
       return false;
     } catch (e) {
-
       return false;
     }
   }
@@ -273,7 +269,6 @@ class ShortProvider extends BaseProvider {
 
       return null;
     } catch (e) {
-
       return null;
     }
   }

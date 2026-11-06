@@ -22,6 +22,7 @@ import 'package:ott/app/widgets/video_skip_controls.dart';
 import 'package:ott/data/models/anti_piracy_models.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -154,7 +155,6 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       await InvoiceService.instance.showShareOptions(context, invoice);
     } catch (error) {
       if (!mounted) return;
-
     }
   }
 
@@ -195,7 +195,8 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
           if (mounted) {
             setState(() {
               _hasVideoError = true;
-              _videoErrorMessage = "Invalid video";
+              _videoErrorMessage =
+                  AppLocalizations.of(context)!.playerInvalidVideo;
             });
           }
           return;
@@ -228,7 +229,8 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         if (mounted) {
           setState(() {
             _hasVideoError = true;
-            _videoErrorMessage = "Video unavailable";
+            _videoErrorMessage =
+                AppLocalizations.of(context)!.playerVideoUnavailable;
           });
         }
         return;
@@ -276,7 +278,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         !_handlingSecureAuthenticationFailure) {
       _handlingSecureAuthenticationFailure = true;
       unawaited(SessionManager.instance.handleSessionExpired(
-        'Your session has expired. Please sign in again.',
+        AppLocalizations.of(context)!.playerSessionExpired,
       ));
     }
     setState(() {
@@ -328,11 +330,11 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         if (mounted) setState(() {});
       }))
       ..add(player.stream.error.listen((error) {
-
         if (mounted) {
           setState(() {
             _hasVideoError = true;
-            _videoErrorMessage = 'Failed to load video';
+            _videoErrorMessage =
+                AppLocalizations.of(context)!.playerFailedToLoadVideo;
           });
         }
       }));
@@ -415,16 +417,17 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
   Future<void> _showInsufficientBalanceDialog() async {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text("Insufficient Balance",
+        title: Text(lang.shortsInsufficientBalance,
             style: TextStyle(
                 color: theme.primaryColor, fontWeight: FontWeight.bold)),
-        content: Text("You don't have enough coins.",
+        content: Text(lang.shortsNotEnoughCoins,
             style: TextStyle(color: theme.canvasColor)),
         actions: [
           TextButton(
@@ -432,7 +435,8 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
               Navigator.pop(context);
               Navigator.pop(context);
             },
-            child: Text("Cancel", style: TextStyle(color: theme.canvasColor)),
+            child:
+                Text(lang.cancel, style: TextStyle(color: theme.canvasColor)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -440,7 +444,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
               Navigator.push(
                   context, MaterialPageRoute(builder: (_) => WalletPage()));
             },
-            child: const Text("Recharge"),
+            child: Text(lang.recharge),
           ),
         ],
       ),
@@ -503,7 +507,8 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
               const Icon(Icons.play_disabled, color: Colors.white70, size: 32),
               const SizedBox(height: 8),
               Text(
-                _videoErrorMessage ?? "Video unavailable",
+                _videoErrorMessage ??
+                    AppLocalizations.of(context)!.playerVideoUnavailable,
                 style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
             ],
@@ -657,7 +662,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              "See more",
+                              AppLocalizations.of(context)!.shortsSeeMore,
                               style: TextStyle(
                                 color: Colors.white70,
                                 fontSize: 10,
@@ -693,7 +698,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              "See less",
+                              AppLocalizations.of(context)!.shortsSeeLess,
                               style: TextStyle(
                                 color: Colors.white70,
                                 fontSize: 10,
@@ -783,7 +788,8 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
             isActive: part.isLiked,
           ),
           const SizedBox(height: 18),
-          _actionBtn(Icons.telegram_outlined, "share", () {
+          _actionBtn(Icons.telegram_outlined,
+              AppLocalizations.of(context)!.shortsShareAction, () {
             _shareShortContent(context);
           }),
           //const SizedBox(height: 18),
@@ -836,7 +842,8 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       context,
       widget.short.toShareContent(),
       contentType: DeepLinkContentType.short,
-      unavailableMessage: "Mini series details are not available yet",
+      unavailableMessage:
+          AppLocalizations.of(context)!.shortsMiniSeriesDetailsUnavailable,
     );
   }
 
@@ -858,8 +865,8 @@ ${short.durationSec ?? ''}
       await Clipboard.setData(ClipboardData(text: shareText));
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Share text copied to clipboard"),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.shortsShareTextCopied),
         ),
       );
     } else {
@@ -893,7 +900,8 @@ ${short.durationSec ?? ''}
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "Episode ${_currentIndex + 1} / $totalParts",
+                    AppLocalizations.of(context)!
+                        .shortsEpisodeOfTotal(_currentIndex + 1, totalParts),
                     style: TextStyle(
                       color: Colors.white,
                       shadows: [
@@ -1042,7 +1050,8 @@ ${short.durationSec ?? ''}
                       ),
                       child: Center(
                         child: Text(
-                          "EP ${part.partNumber}",
+                          AppLocalizations.of(context)!
+                              .shortsEpisodeShort(part.partNumber),
                           style: TextStyle(
                             color: active ? Colors.white : theme.canvasColor,
                             fontWeight: FontWeight.bold,

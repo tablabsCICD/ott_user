@@ -9,6 +9,7 @@ import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -35,7 +36,9 @@ class _GiftedMoviesPageState extends State<GiftedMoviesPage> {
 
   void copyToClipboard(BuildContext context, String text) {
     Clipboard.setData(ClipboardData(text: text));
-    CustomToast.show(context, "Copied: $text", isSuccess: true);
+    CustomToast.show(
+        context, AppLocalizations.of(context)!.giftCopiedText(text),
+        isSuccess: true);
   }
 
   Future<void> shareGiftLink(
@@ -44,22 +47,18 @@ class _GiftedMoviesPageState extends State<GiftedMoviesPage> {
   ) async {
     final giftLink = DeepLinkService.instance.buildGiftDeepLink(couponCode);
     final fallbackLink = DeepLinkService.instance.buildGiftAppLink(couponCode);
-    final message = '''
-You have received a Filmytell gift: $movieTitle
-
-Claim gift:
-$giftLink
-
-Fallback link:
-$fallbackLink
-
-Gift code: $couponCode
-''';
+    final lang = AppLocalizations.of(context)!;
+    final message = lang.giftShareMessage(
+      movieTitle,
+      giftLink.toString(),
+      fallbackLink.toString(),
+      couponCode,
+    );
 
     await SharePlus.instance.share(
       ShareParams(
         text: message.trim(),
-        subject: 'Filmytell movie gift',
+        subject: lang.giftShareSubject,
       ),
     );
   }
@@ -67,12 +66,13 @@ Gift code: $couponCode
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         foregroundColor: Colors.white,
-        title: const Text(
-          "Gifted Movies",
-          style: TextStyle(
+        title: Text(
+          lang.giftedMovies,
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -85,7 +85,7 @@ Gift code: $couponCode
             return const Center(child: CircularProgressIndicator());
           }
           if (provider.errorMessage != null) {
-            return const Center(child: Text("No gift history available."));
+            return Center(child: Text(lang.giftNoHistoryAvailable));
           }
           if (provider.giftRecords.isEmpty) {
             return Center(
@@ -98,9 +98,9 @@ Gift code: $couponCode
                     color: theme.canvasColor.withOpacity(0.5),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
-                    "No gift history available.",
-                    style: TextStyle(fontSize: 16),
+                  Text(
+                    lang.giftNoHistoryAvailable,
+                    style: const TextStyle(fontSize: 16),
                   ),
                 ],
               ),
@@ -113,9 +113,10 @@ Gift code: $couponCode
             itemBuilder: (context, index) {
               final record = provider.giftRecords[index];
               return GiftCard(
-                title: record.movie?.title ?? "Movie #${record.movie}",
+                title: record.movie?.title ??
+                    lang.giftMovieNumber('${record.movie}'),
                 date: record.createdDate == null
-                    ? "Date not available"
+                    ? lang.giftDateNotAvailable
                     : formatDate(record.createdDate!),
                 totalGifted: record.totalGiftCount ?? 0,
                 remainingGifted: record.remainingGiftCount ?? 0,
@@ -137,7 +138,7 @@ Gift code: $couponCode
                 onShare: record.couponCode != null
                     ? () => shareGiftLink(
                           record.couponCode!,
-                          record.movie?.title ?? "this movie",
+                          record.movie?.title ?? lang.giftThisMovie,
                         )
                     : null,
                 onMovieDetails: record.movie?.id == null
@@ -191,6 +192,7 @@ class GiftCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
     final showMovieDetailsButton =
         !ResponsiveWidget.isDesktop(context) && onMovieDetails != null;
 
@@ -242,25 +244,25 @@ class GiftCard extends StatelessWidget {
                   _infoChip(
                     context,
                     icon: LucideIcons.gift,
-                    label1: 'Gifted: ',
+                    label1: lang.giftGiftedLabel,
                     label2: '$totalGifted',
                   ),
                   _infoChip(
                     context,
                     icon: Icons.inventory_2_outlined,
-                    label1: 'Remaining: ',
+                    label1: lang.giftRemainingLabel,
                     label2: '$remainingGifted',
                   ),
                   _infoChip(
                     context,
                     icon: Icons.payment,
-                    label1: 'Price: ',
+                    label1: lang.giftPriceLabel,
                     label2: "₹${moviePrice.toStringAsFixed(2)}",
                   ),
                   _infoChip(
                     context,
                     icon: Icons.payments_outlined,
-                    label1: 'Total Paid: ',
+                    label1: lang.giftTotalPaidLabel,
                     label2: '₹${totalPaid.toStringAsFixed(2)}',
                   ),
                 ],
@@ -297,14 +299,14 @@ class GiftCard extends StatelessWidget {
                           icon: const Icon(Icons.copy, size: 18),
                           color: theme.primaryColor,
                           onPressed: onCopy,
-                          tooltip: "Copy coupon code",
+                          tooltip: lang.giftCopyCouponCode,
                         ),
                       if (onShare != null)
                         IconButton(
                           icon: const Icon(Icons.share, size: 18),
                           color: theme.primaryColor,
                           onPressed: onShare,
-                          tooltip: "Share gift link",
+                          tooltip: lang.giftShareGiftLink,
                         ),
                     ],
                   ),
@@ -323,7 +325,7 @@ class GiftCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          "Share gift claim link",
+                          lang.giftShareClaimLink,
                           style: TextStyle(
                             color: theme.primaryColor,
                             fontWeight: FontWeight.w600,
@@ -341,7 +343,7 @@ class GiftCard extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: onMovieDetails,
                     icon: const Icon(Icons.movie_outlined, size: 18),
-                    label: const Text('Movie details'),
+                    label: Text(lang.giftMovieDetails),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: theme.primaryColor,
                       side: BorderSide(color: theme.primaryColor),

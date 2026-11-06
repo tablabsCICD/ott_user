@@ -2,6 +2,7 @@ import 'package:ott/app/core/network/anti_piracy_api_client.dart';
 import 'package:ott/app/core/repositories/secure_playback_repository.dart';
 import 'package:ott/data/models/anti_piracy_models.dart';
 import 'baseProvider.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class SessionDeviceProvider extends BaseProvider {
   SessionDeviceProvider({SecurePlaybackRepository? repository})
@@ -21,7 +22,7 @@ class SessionDeviceProvider extends BaseProvider {
     } on SecurePlaybackException catch (error) {
       errorMessage = error.userMessage;
     } catch (_) {
-      errorMessage = 'Unable to load registered devices.';
+      errorMessage = appL10n().msgUnableToLoadRegisteredDevices;
     } finally {
       isLoading = false;
       notifyListeners();
@@ -36,7 +37,7 @@ class SessionDeviceProvider extends BaseProvider {
     } on SecurePlaybackException catch (error) {
       errorMessage = error.userMessage;
     } catch (_) {
-      errorMessage = 'Unable to remove this device.';
+      errorMessage = appL10n().msgUnableToRemoveDevice;
     }
     notifyListeners();
     return false;

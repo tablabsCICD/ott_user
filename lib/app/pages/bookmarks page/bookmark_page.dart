@@ -1,10 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/l10n/app_localizations.dart';
+import 'package:ott/app/widgets/content_type_chip.dart';
 import 'package:ott/app/pages/bookmarks page/component/bookmark_card.dart';
 import 'package:ott/app/provider/bookmarkProvider.dart';
 import 'package:ott/app/core/utils/content_type.dart';
 import 'package:ott/data/models/content.dart';
-import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 
 enum BookmarkFilter { movies, series, shorts, shortFilms }
@@ -32,13 +33,14 @@ class _BookmarkPageState extends State<BookmarkPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          "My Bookmarks",
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          lang.bookmarkMyBookmarks,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: theme.primaryColor,
         foregroundColor: Colors.white,
@@ -60,14 +62,14 @@ class _BookmarkPageState extends State<BookmarkPage> {
               allBookmarks.isNotEmpty || allShortBookmarks.isNotEmpty;
 
           if (!hasAnyBookmarks) {
-            return _emptyState(theme, message: "No bookmarks added");
+            return _emptyState(theme, message: lang.bookmarkNoBookmarksAdded);
           }
 
           if (selectedFilter == BookmarkFilter.shorts) {
             if (allShortBookmarks.isEmpty) {
               return _emptyState(
                 theme,
-                message: "No bookmarks found",
+                message: lang.bookmarkNoBookmarksFound,
               );
             }
 
@@ -116,7 +118,7 @@ class _BookmarkPageState extends State<BookmarkPage> {
           if (filteredBookmarks.isEmpty) {
             return _emptyState(
               theme,
-              message: "No bookmarks found",
+              message: lang.bookmarkNoBookmarksFound,
             );
           }
 
@@ -185,52 +187,35 @@ class _BookmarkPageState extends State<BookmarkPage> {
     }
   }
 
+  /// Filter chips styled exactly like the Home page content-type chips.
   Widget _segmentedToggle(ThemeData theme) {
+    final lang = AppLocalizations.of(context)!;
+    final items = <({BookmarkFilter value, String label})>[
+      (value: BookmarkFilter.movies, label: lang.movie),
+      (value: BookmarkFilter.series, label: lang.series),
+      (value: BookmarkFilter.shorts, label: lang.minSeries),
+      (value: BookmarkFilter.shortFilms, label: lang.shortFilm),
+    ];
+
     return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Container(
-        height: 40,
-        width: ResponsiveWidget.isMobile(context) ? double.infinity : 520,
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(30),
-        ),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _segment(theme, BookmarkFilter.movies, "Movies"),
-            _segment(theme, BookmarkFilter.series, "Series"),
-            _segment(theme, BookmarkFilter.shorts, "Mini Series"),
-            _segment(theme, BookmarkFilter.shortFilms, "Short Film"),
+            for (final item in items)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ContentTypeChip(
+                  label: item.label,
+                  selected: selectedFilter == item.value,
+                  onTap: () {
+                    if (selectedFilter == item.value) return;
+                    setState(() => selectedFilter = item.value);
+                  },
+                ),
+              ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _segment(
-    ThemeData theme,
-    BookmarkFilter value,
-    String label,
-  ) {
-    final selected = selectedFilter == value;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => selectedFilter = value),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          decoration: BoxDecoration(
-            color: selected ? theme.primaryColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(30),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected ? Colors.white : theme.canvasColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
         ),
       ),
     );

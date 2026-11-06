@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ott/app/core/utils/text_capitalization_formatter.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:wc_form_validators/wc_form_validators.dart';
 
 export 'package:ott/app/core/utils/text_capitalization_formatter.dart';
@@ -151,31 +152,31 @@ class _CustomTextFieldState extends State<CustomTextField> {
   String? Function(String?)? _buildValidator() {
     if (widget.validator != null) return widget.validator;
     if (!widget.isValidator) return null;
+    final lang = AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('en'));
     if (widget.isPhoneNumber) {
       return Validators.compose([
-        Validators.required('Phone number is required'),
-        Validators.minLength(10, 'Mobile number cannot be less than 10 digits'),
-        Validators.maxLength(
-            10, 'Mobile number cannot be greater than 10 digits'),
+        Validators.required(lang.fieldPhoneRequired),
+        Validators.minLength(10, lang.fieldMobileMinDigits),
+        Validators.maxLength(10, lang.fieldMobileMaxDigits),
       ]);
     } else if (widget.isEmail) {
       return Validators.compose([
-        Validators.required('Email is required'),
-        Validators.email('Invalid email address'),
+        Validators.required(lang.fieldEmailRequired),
+        Validators.email(lang.fieldInvalidEmail),
       ]);
     } else if (widget.isName) {
       return Validators.compose([
-        Validators.patternString(r"^[A-Za-z]+$", 'Only alphabets are allowed'),
-        Validators.required('${widget.hintText} is required'),
+        Validators.patternString(r"^[A-Za-z]+$", lang.fieldOnlyAlphabets),
+        Validators.required(lang.profileFieldRequired(widget.hintText)),
       ]);
     } else if (widget.isDigits) {
       return Validators.compose([
-        Validators.patternRegExp(
-            RegExp(r"^[0-9]*$"), 'Only digits are allowed'),
-        Validators.required('${widget.hintText} is required'),
+        Validators.patternRegExp(RegExp(r"^[0-9]*$"), lang.fieldOnlyDigits),
+        Validators.required(lang.profileFieldRequired(widget.hintText)),
       ]);
     } else {
-      return Validators.required('This field is required');
+      return Validators.required(lang.fieldRequired);
     }
   }
 

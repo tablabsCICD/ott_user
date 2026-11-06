@@ -4,13 +4,13 @@ import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/services/session_manager.dart';
 import 'package:ott/app/core/utils/image_url_utils.dart';
-import 'package:ott/app/core/utils/text_capitalization_formatter.dart';
 import 'package:ott/app/pages/profile%20page/component/EditProfilePage.dart';
 import 'package:ott/app/provider/userProvider.dart';
+import 'package:ott/app/widgets/edit_address_dialog.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:ott/presentation/web_landing/utils/post_logout_navigation.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AccountDetailsPage extends StatefulWidget {
@@ -39,12 +39,13 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          "Account Details",
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          lang.accountDetails,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: theme.primaryColor,
         foregroundColor: Colors.white,
@@ -59,8 +60,9 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
             final user = userProvider.userObj;
             final location = user.location;
 
-            String v(String? value) =>
-                (value == null || value.trim().isEmpty) ? "Not added" : value;
+            String v(String? value) => (value == null || value.trim().isEmpty)
+                ? lang.profileNotAdded
+                : value;
 
             return Stack(
               children: [
@@ -76,35 +78,36 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                         theme: theme,
                         children: [
                           _inputTile(
-                              theme, "Mobile Number", v(user.mobileNumber),
+                              theme, lang.mobileNumber, v(user.mobileNumber),
                               trailing: "EDIT"),
                           const SizedBox(height: 12),
-                          _inputTile(theme, "Email Address", v(user.emailId),
+                          _inputTile(
+                              theme, lang.profileEmailAddress, v(user.emailId),
                               trailing: "ADD"),
                         ],
                       ),
                       const SizedBox(height: 18),
-                      _sectionTitle(theme, "Personal Details"),
+                      _sectionTitle(theme, lang.profilePersonalDetails),
                       const SizedBox(height: 10),
                       _card(
                         theme: theme,
                         children: [
                           _inputTile(
                             theme,
-                            "Name",
+                            lang.profileName,
                             v([user.firstName, user.lastName]
                                 .where((s) => s != null && s.trim().isNotEmpty)
                                 .join(' ')),
                           ),
                           const SizedBox(height: 12),
-                          _inputTile(theme, "Birthday", v(user.dob)),
+                          _inputTile(theme, lang.profileBirthday, v(user.dob)),
                           /* const SizedBox(height: 12),
                           _chipSelector(theme, "Identity", ["Female", "Male"],
                               selected: _genderLabel(user.gender)), */
                         ],
                       ),
                       const SizedBox(height: 18),
-                      _sectionTitle(theme, "Address"),
+                      _sectionTitle(theme, lang.profileAddress),
                       const SizedBox(height: 10),
                       _card(
                         theme: theme,
@@ -113,28 +116,30 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                               theme, "Save as", ["Home", "Work", "Other"],
                               selected: "Home"),
                           const SizedBox(height: 12), */
-                          _inputTile(theme, "Address Line",
+                          _inputTile(theme, lang.profileAddressLine,
                               v(location?.officeBuilding)),
                           const SizedBox(height: 12),
                           _inputTile(
                             theme,
-                            "City",
+                            lang.profileCity,
                             v(location?.city ?? location?.taluka),
                           ),
                           const SizedBox(height: 12),
-                          _inputTile(theme, "District", v(location?.district)),
+                          _inputTile(
+                              theme, lang.district, v(location?.district)),
                           const SizedBox(height: 12),
-                          _inputTile(theme, "State", v(location?.state)),
+                          _inputTile(theme, lang.state, v(location?.state)),
                           const SizedBox(height: 12),
-                          _inputTile(theme, "Country", v(location?.country)),
+                          _inputTile(theme, lang.country, v(location?.country)),
                           const SizedBox(height: 12),
-                          _inputTile(theme, "Pincode", v(location?.pincode)),
+                          _inputTile(
+                              theme, lang.profilePincode, v(location?.pincode)),
                           const SizedBox(height: 12),
                           _editButtons(theme),
                         ],
                       ),
                       const SizedBox(height: 18),
-                      _sectionTitle(theme, "Account Deletion"),
+                      _sectionTitle(theme, lang.accountDeletion),
                       const SizedBox(height: 10),
                       _deleteAccountCard(theme, userProvider),
                     ],
@@ -223,7 +228,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           child: _actionButton(
             theme,
             icon: Icons.person_outline,
-            label: "Edit Profile",
+            label: AppLocalizations.of(context)!.editProfile,
             onPressed: _openEditProfile,
           ),
         ),
@@ -232,7 +237,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           child: _actionButton(
             theme,
             icon: Icons.location_on_outlined,
-            label: "Edit Address",
+            label: AppLocalizations.of(context)!.editAddress,
             onPressed: _showEditAddressDialog,
           ),
         ),
@@ -255,7 +260,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                "Delete your Filmytell account and personal profile data. Purchases, wallet activity, support tickets, and records required for legal, tax, security, or fraud-prevention purposes may be retained as required by law.",
+                AppLocalizations.of(context)!.profileDeleteAccountInfo,
                 style: TextStyle(
                   color: theme.canvasColor.withOpacity(0.74),
                   height: 1.45,
@@ -272,7 +277,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
               child: OutlinedButton.icon(
                 onPressed: _isDeletingAccount ? null : _openDeletionPage,
                 icon: const Icon(Icons.open_in_new, size: 18),
-                label: const Text("Deletion Info"),
+                label: Text(AppLocalizations.of(context)!.profileDeletionInfo),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: theme.primaryColor,
                   side: BorderSide(color: theme.primaryColor.withOpacity(0.45)),
@@ -299,7 +304,9 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                         ),
                       )
                     : const Icon(Icons.delete_forever, size: 18),
-                label: Text(_isDeletingAccount ? "Deleting..." : "Delete"),
+                label: Text(_isDeletingAccount
+                    ? AppLocalizations.of(context)!.profileDeleting
+                    : AppLocalizations.of(context)!.profileDelete),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.redAccent,
                   foregroundColor: Colors.white,
@@ -326,7 +333,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
     if (!opened && mounted) {
       CustomToast.show(
         context,
-        "Unable to open account deletion page right now.",
+        AppLocalizations.of(context)!.profileUnableOpenAccountDeletion,
         isSuccess: false,
       );
     }
@@ -337,7 +344,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
     if (id <= 0) {
       CustomToast.show(
         context,
-        "Unable to find your account. Please log in again.",
+        AppLocalizations.of(context)!.profileAccountNotFound,
         isSuccess: false,
       );
       return;
@@ -349,16 +356,17 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
         final theme = Theme.of(dialogContext);
         return AlertDialog(
           backgroundColor: theme.scaffoldBackgroundColor,
-          title: const Text("Delete account?"),
+          title: Text(
+              AppLocalizations.of(dialogContext)!.profileDeleteAccountTitle),
           content: Text(
-            "This will permanently delete your Filmytell account. You will be logged out after the request is completed.",
+            AppLocalizations.of(dialogContext)!.profileDeleteAccountConfirm,
             style: TextStyle(color: theme.canvasColor.withOpacity(0.78)),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
               child: Text(
-                "Cancel",
+                AppLocalizations.of(dialogContext)!.cancel,
                 style: TextStyle(color: theme.canvasColor),
               ),
             ),
@@ -368,7 +376,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                 backgroundColor: Colors.redAccent,
                 foregroundColor: Colors.white,
               ),
-              child: const Text("Delete"),
+              child: Text(AppLocalizations.of(dialogContext)!.profileDelete),
             ),
           ],
         );
@@ -386,7 +394,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
       if (!mounted) return;
       CustomToast.show(
         context,
-        "Your account has been deleted.",
+        AppLocalizations.of(context)!.profileAccountDeleted,
         isSuccess: true,
       );
       pushPostLogoutReplacement(context);
@@ -394,7 +402,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
       if (!mounted) return;
       CustomToast.show(
         context,
-        "Unable to delete account right now. Please try again.",
+        AppLocalizations.of(context)!.profileUnableDeleteAccount,
         isSuccess: false,
       );
     } finally {
@@ -443,411 +451,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   }
 
   Future<void> _showEditAddressDialog() async {
-    final formKey = GlobalKey<FormState>();
-    final userProvider = context.read<UserProvider>();
-    final location = userProvider.userObj.location;
-
-    await userProvider.loadCountryOptions();
-    if ((location?.country ?? "").trim().isNotEmpty) {
-      await userProvider.loadStateOptionsByCountry(location!.country!);
-    }
-
-    userProvider.officeBuildingController.text =
-        location?.officeBuilding ?? location?.area ?? "";
-    userProvider.countryController.text = location?.country ?? "";
-    userProvider.stateController.text = location?.state ?? "";
-    userProvider.districtController.text = location?.district ?? "";
-    userProvider.cityController.text = location?.city ?? location?.taluka ?? "";
-    userProvider.pinCodeDateController.text = location?.pincode ?? "";
-
-    if (!mounted) return;
-    await showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return Consumer<UserProvider>(
-          builder: (context, provider, _) {
-            final selectedThemeData = Theme.of(context);
-
-            return AlertDialog(
-              backgroundColor: selectedThemeData.scaffoldBackgroundColor,
-              title: const Text("Edit Address"),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              content: SingleChildScrollView(
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: provider.officeBuildingController,
-                        maxLines: 2,
-                        textCapitalization: TextCapitalization.words,
-                        inputFormatters: [
-                          CapitalizeWordsTextInputFormatter(),
-                        ],
-                        cursorColor: selectedThemeData.primaryColor,
-                        onChanged: provider.searchAddressSuggestions,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: selectedThemeData.cardColor,
-                          labelText: 'Address',
-                          hintText: 'Search your address',
-                          labelStyle: TextStyle(
-                            color: selectedThemeData.canvasColor,
-                          ),
-                          hintStyle: TextStyle(
-                            color: selectedThemeData.canvasColor,
-                            fontSize: 13,
-                          ),
-                          border: OutlineInputBorder(
-                            borderSide:
-                                const BorderSide(color: Colors.transparent),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide:
-                                const BorderSide(color: Colors.transparent),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: selectedThemeData.primaryColor,
-                            ),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          prefixIcon: Icon(
-                            Icons.location_on_outlined,
-                            color: selectedThemeData.canvasColor,
-                          ),
-                          suffixIcon: provider.isSearchingAddress
-                              ? Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: selectedThemeData.primaryColor,
-                                    ),
-                                  ),
-                                )
-                              : null,
-                        ),
-                        style: TextStyle(color: selectedThemeData.canvasColor),
-                      ),
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: provider.isFetchingCurrentLocation
-                            ? null
-                            : provider.useCurrentLocationFromGoogle,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: selectedThemeData.primaryColor,
-                          side: BorderSide(
-                            color: selectedThemeData.primaryColor,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        icon: provider.isFetchingCurrentLocation
-                            ? SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: selectedThemeData.primaryColor,
-                                ),
-                              )
-                            : const Icon(Icons.my_location),
-                        label: Text(
-                          provider.isFetchingCurrentLocation
-                              ? 'Fetching location...'
-                              : 'Use current location',
-                        ),
-                      ),
-                      if (provider.addressSuggestions.isNotEmpty)
-                        Container(
-                          margin: const EdgeInsets.only(top: 6, bottom: 8),
-                          decoration: BoxDecoration(
-                            color: selectedThemeData.cardColor,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: selectedThemeData.primaryColor
-                                  .withOpacity(0.25),
-                            ),
-                          ),
-                          child: ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: provider.addressSuggestions.length,
-                            separatorBuilder: (_, __) => Divider(
-                              height: 1,
-                              color: selectedThemeData.canvasColor
-                                  .withOpacity(0.08),
-                            ),
-                            itemBuilder: (context, index) {
-                              final suggestion =
-                                  provider.addressSuggestions[index];
-                              return ListTile(
-                                dense: true,
-                                leading: Icon(
-                                  Icons.place_outlined,
-                                  color: selectedThemeData.primaryColor,
-                                ),
-                                title: Text(
-                                  suggestion['description'] ?? '',
-                                  style: TextStyle(
-                                    color: selectedThemeData.canvasColor,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                onTap: () {
-                                  provider.selectAddressSuggestion(suggestion);
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                      _buildEditableLocationDropdown(
-                        context: context,
-                        selectedThemeData: selectedThemeData,
-                        controller: provider.countryController,
-                        label: 'Country',
-                        hintText: 'Enter country',
-                        options: provider.countryOptions,
-                        onChanged: (value) {
-                          if (value.trim().isEmpty) {
-                            provider.loadStateOptionsByCountry('');
-                          }
-                        },
-                        onFieldSubmitted: provider.loadStateOptionsByCountry,
-                        onOptionSelected: provider.loadStateOptionsByCountry,
-                      ),
-                      _buildEditableLocationDropdown(
-                        context: context,
-                        selectedThemeData: selectedThemeData,
-                        controller: provider.stateController,
-                        label: 'State',
-                        hintText: 'Enter state',
-                        options: provider.stateOptions,
-                        onChanged: (value) {
-                          if (value.trim().isEmpty) {
-                            provider.loadDistrictOptionsByState('');
-                          }
-                        },
-                        onFieldSubmitted: provider.loadDistrictOptionsByState,
-                        onOptionSelected: provider.loadDistrictOptionsByState,
-                      ),
-                      _buildEditableLocationDropdown(
-                        context: context,
-                        selectedThemeData: selectedThemeData,
-                        controller: provider.districtController,
-                        label: 'District',
-                        hintText: 'Enter district',
-                        options: provider.districtOptions,
-                        onChanged: (value) {
-                          if (value.trim().isEmpty) {
-                            provider.loadTalukaOptionsByDistrict('');
-                          }
-                        },
-                        onFieldSubmitted: provider.loadTalukaOptionsByDistrict,
-                        onOptionSelected: provider.loadTalukaOptionsByDistrict,
-                      ),
-                      _buildEditableLocationDropdown(
-                        context: context,
-                        selectedThemeData: selectedThemeData,
-                        controller: provider.cityController,
-                        label: 'City',
-                        hintText: 'Enter city',
-                        options: provider.talukaOptions,
-                      ),
-                      _buildEditableLocationDropdown(
-                        context: context,
-                        selectedThemeData: selectedThemeData,
-                        controller: provider.pinCodeDateController,
-                        label: 'Pincode',
-                        hintText: 'Enter pincode',
-                        options: provider.pincodeOptions,
-                        keyboardType: TextInputType.number,
-                        isRequired: false,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: Text(
-                    "Cancel",
-                    style: TextStyle(color: selectedThemeData.canvasColor),
-                  ),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: selectedThemeData.primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) return;
-                    final result = await provider.updateUserLocation();
-                    if (!mounted) return;
-
-                    if (result['success'] == true) {
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setBool('isLoggedIn', true);
-                      CustomToast.show(
-                        context,
-                        "Address updated successfully!",
-                        isSuccess: true,
-                      );
-                      Navigator.of(dialogContext).pop();
-                    } else {
-                      CustomToast.show(
-                        context,
-                        'Failure: ${result['message']}',
-                        isSuccess: false,
-                      );
-                    }
-                  },
-                  child: const Text("Save"),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildEditableLocationDropdown({
-    required BuildContext context,
-    required ThemeData selectedThemeData,
-    required TextEditingController controller,
-    required String label,
-    required String hintText,
-    required List<String> options,
-    TextInputType keyboardType = TextInputType.text,
-    bool isRequired = true,
-    ValueChanged<String>? onChanged,
-    ValueChanged<String>? onFieldSubmitted,
-    ValueChanged<String>? onOptionSelected,
-  }) {
-    final cleanOptions =
-        options.where((option) => option.trim().isNotEmpty).toSet().toList();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: selectedThemeData.canvasColor,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 5),
-          TextFormField(
-            controller: controller,
-            keyboardType: keyboardType,
-            textCapitalization: keyboardType == TextInputType.number
-                ? TextCapitalization.none
-                : TextCapitalization.words,
-            inputFormatters: keyboardType == TextInputType.number
-                ? [FilteringTextInputFormatter.digitsOnly]
-                : [CapitalizeWordsTextInputFormatter()],
-            cursorColor: selectedThemeData.primaryColor,
-            onChanged: onChanged,
-            onFieldSubmitted: onFieldSubmitted,
-            validator: isRequired
-                ? (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return '$hintText is required';
-                    }
-                    return null;
-                  }
-                : null,
-            style: TextStyle(
-              color: selectedThemeData.canvasColor,
-              fontSize: 14,
-            ),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: selectedThemeData.cardColor,
-              hintText: hintText,
-              hintStyle: TextStyle(
-                color: selectedThemeData.canvasColor,
-                fontSize: 14,
-              ),
-              border: OutlineInputBorder(
-                borderSide: const BorderSide(color: Colors.transparent),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: Colors.transparent),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: selectedThemeData.primaryColor),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              suffixIcon: PopupMenuButton<String>(
-                icon: Icon(
-                  Icons.arrow_drop_down,
-                  color: selectedThemeData.primaryColor,
-                ),
-                color: selectedThemeData.cardColor,
-                enabled: cleanOptions.isNotEmpty,
-                onSelected: (value) {
-                  controller.text = value;
-                  if (onOptionSelected != null) {
-                    onOptionSelected(value);
-                  }
-                },
-                itemBuilder: (context) {
-                  if (cleanOptions.isEmpty) {
-                    return [
-                      PopupMenuItem<String>(
-                        enabled: false,
-                        child: Text(
-                          'No options available',
-                          style: TextStyle(
-                            color:
-                                selectedThemeData.canvasColor.withOpacity(0.7),
-                          ),
-                        ),
-                      ),
-                    ];
-                  }
-
-                  return cleanOptions
-                      .map(
-                        (option) => PopupMenuItem<String>(
-                          value: option,
-                          child: Text(
-                            option,
-                            style: TextStyle(
-                              color: selectedThemeData.canvasColor,
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList();
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    await showEditAddressDialog(context);
   }
 
   static Widget _sectionTitle(ThemeData theme, String title) {
@@ -957,9 +561,9 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           onPressed: () {},
-          child: const Text(
-            "Save Changes",
-            style: TextStyle(fontSize: 16),
+          child: Text(
+            AppLocalizations.of(context)!.profileSaveChanges,
+            style: const TextStyle(fontSize: 16),
           ),
         ),
       ),

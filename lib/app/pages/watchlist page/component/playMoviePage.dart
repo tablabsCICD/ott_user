@@ -28,6 +28,7 @@ import 'package:ott/app/widgets/video_skip_controls.dart';
 import 'package:ott/app/core/utils/content_type.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import '../../../provider/offline_download_provider.dart';
 import '../../../provider/playMediaProvider.dart';
 
@@ -218,7 +219,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         error,
         stackTrace,
       );
-      _showPlaybackError('Failed to resume video');
+      _showPlaybackError((lang) => lang.playerFailedToResumeVideo);
     }
   }
 
@@ -306,7 +307,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         'FLOW',
         'Secure playback stopped because the media source is empty.',
       );
-      _showPlaybackError('Video unavailable');
+      _showPlaybackError();
       return;
     }
 
@@ -345,7 +346,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         'FLOW',
         'Signed API was not called because the content ID is missing.',
       );
-      _showPlaybackError('The requested content was not found.');
+      _showPlaybackError((lang) => lang.playerContentNotFound);
       return;
     }
     SecurityDebugLog.event(
@@ -437,7 +438,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       _handlingSecureAuthenticationFailure = true;
       unawaited(
         SessionManager.instance.handleSessionExpired(
-            'Your session has expired. Please sign in again.'),
+            AppLocalizations.of(context)!.playerSessionExpired),
       );
     }
     setState(() {
@@ -548,13 +549,15 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     _youtubeController?.pause();
   }
 
-  void _showPlaybackError([String message = 'Video unavailable']) {
+  void _showPlaybackError([String Function(AppLocalizations lang)? message]) {
     if (!mounted || _isDisposed) return;
+    final lang = AppLocalizations.of(context)!;
 
     setState(() {
       _loading = false;
       _hasPlaybackError = true;
-      _playbackMessage = message;
+      _playbackMessage =
+          message != null ? message(lang) : lang.playerVideoUnavailable;
     });
   }
 
@@ -621,7 +624,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           'PLAYER',
           'YouTube player reported a sanitized playback error.',
         );
-        _showPlaybackError('Failed to load video');
+        _showPlaybackError((lang) => lang.playerFailedToLoadVideo);
       }
 
       if (value.playerState == youtube.PlayerState.ended) {
@@ -843,7 +846,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           );
           return;
         }
-        _showPlaybackError('Failed to load video');
+        _showPlaybackError((lang) => lang.playerFailedToLoadVideo);
       }
       return;
     }
@@ -941,7 +944,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         if (error.contains('403') && _securePlaybackController != null) {
           unawaited(_securePlaybackController!.handlePlayerHttp403());
         } else {
-          _showPlaybackError('Failed to load video');
+          _showPlaybackError((lang) => lang.playerFailedToLoadVideo);
         }
       }
       if (value.isCompleted) _handlePlaybackCompleted();
@@ -967,7 +970,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             forceMediaKit: true,
           );
         } else {
-          _showPlaybackError('Failed to load video');
+          _showPlaybackError((lang) => lang.playerFailedToLoadVideo);
         }
       }
       return;
@@ -1040,8 +1043,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         'Range': 'bytes=0-65535',
         if (cookieHeader != null && cookieHeader.isNotEmpty && !kIsWeb)
           'Cookie': cookieHeader,
-        if (!kIsWeb)
-          'User-Agent': 'FilmyTell/1.0',
+        if (!kIsWeb) 'User-Agent': 'FilmyTell/1.0',
       };
       final master = await _getHlsProbeResource(
         stage: 'MASTER_PLAYLIST',
@@ -1242,7 +1244,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           return;
         }
         if (mounted) {
-          _showPlaybackError('Failed to load video');
+          _showPlaybackError((lang) => lang.playerFailedToLoadVideo);
         }
       }));
   }
@@ -1314,7 +1316,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         return;
       }
       SecurityDebugLog.exception('MEDIA_KIT_PLAY', error, stackTrace);
-      _showPlaybackError('Failed to load video');
+      _showPlaybackError((lang) => lang.playerFailedToLoadVideo);
       return;
     }
     if (_isDisposed || token != _setupToken) return;
@@ -1510,7 +1512,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     _handlingEnd = false;
     final nextUrl = next.videoUrl?.trim() ?? "";
     if (nextUrl.isEmpty) {
-      _showPlaybackError('Video unavailable');
+      _showPlaybackError();
       return;
     }
 
@@ -1972,7 +1974,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             const Icon(Icons.lock_outline, color: Colors.white70, size: 42),
             const SizedBox(height: 12),
             Text(
-              _playbackMessage ?? 'Video unavailable',
+              _playbackMessage ??
+                  AppLocalizations.of(context)!.playerVideoUnavailable,
               style: const TextStyle(color: Colors.white),
               textAlign: TextAlign.center,
             ),
@@ -1980,7 +1983,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => unawaited(_securePlaybackController!.start()),
-                child: const Text('Retry'),
+                child: Text(AppLocalizations.of(context)!.retry),
               ),
             ],
           ],
@@ -2016,7 +2019,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       children: [
         _roundPlaybackButton(
           icon: Icons.replay_10_rounded,
-          semanticsLabel: 'Rewind 10 seconds',
+          semanticsLabel: AppLocalizations.of(context)!.playerRewind10Seconds,
           onPressed: () {
             _seekBy(const Duration(seconds: -10));
             _showControls();
@@ -2029,7 +2032,9 @@ class _PlayMediaPageState extends State<PlayMediaPage>
               : _isPlaybackPlaying
                   ? Icons.pause_rounded
                   : Icons.play_arrow_rounded,
-          semanticsLabel: _isPlaybackPlaying ? 'Pause' : 'Play',
+          semanticsLabel: _isPlaybackPlaying
+              ? AppLocalizations.of(context)!.playerPause
+              : AppLocalizations.of(context)!.playerPlay,
           prominent: true,
           loading: _isPlaybackBuffering,
           onPressed: () {
@@ -2040,7 +2045,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         SizedBox(width: spacing),
         _roundPlaybackButton(
           icon: Icons.forward_10_rounded,
-          semanticsLabel: 'Forward 10 seconds',
+          semanticsLabel: AppLocalizations.of(context)!.playerForward10Seconds,
           onPressed: () {
             _seekBy(const Duration(seconds: 10));
             _showControls();
@@ -2050,7 +2055,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           SizedBox(width: spacing),
           _roundPlaybackButton(
             icon: Icons.skip_next_rounded,
-            semanticsLabel: 'Next Episode',
+            semanticsLabel: AppLocalizations.of(context)!.playerNextEpisode,
             onPressed: () {
               unawaited(_playNextEpisode());
               _showControls();
@@ -2069,12 +2074,9 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     bool loading = false,
   }) {
     final compact = ResponsiveWidget.isMobile(context);
-    final size = prominent
-        ? (compact ? 40.0 : 46.0)
-        : (compact ? 34.0 : 38.0);
-    final iconSize = prominent
-        ? (compact ? 24.0 : 28.0)
-        : (compact ? 18.0 : 22.0);
+    final size = prominent ? (compact ? 40.0 : 46.0) : (compact ? 34.0 : 38.0);
+    final iconSize =
+        prominent ? (compact ? 24.0 : 28.0) : (compact ? 18.0 : 22.0);
 
     return Semantics(
       button: true,
@@ -2139,7 +2141,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           final result = offlineProvider.isDownloaded(contentId)
               ? <String, Object>{
                   'success': true,
-                  'message': 'Movie is already downloaded.',
+                  'message': AppLocalizations.of(context)!
+                      .playerMovieAlreadyDownloaded,
                 }
               : await offlineProvider.downloadContent(
                   content,
@@ -2151,7 +2154,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                result['message']?.toString() ?? 'Download updated',
+                result['message']?.toString() ??
+                    AppLocalizations.of(context)!.detailsDownloadUpdated,
               ),
               backgroundColor: result['success'] == true
                   ? Colors.green.shade700
@@ -2177,8 +2181,19 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     final duration = _currentPlaybackDuration;
     final durationMs = duration.inMilliseconds;
     final positionMs = position.inMilliseconds.clamp(0, durationMs);
-    final isLongDuration = duration.inHours > 0;
-    final minLabelWidth = isLongDuration ? 68.0 : 50.0;
+    // Left label: watched time. Right label: remaining time (total − watched),
+    // shown with a minus sign while playback is in progress. Unknown/invalid
+    // duration → no remaining time is shown as negative.
+    final hasDuration = durationMs > 0;
+    final watched = hasDuration ? Duration(milliseconds: positionMs) : position;
+    final remaining = hasDuration
+        ? Duration(milliseconds: durationMs - positionMs)
+        : Duration.zero;
+    final remainingLabel = remaining.inSeconds > 0
+        ? '-${_formatPlaybackTime(remaining)}'
+        : _formatPlaybackTime(Duration.zero);
+    // Fits "-00:00:00" so the labels don't shift while the time changes.
+    const minLabelWidth = 72.0;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -2194,7 +2209,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             ConstrainedBox(
               constraints: BoxConstraints(minWidth: minLabelWidth),
               child: Text(
-                _formatPlaybackTime(position),
+                _formatPlaybackTime(watched),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 13,
@@ -2236,7 +2251,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             ConstrainedBox(
               constraints: BoxConstraints(minWidth: minLabelWidth),
               child: Text(
-                _formatPlaybackTime(duration),
+                remainingLabel,
                 textAlign: TextAlign.right,
                 style: const TextStyle(
                   color: Colors.white,
@@ -2257,9 +2272,13 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   Widget _mikeOptionButton(ThemeData theme) {
     return Semantics(
       button: true,
-      label: _isMicMuted ? 'Unmute Mic' : 'Mute Mic',
+      label: _isMicMuted
+          ? AppLocalizations.of(context)!.playerUnmuteMic
+          : AppLocalizations.of(context)!.playerMuteMic,
       child: Tooltip(
-        message: _isMicMuted ? 'Unmute Mic' : 'Mute Mic',
+        message: _isMicMuted
+            ? AppLocalizations.of(context)!.playerUnmuteMic
+            : AppLocalizations.of(context)!.playerMuteMic,
         child: Material(
           color: Colors.white.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(6),
@@ -2310,14 +2329,16 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
     CustomToast.show(
       context,
-      _isMicMuted ? 'Mic Muted' : 'Mic Enabled',
+      _isMicMuted
+          ? AppLocalizations.of(context)!.playerMicMuted
+          : AppLocalizations.of(context)!.playerMicEnabled,
       isSuccess: !_isMicMuted,
     );
   }
 
   Widget _speedSelectorButton(ThemeData theme) {
     return PopupMenuButton<double>(
-      tooltip: 'Playback speed',
+      tooltip: AppLocalizations.of(context)!.playerPlaybackSpeed,
       initialValue: _currentPlaybackSpeed,
       onSelected: (speed) {
         _changePlaybackSpeed(speed);
@@ -2411,7 +2432,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                 SizedBox(width: isMobile ? 4 : 6),
                 Flexible(
                   child: Text(
-                    'Resumed from $_resumedTimeText',
+                    AppLocalizations.of(context)!
+                        .playerResumedFrom(_resumedTimeText!),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
                     style: TextStyle(
@@ -2434,7 +2456,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                       vertical: 2,
                     ),
                     child: Text(
-                      'Start Over',
+                      AppLocalizations.of(context)!.playerStartOver,
                       style: TextStyle(
                         color: theme.primaryColor,
                         fontWeight: FontWeight.bold,
@@ -2566,17 +2588,14 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     if (player != null) unawaited(player.seek(position));
   }
 
+  /// Progress-bar time label, always HH:MM:SS (e.g. 00:30:00, 01:30:00).
   String _formatPlaybackTime(Duration value) {
     final totalSeconds = value.inSeconds.clamp(0, 359999);
     final hours = totalSeconds ~/ 3600;
     final minutes = (totalSeconds % 3600) ~/ 60;
     final seconds = totalSeconds % 60;
-    final twoMinutes = minutes.toString().padLeft(2, '0');
-    final twoSeconds = seconds.toString().padLeft(2, '0');
-    if (hours > 0) {
-      return '$hours:$twoMinutes:$twoSeconds';
-    }
-    return '$twoMinutes:$twoSeconds';
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(hours)}:${two(minutes)}:${two(seconds)}';
   }
 
   String _downloadSourceUrl(Content? content) {
@@ -2676,7 +2695,8 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       if (_hasPlaybackError) {
         return Center(
           child: Text(
-            _playbackMessage ?? 'Video unavailable',
+            _playbackMessage ??
+                AppLocalizations.of(context)!.playerVideoUnavailable,
             style: const TextStyle(color: Colors.white),
             textAlign: TextAlign.center,
           ),
