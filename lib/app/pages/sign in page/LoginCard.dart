@@ -42,6 +42,10 @@ class _LoginCardState extends State<LoginCard>
   final FocusNode _backFocusNode = FocusNode(debugLabel: 'login-back');
   final FocusNode _resendFocusNode = FocusNode(debugLabel: 'login-resend');
   final FocusNode _skipFocusNode = FocusNode(debugLabel: 'login-skip');
+  final FocusNode _languageFocusNode =
+      FocusNode(debugLabel: 'login-language');
+  final GlobalKey<PopupMenuButtonState<String>> _languageMenuKey =
+      GlobalKey<PopupMenuButtonState<String>>();
   final List<FocusNode> _keypadFocusNodes = List.generate(
     12,
     (index) => FocusNode(debugLabel: 'login-tv-keypad-$index'),
@@ -112,6 +116,7 @@ class _LoginCardState extends State<LoginCard>
     _backFocusNode.dispose();
     _resendFocusNode.dispose();
     _skipFocusNode.dispose();
+    _languageFocusNode.dispose();
     for (final node in _keypadFocusNodes) {
       node.dispose();
     }
@@ -176,12 +181,17 @@ class _LoginCardState extends State<LoginCard>
         forceMaterialTransparency: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-            child: LanguageDropdown(),
-          ),
-        ],
+        // On TV the language picker lives inside the login card so the
+        // remote focus never has to leave it.
+        actions: ResponsiveWidget.isTv(context)
+            ? null
+            : const [
+                Padding(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+                  child: LanguageDropdown(),
+                ),
+              ],
       ),
       body: Stack(
         children: [
@@ -268,7 +278,7 @@ class _LoginCardState extends State<LoginCard>
     bool useTvKeypad,
   ) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -348,56 +358,6 @@ class _LoginCardState extends State<LoginCard>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    OttTvFocus(
-                      focusNode: _backFocusNode,
-                      borderRadius: 10,
-                      scale: 1.05,
-                      onTap: () {
-                        setState(() {
-                          otpSent = false;
-                          _otpController.clear();
-                          _otpHelperText = null;
-                        });
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (mounted && _keypadFocusNodes.isNotEmpty) {
-                            _keypadFocusNodes[0].requestFocus();
-                          }
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.15),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.edit_outlined,
-                              size: 15,
-                              color: theme.primaryColor,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              "Change Mobile Number",
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: theme.primaryColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   ],
 
                   const SizedBox(height: 36),
@@ -432,9 +392,14 @@ class _LoginCardState extends State<LoginCard>
           Expanded(
             flex: 5,
             child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440),
-                child: _buildTvFormCard(context, lang, theme),
+              // Scale the card down (never up) if it is still taller than
+              // the space left on the TV screen, so it can never overflow.
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: SizedBox(
+                  width: 350,
+                  child: _buildTvFormCard(context, lang, theme),
+                ),
               ),
             ),
           ),
@@ -500,11 +465,13 @@ class _LoginCardState extends State<LoginCard>
     AppLocalizations lang,
     ThemeData theme,
   ) {
+    final resendReady = _resendSecondsRemaining <= 0;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
       decoration: BoxDecoration(
-        color: theme.cardColor.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(24),
+        color: theme.cardColor.withValues(alpha: 0.88),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.12),
           width: 1.2,
@@ -512,51 +479,81 @@ class _LoginCardState extends State<LoginCard>
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.45),
-            blurRadius: 36,
-            offset: const Offset(0, 16),
+            blurRadius: 32,
+            offset: const Offset(0, 14),
           ),
         ],
       ),
-      child: FocusTraversalGroup(
-        policy: OrderedTraversalPolicy(),
+      // Every arrow key is handled here so the focus can never leave the
+      // card and always moves to a predictable neighbour.
+      child: Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onKeyEvent: _handleTvCardArrowKey,
         child: Form(
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              /// Header indicator inside card
+              /// Header: step + title on the left, language on the right
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    otpSent ? "ENTER 6-DIGIT OTP" : "ENTER MOBILE NUMBER",
-                    style: GoogleFonts.outfit(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.1,
-                      color: theme.primaryColor,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          otpSent ? "STEP 2 OF 2" : "STEP 1 OF 2",
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.8,
+                            color: theme.canvasColor.withValues(alpha: 0.55),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          otpSent ? "ENTER 6-DIGIT OTP" : "ENTER MOBILE NUMBER",
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.0,
+                            color: theme.primaryColor,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: theme.primaryColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      otpSent ? "STEP 2 OF 2" : "STEP 1 OF 2",
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: theme.primaryColor,
-                      ),
-                    ),
+                  ListenableBuilder(
+                    listenable: _languageFocusNode,
+                    builder: (context, _) {
+                      final focused = _languageFocusNode.hasFocus;
+                      return OttTvFocus(
+                        focusNode: _languageFocusNode,
+                        borderRadius: 8,
+                        scale: 1.04,
+                        semanticLabel: lang.translate,
+                        onTap: () =>
+                            _languageMenuKey.currentState?.showButtonMenu(),
+                        child: LanguageDropdown(
+                          menuKey: _languageMenuKey,
+                          showSelectedLabel: true,
+                          foregroundColor: focused ? Colors.white : null,
+                          backgroundColor:
+                              focused ? theme.primaryColor : null,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 5,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
 
               if (!otpSent) ...[
                 /// Mobile Number TV Display Box
@@ -565,7 +562,7 @@ class _LoginCardState extends State<LoginCard>
                 /// OTP 6-Box TV Slot Display
                 _buildTvOtpSlotDisplay(theme),
                 if (_otpHelperText != null) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
                     _otpHelperText!,
                     textAlign: TextAlign.center,
@@ -573,134 +570,140 @@ class _LoginCardState extends State<LoginCard>
                       color: _otpAutoFilled
                           ? Colors.greenAccent
                           : theme.canvasColor.withValues(alpha: 0.7),
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
 
-                /// Resend Timer Action Pill
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FocusTraversalOrder(
-                    order: const NumericFocusOrder(18),
-                    child: OttTvFocus(
-                      focusNode: _resendFocusNode,
-                      borderRadius: 8,
-                      scale: 1.05,
-                      onTap: isLoading ||
-                              _authRequestInFlight ||
-                              _resendSecondsRemaining > 0
-                          ? null
-                          : _resendOtp,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        child: Text(
-                          _resendSecondsRemaining > 0
-                              ? 'Resend OTP in ${_formatResendTime(_resendSecondsRemaining)}'
-                              : 'Resend OTP',
-                          style: TextStyle(
-                            color: _resendSecondsRemaining > 0
-                                ? theme.canvasColor.withValues(alpha: 0.5)
-                                : theme.primaryColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
+                /// Change number + Resend OTP (kept inside the card so the
+                /// focus never has to leave it)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildTvTextAction(
+                      theme: theme,
+                      focusNode: _backFocusNode,
+                      icon: Icons.edit_outlined,
+                      label: 'Change Number',
+                      onTap: _backToMobileStep,
                     ),
-                  ),
+                    _buildTvTextAction(
+                      theme: theme,
+                      focusNode: _resendFocusNode,
+                      icon: Icons.refresh_rounded,
+                      label: resendReady
+                          ? 'Resend OTP'
+                          : 'Resend in ${_formatResendTime(_resendSecondsRemaining)}',
+                      enabledLook: resendReady,
+                      onTap: () {
+                        if (!resendReady ||
+                            isLoading ||
+                            _authRequestInFlight) {
+                          return;
+                        }
+                        _resendOtp();
+                      },
+                    ),
+                  ],
                 ),
               ],
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
 
               /// On-Screen TV Number Pad
               _TvNumberPad(
                 focusNodes: _keypadFocusNodes,
-                focusOrderStart: 1,
                 onDigit: _appendTvDigit,
                 onBackspace: _removeTvDigit,
                 onDone: _handleTvDone,
               ),
 
-              const SizedBox(height: 16),
-
-              /// Primary Action Button (Send OTP / Verify OTP)
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(20),
-                child: OttTvFocus(
-                  focusNode: _submitFocusNode,
-                  borderRadius: 14,
-                  scale: 1.04,
-                  onTap: isLoading || _authRequestInFlight
-                      ? null
-                      : _handleLoginOrOtp,
-                  child: Container(
-                    height: 50,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          theme.primaryColor,
-                          theme.primaryColor.withValues(alpha: 0.85),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: theme.primaryColor.withValues(alpha: 0.4),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: isLoading
-                          ? const SizedBox(
-                              height: 22,
-                              width: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  otpSent ? lang.verifyOtp : lang.sendOtp,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Icon(
-                                  Icons.arrow_forward_rounded,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                              ],
-                            ),
-                    ),
-                  ),
-                ),
-              ),
-
               const SizedBox(height: 10),
 
+              /// Primary Action Button (Send OTP / Verify OTP)
+              ListenableBuilder(
+                listenable: _submitFocusNode,
+                builder: (context, child) {
+                  final focused = _submitFocusNode.hasFocus;
+                  return OttTvFocus(
+                    focusNode: _submitFocusNode,
+                    borderRadius: 12,
+                    scale: 1.03,
+                    // Keep the button focusable while loading; otherwise
+                    // the focus is dropped and the user loses the cursor.
+                    onTap: () {
+                      if (isLoading || _authRequestInFlight) return;
+                      _handleLoginOrOtp();
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor
+                            .withValues(alpha: focused ? 1.0 : 0.75),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: focused ? Colors.white : Colors.transparent,
+                          width: 2,
+                        ),
+                        boxShadow: focused
+                            ? [
+                                BoxShadow(
+                                  color: theme.primaryColor
+                                      .withValues(alpha: 0.5),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Center(
+                        child: isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.4,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    otpSent ? lang.verifyOtp : lang.sendOtp,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Icon(
+                                    Icons.arrow_forward_rounded,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 4),
+
               /// Skip Button
-              FocusTraversalOrder(
-                order: const NumericFocusOrder(21),
-                child: OttTvFocus(
+              Center(
+                child: _buildTvTextAction(
+                  theme: theme,
                   focusNode: _skipFocusNode,
-                  borderRadius: 10,
-                  scale: 1.03,
-                  semanticLabel: "Skip & Browse App",
+                  label: 'Skip & Browse App as Guest',
+                  enabledLook: false,
                   onTap: () {
                     Navigator.pushReplacement(
                       context,
@@ -709,19 +712,6 @@ class _LoginCardState extends State<LoginCard>
                       ),
                     );
                   },
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        "Skip & Browse App as Guest",
-                        style: TextStyle(
-                          color: theme.canvasColor.withValues(alpha: 0.65),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ),
                 ),
               ),
             ],
@@ -731,14 +721,157 @@ class _LoginCardState extends State<LoginCard>
     );
   }
 
+  /// Small text button for the TV card that fills with the brand colour when
+  /// focused, so the remote cursor is always easy to spot.
+  Widget _buildTvTextAction({
+    required ThemeData theme,
+    required FocusNode focusNode,
+    required String label,
+    required VoidCallback onTap,
+    IconData? icon,
+    bool enabledLook = true,
+  }) {
+    return ListenableBuilder(
+      listenable: focusNode,
+      builder: (context, _) {
+        final focused = focusNode.hasFocus;
+        final color = focused
+            ? Colors.white
+            : enabledLook
+                ? theme.primaryColor
+                : theme.canvasColor.withValues(alpha: 0.6);
+        return OttTvFocus(
+          focusNode: focusNode,
+          borderRadius: 8,
+          scale: 1.04,
+          semanticLabel: label,
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: focused ? theme.primaryColor : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 14, color: color),
+                  const SizedBox(width: 5),
+                ],
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _backToMobileStep() {
+    setState(() {
+      otpSent = false;
+      _otpController.clear();
+      _otpHelperText = null;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _keypadFocusNodes.isNotEmpty) {
+        _keypadFocusNodes[0].requestFocus();
+      }
+    });
+  }
+
+  /// Focusable items of the TV card, laid out in the same rows as on screen.
+  List<List<FocusNode>> get _tvCardFocusRows => [
+        [_languageFocusNode],
+        if (otpSent) [_backFocusNode, _resendFocusNode],
+        for (var row = 0; row < 4; row++)
+          _keypadFocusNodes.sublist(row * 3, row * 3 + 3),
+        [_submitFocusNode],
+        [_skipFocusNode],
+      ];
+
+  KeyEventResult _handleTvCardArrowKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    final int dRow;
+    final int dCol;
+    if (key == LogicalKeyboardKey.arrowUp) {
+      dRow = -1;
+      dCol = 0;
+    } else if (key == LogicalKeyboardKey.arrowDown) {
+      dRow = 1;
+      dCol = 0;
+    } else if (key == LogicalKeyboardKey.arrowLeft) {
+      dRow = 0;
+      dCol = -1;
+    } else if (key == LogicalKeyboardKey.arrowRight) {
+      dRow = 0;
+      dCol = 1;
+    } else {
+      return KeyEventResult.ignored;
+    }
+
+    final rows = _tvCardFocusRows
+        .map((row) => row.where((n) => n.context != null).toList())
+        .where((row) => row.isNotEmpty)
+        .toList();
+
+    var row = -1;
+    var col = -1;
+    for (var r = 0; r < rows.length && row < 0; r++) {
+      final c = rows[r].indexWhere((n) => n.hasFocus);
+      if (c >= 0) {
+        row = r;
+        col = c;
+      }
+    }
+
+    FocusNode? target;
+    if (row < 0) {
+      // Focus is somewhere unexpected: bring it back to the first key.
+      target = _keypadFocusNodes.first;
+    } else if (dCol != 0) {
+      final newCol = col + dCol;
+      // Stop at the card edges instead of jumping out of the card.
+      if (newCol >= 0 && newCol < rows[row].length) {
+        target = rows[row][newCol];
+      }
+    } else {
+      final newRow = row + dRow;
+      if (newRow >= 0 && newRow < rows.length) {
+        final from = rows[row].length;
+        final to = rows[newRow].length;
+        // Keep roughly the same horizontal position between rows.
+        final newCol = ((col + 0.5) * to / from).floor().clamp(0, to - 1);
+        target = rows[newRow][newCol];
+      }
+    }
+
+    target?.requestFocus();
+    // Always consume arrow keys so the default traversal can never move the
+    // focus outside of the card.
+    return KeyEventResult.handled;
+  }
+
   Widget _buildTvMobileDisplayBox(ThemeData theme) {
     final text = _mobileController.text;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: text.isNotEmpty
               ? theme.primaryColor.withValues(alpha: 0.6)
@@ -757,25 +890,25 @@ class _LoginCardState extends State<LoginCard>
             child: Text(
               "🇮🇳 +91",
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: theme.canvasColor,
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Container(
-            height: 24,
+            height: 22,
             width: 1,
             color: Colors.white.withValues(alpha: 0.2),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: text.isEmpty
                 ? Text(
                     "Enter 10 digit number",
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 15,
                       color: theme.canvasColor.withValues(alpha: 0.35),
                       letterSpacing: 1.0,
                     ),
@@ -785,10 +918,10 @@ class _LoginCardState extends State<LoginCard>
                       Text(
                         _formatSpacedPhoneNumber(text),
                         style: GoogleFonts.outfit(
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: theme.canvasColor,
-                          letterSpacing: 2.0,
+                          letterSpacing: 1.6,
                         ),
                       ),
                       if (text.length < 10) ...[
@@ -838,8 +971,8 @@ class _LoginCardState extends State<LoginCard>
         final digit = hasValue ? otpText[index] : '';
 
         return Container(
-          width: 48,
-          height: 56,
+          width: 42,
+          height: 44,
           decoration: BoxDecoration(
             color: hasValue
                 ? theme.primaryColor.withValues(alpha: 0.12)
@@ -867,7 +1000,7 @@ class _LoginCardState extends State<LoginCard>
                 ? Text(
                     digit,
                     style: GoogleFonts.outfit(
-                      fontSize: 24,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: theme.canvasColor,
                     ),
@@ -1012,8 +1145,7 @@ class _LoginCardState extends State<LoginCard>
                     shape: PinCodeFieldShape.box,
                     borderRadius: BorderRadius.circular(10),
                     fieldHeight: 48,
-                    fieldWidth:
-                        ResponsiveWidget.isMobile(context) ? 42 : 48,
+                    fieldWidth: ResponsiveWidget.isMobile(context) ? 42 : 48,
                     activeFillColor: theme.cardColor,
                     selectedFillColor: theme.cardColor,
                     inactiveFillColor: theme.cardColor,
@@ -1555,14 +1687,12 @@ class _LoginCardState extends State<LoginCard>
 class _TvNumberPad extends StatelessWidget {
   const _TvNumberPad({
     required this.focusNodes,
-    required this.focusOrderStart,
     required this.onDigit,
     required this.onBackspace,
     required this.onDone,
   });
 
   final List<FocusNode> focusNodes;
-  final double focusOrderStart;
   final ValueChanged<String> onDigit;
   final VoidCallback onBackspace;
   final VoidCallback onDone;
@@ -1591,49 +1721,67 @@ class _TvNumberPad extends StatelessWidget {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        mainAxisSpacing: 8,
+        mainAxisSpacing: 6,
         crossAxisSpacing: 8,
-        childAspectRatio: 2.2,
+        mainAxisExtent: 38,
       ),
       itemCount: keys.length,
       itemBuilder: (context, index) {
         final key = keys[index];
-        return FocusTraversalOrder(
-          order: NumericFocusOrder(focusOrderStart + index),
-          child: OttTvFocus(
-            focusNode: focusNodes[index],
-            onTap: key.onTap,
-            borderRadius: 12,
-            scale: 1.08,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.10),
-                  width: 1.0,
+        final node = focusNodes[index];
+        return ListenableBuilder(
+          listenable: node,
+          builder: (context, _) {
+            // A filled brand-coloured key makes the remote cursor obvious.
+            final focused = node.hasFocus;
+            final contentColor = focused
+                ? Colors.white
+                : key.actionColor ?? theme.canvasColor;
+            return OttTvFocus(
+              focusNode: node,
+              onTap: key.onTap,
+              borderRadius: 10,
+              scale: 1.06,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 120),
+                decoration: BoxDecoration(
+                  color: focused
+                      ? theme.primaryColor
+                      : Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: focused
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.10),
+                    width: focused ? 1.6 : 1.0,
+                  ),
+                  boxShadow: focused
+                      ? [
+                          BoxShadow(
+                            color: theme.primaryColor.withValues(alpha: 0.5),
+                            blurRadius: 12,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Center(
+                  child: key.icon == null
+                      ? Text(
+                          key.label!,
+                          style: GoogleFonts.outfit(
+                            color: contentColor,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                      : Icon(key.icon, color: contentColor, size: 18),
                 ),
               ),
-              child: Center(
-                child: key.icon == null
-                    ? Text(
-                        key.label!,
-                        style: GoogleFonts.outfit(
-                          color: theme.canvasColor,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      )
-                    : Icon(
-                        key.icon,
-                        color: key.actionColor ?? theme.canvasColor,
-                        size: 22,
-                      ),
-              ),
-            ),
-          ),
+            );
+          },
         );
       },
     );

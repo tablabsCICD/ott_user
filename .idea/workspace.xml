@@ -12,8 +12,18 @@
     <list default="true" id="3f04a968-27e5-4905-8561-ff00d911146d" name="Changes" comment="added deeplink and final launch build for deployment">
       <change beforePath="$PROJECT_DIR$/.flutter-plugins-dependencies" beforeDir="false" afterPath="$PROJECT_DIR$/.flutter-plugins-dependencies" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/app/core/constant/api_constant.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/core/constant/api_constant.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ott.iml" beforeDir="false" afterPath="$PROJECT_DIR$/ott.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/analysis_options.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/analysis_options.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/gradle.properties" beforeDir="false" afterPath="$PROJECT_DIR$/android/gradle.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/gradle/wrapper/gradle-wrapper.properties" beforeDir="false" afterPath="$PROJECT_DIR$/android/gradle/wrapper/gradle-wrapper.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/settings.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/android/settings.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/pages/onboarding pages/SplashScreen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/onboarding pages/SplashScreen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/pages/onboarding pages/selectLanguagePage.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/onboarding pages/selectLanguagePage.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/pages/sign in page/LoginCard.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/pages/sign in page/LoginCard.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/app/widgets/LanguageDropdown.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/app/widgets/LanguageDropdown.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/windows/flutter/generated_plugin_registrant.cc" beforeDir="false" afterPath="$PROJECT_DIR$/windows/flutter/generated_plugin_registrant.cc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/windows/flutter/generated_plugins.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/windows/flutter/generated_plugins.cmake" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -70,6 +80,7 @@
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
     &quot;Flutter.main.dart.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
@@ -78,11 +89,11 @@
     &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
     &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
     &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;final__tv&quot;,
     &quot;io.flutter.project.isFirstOpen&quot;: &quot;true&quot;,
     &quot;io.flutter.reload.alreadyRun&quot;: &quot;true&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/Tablab Workspace/OTT/ott_user/lib&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/shivrajechaudhari/Development/Projects/ott_user&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;flutter.settings&quot;,
     &quot;show.migrate.to.gradle.popup&quot;: &quot;false&quot;
   }
@@ -185,30 +196,6 @@
     <MESSAGE value="changes in change_language and home screen" />
     <MESSAGE value="added deeplink and final launch build for deployment" />
     <option name="LAST_COMMIT_MESSAGE" value="added deeplink and final launch build for deployment" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="Dart">
-          <url>file://$PROJECT_DIR$/lib/app/pages/watchlist page/playMoviePage.dart</url>
-          <line>14</line>
-          <option name="timeStamp" value="5" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="Dart">
-          <url>file://$PROJECT_DIR$/lib/app/pages/watchlist page/playMoviePage.dart</url>
-          <line>27</line>
-          <option name="timeStamp" value="6" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="Dart">
-          <url>file://$PROJECT_DIR$/lib/app/provider/dashboardProvider.dart</url>
-          <line>221</line>
-          <option name="timeStamp" value="7" />
-        </line-breakpoint>
-      </breakpoints>
-      <default-breakpoints>
-        <breakpoint type="dart-exception" />
-      </default-breakpoints>
-    </breakpoint-manager>
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

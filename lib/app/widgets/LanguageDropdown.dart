@@ -17,6 +17,7 @@ class LanguageDropdown extends StatefulWidget {
     this.backgroundColor,
     this.padding,
     this.constraints,
+    this.menuKey,
   });
 
   final bool isTitle;
@@ -25,6 +26,10 @@ class LanguageDropdown extends StatefulWidget {
   final Color? backgroundColor;
   final EdgeInsetsGeometry? padding;
   final BoxConstraints? constraints;
+
+  /// Optional key for the underlying popup button, so a parent (e.g. a TV
+  /// focus wrapper) can open the menu with `showButtonMenu()`.
+  final GlobalKey<PopupMenuButtonState<String>>? menuKey;
 
   static const Map<String, String> languages = {
     'en': 'English',
@@ -88,6 +93,7 @@ class _LanguageDropdownState extends State<LanguageDropdown> {
     _logLocale('LanguageDropdown build locale=$currentCode mounted=$mounted');
 
     return PopupMenuButton<String>(
+      key: widget.menuKey,
       color: theme.cardColor,
       padding: EdgeInsets.zero,
       tooltip: lang?.translate ?? 'Select Language',
