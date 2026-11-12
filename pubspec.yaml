@@ -93,6 +93,8 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 
 dependency_overrides:
+  lucide_icons:
+    path: third_party/lucide_icons
   shared_preferences_android: 2.4.10
   uni_links:
     path: third_party/uni_links

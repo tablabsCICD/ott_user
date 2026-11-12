@@ -4,21 +4,21 @@
         "ios": [
             {
                 "name": "connectivity_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\connectivity_plus-6.1.5\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/connectivity_plus-6.1.5/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "firebase_core",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\firebase_core-3.15.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/firebase_core-3.15.2/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "firebase_messaging",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\firebase_messaging-15.2.10\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/firebase_messaging-15.2.10/",
                 "native_build": true,
                 "dependencies": [
                     "firebase_core"
@@ -27,35 +27,35 @@
             },
             {
                 "name": "flutter_inappwebview_ios",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_inappwebview_ios-1.1.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/flutter_inappwebview_ios-1.1.2/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "flutter_local_notifications",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_local_notifications-21.0.0\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/flutter_local_notifications-21.0.0/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "flutter_secure_storage",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage-9.2.4\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/flutter_secure_storage-9.2.4/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "fluttertoast",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\fluttertoast-8.2.14\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/fluttertoast-8.2.14/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "geolocator_apple",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\geolocator_apple-2.3.13\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/geolocator_apple-2.3.13/",
                 "shared_darwin_source": true,
                 "native_build": true,
                 "dependencies": [],
@@ -63,21 +63,21 @@
             },
             {
                 "name": "image_picker_ios",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\image_picker_ios-0.8.13+6\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/image_picker_ios-0.8.13+6/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "media_kit_libs_ios_video",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\media_kit_libs_ios_video-1.1.4\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/media_kit_libs_ios_video-1.1.4/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "media_kit_video",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\media_kit_video-2.0.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/media_kit_video-2.0.1/",
                 "native_build": true,
                 "dependencies": [
                     "wakelock_plus"
@@ -86,14 +86,14 @@
             },
             {
                 "name": "package_info_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\package_info_plus-9.0.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/package_info_plus-9.0.1/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "path_provider_foundation",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_foundation-2.5.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/path_provider_foundation-2.5.1/",
                 "shared_darwin_source": true,
                 "native_build": true,
                 "dependencies": [],
@@ -101,21 +101,21 @@
             },
             {
                 "name": "razorpay_flutter",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\razorpay_flutter-1.4.3\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/razorpay_flutter-1.4.3/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "share_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\share_plus-12.0.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/share_plus-12.0.2/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "shared_preferences_foundation",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\shared_preferences_foundation-2.5.6\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/shared_preferences_foundation-2.5.6/",
                 "shared_darwin_source": true,
                 "native_build": true,
                 "dependencies": [],
@@ -123,7 +123,7 @@
             },
             {
                 "name": "sqflite_darwin",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\sqflite_darwin-2.4.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/sqflite_darwin-2.4.2/",
                 "shared_darwin_source": true,
                 "native_build": true,
                 "dependencies": [],
@@ -131,21 +131,21 @@
             },
             {
                 "name": "uni_links",
-                "path": "D:\\\\Tablab Workspace\\\\OTT\\\\ott_user\\\\third_party\\\\uni_links\\\\",
+                "path": "/Users/shivrajechaudhari/Development/Projects/ott_user/third_party/uni_links/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "url_launcher_ios",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\url_launcher_ios-6.4.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/url_launcher_ios-6.4.1/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "video_player_avfoundation",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\video_player_avfoundation-2.11.0\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/video_player_avfoundation-2.11.0/",
                 "shared_darwin_source": true,
                 "native_build": true,
                 "dependencies": [],
@@ -153,7 +153,7 @@
             },
             {
                 "name": "wakelock_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\wakelock_plus-1.5.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/wakelock_plus-1.5.1/",
                 "native_build": true,
                 "dependencies": [
                     "package_info_plus"
@@ -164,21 +164,21 @@
         "android": [
             {
                 "name": "connectivity_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\connectivity_plus-6.1.5\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/connectivity_plus-6.1.5/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "firebase_core",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\firebase_core-3.15.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/firebase_core-3.15.2/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "firebase_messaging",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\firebase_messaging-15.2.10\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/firebase_messaging-15.2.10/",
                 "native_build": true,
                 "dependencies": [
                     "firebase_core"
@@ -187,49 +187,49 @@
             },
             {
                 "name": "flutter_inappwebview_android",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_inappwebview_android-1.1.3\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/flutter_inappwebview_android-1.1.3/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "flutter_local_notifications",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_local_notifications-21.0.0\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/flutter_local_notifications-21.0.0/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "flutter_plugin_android_lifecycle",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_plugin_android_lifecycle-2.0.34\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/flutter_plugin_android_lifecycle-2.0.34/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "flutter_secure_storage",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage-9.2.4\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/flutter_secure_storage-9.2.4/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "fluttertoast",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\fluttertoast-8.2.14\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/fluttertoast-8.2.14/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "geolocator_android",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\geolocator_android-4.6.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/geolocator_android-4.6.2/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "image_picker_android",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\image_picker_android-0.8.13+15\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/image_picker_android-0.8.13+15/",
                 "native_build": true,
                 "dependencies": [
                     "flutter_plugin_android_lifecycle"
@@ -238,14 +238,14 @@
             },
             {
                 "name": "media_kit_libs_android_video",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\media_kit_libs_android_video-1.3.8\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/media_kit_libs_android_video-1.3.8/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "media_kit_video",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\media_kit_video-2.0.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/media_kit_video-2.0.1/",
                 "native_build": true,
                 "dependencies": [
                     "wakelock_plus"
@@ -254,77 +254,77 @@
             },
             {
                 "name": "package_info_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\package_info_plus-9.0.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/package_info_plus-9.0.1/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "path_provider_android",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_android-2.2.23\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/path_provider_android-2.2.23/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "razorpay_flutter",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\razorpay_flutter-1.4.3\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/razorpay_flutter-1.4.3/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "share_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\share_plus-12.0.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/share_plus-12.0.2/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "shared_preferences_android",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\shared_preferences_android-2.4.10\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.10/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "sms_autofill",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\sms_autofill-2.5.0\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/sms_autofill-2.5.0/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "sqflite_android",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\sqflite_android-2.4.2+3\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/sqflite_android-2.4.2+3/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "uni_links",
-                "path": "D:\\\\Tablab Workspace\\\\OTT\\\\ott_user\\\\third_party\\\\uni_links\\\\",
+                "path": "/Users/shivrajechaudhari/Development/Projects/ott_user/third_party/uni_links/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "url_launcher_android",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\url_launcher_android-6.3.29\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/url_launcher_android-6.3.29/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "video_player_android",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\video_player_android-2.9.5\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/video_player_android-2.9.5/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "wakelock_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\wakelock_plus-1.5.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/wakelock_plus-1.5.1/",
                 "native_build": true,
                 "dependencies": [
                     "package_info_plus"
@@ -335,28 +335,28 @@
         "macos": [
             {
                 "name": "connectivity_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\connectivity_plus-6.1.5\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/connectivity_plus-6.1.5/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "file_selector_macos",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\file_selector_macos-0.9.5\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/file_selector_macos-0.9.5/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "firebase_core",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\firebase_core-3.15.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/firebase_core-3.15.2/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "firebase_messaging",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\firebase_messaging-15.2.10\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/firebase_messaging-15.2.10/",
                 "native_build": true,
                 "dependencies": [
                     "firebase_core"
@@ -365,28 +365,28 @@
             },
             {
                 "name": "flutter_inappwebview_macos",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_inappwebview_macos-1.1.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/flutter_inappwebview_macos-1.1.2/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "flutter_local_notifications",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_local_notifications-21.0.0\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/flutter_local_notifications-21.0.0/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "flutter_secure_storage_macos",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage_macos-3.1.3\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/flutter_secure_storage_macos-3.1.3/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "geolocator_apple",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\geolocator_apple-2.3.13\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/geolocator_apple-2.3.13/",
                 "shared_darwin_source": true,
                 "native_build": true,
                 "dependencies": [],
@@ -394,7 +394,7 @@
             },
             {
                 "name": "image_picker_macos",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\image_picker_macos-0.2.2+1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/image_picker_macos-0.2.2+1/",
                 "native_build": false,
                 "dependencies": [
                     "file_selector_macos"
@@ -403,14 +403,14 @@
             },
             {
                 "name": "media_kit_libs_macos_video",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\media_kit_libs_macos_video-1.1.4\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/media_kit_libs_macos_video-1.1.4/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "media_kit_video",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\media_kit_video-2.0.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/media_kit_video-2.0.1/",
                 "native_build": true,
                 "dependencies": [
                     "wakelock_plus"
@@ -419,14 +419,14 @@
             },
             {
                 "name": "package_info_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\package_info_plus-9.0.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/package_info_plus-9.0.1/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "path_provider_foundation",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_foundation-2.5.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/path_provider_foundation-2.5.1/",
                 "shared_darwin_source": true,
                 "native_build": true,
                 "dependencies": [],
@@ -434,14 +434,14 @@
             },
             {
                 "name": "share_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\share_plus-12.0.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/share_plus-12.0.2/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "shared_preferences_foundation",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\shared_preferences_foundation-2.5.6\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/shared_preferences_foundation-2.5.6/",
                 "shared_darwin_source": true,
                 "native_build": true,
                 "dependencies": [],
@@ -449,7 +449,7 @@
             },
             {
                 "name": "sqflite_darwin",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\sqflite_darwin-2.4.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/sqflite_darwin-2.4.2/",
                 "shared_darwin_source": true,
                 "native_build": true,
                 "dependencies": [],
@@ -457,14 +457,14 @@
             },
             {
                 "name": "url_launcher_macos",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\url_launcher_macos-3.2.5\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/url_launcher_macos-3.2.5/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "video_player_avfoundation",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\video_player_avfoundation-2.11.0\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/video_player_avfoundation-2.11.0/",
                 "shared_darwin_source": true,
                 "native_build": true,
                 "dependencies": [],
@@ -472,7 +472,7 @@
             },
             {
                 "name": "wakelock_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\wakelock_plus-1.5.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/wakelock_plus-1.5.1/",
                 "native_build": true,
                 "dependencies": [
                     "package_info_plus"
@@ -483,35 +483,35 @@
         "linux": [
             {
                 "name": "connectivity_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\connectivity_plus-6.1.5\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/connectivity_plus-6.1.5/",
                 "native_build": false,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "file_selector_linux",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\file_selector_linux-0.9.4\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/file_selector_linux-0.9.4/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "flutter_local_notifications_linux",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_local_notifications_linux-8.0.0\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/flutter_local_notifications_linux-8.0.0/",
                 "native_build": false,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "flutter_secure_storage_linux",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage_linux-1.2.3\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/flutter_secure_storage_linux-1.2.3/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "image_picker_linux",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\image_picker_linux-0.2.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/image_picker_linux-0.2.2/",
                 "native_build": false,
                 "dependencies": [
                     "file_selector_linux"
@@ -520,14 +520,14 @@
             },
             {
                 "name": "media_kit_libs_linux",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\media_kit_libs_linux-1.2.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/media_kit_libs_linux-1.2.1/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "media_kit_video",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\media_kit_video-2.0.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/media_kit_video-2.0.1/",
                 "native_build": true,
                 "dependencies": [
                     "wakelock_plus"
@@ -536,21 +536,21 @@
             },
             {
                 "name": "package_info_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\package_info_plus-9.0.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/package_info_plus-9.0.1/",
                 "native_build": false,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "path_provider_linux",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_linux-2.2.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/path_provider_linux-2.2.1/",
                 "native_build": false,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "share_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\share_plus-12.0.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/share_plus-12.0.2/",
                 "native_build": false,
                 "dependencies": [
                     "url_launcher_linux"
@@ -559,7 +559,7 @@
             },
             {
                 "name": "shared_preferences_linux",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\shared_preferences_linux-2.4.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/shared_preferences_linux-2.4.1/",
                 "native_build": false,
                 "dependencies": [
                     "path_provider_linux"
@@ -568,14 +568,14 @@
             },
             {
                 "name": "url_launcher_linux",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\url_launcher_linux-3.2.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/url_launcher_linux-3.2.2/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "wakelock_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\wakelock_plus-1.5.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/wakelock_plus-1.5.1/",
                 "native_build": false,
                 "dependencies": [
                     "package_info_plus"
@@ -586,56 +586,56 @@
         "windows": [
             {
                 "name": "connectivity_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\connectivity_plus-6.1.5\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/connectivity_plus-6.1.5/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "file_selector_windows",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\file_selector_windows-0.9.3+5\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/file_selector_windows-0.9.3+5/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "firebase_core",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\firebase_core-3.15.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/firebase_core-3.15.2/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "flutter_inappwebview_windows",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_inappwebview_windows-0.6.0\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/flutter_inappwebview_windows-0.6.0/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "flutter_local_notifications_windows",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_local_notifications_windows-3.0.0\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/flutter_local_notifications_windows-3.0.0/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "flutter_secure_storage_windows",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage_windows-3.1.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/flutter_secure_storage_windows-3.1.2/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "geolocator_windows",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\geolocator_windows-0.2.5\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/geolocator_windows-0.2.5/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "image_picker_windows",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\image_picker_windows-0.2.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/image_picker_windows-0.2.2/",
                 "native_build": false,
                 "dependencies": [
                     "file_selector_windows"
@@ -644,14 +644,14 @@
             },
             {
                 "name": "media_kit_libs_windows_video",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\media_kit_libs_windows_video-1.0.11\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/media_kit_libs_windows_video-1.0.11/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "media_kit_video",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\media_kit_video-2.0.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/media_kit_video-2.0.1/",
                 "native_build": true,
                 "dependencies": [
                     "wakelock_plus"
@@ -660,21 +660,21 @@
             },
             {
                 "name": "package_info_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\package_info_plus-9.0.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/package_info_plus-9.0.1/",
                 "native_build": false,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "path_provider_windows",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_windows-2.3.0\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/path_provider_windows-2.3.0/",
                 "native_build": false,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "share_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\share_plus-12.0.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/share_plus-12.0.2/",
                 "native_build": true,
                 "dependencies": [
                     "url_launcher_windows"
@@ -683,7 +683,7 @@
             },
             {
                 "name": "shared_preferences_windows",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\shared_preferences_windows-2.4.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/shared_preferences_windows-2.4.1/",
                 "native_build": false,
                 "dependencies": [
                     "path_provider_windows"
@@ -692,14 +692,14 @@
             },
             {
                 "name": "url_launcher_windows",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\url_launcher_windows-3.1.5\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/url_launcher_windows-3.1.5/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "wakelock_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\wakelock_plus-1.5.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/wakelock_plus-1.5.1/",
                 "native_build": false,
                 "dependencies": [
                     "package_info_plus"
@@ -710,19 +710,19 @@
         "web": [
             {
                 "name": "connectivity_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\connectivity_plus-6.1.5\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/connectivity_plus-6.1.5/",
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "firebase_core_web",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\firebase_core_web-2.24.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/firebase_core_web-2.24.1/",
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "firebase_messaging_web",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\firebase_messaging_web-3.10.10\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/firebase_messaging_web-3.10.10/",
                 "dependencies": [
                     "firebase_core_web"
                 ],
@@ -730,43 +730,43 @@
             },
             {
                 "name": "flutter_inappwebview_web",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_inappwebview_web-1.1.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/flutter_inappwebview_web-1.1.2/",
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "flutter_secure_storage_web",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage_web-1.2.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/flutter_secure_storage_web-1.2.1/",
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "fluttertoast",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\fluttertoast-8.2.14\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/fluttertoast-8.2.14/",
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "geolocator_web",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\geolocator_web-4.1.3\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/geolocator_web-4.1.3/",
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "image_picker_for_web",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\image_picker_for_web-3.1.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/image_picker_for_web-3.1.1/",
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "package_info_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\package_info_plus-9.0.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/package_info_plus-9.0.1/",
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "share_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\share_plus-12.0.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/share_plus-12.0.2/",
                 "dependencies": [
                     "url_launcher_web"
                 ],
@@ -774,31 +774,31 @@
             },
             {
                 "name": "shared_preferences_web",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\shared_preferences_web-2.4.3\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/shared_preferences_web-2.4.3/",
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "uni_links_web",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\uni_links_web-0.1.0\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/uni_links_web-0.1.0/",
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "url_launcher_web",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\url_launcher_web-2.4.2\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/url_launcher_web-2.4.2/",
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "video_player_web",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\video_player_web-2.4.0\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/video_player_web-2.4.0/",
                 "dependencies": [],
                 "dev_dependency": false
             },
             {
                 "name": "wakelock_plus",
-                "path": "C:\\\\Users\\\\admin\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\wakelock_plus-1.5.1\\\\",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/wakelock_plus-1.5.1/",
                 "dependencies": [
                     "package_info_plus"
                 ],
@@ -1187,10 +1187,10 @@
             ]
         }
     ],
-    "date_created": "2026-10-13 18:18:23.734286",
-    "version": "3.38.3",
+    "date_created": "2026-11-12 11:38:19.475307",
+    "version": "3.47.6",
     "swift_package_manager_enabled": {
-        "ios": false,
-        "macos": false
+        "ios": true,
+        "macos": true
     }
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
-import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
 import 'package:ott/app/widgets/LanguageDropdown.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';

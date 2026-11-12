@@ -9,7 +9,8 @@ import 'package:ott/app/core/constant/app_constant.dart';
 import 'package:ott/app/core/services/referral_service.dart';
 import 'package:ott/app/flavor/app_flavor.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
-import 'package:ott/app/pages/sign%20in%20page/LoginCard.dart';
+import 'package:ott/app/pages/onboarding pages/selectLanguagePage.dart';
+import 'package:ott/app/pages/sign in page/LoginCard.dart';
 import 'package:ott/app/route/routes/web_navigation_routes.dart';
 import 'package:ott/presentation/web_landing/screens/web_landing_screen.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -89,7 +90,6 @@ class _SplashScreenState extends State<SplashScreen> {
       MaterialPageRoute(
         settings: RouteSettings(name: routeName),
         builder: (routeContext) {
-          debugPrint('SPLASH_TRACE: MaterialPageRoute builder executing, isLoggedIn=$isLoggedIn');
           if (isLoggedIn) {
             final route = initialNavigationRoute;
             return NavigationPage(
@@ -100,8 +100,12 @@ class _SplashScreenState extends State<SplashScreen> {
           if (_shouldShowWebLandingForContext(routeContext)) {
             return const WebLandingScreen();
           }
-          debugPrint('SPLASH_TRACE: Returning const LoginCard()');
-          return const LoginCard();
+          // TV users who are not signed in go straight to the TV login
+          // screen (it offers language selection and "Skip & Browse").
+          if (ResponsiveWidget.isTv(routeContext)) {
+            return const LoginCard();
+          }
+          return const SelectLocaleLanguagePage();
         },
       ),
     );

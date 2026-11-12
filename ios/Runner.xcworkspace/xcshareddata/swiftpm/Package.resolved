@@ -1,5 +1,4 @@
 {
-  "originHash" : "8113cb43d5a72883bde0ec743de1f4e2e07841d64489698724c055d1db383359",
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -128,6 +127,15 @@
       }
     },
     {
+      "identity" : "razorpay-pod",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/razorpay/razorpay-pod.git",
+      "state" : {
+        "revision" : "a7ee6d9db75d629376a2ea0d5c19cfedf8bed95d",
+        "version" : "1.5.8"
+      }
+    },
+    {
       "identity" : "swift-protobuf",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-protobuf.git",
@@ -137,5 +145,5 @@
       }
     }
   ],
-  "version" : 3
+  "version" : 2
 }
