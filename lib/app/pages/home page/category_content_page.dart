@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/widgets/movieCard.dart';
+import 'package:ott/app/widgets/tv_card_scale.dart';
 import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -116,9 +117,11 @@ class _CategoryContentPageState extends State<CategoryContentPage>
         (viewStart / rowExtent).floor().clamp(0, totalRows - 1).toInt();
     final lastRow =
         ((viewEnd - 0.001) / rowExtent).floor().clamp(0, totalRows - 1).toInt();
-    final first = (firstRow * crossCount).clamp(0, _contents.length - 1).toInt();
-    final last =
-        (((lastRow + 1) * crossCount) - 1).clamp(0, _contents.length - 1).toInt();
+    final first =
+        (firstRow * crossCount).clamp(0, _contents.length - 1).toInt();
+    final last = (((lastRow + 1) * crossCount) - 1)
+        .clamp(0, _contents.length - 1)
+        .toInt();
     int? index;
     double bestVisibility = 0;
     for (var candidate = first; candidate <= last; candidate++) {
@@ -286,19 +289,27 @@ class _CategoryContentPageState extends State<CategoryContentPage>
                     cardWidth = MovieCard.mobileCardWidth; // 300.0
                   }
 
+                  final isTv = ResponsiveWidget.isAndroidTv(context);
+                  final targetCardWidth = isDesktop ? 312.0 : 296.0;
                   int crossAxisCount =
                       ((availableWidth + gap) / (cardWidth + gap)).floor();
                   if (crossAxisCount < 1) crossAxisCount = 1;
-                  _crossAxisCount = crossAxisCount;
+                  if (isTablet && crossAxisCount > 3) crossAxisCount = 3;
+                  if (isDesktop && crossAxisCount > 4) crossAxisCount = 4;
+                  // TV: same number of (scaled-down) cards per row as the
+                  // home rows.
+                  if (isTv) crossAxisCount = TvCardScale.visibleCards.floor();
 
-                  // Keep card dimensions stable within each breakpoint:
-                  // Center the grid of consistently sized cards, absorbing remaining space into side padding
-                  final totalGridWidth =
-                      (crossAxisCount * cardWidth) + ((crossAxisCount - 1) * gap);
-                  final centeringPadding =
-                      math.max(0.0, (availableWidth - totalGridWidth) / 2);
-                  final effectiveHorizontalPadding =
-                      horizontalPadding + centeringPadding;
+                  final cardWidth =
+                      (availableWidth - ((crossAxisCount - 1) * _gap)) /
+                          crossAxisCount;
+                  // On TV the card keeps its original design size and is
+                  // scaled down uniformly to fit the cell.
+                  final tvScale = isTv
+                      ? TvCardScale.forWidth(cardWidth, MovieCard.itemWidth)
+                      : null;
+                  final gridItemHeight =
+                      tvScale?.size(_cardHeight) ?? _cardHeight;
 
                   return CustomScrollView(
                     controller: _scrollController,
@@ -314,18 +325,25 @@ class _CategoryContentPageState extends State<CategoryContentPage>
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
                               final content = _contents[index];
-                              return SizedBox(
-                                width: cardWidth,
-                                height: cardHeight,
-                                child: Center(
+                              if (tvScale != null) {
+                                return tvScale.wrap(
+                                  baseWidth: MovieCard.itemWidth,
+                                  baseHeight: _cardHeight,
                                   child: MovieCard(
                                     movie: content,
-                                    index: index,
-                                    activeIndexListenable: _activeIndex,
-                                    cardWidth: cardWidth,
+                                    cardWidth: MovieCard.itemWidth,
                                     cardMargin: 0,
                                     onContentUpdated: _replaceContent,
                                   ),
+                                );
+                              }
+                              return SizedBox(
+                                height: gridItemHeight,
+                                child: MovieCard(
+                                  movie: content,
+                                  cardWidth: cardWidth,
+                                  cardMargin: 0,
+                                  onContentUpdated: _replaceContent,
                                 ),
                               );
                             },
@@ -334,9 +352,9 @@ class _CategoryContentPageState extends State<CategoryContentPage>
                           gridDelegate:
                               SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: crossAxisCount,
-                            mainAxisSpacing: gap,
-                            crossAxisSpacing: gap,
-                            mainAxisExtent: cardHeight,
+                            mainAxisSpacing: _gap,
+                            crossAxisSpacing: _gap,
+                            mainAxisExtent: gridItemHeight,
                           ),
                         ),
                       ),

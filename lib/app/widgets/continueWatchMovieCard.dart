@@ -63,6 +63,9 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
   VideoController? _videoController;
   final List<StreamSubscription<dynamic>> _previewSubscriptions = [];
   bool _isHovered = false;
+  // Remote focus, tracked separately from hover/preview: the home row turns
+  // trailer previews off, which also skipped the focus highlight.
+  bool _isFocused = false;
   bool _isMuted = true;
   bool _isVideoInitialized = false;
   bool _isPreviewPlaying = false;
@@ -437,10 +440,18 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     final highlightColor = theme.brightness == Brightness.light
         ? const Color.fromARGB(255, 185, 169, 169)
         : const Color.fromARGB(255, 58, 49, 49);
+    // Android TV: the card the remote is on lifts, glows and gets a thick
+    // brand-colour outline.
+    final tvFocused = ResponsiveWidget.isAndroidTv(context) &&
+        (_isFocused || _isHovered) &&
+        !showPreview;
     return Stack(children: [
       Focus(
         canRequestFocus: ResponsiveWidget.isTabletOrTv(context),
         onFocusChange: (hasFocus) {
+          if (mounted && _isFocused != hasFocus) {
+            setState(() => _isFocused = hasFocus);
+          }
           if (ResponsiveWidget.isTabletOrTv(context)) {
             _handleHover(hasFocus);
           }
@@ -471,7 +482,9 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                 left: ContinueWatchMovieCard.itemMargin,
                 right: ContinueWatchMovieCard.itemMargin,
                 bottom: ContinueWatchMovieCard.itemMargin,
-                top: showPreview ? 4 : 12, // 👈 selected card moves slightly up
+                top: (showPreview || tvFocused)
+                    ? 4
+                    : 12, // 👈 selected card moves slightly up
               ),
               decoration: BoxDecoration(
                 color: theme.cardColor,
@@ -489,8 +502,28 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
                           offset: const Offset(0, 6),
                         ),
                       ]
-                    : null,
+                    : tvFocused
+                        ? [
+                            BoxShadow(
+                              color: theme.primaryColor.withValues(alpha: 0.55),
+                              blurRadius: 22,
+                              spreadRadius: 2,
+                              offset: const Offset(0, 6),
+                            ),
+                          ]
+                        : null,
               ),
+              // On TV outline the focused card so the remote cursor is
+              // visible (previews are off in this row). Painted on top so it
+              // never shrinks the card content.
+              // (The row scales the card down on TV, so the outline is drawn
+              // thicker to stay clearly visible.)
+              foregroundDecoration: tvFocused
+                  ? BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: theme.primaryColor, width: 4),
+                    )
+                  : null,
               child: Container(
                 decoration: BoxDecoration(
                   border: Border(

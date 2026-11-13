@@ -17,6 +17,7 @@ import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/movieCard.dart';
+import 'package:ott/app/widgets/tv_card_scale.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/shimmer%20loader/home_shimmer.dart';
 import 'package:ott/app/widgets/shimmer%20loader/shimmer_loader.dart';
@@ -443,7 +444,8 @@ class _SeriesListViewState extends State<_SeriesListView>
                         ? selectedThemeData.canvasColor
                         : Colors.white,
                   ),
-                  tooltip: '₹ ${walletProvider.walletBalance.toStringAsFixed(2)}',
+                  tooltip:
+                      '₹ ${walletProvider.walletBalance.toStringAsFixed(2)}',
                   style: _appBarIconStyle(context),
                   onPressed: () => Navigator.push(
                     context,
@@ -617,7 +619,11 @@ class _SeriesListViewState extends State<_SeriesListView>
                         title,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
-                          fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
+                          fontSize: ResponsiveWidget.isMobile(context)
+                              ? 18
+                              : ResponsiveWidget.isAndroidTv(context)
+                                  ? 16
+                                  : 20,
                           fontWeight: FontWeight.bold,
                           color: selectedThemeData.canvasColor,
                         ),
@@ -634,34 +640,50 @@ class _SeriesListViewState extends State<_SeriesListView>
               ),
             ),
           ),
-          SizedBox(
-            height: MovieCard.standardHeight,
-            child: ListView.builder(
-              controller: controller,
-              scrollDirection: Axis.horizontal,
-              itemCount: dashboardData.movies!.length +
-                  (dashboardData.isRowLoading ? 1 : 0),
-              itemBuilder: (context, i) {
-                if (i < dashboardData.movies!.length) {
-                  return MovieCard(
-                    movie: dashboardData.movies![i],
-                    index: i,
-                    activeIndexListenable: activeIndex,
-                  );
-                }
+          LayoutBuilder(builder: (context, constraints) {
+            // On TV the existing cards are scaled down uniformly (same
+            // design and aspect ratio); null elsewhere.
+            final tvScale = ResponsiveWidget.isAndroidTv(context)
+                ? TvCardScale.forRow(constraints.maxWidth, MovieCard.itemExtent)
+                : null;
+            return SizedBox(
+              height: tvScale?.size(270) ?? 270,
+              child: ListView.builder(
+                controller: controller,
+                scrollDirection: Axis.horizontal,
+                itemCount: dashboardData.movies!.length +
+                    (dashboardData.isRowLoading ? 1 : 0),
+                itemBuilder: (context, i) {
+                  if (i < dashboardData.movies!.length) {
+                    final card = MovieCard(
+                      movie: dashboardData.movies![i],
+                      index: i,
+                      // On TV the trailer preview follows the remote focus.
+                      activeIndexListenable:
+                          tvScale == null ? activeIndex : null,
+                    );
+                    return tvScale == null
+                        ? card
+                        : tvScale.wrap(
+                            baseWidth: MovieCard.itemExtent,
+                            baseHeight: 270,
+                            child: card,
+                          );
+                  }
 
-                return const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 20),
+                  return const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  );
+                },
+              ),
+            );
+          }),
+          SizedBox(height: ResponsiveWidget.isAndroidTv(context) ? 8 : 20),
         ],
       ),
     );

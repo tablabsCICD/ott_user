@@ -36,6 +36,7 @@ import 'package:provider/provider.dart';
 import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/movieCard.dart';
+import 'package:ott/app/widgets/tv_card_scale.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -571,8 +572,17 @@ class _HomePageState extends State<HomePage>
               slivers: [
                 _buildSliverAppBar(context, selectedThemeData),
                 SliverToBoxAdapter(
-                  child: Consumer<DashboardProvider>(
-                    builder: (context, dashboardProvider, child) {
+                  child: LayoutBuilder(builder: (context, constraints) {
+                  // On TV the existing cards are scaled down uniformly (same
+                  // design and aspect ratio); null on mobile/tablet/web.
+                  final tvScale = ResponsiveWidget.isAndroidTv(context)
+                      ? TvCardScale.forRow(
+                          constraints.maxWidth - 16, MovieCard.itemExtent)
+                      : null;
+                  return Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Consumer<DashboardProvider>(
+                        builder: (context, dashboardProvider, child) {
                       final showContentLoader = dashboardProvider.isLoading &&
                           (ContentType.isMovieLike(selectedType) ||
                               ContentType.isSeries(selectedType));
@@ -595,52 +605,83 @@ class _HomePageState extends State<HomePage>
                                     context, dashboardProvider),
                               ),
                             ),
-                          const SizedBox(height: 6),
-                          if (selectedType != 'MINI SERIES' &&
-                              selectedType != 'MADIOO')
-                            _isOffline
-                                ? _continueWatchShimmerWidget()
-                                : continueWatchWidget(
-                                    continueWatchList: dashboardProvider
-                                        .continueWatchedMovies),
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 10.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (ResponsiveWidget.isTabletOrTv(context) &&
-                                    selectedType != 'MINI SERIES' &&
-                                    selectedType != 'MADIOO')
-                                  _buildTvHeroSlider(
-                                    context,
-                                    selectedThemeData,
-                                    dashboardProvider,
-                                  ),
-                                const SizedBox(height: 8),
-                                showContentLoader
-                                    ? _buildDashboardSectionLoader(
-                                        context,
-                                        selectedThemeData,
-                                      )
-                                    : Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          selectedType == 'MINI SERIES'
-                                              ? ShortsLibraryPage(
-                                                  useParentScroll: true)
-                                              : selectedType == 'MADIOO'
-                                                  ? MadiooPage(
-                                                      useParentScroll: true)
-                                                  : ListView.builder(
-                                                      shrinkWrap: true,
-                                                      physics:
-                                                          NeverScrollableScrollPhysics(),
-                                                      padding: EdgeInsets.zero,
-                                                      scrollDirection:
-                                                          Axis.vertical,
-                                                      itemCount:
+                          SizedBox(
+                            height: 20,
+                          ),
+                          showContentLoader
+                              ? _buildDashboardSectionLoader(
+                                  context,
+                                  selectedThemeData,
+                                )
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    selectedType == 'MINI SERIES' ||
+                                            selectedType == 'MADIOO'
+                                        ? SizedBox.shrink()
+                                        : _isOffline
+                                            ? _continueWatchShimmerWidget()
+                                            : continueWatchWidget(
+                                                continueWatchList:
+                                                    dashboardProvider
+                                                        .continueWatchedMovies,
+                                                tvScale: tvScale),
+                                    selectedType == 'MINI SERIES'
+                                        ? ShortsLibraryPage(
+                                            useParentScroll: true)
+                                        : selectedType == 'MADIOO'
+                                            ? MadiooPage(useParentScroll: true)
+                                            : ListView.builder(
+                                                shrinkWrap: true,
+                                                physics:
+                                                    NeverScrollableScrollPhysics(),
+                                                padding: EdgeInsets.zero,
+                                                scrollDirection: Axis.vertical,
+                                                itemCount: dashboardProvider
+                                                    .dashboardData.length,
+                                                itemBuilder: (context, index) {
+                                                  DashboardData dashboardData =
+                                                      dashboardProvider
+                                                          .dashboardData[index];
+
+                                                  _rowControllers.putIfAbsent(
+                                                      index,
+                                                      () => ScrollController());
+                                                  _rowActiveIndexes.putIfAbsent(
+                                                      index,
+                                                      () => ValueNotifier<int?>(
+                                                          null));
+                                                  _rowItemCounts[index] =
+                                                      dashboardData
+                                                              .movies?.length ??
+                                                          0;
+                                                  _rowItems[index] =
+                                                      dashboardData.movies ??
+                                                          const <Content>[];
+                                                  _scheduleVisibleUpdate();
+                                                  _rowKeys.putIfAbsent(
+                                                      index, () => GlobalKey());
+
+                                                  final controller =
+                                                      _rowControllers[index]!;
+                                                  final activeIndex =
+                                                      _rowActiveIndexes[index]!;
+                                                  final rowKey =
+                                                      _rowKeys[index]!;
+                                                  final rowIndex = index;
+
+                                                  // Attach listener only once.
+                                                  if (!controller
+                                                      .hasListeners) {
+                                                    controller.addListener(() {
+                                                      _scheduleVisibleUpdate();
+
+                                                      if (controller.position
+                                                              .pixels >=
+                                                          controller.position
+                                                                  .maxScrollExtent -
+                                                              200) {
+                                                        if (_userId != null) {
                                                           dashboardProvider
                                                               .dashboardData
                                                               .length,
@@ -735,35 +776,117 @@ class _HomePageState extends State<HomePage>
                                                                           MaterialPageRoute(
                                                                             builder: (_) =>
                                                                                 CategoryContentPage(
-                                                                              categoryTitle: "${dashboardData.language} - ${dashboardData.category}",
-                                                                              contents: dashboardData.movies ?? [],
+                                                                          categoryTitle:
+                                                                              "${dashboardData.language} - ${dashboardData.category}",
+                                                                          contents:
+                                                                              dashboardData.movies ?? [],
+                                                                        ),
+                                                                      ),
+                                                                    );
+                                                                  },
+                                                                  child:
+                                                                      Padding(
+                                                                    padding:
+                                                                        const EdgeInsets
+                                                                            .symmetric(
+                                                                      horizontal:
+                                                                          4,
+                                                                      vertical:
+                                                                          4,
+                                                                    ),
+                                                                    child: Row(
+                                                                      children: [
+                                                                        Expanded(
+                                                                          child:
+                                                                              Text(
+                                                                            "${dashboardData.language} - ${dashboardData.category}",
+                                                                            overflow:
+                                                                                TextOverflow.ellipsis,
+                                                                            style:
+                                                                                GoogleFonts.inter(
+                                                                              fontSize: ResponsiveWidget.isMobile(context)
+                                                                                  ? 18
+                                                                                  : ResponsiveWidget.isAndroidTv(context)
+                                                                                      ? 16
+                                                                                      : 20,
+                                                                              fontWeight: FontWeight.bold,
+                                                                              color: selectedThemeData.canvasColor,
                                                                             ),
                                                                           ),
-                                                                        );
-                                                                      },
-                                                                      borderRadius:
-                                                                          8,
-                                                                      scale:
-                                                                          1.01,
-                                                                      semanticLabel:
-                                                                          "See all ${dashboardData.language} ${dashboardData.category}",
-                                                                      child:
-                                                                          InkWell(
-                                                                        splashColor:
-                                                                            Colors.transparent,
-                                                                        onTap:
-                                                                            () {
-                                                                          Navigator
-                                                                              .push(
-                                                                            context,
-                                                                            MaterialPageRoute(
-                                                                              builder: (_) => CategoryContentPage(
-                                                                                categoryTitle: "${dashboardData.language} - ${dashboardData.category}",
-                                                                                contents: dashboardData.movies ?? [],
-                                                                              ),
-                                                                            ),
-                                                                          );
-                                                                        },
+                                                                        ),
+                                                                        Icon(
+                                                                          Icons
+                                                                              .arrow_forward_ios,
+                                                                          size:
+                                                                              18,
+                                                                          color:
+                                                                              selectedThemeData.primaryColor,
+                                                                        ),
+                                                                        SizedBox(
+                                                                          width:
+                                                                              3,
+                                                                        )
+                                                                      ],
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                        (dashboardData.movies ==
+                                                                    null ||
+                                                                dashboardData
+                                                                    .movies!
+                                                                    .isEmpty)
+                                                            ? SizedBox.shrink()
+                                                            : SizedBox(
+                                                                height: tvScale
+                                                                        ?.size(270) ??
+                                                                    270,
+                                                                child: ListView
+                                                                    .builder(
+                                                                  controller:
+                                                                      controller,
+                                                                  scrollDirection:
+                                                                      Axis.horizontal,
+                                                                  //padding: EdgeInsets.zero,
+                                                                  itemCount: dashboardData
+                                                                          .movies!
+                                                                          .length +
+                                                                      (dashboardData
+                                                                              .isRowLoading
+                                                                          ? 1
+                                                                          : 0),
+                                                                  itemBuilder:
+                                                                      (context,
+                                                                          i) {
+                                                                    if (i <
+                                                                        dashboardData
+                                                                            .movies!
+                                                                            .length) {
+                                                                      final card = MovieCard(
+                                                                          movie: dashboardData.movies![
+                                                                              i],
+                                                                          index:
+                                                                              i,
+                                                                          isShortFilmTab: ContentType.normalize(selectedType) ==
+                                                                              ContentType
+                                                                                  .shortFilm,
+                                                                          // On TV the trailer preview follows the remote focus instead of scroll visibility.
+                                                                          activeIndexListenable: tvScale == null
+                                                                              ? activeIndex
+                                                                              : null);
+                                                                      return tvScale == null
+                                                                          ? card
+                                                                          : tvScale.wrap(
+                                                                              baseWidth: MovieCard.itemExtent,
+                                                                              baseHeight: 270,
+                                                                              child: card,
+                                                                            );
+                                                                    } else if (dashboardData
+                                                                        .isRowLoading) {
+                                                                      return Padding(
+                                                                        padding: const EdgeInsets
+                                                                            .all(
+                                                                            12),
                                                                         child:
                                                                             Padding(
                                                                           padding: const EdgeInsets
@@ -806,68 +929,26 @@ class _HomePageState extends State<HomePage>
                                                                             ],
                                                                           ),
                                                                         ),
-                                                                      ),
-                                                                    ),
-                                                              (dashboardData.movies ==
-                                                                          null ||
-                                                                      dashboardData
-                                                                          .movies!
-                                                                          .isEmpty)
-                                                                  ? SizedBox
-                                                                      .shrink()
-                                                                  : SizedBox(
-                                                                      height: MovieCard
-                                                                          .standardHeight,
-                                                                      child: ListView
-                                                                          .builder(
-                                                                        controller:
-                                                                            controller,
-                                                                        scrollDirection:
-                                                                            Axis.horizontal,
-                                                                        //padding: EdgeInsets.zero,
-                                                                        itemCount: dashboardData.movies!.length +
-                                                                            (dashboardData.isRowLoading
-                                                                                ? 1
-                                                                                : 0),
-                                                                        itemBuilder:
-                                                                            (context,
-                                                                                i) {
-                                                                          if (i <
-                                                                              dashboardData.movies!.length) {
-                                                                            return MovieCard(
-                                                                                movie: dashboardData.movies![i],
-                                                                                index: i,
-                                                                                isShortFilmTab: ContentType.normalize(selectedType) == ContentType.shortFilm,
-                                                                                activeIndexListenable: activeIndex);
-                                                                          } else if (dashboardData.isRowLoading) {
-                                                                            return Padding(
-                                                                              padding: const EdgeInsets.all(12),
-                                                                              child: SizedBox(
-                                                                                width: 40,
-                                                                                height: 40,
-                                                                                child: CircularProgressIndicator(strokeWidth: 2),
-                                                                              ),
-                                                                            );
-                                                                          } else {
-                                                                            return const SizedBox.shrink();
-                                                                          }
-                                                                        },
-                                                                      ),
-                                                                    ),
-                                                              (dashboardData.movies ==
-                                                                          null ||
-                                                                      dashboardData
-                                                                          .movies!
-                                                                          .isEmpty)
-                                                                  ? SizedBox
-                                                                      .shrink()
-                                                                  : SizedBox(
-                                                                      height:
-                                                                          20),
-                                                            ],
-                                                          ),
-                                                        );
-                                                      },
+                                                                      );
+                                                                    } else {
+                                                                      return const SizedBox
+                                                                          .shrink();
+                                                                    }
+                                                                  },
+                                                                ),
+                                                              ),
+                                                        (dashboardData.movies ==
+                                                                    null ||
+                                                                dashboardData
+                                                                    .movies!
+                                                                    .isEmpty)
+                                                            ? SizedBox.shrink()
+                                                            : SizedBox(
+                                                                height: tvScale !=
+                                                                        null
+                                                                    ? 8
+                                                                    : 20),
+                                                      ],
                                                     ),
                                         ],
                                       ),
@@ -876,8 +957,9 @@ class _HomePageState extends State<HomePage>
                           ),
                         ],
                       );
-                    },
-                  ),
+                    }),
+                  );
+                }),
                 ),
               ],
             ),
@@ -902,15 +984,25 @@ class _HomePageState extends State<HomePage>
 
     if (heroItems.isEmpty) return const SizedBox.shrink();
 
-    final height = ResponsiveWidget.isTv(context)
-        ? 380.0
-        : ResponsiveWidget.isDesktop(context)
+    final isTv = ResponsiveWidget.isAndroidTv(context);
+    // On TV keep the hero to about half the screen so the poster rows start
+    // above the fold.
+    final height = isTv
+        ? (MediaQuery.sizeOf(context).height * 0.5).clamp(220.0, 380.0)
+        : ResponsiveWidget.isTv(context)
+            ? 380.0
+            : ResponsiveWidget.isDesktop(context)
             ? 520.0
             : 410.0;
-    final horizontalMargin = ResponsiveWidget.isDesktop(context) ? 24.0 : 14.0;
+    final horizontalMargin = isTv
+        ? 8.0
+        : ResponsiveWidget.isDesktop(context)
+            ? 24.0
+            : 14.0;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(horizontalMargin, 8, horizontalMargin, 28),
+      padding: EdgeInsets.fromLTRB(
+          horizontalMargin, isTv ? 4 : 8, horizontalMargin, isTv ? 14 : 28),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(22),
         child: SizedBox(
@@ -1000,10 +1092,21 @@ class _HomePageState extends State<HomePage>
                           ),
                         ),
                         Positioned(
-                          left: ResponsiveWidget.isDesktop(context) ? 70 : 36,
-                          bottom: ResponsiveWidget.isDesktop(context) ? 58 : 34,
-                          width:
-                              ResponsiveWidget.isDesktop(context) ? 560 : 430,
+                          left: isTv
+                              ? 64
+                              : ResponsiveWidget.isDesktop(context)
+                                  ? 70
+                                  : 36,
+                          bottom: isTv
+                              ? 30
+                              : ResponsiveWidget.isDesktop(context)
+                                  ? 58
+                                  : 34,
+                          width: isTv
+                              ? 420
+                              : ResponsiveWidget.isDesktop(context)
+                                  ? 560
+                                  : 430,
                           child: _buildTvHeroCopy(context, theme, item, index),
                         ),
                       ],
@@ -1037,7 +1140,7 @@ class _HomePageState extends State<HomePage>
                 Positioned(
                   left: 0,
                   right: 0,
-                  bottom: 18,
+                  bottom: isTv ? 10 : 18,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
@@ -1081,12 +1184,12 @@ class _HomePageState extends State<HomePage>
         customBorder: const CircleBorder(),
         onTap: onTap,
         child: SizedBox(
-          width: 54,
-          height: 54,
+          width: ResponsiveWidget.isAndroidTv(context) ? 38 : 54,
+          height: ResponsiveWidget.isAndroidTv(context) ? 38 : 54,
           child: Icon(
             icon,
             color: Colors.white,
-            size: 38,
+            size: ResponsiveWidget.isAndroidTv(context) ? 26 : 38,
           ),
         ),
       ),
@@ -1121,72 +1224,80 @@ class _HomePageState extends State<HomePage>
       if (genres != null && genres.isNotEmpty) genres,
       if (item.ratings != null) '${item.ratings!.toStringAsFixed(0)} star',
     ].join('  -  ');
+    final isTv = ResponsiveWidget.isAndroidTv(context);
+    final buttonHeight = isTv ? 38.0 : 48.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          padding: isTv
+              ? const EdgeInsets.symmetric(horizontal: 10, vertical: 4)
+              : const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
             color: theme.primaryColor,
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
             '#${index + 1} Trending',
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w800,
-              fontSize: 13,
+              fontSize: isTv ? 11 : 13,
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: isTv ? 10 : 16),
         Text(
           item.title ?? '',
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: GoogleFonts.inter(
             color: Colors.white,
-            fontSize: ResponsiveWidget.isDesktop(context) ? 46 : 34,
+            fontSize: isTv
+                ? 28
+                : ResponsiveWidget.isDesktop(context)
+                    ? 46
+                    : 34,
             fontWeight: FontWeight.w900,
           ),
         ),
         if (meta.isNotEmpty) ...[
-          const SizedBox(height: 10),
+          SizedBox(height: isTv ? 6 : 10),
           Text(
             meta,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white70,
               fontWeight: FontWeight.w700,
-              fontSize: 14,
+              fontSize: isTv ? 12 : 14,
             ),
           ),
         ],
         if ((item.description ?? '').trim().isNotEmpty) ...[
-          const SizedBox(height: 12),
+          SizedBox(height: isTv ? 6 : 12),
           Text(
             item.description!,
-            maxLines: 2,
+            maxLines: isTv ? 1 : 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white70,
               fontWeight: FontWeight.w600,
-              fontSize: 15,
+              fontSize: isTv ? 13 : 15,
               height: 1.35,
             ),
           ),
         ],
-        const SizedBox(height: 22),
+        SizedBox(height: isTv ? 14 : 22),
         Row(
           children: [
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.primaryColor,
                 foregroundColor: Colors.white,
-                minimumSize: const Size(142, 48),
+                minimumSize: Size(isTv ? 120 : 142, buttonHeight),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -1203,7 +1314,7 @@ class _HomePageState extends State<HomePage>
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white.withOpacity(0.14),
                 foregroundColor: Colors.white,
-                minimumSize: const Size(118, 48),
+                minimumSize: Size(isTv ? 100 : 118, buttonHeight),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -1241,6 +1352,7 @@ class _HomePageState extends State<HomePage>
 
   Widget continueWatchWidget({
     required List<Content> continueWatchList,
+    TvCardScale? tvScale,
   }) {
     final items = continueWatchList
         .where((item) => (item.watchedPercentage ?? 0) < 95)
@@ -1252,17 +1364,69 @@ class _HomePageState extends State<HomePage>
 
     return KeyedSubtree(
       key: _continueWatchKey,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 20.0),
-        child: ContinueWatchingBanner(
-          items: items,
-          selectedType: selectedType,
-          onPlaybackFinished: () {
-            if (mounted) {
-              setState(() {});
-            }
-          },
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Label
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
+            child: Text(
+              "Continue Watching",
+              style: GoogleFonts.inter(
+                fontSize: ResponsiveWidget.isMobile(context)
+                                                                                  ? 18
+                                                                                  : ResponsiveWidget.isAndroidTv(context)
+                                                                                      ? 16
+                                                                                      : 20,
+                fontWeight: FontWeight.bold,
+                color: theme.canvasColor,
+              ),
+            ),
+          ),
+
+          // Horizontal list
+          SizedBox(
+            height: tvScale?.size(220) ?? 220, //270,
+            child: ListView.builder(
+              controller: _continueWatchController,
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.zero,
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+
+                // return SizedBox(
+                //   width: MovieCard.itemExtent,
+                //   child: MovieCard(
+                //     movie: item,
+                //     index: index,
+                //     activeIndexListenable: _continueWatchActiveIndex,
+                //   ),
+                // );
+                final card = ContinueWatchMovieCard(
+                  movie: item,
+                  index: index,
+                  isShortFilmTab: ContentType.normalize(selectedType) ==
+                      ContentType.shortFilm,
+                  enableTrailerPreview: false,
+                );
+                // On TV the same card is scaled down uniformly.
+                if (tvScale != null) {
+                  return tvScale.wrap(
+                    baseWidth: ContinueWatchMovieCard.itemExtent,
+                    baseHeight: 220,
+                    child: card,
+                  );
+                }
+                return SizedBox(
+                  width: ContinueWatchMovieCard.itemExtent,
+                  child: card,
+                );
+              },
+            ),
+          ),
+          SizedBox(height: tvScale != null ? 8 : 20),
+        ],
       ),
     );
   }

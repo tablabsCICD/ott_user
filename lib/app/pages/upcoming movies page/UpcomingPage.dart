@@ -110,8 +110,16 @@ class _UpcomingPageState extends State<UpcomingPage> {
     final theme = Theme.of(context);
 
     void openDetails() => _openDetails(item);
+    void notifyMe() {
+      CustomToast.show(
+        context,
+        "You’ll be notified on release day",
+        isSuccess: true,
+      );
+    }
 
-    final card = ClipRRect(
+    // `notifySelected`: the TV remote has the Notify Me button selected.
+    Widget buildCard({bool notifySelected = false}) => ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: Stack(
         children: [
@@ -182,16 +190,13 @@ class _UpcomingPageState extends State<UpcomingPage> {
                 const SizedBox(height: 8),
 
                 // 🔔 Notify Me button
-                SizedBox(
+                OttTvActionHighlight(
+                  selected: notifySelected,
+                  borderRadius: 20,
+                  child: SizedBox(
                   height: 28,
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      CustomToast.show(
-                        context,
-                        "You’ll be notified on release day",
-                        isSuccess: true,
-                      );
-                    },
+                    onPressed: notifyMe,
                     icon: const Icon(
                       Icons.notifications_active,
                       size: 14,
@@ -212,6 +217,7 @@ class _UpcomingPageState extends State<UpcomingPage> {
                     ),
                   ),
                 ),
+                ),
               ],
             ),
           ),
@@ -220,15 +226,20 @@ class _UpcomingPageState extends State<UpcomingPage> {
     );
 
     if (ResponsiveWidget.isMobile(context)) {
-      return InkWell(onTap: openDetails, child: card);
+      return InkWell(onTap: openDetails, child: buildCard());
     }
 
-    return OttTvFocus(
+    // TV: Down from the card selects Notify Me (which the remote can't
+    // otherwise reach), OK presses it, Up returns to the card.
+    return OttTvActionCard(
       onTap: openDetails,
+      onAction: notifyMe,
+      actionDirection: TraversalDirection.down,
       borderRadius: 16,
       scale: 1.04,
       semanticLabel: item.title,
-      child: card,
+      builder: (context, notifySelected) =>
+          buildCard(notifySelected: notifySelected),
     );
   }
 

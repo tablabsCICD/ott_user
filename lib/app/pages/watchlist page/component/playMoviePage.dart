@@ -77,6 +77,7 @@ class PlayMediaPage extends StatefulWidget {
 class _PlayMediaPageState extends State<PlayMediaPage>
     with WidgetsBindingObserver {
   static int _nextPlayerId = 0;
+  static const Duration _playerOpenTimeout = Duration(seconds: 30);
 
   Player? _player;
   native_video.VideoPlayerController? _androidSecurePlayer;
@@ -89,6 +90,9 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
   bool _loading = true;
   bool _hasPlaybackError = false;
+  // TV: lets the remote land on the Play button when the controls reappear.
+  final FocusNode _tvPlayButtonFocusNode =
+      FocusNode(debugLabel: 'player-play-button');
   bool _handlingEnd = false;
   Duration _lastSavedPosition = Duration.zero;
   bool _wakelockEnabled = false;
@@ -116,6 +120,34 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   bool _showBackwardIndicator = false;
   Timer? _seekIndicatorTimer;
   bool _isMicMuted = false;
+  // True while a signed-URL refresh is rebuilding the player. The refresh
+  // restores the exact position/play state itself, so the initial resume
+  // logic (seek to the saved point, banner, auto-play) must not run.
+  bool _isRestoringRefreshedSource = false;
+  // Android/ExoPlayer: what the viewer asked for (play or pause). ExoPlayer
+  // reports isPlaying=false during every buffering stall, which made the
+  // play/pause state flicker while the network caught up.
+  bool _androidPlayIntent = false;
+  // Buffering spinner shown to the viewer. The engines' raw buffering flags
+  // are unreliable for UI: media_kit/mpv keeps `buffering` true for a while
+  // after a seek or cache refill even though frames are rendering, and
+  // ExoPlayer can report isBuffering alongside isPlaying. The spinner is
+  // only shown when the engine reports buffering AND the position has
+  // actually stopped advancing.
+  bool _showBufferingIndicator = false;
+  Duration _lastObservedPosition = Duration.zero;
+  DateTime _lastPositionAdvanceAt = DateTime.fromMillisecondsSinceEpoch(0);
+  Timer? _bufferingWatchdog;
+  DateTime _lastPositionRebuildAt = DateTime.fromMillisecondsSinceEpoch(0);
+  static const Duration _positionRebuildInterval =
+      Duration(milliseconds: 250);
+  // mpv log verbosity. `debug` streams thousands of lines per minute from
+  // the native player into Dart, which costs CPU during playback. Opt back
+  // in with --dart-define=MPV_VERBOSE_LOGS=true when diagnosing streams.
+  static const bool _mpvVerboseLogs =
+      bool.fromEnvironment('MPV_VERBOSE_LOGS');
+  static const Duration _bufferingStallThreshold =
+      Duration(milliseconds: 1200);
 
   void _changePlaybackSpeed(double speed) {
     if (!mounted || _isDisposed) return;
@@ -176,13 +208,18 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
+    // Only pause when the app really goes to the background. `inactive` is a
+    // transient window-focus loss (TV volume bar, system/CEC overlays,
+    // notification shade, immersive-mode switch); pausing there and resuming
+    // on `resumed` made playback flip between play and pause on its own.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
       _resumeAfterLifecyclePause = _loading ||
           (_player?.state.playing ?? false) ||
           (_androidSecurePlayer?.value.isPlaying ?? false) ||
           (_youtubeController?.value.isPlaying ?? false);
+      _androidPlayIntent = false;
       unawaited(_player?.pause());
       unawaited(_androidSecurePlayer?.pause());
       _youtubeController?.pause();
@@ -203,6 +240,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       if (_youtubeController != null) {
         _youtubeController!.play();
       } else if (_androidSecurePlayer != null) {
+        _androidPlayIntent = true;
         await _androidSecurePlayer!.play();
       } else {
         await _player?.play();
@@ -219,6 +257,11 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   Future<void> _enterLandscapePlayback() async {
+    // Android TV is always landscape and has no system bars. Switching
+    // orientation/immersive mode there only reconfigures the window surface,
+    // which detached the video surface (frozen picture, endless loader) and
+    // briefly resized the layout (video shifted/zoomed).
+    if (FlavorConfig.current.isTv && !kIsWeb) return;
     await SystemChrome.setPreferredOrientations(const [
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
@@ -227,6 +270,11 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   Future<void> _restoreAppOrientation() async {
+    if (FlavorConfig.current.isTv && !kIsWeb) {
+      // Nothing was changed on enter (see _enterLandscapePlayback).
+      await AntiPiracyService.instance.disableScreenProtection();
+      return;
+    }
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     await SystemChrome.setPreferredOrientations(
       FlavorConfig.current.isTv
@@ -433,11 +481,23 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             'Your session has expired. Please sign in again.'),
       );
     }
+    final secureError = controller.state == SecurePlaybackState.accessDenied ||
+        controller.state == SecurePlaybackState.playbackError;
+    final restarting =
+        controller.state == SecurePlaybackState.preparingSecurity ||
+            controller.state == SecurePlaybackState.requestingPlaybackAccess;
     setState(() {
-      _playbackMessage = controller.errorMessage;
-      _hasPlaybackError =
-          controller.state == SecurePlaybackState.accessDenied ||
-              controller.state == SecurePlaybackState.playbackError;
+      if (secureError) {
+        _hasPlaybackError = true;
+        _playbackMessage = controller.errorMessage;
+      } else if (restarting) {
+        // Retry: clear any previous error so the loader can take over.
+        _hasPlaybackError = false;
+        _playbackMessage = null;
+      }
+      // Other notifications (playing/paused, watermark updates) must not
+      // clear a player-reported error; doing so swapped the error screen
+      // for a player surface with no engine, i.e. an endless spinner.
     });
   }
 
@@ -482,14 +542,19 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       );
     }
 
-    await _setupPlayer(
-      authorization.playbackUrl,
-      httpHeaders: authorization.httpHeaders,
-      diagnoseSignedHls: true,
-      automaticAudioTrack: getAutomaticAudioTrack(authorization.audioTracks),
-      automaticSubtitleTrack:
-          getAutomaticSubtitleTrack(authorization.subtitleTracks),
-    );
+    _isRestoringRefreshedSource = isRefresh;
+    try {
+      await _setupPlayer(
+        authorization.playbackUrl,
+        httpHeaders: authorization.httpHeaders,
+        diagnoseSignedHls: true,
+        automaticAudioTrack: getAutomaticAudioTrack(authorization.audioTracks),
+        automaticSubtitleTrack:
+            getAutomaticSubtitleTrack(authorization.subtitleTracks),
+      );
+    } finally {
+      _isRestoringRefreshedSource = false;
+    }
     final player = _player;
     final androidPlayer = _androidSecurePlayer;
     if ((player == null && androidPlayer == null) || _hasPlaybackError) {
@@ -505,6 +570,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         if (position > Duration.zero) await androidPlayer.seekTo(position);
         await androidPlayer.setVolume((volume / 100).clamp(0.0, 1.0));
         await androidPlayer.setPlaybackSpeed(rate);
+        _androidPlayIntent = wasPlaying;
         if (wasPlaying) {
           await androidPlayer.play();
         } else {
@@ -535,6 +601,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   }
 
   Future<void> _pauseActivePlayer() async {
+    _androidPlayIntent = false;
     await _player?.pause();
     await _androidSecurePlayer?.pause();
     _youtubeController?.pause();
@@ -690,8 +757,10 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
     final playerId = ++_nextPlayerId;
     final player = Player(
-      configuration: const PlayerConfiguration(
-        logLevel: MPVLogLevel.debug,
+      configuration: PlayerConfiguration(
+        logLevel: _mpvVerboseLogs
+            ? MPVLogLevel.debug
+            : (kDebugMode ? MPVLogLevel.info : MPVLogLevel.warn),
         protocolWhitelist: [
           'udp',
           'rtp',
@@ -755,7 +824,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         'cookieHeaderPresent=${media.httpHeaders?['Cookie']?.isNotEmpty == true} '
         'cookieValuesRedacted=true openPlay=false',
       );
-      await player.open(media, play: false);
+      await player.open(media, play: false).timeout(_playerOpenTimeout);
       if (automaticAudioTrack != null) {
         try {
           await player.setAudioTrack(
@@ -878,11 +947,14 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     );
     var lastPlaying = false;
     var lastBuffering = false;
+    var lastEffectivePlaying = false;
     var lastError = '';
     controller.addListener(() {
       if (_isDisposed || token != _setupToken) return;
       final value = controller.value;
       _handlePositionChanged();
+      _syncBufferingIndicator();
+      if (value.isPlaying) _androidPlayIntent = true;
       if (value.isPlaying != lastPlaying ||
           value.isBuffering != lastBuffering) {
         lastPlaying = value.isPlaying;
@@ -893,7 +965,19 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           'buffering=${value.isBuffering} '
           'positionMs=${value.position.inMilliseconds}',
         );
-        _handlePlayingChanged(value.isPlaying);
+        // A buffering stall while the viewer wants playback is still
+        // "playing" for the UI, wakelock and analytics; only a real pause
+        // (by the viewer or the system) changes the state.
+        final effectivePlaying =
+            value.isPlaying || (value.isBuffering && _androidPlayIntent);
+        if (effectivePlaying != lastEffectivePlaying) {
+          lastEffectivePlaying = effectivePlaying;
+          _handlePlayingChanged(effectivePlaying);
+        } else if (effectivePlaying && !_isPlaybackBuffering) {
+          // Real stalls are surfaced by _syncBufferingIndicator(); a raw
+          // isBuffering flip alone must not pin the controls/spinner.
+          _scheduleControlsAutoHide();
+        }
       }
       final error = value.errorDescription ?? '';
       if (value.hasError && error != lastError) {
@@ -914,7 +998,9 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     });
 
     try {
-      await controller.initialize();
+      // Without a timeout a stalled network/manifest kept the loader up
+      // forever. On timeout we fall back to media_kit like other failures.
+      await controller.initialize().timeout(_playerOpenTimeout);
       await controller.setVolume(1);
     } catch (error, stackTrace) {
       SecurityDebugLog.exception(
@@ -1142,9 +1228,13 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           'positionMs=${player.state.position.inMilliseconds}',
         );
         _handlePlayingChanged(isPlaying);
+        _syncBufferingIndicator();
         if (mounted) setState(() {});
       }))
-      ..add(player.stream.position.listen((_) => _handlePositionChanged()))
+      ..add(player.stream.position.listen((_) {
+        _handlePositionChanged();
+        _syncBufferingIndicator();
+      }))
       ..add(player.stream.duration.listen((_) {
         final duration = player.state.duration;
         if (duration != _lastLoggedDuration) {
@@ -1163,11 +1253,9 @@ class _PlayMediaPageState extends State<PlayMediaPage>
               'playing=${player.state.playing} '
               'positionMs=${player.state.position.inMilliseconds}.',
         );
-        if (isBuffering) {
-          _showControls(persist: true);
-        } else if (player.state.playing) {
-          _scheduleControlsAutoHide();
-        }
+        // Spinner/controls follow the stall-aware indicator, not the raw
+        // flag, which mpv leaves raised while frames are still rendering.
+        _syncBufferingIndicator();
       }))
       ..add(player.stream.completed.listen((completed) {
         if (completed) {
@@ -1207,6 +1295,17 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     await _player?.setVolume(100);
     await _androidSecurePlayer?.setVolume(1);
 
+    if (_isRestoringRefreshedSource) {
+      // _loadSecureMedia restores position, volume, rate and play state
+      // after a refresh; only keep progress saving running.
+      _progressTimer?.cancel();
+      _progressTimer = Timer.periodic(
+        const Duration(seconds: 15),
+        (_) => _saveProgress(),
+      );
+      return;
+    }
+
     final localResumeSeconds = provider.getLocalResume(
       contentId: widget.content!.id!,
       seasonId: _isSeries ? widget.seasonIndex : null,
@@ -1237,6 +1336,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             'at positionMs=${position.inMilliseconds}.',
       );
       if (_androidSecurePlayer != null) {
+        _androidPlayIntent = true;
         await _androidSecurePlayer!.play();
       } else {
         await _player!.play();
@@ -1266,6 +1366,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
     if (_isDisposed || token != _setupToken) return;
 
+    _progressTimer?.cancel();
     _progressTimer = Timer.periodic(
       const Duration(seconds: 15),
       (_) => _saveProgress(),
@@ -1325,6 +1426,18 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       _saveProgress();
     }
 
+    // media_kit emits a position update for (almost) every rendered frame.
+    // Rebuilding the whole player page that often competes with video
+    // composition for the raster thread on TV hardware; the time label and
+    // progress bar only need a few updates per second. Paused/seek updates
+    // are still applied immediately.
+    final now = DateTime.now();
+    if (state.playing &&
+        !_isSeeking &&
+        now.difference(_lastPositionRebuildAt) < _positionRebuildInterval) {
+      return;
+    }
+    _lastPositionRebuildAt = now;
     if (mounted) setState(() {});
   }
 
@@ -1413,9 +1526,12 @@ class _PlayMediaPageState extends State<PlayMediaPage>
 
   @override
   void dispose() {
+    _tvPlayButtonFocusNode.dispose();
     _isDisposed = true;
     _setupToken++;
     _controlsHideTimer?.cancel();
+    _bufferingWatchdog?.cancel();
+    _bufferingWatchdog = null;
     WidgetsBinding.instance.removeObserver(this);
     final secureController = _securePlaybackController;
     secureController?.removeListener(_onSecurePlaybackChanged);
@@ -1439,6 +1555,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       await subscription.cancel();
     }
     _playerSubscriptions.clear();
+    _resetBufferingIndicator();
 
     final player = _player;
     final androidPlayer = _androidSecurePlayer;
@@ -1499,6 +1616,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
       unawaited(subscription.cancel());
     }
     _playerSubscriptions.clear();
+    _resetBufferingIndicator();
 
     final player = _player;
     final androidPlayer = _androidSecurePlayer;
@@ -1564,6 +1682,33 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
 
     final key = event.logicalKey;
+    final isOk = key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.space ||
+        key == LogicalKeyboardKey.gameButtonA;
+    final isArrow = OttTvRemoteKey.isDirectional(key);
+
+    // Error screen: let the remote reach and press the Retry button.
+    if (_hasPlaybackError && (isOk || isArrow)) {
+      return KeyEventResult.ignored;
+    }
+
+    // While the on-screen controls are visible, arrows move between them and
+    // OK presses the focused one (Back, volume, download, rewind/play/forward,
+    // speed, ...). Seeking with Left/Right still works when they're hidden.
+    if (_controlsVisible && (isOk || isArrow)) {
+      final controlHasFocus = FocusManager.instance.primaryFocus != node;
+      if (controlHasFocus) {
+        _showControls();
+        return KeyEventResult.ignored;
+      }
+      if (isArrow && _tvPlayButtonFocusNode.context != null) {
+        _tvPlayButtonFocusNode.requestFocus();
+        _showControls();
+        return KeyEventResult.handled;
+      }
+    }
+
     if (OttTvRemoteKey.playPause.contains(key)) {
       _togglePlayback();
       _showControls(persist: true);
@@ -1634,24 +1779,90 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     }
     final androidPlayer = _androidSecurePlayer;
     if (androidPlayer != null) {
-      unawaited(
-        androidPlayer.value.isPlaying
-            ? androidPlayer.pause()
-            : androidPlayer.play(),
-      );
+      final shouldPause = _isPlaybackPlaying;
+      _androidPlayIntent = !shouldPause;
+      unawaited(shouldPause ? androidPlayer.pause() : androidPlayer.play());
     }
   }
 
   bool get _isPlaybackPlaying =>
       _youtubeController?.value.isPlaying ??
-      _androidSecurePlayer?.value.isPlaying ??
+      _androidEffectivePlaying ??
       _player?.state.playing ??
       false;
 
-  bool get _isPlaybackBuffering =>
-      _androidSecurePlayer?.value.isBuffering ??
-      _player?.state.buffering ??
-      false;
+  bool? get _androidEffectivePlaying {
+    final value = _androidSecurePlayer?.value;
+    if (value == null) return null;
+    return value.isPlaying || (value.isBuffering && _androidPlayIntent);
+  }
+
+  bool get _isPlaybackBuffering => _showBufferingIndicator;
+
+  /// Raw engine buffering report. ExoPlayer's isPlaying is only true in
+  /// STATE_READY, so an Android player that is playing is never buffering.
+  bool get _engineReportsBuffering {
+    final androidValue = _androidSecurePlayer?.value;
+    if (androidValue != null) {
+      return androidValue.isBuffering && !androidValue.isPlaying;
+    }
+    return _player?.state.buffering ?? false;
+  }
+
+  Duration get _enginePosition =>
+      _androidSecurePlayer?.value.position ??
+      _player?.state.position ??
+      Duration.zero;
+
+  /// Recomputes [_showBufferingIndicator] from the engine state. Called from
+  /// the player listeners and, while the engine claims to be buffering, from
+  /// a short watchdog so the spinner appears once a real stall begins and
+  /// disappears as soon as playback resumes.
+  void _syncBufferingIndicator() {
+    if (_isDisposed || !mounted) return;
+    final now = DateTime.now();
+    final position = _enginePosition;
+    if (position != _lastObservedPosition) {
+      final delta = position - _lastObservedPosition;
+      _lastObservedPosition = position;
+      // Only small forward steps mean frames are rendering; a seek jump
+      // (either direction) is not evidence of playback.
+      if (delta > Duration.zero && delta < const Duration(seconds: 3)) {
+        _lastPositionAdvanceAt = now;
+      }
+    }
+
+    final raw = _engineReportsBuffering;
+    final advancing =
+        now.difference(_lastPositionAdvanceAt) < _bufferingStallThreshold;
+    final show = raw && !advancing;
+
+    if (raw) {
+      _bufferingWatchdog ??= Timer.periodic(
+        const Duration(milliseconds: 400),
+        (_) => _syncBufferingIndicator(),
+      );
+    } else {
+      _bufferingWatchdog?.cancel();
+      _bufferingWatchdog = null;
+    }
+
+    if (show == _showBufferingIndicator) return;
+    setState(() => _showBufferingIndicator = show);
+    if (show) {
+      _showControls(persist: true);
+    } else if (_isPlaybackPlaying) {
+      _scheduleControlsAutoHide();
+    }
+  }
+
+  void _resetBufferingIndicator() {
+    _bufferingWatchdog?.cancel();
+    _bufferingWatchdog = null;
+    _showBufferingIndicator = false;
+    _lastObservedPosition = Duration.zero;
+    _lastPositionAdvanceAt = DateTime.fromMillisecondsSinceEpoch(0);
+  }
 
   void _toggleControlsVisibility() {
     if (_controlsVisible) {
@@ -1801,11 +2012,18 @@ class _PlayMediaPageState extends State<PlayMediaPage>
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>().getTheme;
     final secureState = _securePlaybackController?.state;
+    final hasAttachedPlayer =
+        _player != null || _androidSecurePlayer != null;
+    // refreshingUrl is not a loading state on its own: the current player
+    // keeps playing while the new signed URL is requested, and the brief
+    // player rebuild that follows is already covered by _loading. Likewise
+    // initializingPlayer only blocks the screen until a player is attached;
+    // the secure controller may lag behind the engine's first playing event.
     final secureLoading =
         secureState == SecurePlaybackState.preparingSecurity ||
             secureState == SecurePlaybackState.requestingPlaybackAccess ||
-            secureState == SecurePlaybackState.initializingPlayer ||
-            secureState == SecurePlaybackState.refreshingUrl;
+            (secureState == SecurePlaybackState.initializingPlayer &&
+                !hasAttachedPlayer);
     final showLoading = _loading || secureLoading;
     final watermark = _securePlaybackController?.watermark;
 
@@ -1950,6 +2168,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
             if (_securePlaybackController != null) ...[
               const SizedBox(height: 16),
               ElevatedButton(
+                autofocus: ResponsiveWidget.isAndroidTv(context),
                 onPressed: () => unawaited(_securePlaybackController!.start()),
                 child: const Text('Retry'),
               ),
@@ -1984,6 +2203,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
           semanticsLabel: _isPlaybackPlaying ? 'Pause' : 'Play',
           prominent: true,
           autofocus: true,
+          focusNode: _tvPlayButtonFocusNode,
           loading: _isPlaybackBuffering,
           onPressed: () {
             _togglePlayback();
@@ -2010,6 +2230,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
     bool prominent = false,
     bool autofocus = false,
     bool loading = false,
+    FocusNode? focusNode,
   }) {
     final compact = ResponsiveWidget.isMobile(context);
     final size = prominent
@@ -2020,8 +2241,10 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         : (compact ? 18.0 : 22.0);
 
     return OttTvFocus(
-      onTap: loading ? () {} : onPressed,
+      // Stay actionable while buffering so the remote can still pause.
+      onTap: onPressed,
       autofocus: autofocus,
+      focusNode: focusNode,
       borderRadius: size / 2,
       semanticLabel: semanticsLabel,
       child: Material(
@@ -2034,7 +2257,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
         elevation: 2,
         child: InkWell(
           customBorder: const CircleBorder(),
-          onTap: loading ? null : onPressed,
+          onTap: onPressed,
           child: SizedBox(
             width: size,
             height: size,
@@ -2194,7 +2417,12 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                     overlayRadius: 16,
                   ),
                 ),
-                child: Slider(
+                // On Android TV the slider would trap Up/Down/Left/Right to
+                // change its value; seeking is done with the rewind/forward
+                // buttons and Left/Right while controls are hidden.
+                child: ExcludeFocus(
+                  excluding: ResponsiveWidget.isAndroidTv(context),
+                  child: Slider(
                   value: durationMs > 0 ? positionMs.toDouble() : 0,
                   min: 0,
                   max: durationMs > 0 ? durationMs.toDouble() : 1,
@@ -2205,6 +2433,7 @@ class _PlayMediaPageState extends State<PlayMediaPage>
                       : null,
                   onChangeStart: durationMs > 0 ? (_) => _beginSeeking() : null,
                   onChangeEnd: durationMs > 0 ? _finishSeeking : null,
+                ),
                 ),
               ),
             ),

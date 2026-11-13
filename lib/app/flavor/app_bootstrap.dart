@@ -299,12 +299,21 @@ class _MyAppState extends State<MyApp> {
       onGenerateRoute: RouteGenerator.generateRoute,
       builder: (context, child) {
         final routeChild = child ?? const SizedBox.shrink();
-        return Stack(
+        final app = Stack(
           fit: StackFit.expand,
           children: [
             kIsWeb ? routeChild : OttTvAppShell(child: routeChild),
             const Positioned.fill(child: FeatureTourOverlay()),
           ],
+        );
+        // Android TV build: same UI size on every TV, whatever density the
+        // device reports. Other platforms are unchanged.
+        if (!FlavorConfig.current.isTv || kIsWeb) return app;
+        return TvDesignViewport(
+          child: Theme(
+            data: tvFocusTheme(Theme.of(context)),
+            child: app,
+          ),
         );
       },
     );

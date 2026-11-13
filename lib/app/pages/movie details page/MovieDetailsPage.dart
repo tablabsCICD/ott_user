@@ -313,6 +313,14 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     );
   }
 
+  bool get _isAndroidTv => ResponsiveWidget.isAndroidTv(context);
+
+  double get _tvSidePadding => _isAndroidTv
+      ? 40
+      : ResponsiveWidget.isDesktop(context)
+          ? 64
+          : 32;
+
   Widget _buildCinematicTvView(Content content, ThemeData selectedThemeData) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && !_isHeroTrailerPlaying && _heroTrailerTimer == null) {
@@ -351,26 +359,26 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(
-                      ResponsiveWidget.isDesktop(context) ? 64 : 32,
+                      _tvSidePadding,
                       10,
-                      ResponsiveWidget.isDesktop(context) ? 64 : 32,
-                      56,
+                      _tvSidePadding,
+                      _isAndroidTv ? 32 : 56,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildTvCastRail(context, content, selectedThemeData),
-                        const SizedBox(height: 34),
+                        SizedBox(height: _isAndroidTv ? 20 : 34),
                         _buildTvRecommendationRails(
                           context,
                           content,
                           selectedThemeData,
                         ),
-                        const SizedBox(height: 34),
+                        SizedBox(height: _isAndroidTv ? 20 : 34),
                         _buildDetailsSection(context, content),
-                        const SizedBox(height: 28),
+                        SizedBox(height: _isAndroidTv ? 18 : 28),
                         _buildGallery(context, content, previewAutoPlay: false),
-                        const SizedBox(height: 28),
+                        SizedBox(height: _isAndroidTv ? 18 : 28),
                         _buildRatingAndReviewsSection(context, content),
                       ],
                     ),
@@ -386,7 +394,11 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
 
   Widget _buildTvHero(Content content, ThemeData theme) {
     final size = MediaQuery.of(context).size;
-    final heroHeight = (size.height * 0.78).clamp(560.0, 760.0);
+    final tv = _isAndroidTv;
+    // Android TV: the hero fills the first screen (with a hint of the next
+    // section) instead of being taller than the screen.
+    final heroHeight =
+        tv ? size.height * 0.92 : (size.height * 0.78).clamp(560.0, 760.0);
     final backdrop = _heroImage(content);
     final hasResume = (content.watchedSeconds ?? 0) > 5 ||
         (content.watchedPercentage ?? 0) > 0;
@@ -432,10 +444,18 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 ),
               ),
             ),
+            // Back button (same as the series details page). On TV it is
+            // reached with Up from the action buttons; Back on the remote
+            // still works too.
             Positioned(
-              left: ResponsiveWidget.isDesktop(context) ? 64 : 32,
+              left: _tvSidePadding,
+              top: MediaQuery.of(context).padding.top + (tv ? 16 : 24),
+              child: _buildTvBackButton(theme),
+            ),
+            Positioned(
+              left: _tvSidePadding,
               right: kIsWeb ? size.width * 0.52 : size.width * 0.43,
-              bottom: 54,
+              bottom: tv ? 28 : 54,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -446,20 +466,24 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: ResponsiveWidget.isDesktop(context) ? 56 : 42,
+                      fontSize: tv
+                          ? 30
+                          : ResponsiveWidget.isDesktop(context)
+                              ? 56
+                              : 42,
                       height: 1.02,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: tv ? 10 : 16),
                   _buildTvMetaRow(content, theme),
-                  const SizedBox(height: 16),
+                  SizedBox(height: tv ? 10 : 16),
                   _buildExpandableDescription(
                     content.description ?? 'N/A',
                     theme,
-                    maxCollapsedLines: 4,
+                    maxCollapsedLines: tv ? 3 : 4,
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: tv ? 14 : 24),
                   content.isFeatured == true
                       ? _buildReleaseDateHighlight(context, content)
                       : _buildTvActionButtons(context, content, theme,
@@ -468,17 +492,41 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               ),
             ),
             Positioned(
-              right: ResponsiveWidget.isDesktop(context) ? 64 : 32,
-              bottom: 70,
+              right: _tvSidePadding,
+              bottom: tv ? 40 : 70,
               width: kIsWeb
                   ? 620
-                  : ResponsiveWidget.isDesktop(context)
-                      ? 500
-                      : 390,
+                  : tv
+                      ? size.width * 0.34
+                      : ResponsiveWidget.isDesktop(context)
+                          ? 500
+                          : 390,
               child: _buildTvTrailerPanel(content, theme),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTvBackButton(ThemeData theme) {
+    void goBack() {
+      _stopHeroTrailer();
+      if (Navigator.canPop(context)) Navigator.pop(context);
+    }
+
+    return _MovieTvFocusableScale(
+      onPressed: goBack,
+      child: IconButton(
+        onPressed: goBack,
+        tooltip: 'Back',
+        style: IconButton.styleFrom(
+          backgroundColor: theme.primaryColor,
+          foregroundColor: Colors.white,
+          fixedSize: Size.square(_isAndroidTv ? 38 : 52),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        ),
+        icon: Icon(Icons.arrow_back_rounded, size: _isAndroidTv ? 20 : 28),
       ),
     );
   }
@@ -538,15 +586,18 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     ];
 
     return Wrap(
-      spacing: 10,
-      runSpacing: 10,
+      spacing: _isAndroidTv ? 6 : 10,
+      runSpacing: _isAndroidTv ? 6 : 10,
       children: items.map((item) => _buildTvMetaPill(item)).toList(),
     );
   }
 
   Widget _buildTvMetaPill(String text) {
+    final tv = _isAndroidTv;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      padding: tv
+          ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
+          : const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.09),
         borderRadius: BorderRadius.circular(6),
@@ -554,9 +605,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
       ),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           color: Colors.white,
-          fontSize: 13,
+          fontSize: tv ? 11 : 13,
           fontWeight: FontWeight.w800,
         ),
       ),
@@ -569,9 +620,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     ThemeData theme, {
     required bool hasResume,
   }) {
-    return Wrap(
-      spacing: 14,
-      runSpacing: 14,
+    final buttons = Wrap(
+      spacing: _isAndroidTv ? 10 : 14,
+      runSpacing: _isAndroidTv ? 10 : 14,
       children: [
         _tvActionButton(
           theme: theme,
@@ -582,6 +633,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               ? (hasResume ? Icons.restart_alt : Icons.play_arrow_rounded)
               : Icons.lock_open_rounded,
           emphasized: true,
+          // Initial remote focus on Android TV.
+          autofocus: _isAndroidTv,
           onPressed: () {
             if (content.isRental == true) {
               _playMovie(content);
@@ -620,6 +673,23 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           onPressed: () => _showGiftDialog(context, content),
         ),
       ],
+    );
+    if (!_isAndroidTv) return buttons;
+    // When the remote comes back up to the hero buttons, show the whole hero
+    // again instead of leaving it half scrolled.
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (hasFocus) {
+        if (hasFocus && _tvScrollController.hasClients) {
+          _tvScrollController.animateTo(
+            0,
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+          );
+        }
+      },
+      child: buttons,
     );
   }
 
@@ -712,13 +782,20 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     required IconData icon,
     required VoidCallback? onPressed,
     bool emphasized = false,
+    bool autofocus = false,
   }) {
     return _MovieTvFocusableScale(
       onPressed: onPressed,
+      autofocus: autofocus,
       child: ElevatedButton.icon(
         onPressed: onPressed,
-        icon: Icon(icon, size: 24),
-        label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        icon: Icon(icon, size: _isAndroidTv ? 18 : 24),
+        label: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: _isAndroidTv ? const TextStyle(fontSize: 13) : null,
+        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: emphasized
               ? theme.primaryColor
@@ -726,8 +803,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           foregroundColor: Colors.white,
           disabledBackgroundColor: Colors.white.withOpacity(0.08),
           disabledForegroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
-          minimumSize: const Size(0, 56),
+          padding: _isAndroidTv
+              ? const EdgeInsets.symmetric(horizontal: 14, vertical: 8)
+              : const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+          minimumSize: Size(0, _isAndroidTv ? 38 : 56),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
           shadowColor: theme.primaryColor.withOpacity(0.45),
           elevation: emphasized ? 12 : 4,
@@ -761,13 +840,14 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildTvSectionTitle('Cast & Crew'),
-        const SizedBox(height: 14),
+        SizedBox(height: _isAndroidTv ? 8 : 14),
         SizedBox(
-          height: 172,
+          height: _isAndroidTv ? 116 : 172,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: castList.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            separatorBuilder: (_, __) =>
+                SizedBox(width: _isAndroidTv ? 10 : 16),
             itemBuilder: (context, index) =>
                 _buildTvCastCard(context, castList[index], theme),
           ),
@@ -787,16 +867,19 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     final role =
         (cast.role?.trim().isNotEmpty ?? false) ? cast.role!.trim() : '';
 
+    final tv = _isAndroidTv;
+    final cardWidth = tv ? 88.0 : 132.0;
+    final avatarSize = tv ? 66.0 : 104.0;
     return _MovieTvFocusableScale(
-      width: 132,
+      width: cardWidth,
       onPressed: () {},
       child: SizedBox(
-        width: 132,
+        width: cardWidth,
         child: Column(
           children: [
             Container(
-              height: 104,
-              width: 104,
+              height: avatarSize,
+              width: avatarSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withOpacity(0.08),
@@ -813,15 +896,16 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                     : _buildCastInitial(theme, displayName),
               ),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: tv ? 6 : 10),
             Text(
               displayName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w800,
+                fontSize: tv ? 12 : null,
               ),
             ),
             if (role.isNotEmpty)
@@ -832,7 +916,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.58),
-                  fontSize: 12,
+                  fontSize: tv ? 10 : 12,
                 ),
               ),
           ],
@@ -867,7 +951,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
             continueItems,
             theme,
           ),
-          const SizedBox(height: 28),
+          SizedBox(height: _isAndroidTv ? 16 : 28),
         ],
         for (final row in rows) ...[
           _buildTvContentRail(
@@ -878,7 +962,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 .toList(),
             theme,
           ),
-          const SizedBox(height: 28),
+          SizedBox(height: _isAndroidTv ? 16 : 28),
         ],
       ],
     );
@@ -896,13 +980,14 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildTvSectionTitle(title),
-        const SizedBox(height: 14),
+        SizedBox(height: _isAndroidTv ? 8 : 14),
         SizedBox(
-          height: 250,
+          height: _isAndroidTv ? 168 : 250,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            separatorBuilder: (_, __) =>
+                SizedBox(width: _isAndroidTv ? 10 : 16),
             itemBuilder: (context, index) =>
                 _buildTvMovieCard(context, items[index], theme),
           ),
@@ -916,9 +1001,13 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     Content content,
     ThemeData theme,
   ) {
-    final image = content.portraitPosterUrl ?? _heroImage(content) ?? '';
+    final image = _heroImage(content) ?? '';
+    final tv = _isAndroidTv;
+    // Same card proportions, smaller on Android TV.
+    final cardWidth = tv ? 200.0 : 300.0;
+    final imageHeight = tv ? 113.0 : 170.0;
     return _MovieTvFocusableScale(
-      width: 300,
+      width: cardWidth,
       onPressed: content.id == null
           ? null
           : () {
@@ -934,33 +1023,33 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               );
             },
       child: SizedBox(
-        width: 300,
+        width: cardWidth,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: SizedBox(
-                width: 300,
-                height: 170,
+                width: cardWidth,
+                height: imageHeight,
                 child: FilmytellPosterImage(
                   posterUrl: image,
-                  width: 300,
-                  height: 170,
-                  fallbackIconSize: 48,
+                  width: cardWidth,
+                  height: imageHeight,
+                  fallbackIconSize: tv ? 32 : 48,
                   fallbackIcon: Icons.movie,
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: tv ? 6 : 10),
             Text(
               content.title ?? 'Untitled',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w800,
-                fontSize: 15,
+                fontSize: tv ? 12 : 15,
               ),
             ),
             const SizedBox(height: 4),
@@ -972,7 +1061,10 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
               ].whereType<String>().join('  |  '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.white.withOpacity(0.58)),
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.58),
+                fontSize: tv ? 10 : null,
+              ),
             ),
           ],
         ),
@@ -986,7 +1078,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
       title,
       style: TextStyle(
         color: theme.primaryColor,
-        fontSize: 24,
+        fontSize: _isAndroidTv ? 17 : 24,
         fontWeight: FontWeight.w900,
       ),
     );
@@ -1006,6 +1098,12 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     _heroTrailerTimer = Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
       _heroTrailerTimer = null;
+      // Only autoplay while this page is on screen. This page rebuilds while
+      // covered (e.g. when the player saves progress) and used to start the
+      // trailer underneath the movie; its player took audio focus and made
+      // the movie pause/resume on its own.
+      final route = ModalRoute.of(context);
+      if (route != null && !route.isCurrent) return;
       _trailerController.mute?.call();
       _trailerController.play?.call();
       setState(() => _isHeroTrailerPlaying = true);
@@ -1526,13 +1624,13 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           "Gallery",
           style: TextStyle(
             color: theme.primaryColor,
-            fontSize: 18,
+            fontSize: _isAndroidTv ? 17 : 18,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: _isAndroidTv ? 8 : 12),
         SizedBox(
-          height: 180,
+          height: _isAndroidTv ? 120 : 180,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: posters.length,
@@ -1540,24 +1638,17 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
             itemBuilder: (context, index) {
               return ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 320,
-                  height: 180,
-                  color: Colors.black,
-                  alignment: Alignment.center,
-                  child: Image.network(
-                    posters[index],
-                    width: 320,
-                    height: 180,
-                    fit: BoxFit.contain,
-                    alignment: Alignment.center,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 320,
-                      color: Colors.black26,
-                      child: Icon(
-                        Icons.broken_image,
-                        color: theme.canvasColor.withOpacity(0.5),
-                      ),
+                child: Image.network(
+                  posters[index],
+                  width: _isAndroidTv ? 213 : 320,
+                  height: _isAndroidTv ? 120 : 180,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    width: _isAndroidTv ? 213 : 320,
+                    color: Colors.black26,
+                    child: Icon(
+                      Icons.broken_image,
+                      color: theme.canvasColor.withOpacity(0.5),
                     ),
                   ),
                 ),
@@ -2560,11 +2651,13 @@ class _MovieTvFocusableScale extends StatefulWidget {
     required this.child,
     required this.onPressed,
     this.width,
+    this.autofocus = false,
   });
 
   final Widget child;
   final VoidCallback? onPressed;
   final double? width;
+  final bool autofocus;
 
   @override
   State<_MovieTvFocusableScale> createState() => _MovieTvFocusableScaleState();
@@ -2581,6 +2674,7 @@ class _MovieTvFocusableScaleState extends State<_MovieTvFocusableScale> {
     final theme = Theme.of(context);
     return FocusableActionDetector(
       enabled: widget.onPressed != null,
+      autofocus: widget.autofocus,
       mouseCursor: widget.onPressed == null
           ? SystemMouseCursors.basic
           : SystemMouseCursors.click,
@@ -2607,7 +2701,9 @@ class _MovieTvFocusableScaleState extends State<_MovieTvFocusableScale> {
         ),
       },
       child: AnimatedScale(
-        scale: _active ? 1.055 : 1,
+        scale: _active
+            ? (ResponsiveWidget.isAndroidTv(context) ? 1.04 : 1.055)
+            : 1,
         duration: const Duration(milliseconds: 160),
         curve: Curves.easeOutCubic,
         child: AnimatedContainer(
@@ -2634,7 +2730,9 @@ class _MovieTvFocusableScaleState extends State<_MovieTvFocusableScale> {
                   ]
                 : null,
           ),
-          child: widget.child,
+          // The wrapper owns focus/activation; without this the inner
+          // button was a second focus stop for every remote press.
+          child: ExcludeFocus(child: widget.child),
         ),
       ),
     );

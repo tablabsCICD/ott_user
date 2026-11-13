@@ -46,6 +46,19 @@ String? _extractYoutubeId(String urlOrId) {
   return looksLikeVideoId ? value : null;
 }
 
+Duration boundedSeekPosition({
+  required Duration position,
+  required Duration duration,
+  required Duration offset,
+}) {
+  final target = position + offset;
+  if (target < Duration.zero) return Duration.zero;
+  if (duration > Duration.zero && target > duration) return duration;
+  return target;
+}
+
+bool get _isAndroidTvBuild => FlavorConfig.current.isTv && !kIsWeb;
+
 class TrailerPage extends StatefulWidget {
   final String? trailerUrl;
   final bool isTrailerUrl;
@@ -63,6 +76,8 @@ class TrailerPage extends StatefulWidget {
 }
 
 class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
+  // Android TV: focus target when the hidden controls are brought back.
+  final FocusNode _tvPlayFocusNode = FocusNode(debugLabel: 'trailer-play');
   Player? _player;
   VideoController? _videoController;
   YoutubePlayerController? _youtubeController;
@@ -85,18 +100,24 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    SystemChrome.setPreferredOrientations(const [
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    // Android TV is always landscape with no system bars; switching modes
+    // there only reconfigures the video surface (freeze / misplaced video).
+    if (!_isAndroidTvBuild) {
+      SystemChrome.setPreferredOrientations(const [
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    }
     if (_hasUrl) _initPlayer();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
+    // Not on `inactive`: that is a transient focus loss (TV volume bar,
+    // system overlays) and the trailer never resumed afterwards.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
       unawaited(_player?.pause());
       unawaited(_androidController?.pause());
@@ -403,13 +424,16 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _tvPlayFocusNode.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _controlsTimer?.cancel();
     unawaited(_disposePlayer());
     _youtubeController?.dispose();
     WakelockPlus.disable();
 
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    if (!_isAndroidTvBuild) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
     SystemChrome.setPreferredOrientations(
       FlavorConfig.current.isTv
           ? const [
@@ -423,6 +447,100 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
     }
 
     super.dispose();
+  }
+
+  void _togglePlayback() {
+    _showControlsTemporarily();
+    final youtube = _youtubeController;
+    if (youtube != null) {
+      if (youtube.value.isPlaying) {
+        youtube.pause();
+      } else {
+        youtube.play();
+      }
+      setState(() {});
+      return;
+    }
+    final androidController = _androidController;
+    if (androidController != null) {
+      if (androidController.value.isPlaying) {
+        unawaited(androidController.pause());
+      } else {
+        unawaited(androidController.play());
+      }
+      setState(() {});
+      return;
+    }
+    final player = _player;
+    if (player != null) {
+      unawaited(player.playOrPause());
+      setState(() {});
+    }
+  }
+
+  void _toggleMute() {
+    _showControlsTemporarily();
+    final newMuted = !_isMuted;
+    _isMuted = newMuted;
+    if (_player != null) {
+      _player!.setVolume(newMuted ? 0 : 100);
+    }
+    if (_androidController != null) {
+      unawaited(_androidController!.setVolume(newMuted ? 0.0 : 1.0));
+    }
+    if (_youtubeController != null) {
+      newMuted ? _youtubeController!.mute() : _youtubeController!.unMute();
+    }
+    setState(() {});
+  }
+
+  KeyEventResult _handleRemoteKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+    final wasHidden = !_showControls;
+    _showControlsTemporarily();
+    final key = event.logicalKey;
+    // Android TV: when the controls were hidden, OK/arrows just bring them
+    // back (with focus on Play) instead of acting on an invisible button.
+    if (wasHidden &&
+        ResponsiveWidget.isAndroidTv(context) &&
+        (OttTvRemoteKey.isDirectional(key) ||
+            OttTvRemoteKey.activate.contains(key))) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _tvPlayFocusNode.context != null) {
+          _tvPlayFocusNode.requestFocus();
+        }
+      });
+      return KeyEventResult.handled;
+    }
+    if (OttTvRemoteKey.playPause.contains(key) ||
+        key == LogicalKeyboardKey.space) {
+      _togglePlayback();
+      return KeyEventResult.handled;
+    }
+    if (OttTvRemoteKey.fastForward.contains(key)) {
+      _seekBy(const Duration(seconds: 10));
+      return KeyEventResult.handled;
+    }
+    if (OttTvRemoteKey.rewind.contains(key)) {
+      _seekBy(const Duration(seconds: -10));
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.escape ||
+        key == LogicalKeyboardKey.goBack ||
+        key == LogicalKeyboardKey.browserBack ||
+        key == LogicalKeyboardKey.gameButtonB) {
+      Navigator.pop(context);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  String _format(Duration d) {
+    if (d == Duration.zero) return "00:00";
+    String two(int n) => n.toString().padLeft(2, '0');
+    return "${two(d.inMinutes.remainder(60))}:${two(d.inSeconds.remainder(60))}";
   }
 
   @override
@@ -463,71 +581,17 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildControls() {
-    return ColoredBox(
-      color: Colors.black38,
-      child: SafeArea(
-        child: Stack(
-          children: [
-            Align(
-              alignment: Alignment.topLeft,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-            Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    iconSize: 38,
-                    onPressed: () => _seekBy(const Duration(seconds: -10)),
-                    icon: const Icon(Icons.replay_10, color: Colors.white),
-                  ),
-                  const SizedBox(width: 28),
-                  if (_isBuffering)
-                    const SizedBox(
-                      width: 48,
-                      height: 48,
-                      child: CircularProgressIndicator(color: Colors.white),
-                    )
-                  else
-                    IconButton(
-                      iconSize: 52,
-                      onPressed: _togglePlayback,
-                      icon: Icon(
-                        _isPlaying
-                            ? Icons.pause_circle_filled
-                            : Icons.play_circle_fill,
-                        color: Colors.white,
-                      ),
-                    ),
-                  const SizedBox(width: 28),
-                  IconButton(
-                    iconSize: 38,
-                    onPressed: () => _seekBy(const Duration(seconds: 10)),
-                    icon: const Icon(Icons.forward_10, color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomProgressBar() {
-    final durationMs = _duration.inMilliseconds;
-    final positionMs = _position.inMilliseconds.clamp(0, durationMs);
-
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      child: SafeArea(
-        top: false,
+  Widget _buildControlOverlay() {
+    final title = widget.content.title ?? 'Trailer';
+    return AnimatedOpacity(
+      opacity: _showControls ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 250),
+      child: IgnorePointer(
+        ignoring: !_showControls,
+        // Android TV: hidden controls must not keep the remote focus,
+        // otherwise OK presses an invisible button.
+        child: ExcludeFocus(
+        excluding: !_showControls && ResponsiveWidget.isAndroidTv(context),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
@@ -563,15 +627,128 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
                     _scheduleControlsHide();
                   },
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _formatDuration(_duration),
-                style: const TextStyle(color: Colors.white),
-              ),
-            ],
+                Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      OttTvFocus(
+                        onTap: () => _seekBy(const Duration(seconds: -10)),
+                        borderRadius: 30,
+                        semanticLabel: 'Rewind 10 seconds',
+                        child: IconButton(
+                          iconSize: 42,
+                          icon: const Icon(Icons.replay_10_rounded,
+                              color: Colors.white),
+                          onPressed: () =>
+                              _seekBy(const Duration(seconds: -10)),
+                        ),
+                      ),
+                      const SizedBox(width: 36),
+                      OttTvFocus(
+                        autofocus: true,
+                        focusNode: _tvPlayFocusNode,
+                        onTap: _togglePlayback,
+                        borderRadius: 36,
+                        semanticLabel: _isPlaying ? 'Pause' : 'Play',
+                        child: IconButton(
+                          iconSize: 58,
+                          icon: Icon(
+                            _isPlaying
+                                ? Icons.pause_circle_filled_rounded
+                                : Icons.play_circle_filled_rounded,
+                            color: Colors.white,
+                          ),
+                          onPressed: _togglePlayback,
+                        ),
+                      ),
+                      const SizedBox(width: 36),
+                      OttTvFocus(
+                        onTap: () => _seekBy(const Duration(seconds: 10)),
+                        borderRadius: 30,
+                        semanticLabel: 'Forward 10 seconds',
+                        child: IconButton(
+                          iconSize: 42,
+                          icon: const Icon(Icons.forward_10_rounded,
+                              color: Colors.white),
+                          onPressed: () =>
+                              _seekBy(const Duration(seconds: 10)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  bottom: 14,
+                  left: 24,
+                  right: 24,
+                  child: Row(
+                    children: [
+                      Text(
+                        _format(_currentPosition),
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 13),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildProgressSlider(),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        _format(_totalDuration),
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgressSlider() {
+    final durationMs = _totalDuration.inMilliseconds;
+    final posMs = _currentPosition.inMilliseconds;
+    if (durationMs <= 0) {
+      return const LinearProgressIndicator(
+        value: 0,
+        color: Colors.redAccent,
+        backgroundColor: Colors.white24,
+      );
+    }
+    return SliderTheme(
+      data: SliderTheme.of(context).copyWith(
+        trackHeight: 4,
+        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+        overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+        activeTrackColor: Theme.of(context).primaryColor,
+        inactiveTrackColor: Colors.white24,
+        thumbColor: Theme.of(context).primaryColor,
+      ),
+      // Android TV: a focused Slider swallows all arrow keys, trapping the
+      // remote. Seeking is done with the rewind/forward controls instead.
+      child: ExcludeFocus(
+        excluding: ResponsiveWidget.isAndroidTv(context),
+        child: Slider(
+        min: 0,
+        max: durationMs.toDouble(),
+        value: posMs.clamp(0, durationMs).toDouble(),
+        onChanged: (value) {
+          final target = Duration(milliseconds: value.round());
+          if (_player != null) {
+            _player!.seek(target);
+          } else if (_androidController != null) {
+            _androidController!.seekTo(target);
+          } else if (_youtubeController != null) {
+            _youtubeController!.seekTo(target);
+          }
+          setState(() {});
+        },
+      ),
       ),
     );
   }
@@ -741,6 +918,9 @@ class _TrailerPreviewState extends State<TrailerPreview>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Ignore the transient `inactive` state (TV volume bar, overlays); it
+    // made previews stop and restart on their own.
+    if (state == AppLifecycleState.inactive) return;
     _appIsActive = state == AppLifecycleState.resumed;
     if (!_appIsActive) {
       unawaited(_player?.pause());
@@ -1288,7 +1468,11 @@ class _TrailerPreviewState extends State<TrailerPreview>
         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
         overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
       ),
-      child: Slider(
+      // Android TV: a focused Slider swallows all arrow keys, trapping the
+      // remote. Seeking is done with the rewind/forward controls instead.
+      child: ExcludeFocus(
+        excluding: ResponsiveWidget.isAndroidTv(context),
+        child: Slider(
         min: 0,
         max: durationMs.toDouble(),
         value: positionMs.clamp(0, durationMs).toDouble(),
@@ -1297,6 +1481,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
         onChanged: (value) {
           player.seek(Duration(milliseconds: value.round()));
         },
+      ),
       ),
     );
   }

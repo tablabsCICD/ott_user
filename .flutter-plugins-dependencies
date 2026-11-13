@@ -317,7 +317,7 @@
             },
             {
                 "name": "video_player_android",
-                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/video_player_android-2.9.5/",
+                "path": "/Users/shivrajechaudhari/.pub-cache/hosted/pub.dev/video_player_android-2.12.2/",
                 "native_build": true,
                 "dependencies": [],
                 "dev_dependency": false
@@ -1187,7 +1187,7 @@
             ]
         }
     ],
-    "date_created": "2026-11-12 11:38:19.475307",
+    "date_created": "2026-11-12 15:25:17.300615",
     "version": "3.47.6",
     "swift_package_manager_enabled": {
         "ios": true,

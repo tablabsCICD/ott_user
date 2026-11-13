@@ -56,6 +56,10 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  // Android TV lays the app out on a 960x540 canvas; the phone/web sizes
+  // below would fill most of the screen there, so TV uses a compact scale.
+  bool get _isTv => ResponsiveWidget.isAndroidTv(context);
+
   void _openDetail(String title, Widget page) {
     final openInShell = widget.onOpenDetail;
     if (openInShell != null) {
@@ -419,10 +423,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                       ),
                               ],
                             ),
-                            const SizedBox(height: 250),
+                            SizedBox(height: _isTv ? 32 : 250),
                             Opacity(
                               opacity: 0.4,
                               child: CircleAvatar(
+                                radius: _isTv ? 14 : null,
                                 backgroundColor: theme.scaffoldBackgroundColor,
                                 foregroundColor: theme.scaffoldBackgroundColor,
                                 foregroundImage: AssetImage(ImageConstant.logo),
@@ -432,10 +437,10 @@ class _ProfilePageState extends State<ProfilePage> {
                             const SizedBox(height: 2),
                             Text(
                               "Version - ${AppConstant.appVersion}",
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: Colors.grey,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                                fontSize: _isTv ? 10 : 12,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -558,23 +563,27 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Card(
       color: theme.cardColor,
+      margin: _isTv
+          ? const EdgeInsets.symmetric(horizontal: 4, vertical: 3)
+          : null,
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: EdgeInsets.all(_isTv ? 6.0 : 12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             title.isNotEmpty
                 ? Padding(
-                    padding: const EdgeInsets.only(
+                    padding: EdgeInsets.only(
                       left: 8.0,
-                      bottom: 4,
+                      top: _isTv ? 2 : 0,
+                      bottom: _isTv ? 2 : 4,
                     ),
                     child: Text(
                       title,
                       style: TextStyle(
                         color: theme.canvasColor,
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontSize: _isTv ? 13 : 16,
                       ),
                     ),
                   )
@@ -594,9 +603,20 @@ class _ProfilePageState extends State<ProfilePage> {
     final profilePhotoUrl =
         normalizeNetworkImageUrl(userProvider.userObj.profilePhoto);
 
+    final isTv = _isTv;
+    final avatarSize = isTv ? 64.0 : 100.0;
+    // Opened as its own route (e.g. the home page's profile icon) there is
+    // no sidebar to leave through, so show a single back button. Inside the
+    // navigation shell (onOpenDetail set) the shell handles navigation.
+    final showBack =
+        widget.onOpenDetail == null && Navigator.of(context).canPop();
+    final actionIconSize = isTv ? 20.0 : 24.0;
+
     return SliverAppBar(
       automaticallyImplyLeading: false,
-      expandedHeight: 280,
+      leading: showBack ? _buildBackButton(theme) : null,
+      toolbarHeight: isTv ? 48 : kToolbarHeight,
+      expandedHeight: isTv ? 210 : 280,
       backgroundColor: theme.scaffoldBackgroundColor,
       centerTitle: ResponsiveWidget.isDesktop(context) ? true : false,
       actions: [
@@ -605,23 +625,22 @@ class _ProfilePageState extends State<ProfilePage> {
           icon: Icon(
             isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round,
             color: theme.canvasColor,
+            size: actionIconSize,
           ),
           tooltip: "Toggle Theme",
           onPressed: () {
             themeProvider.toggleTheme();
           },
         ),
-        if (userProvider.userObj.id != null &&
-            (userProvider.userObj.id ?? 0) > 0)
-          IconButton(
-            onPressed: () {
-              _showCupertinoDialog(context);
-            },
-            tooltip: "Logout",
-            icon: Icon(
-              Icons.logout,
-              color: theme.canvasColor,
-            ),
+        IconButton(
+          onPressed: () {
+            _showCupertinoDialog(context);
+          },
+          tooltip: "Logout",
+          icon: Icon(
+            Icons.logout,
+            color: theme.canvasColor,
+            size: actionIconSize,
           ),
       ],
       flexibleSpace: FlexibleSpaceBar(
@@ -634,12 +653,14 @@ class _ProfilePageState extends State<ProfilePage> {
 
         background: Center(
           child: Container(
-            width: ResponsiveWidget.isMobile(context) ? double.infinity : 500,
-            padding: const EdgeInsets.all(20.0),
+            width: ResponsiveWidget.isMobile(context)
+                ? double.infinity
+                : (isTv ? 400 : 500),
+            padding: EdgeInsets.all(isTv ? 12.0 : 20.0),
             decoration: BoxDecoration(
               color: theme.primaryColor,
               borderRadius: ResponsiveWidget.isDesktop(context)
-                  ? BorderRadius.circular(60)
+                  ? BorderRadius.circular(isTv ? 36 : 60)
                   : const BorderRadius.only(
                       bottomLeft: Radius.circular(70),
                       bottomRight: Radius.circular(70),
@@ -654,25 +675,25 @@ class _ProfilePageState extends State<ProfilePage> {
                     alignment: AlignmentGeometry.center,
                     children: [
                       CircleAvatar(
-                        radius: 50,
+                        radius: avatarSize / 2,
                         backgroundColor: theme.cardColor,
                         child: ClipOval(
                           child: profilePhotoUrl.isEmpty
                               ? Image.asset(
                                   ImageConstant.profile,
-                                  width: 100,
-                                  height: 100,
+                                  width: avatarSize,
+                                  height: avatarSize,
                                   fit: BoxFit.cover,
                                 )
                               : Image.network(
                                   profilePhotoUrl,
-                                  width: 100,
-                                  height: 100,
+                                  width: avatarSize,
+                                  height: avatarSize,
                                   fit: BoxFit.cover,
                                   errorBuilder: (_, __, ___) => Image.asset(
                                     ImageConstant.profile,
-                                    width: 100,
-                                    height: 100,
+                                    width: avatarSize,
+                                    height: avatarSize,
                                     fit: BoxFit.cover,
                                   ),
                                 ),
@@ -680,8 +701,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       (userProvider.userObj.verified ?? false)
                           ? Positioned(
-                              bottom: 8,
-                              right: 8,
+                              bottom: isTv ? 2 : 8,
+                              right: isTv ? 2 : 8,
                               child: Container(
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
@@ -690,7 +711,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 child: Icon(
                                   Icons.verified,
                                   color: Colors.blue,
-                                  size: 18,
+                                  size: isTv ? 14 : 18,
                                 ),
                               ),
                             )
@@ -698,7 +719,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: isTv ? 6 : 10),
                 Text(
                   (() {
                     final first =
@@ -707,27 +728,27 @@ class _ProfilePageState extends State<ProfilePage> {
                     final full = '$first $last'.trim();
                     return full.isNotEmpty ? full : 'User';
                   })(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                    fontSize: isTv ? 15 : 18,
                   ),
                 ),
                 Text(
                   userProvider.userObj.emailId ?? "",
                   style: TextStyle(
                     color: Colors.white70,
-                    fontSize: 14,
+                    fontSize: isTv ? 11.5 : 14,
                   ),
                 ),
                 Text(
                   userProvider.userObj.mobileNumber ?? '',
                   style: TextStyle(
                     color: Colors.white70,
-                    fontSize: 14,
+                    fontSize: isTv ? 11.5 : 14,
                   ),
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: isTv ? 6 : 10),
                 OttTvFocus(
                   onTap: () {
                     Navigator.push(
@@ -741,6 +762,16 @@ class _ProfilePageState extends State<ProfilePage> {
                   scale: 1.05,
                   semanticLabel: lang.editProfile,
                   child: ElevatedButton(
+                    style: isTv
+                        ? ElevatedButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            minimumSize: const Size(0, 30),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 4,
+                            ),
+                          )
+                        : null,
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -753,6 +784,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       lang.editProfile,
                       style: TextStyle(
                         color: theme.canvasColor,
+                        fontSize: isTv ? 12 : null,
                       ),
                     ),
                   ),
@@ -760,6 +792,42 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackButton(ThemeData theme) {
+    void goBack() => Navigator.of(context).maybePop();
+
+    if (!_isTv) {
+      return IconButton(
+        onPressed: goBack,
+        tooltip: 'Back',
+        icon: Icon(Icons.arrow_back_rounded, color: theme.canvasColor),
+      );
+    }
+
+    // Same look as the movie details TV back button.
+    return Center(
+      child: OttTvFocus(
+        onTap: goBack,
+        borderRadius: 6,
+        semanticLabel: 'Back',
+        child: IconButton(
+          onPressed: goBack,
+          tooltip: 'Back',
+          style: IconButton.styleFrom(
+            backgroundColor: theme.primaryColor,
+            foregroundColor: Colors.white,
+            fixedSize: const Size.square(36),
+            minimumSize: const Size.square(36),
+            padding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          icon: const Icon(Icons.arrow_back_rounded, size: 20),
         ),
       ),
     );
@@ -788,17 +856,28 @@ class _ProfileOptionState extends State<ProfileOption> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isTv = ResponsiveWidget.isAndroidTv(context);
     final option = SizedBox(
-      width: ResponsiveWidget.isMobile(context) ? double.infinity : 600,
+      width: ResponsiveWidget.isMobile(context)
+          ? double.infinity
+          : (isTv ? 480 : 600),
       child: ListTile(
         dense: true,
-        leading: Icon(widget.icon, color: Theme.of(context).primaryColor),
+        visualDensity: isTv ? VisualDensity.compact : null,
+        minLeadingWidth: isTv ? 24 : null,
+        contentPadding:
+            isTv ? const EdgeInsets.symmetric(horizontal: 10) : null,
+        leading: Icon(
+          widget.icon,
+          color: Theme.of(context).primaryColor,
+          size: isTv ? 18 : null,
+        ),
         title: Text(
           widget.title,
           style: TextStyle(
             color: theme.canvasColor,
             fontWeight: FontWeight.normal,
-            fontSize: 14,
+            fontSize: isTv ? 12.5 : 14,
           ),
         ),
         subtitle: widget.balance != null
@@ -807,11 +886,11 @@ class _ProfileOptionState extends State<ProfileOption> {
                 style: TextStyle(
                   color: theme.canvasColor.withOpacity(0.6),
                   fontWeight: FontWeight.normal,
-                  fontSize: 12,
+                  fontSize: isTv ? 10.5 : 12,
                 ),
               )
             : null,
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        trailing: Icon(Icons.arrow_forward_ios, size: isTv ? 12 : 16),
         onTap: widget.onTap,
       ),
     );
@@ -820,7 +899,7 @@ class _ProfileOptionState extends State<ProfileOption> {
 
     return OttTvFocus(
       onTap: widget.onTap,
-      borderRadius: 12,
+      borderRadius: isTv ? 8 : 12,
       scale: 1.025,
       child: option,
     );

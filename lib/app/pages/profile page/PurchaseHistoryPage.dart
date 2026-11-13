@@ -548,7 +548,7 @@ class _PurchaseHistoryCard extends StatelessWidget {
     final invoiceUrl = item.invoiceUrl?.trim() ?? '';
     final hasInvoiceUrl = invoiceUrl.isNotEmpty;
 
-    return Card(
+    final card = Card(
       color: theme.cardColor,
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -616,6 +616,12 @@ class _PurchaseHistoryCard extends StatelessWidget {
         ),
       ),
     );
+    // Android TV: entries without invoice buttons have nothing focusable, so
+    // the remote couldn't scroll to them. Make the card itself a focus stop.
+    if (!hasInvoiceUrl && ResponsiveWidget.isAndroidTv(context)) {
+      return OttTvFocus(onTap: () {}, borderRadius: 12, scale: 1.0, child: card);
+    }
+    return card;
   }
 
   Future<void> _viewInvoice(BuildContext context, String invoiceUrl) async {

@@ -31,7 +31,10 @@ class NotificationDetailPage extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
-      body: ListView(
+      // Android TV: Up/Down scroll the message, then move on to attachments.
+      body: OttTvKeyScroll(
+        child: ListView(
+        primary: ResponsiveWidget.isAndroidTv(context) ? true : null,
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           _header(context, theme),
@@ -44,6 +47,7 @@ class NotificationDetailPage extends StatelessWidget {
             _attachmentsSection(context, theme),
           ],
         ],
+      ),
       ),
     );
   }
