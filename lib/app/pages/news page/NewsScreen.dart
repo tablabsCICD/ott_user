@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 class NewsScreenArgs {
@@ -64,8 +65,12 @@ class NewsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: SingleChildScrollView(
-                child: Text(args.payload.toString()),
+              // Android TV: Up/Down scroll the payload with the remote.
+              child: OttTvKeyScroll(
+                child: SingleChildScrollView(
+                  primary: ResponsiveWidget.isAndroidTv(context) ? true : null,
+                  child: Text(args.payload.toString()),
+                ),
               ),
             ),
           ],

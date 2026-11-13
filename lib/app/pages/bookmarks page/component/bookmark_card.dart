@@ -63,11 +63,15 @@ class BookmarkPosterCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(12),
-      child: OttTvFocus(
+      // TV: Down from the card selects the bookmark button (which the remote
+      // can't otherwise reach), OK toggles it, Up returns to the card.
+      child: OttTvActionCard(
         borderRadius: 12,
         onTap: openDetails,
+        onAction: toggleBookmark,
+        actionDirection: TraversalDirection.down,
         semanticLabel: movie.title,
-        child: Column(
+        builder: (context, actionSelected) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             /// 🎬 Poster
@@ -102,14 +106,12 @@ class BookmarkPosterCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Spacer(),
-                OttTvFocus(
-                  onTap: toggleBookmark,
-                  borderRadius: 18,
-                  scale: 1.12,
-                  semanticLabel: isBookmarked
+                OttTvActionHighlight(
+                  selected: actionSelected,
+                  child: IconButton(
+                  tooltip: isBookmarked
                       ? "Remove ${movie.title} from bookmarks"
                       : "Add ${movie.title} to bookmarks",
-                  child: IconButton(
                     visualDensity: VisualDensity.compact,
                     padding: EdgeInsets.zero,
                     icon: Icon(
@@ -190,13 +192,16 @@ class ShortBookmarkPosterCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(12),
-      child: OttTvFocus(
+      // TV: Up from the card selects the bookmark button, OK toggles it.
+      child: OttTvActionCard(
         borderRadius: 12,
         onTap: () {
           openShort();
         },
+        onAction: toggleShortBookmark,
+        actionDirection: TraversalDirection.up,
         semanticLabel: short.title,
-        child: Stack(
+        builder: (context, actionSelected) => Stack(
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
@@ -228,16 +233,12 @@ class ShortBookmarkPosterCard extends StatelessWidget {
             Positioned(
               top: 5,
               right: 5,
-              child: OttTvFocus(
-                onTap: () {
-                  toggleShortBookmark();
-                },
-                borderRadius: 18,
-                scale: 1.12,
-                semanticLabel: isBookmarked
+              child: OttTvActionHighlight(
+                selected: actionSelected,
+                child: IconButton(
+                tooltip: isBookmarked
                     ? "Remove ${short.title} from bookmarks"
                     : "Add ${short.title} to bookmarks",
-                child: IconButton(
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
                   icon: Icon(

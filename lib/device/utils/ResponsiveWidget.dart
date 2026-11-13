@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/flavor/app_flavor.dart';
 
@@ -15,6 +16,12 @@ class ResponsiveWidget extends StatelessWidget {
     this.tablet,
     required this.desktop,
   });
+
+  /// True only for the Android TV build (TV flavor, not web). Use this for
+  /// layout changes that must not affect desktop web or landscape tablets,
+  /// which [isTv] also matches by screen size.
+  static bool isAndroidTv(BuildContext context) =>
+      FlavorConfig.current.isTv && !kIsWeb;
 
   static bool isTv(BuildContext context) {
     if (FlavorConfig.current.isTv) return true;

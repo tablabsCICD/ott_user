@@ -451,7 +451,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
     final theme = Theme.of(context);
     final item = content.movie;
 
-    final card = ClipRRect(
+    // `deleteSelected`: Android TV remote has the Delete button selected.
+    Widget buildCard({bool deleteSelected = false}) => ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: Stack(
         children: [
@@ -581,7 +582,9 @@ class _WatchlistPageState extends State<WatchlistPage> {
                   const SizedBox(width: 6),
                   Tooltip(
                     message: 'Delete download',
-                    child: Material(
+                    child: OttTvActionHighlight(
+                      selected: deleteSelected,
+                      child: Material(
                       color: Colors.black87,
                       shape: const CircleBorder(
                         side: BorderSide(color: Colors.white24),
@@ -595,6 +598,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
                             color: Colors.white, size: 18),
                         onPressed: () => _deleteDownload(item),
                       ),
+                    ),
                     ),
                   ),
                 ],
@@ -616,6 +620,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
         ],
       ),
     );
+    final card = buildCard();
 
     if (ResponsiveWidget.isMobile(context)) {
       return GestureDetector(
@@ -624,8 +629,35 @@ class _WatchlistPageState extends State<WatchlistPage> {
       );
     }
 
+    final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
+    final VoidCallback? onTap = content.active == true
+        ? () => _playContent(item)
+        // Android TV: keep expired titles focusable so the remote can still
+        // scroll past them, and explain why they don't play.
+        : isAndroidTv
+            ? () => CustomToast.show(
+                  context,
+                  'This title has expired',
+                  isSuccess: false,
+                )
+            : null;
+
+    if (isAndroidTv && content.isDownloaded) {
+      // Android TV: Up from the card selects the top-right Delete button
+      // (which the remote otherwise can't reach), OK deletes, Down returns.
+      return OttTvActionCard(
+        onTap: onTap,
+        onAction: () => _deleteDownload(item),
+        actionDirection: TraversalDirection.up,
+        borderRadius: 16,
+        scale: 1.035,
+        builder: (context, actionSelected) =>
+            buildCard(deleteSelected: actionSelected),
+      );
+    }
+
     return OttTvFocus(
-      onTap: content.active == true ? () => _playContent(item) : null,
+      onTap: onTap,
       borderRadius: 16,
       scale: 1.035,
       child: card,

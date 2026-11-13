@@ -60,6 +60,8 @@ Duration boundedSeekPosition({
   return target;
 }
 
+bool get _isAndroidTvBuild => FlavorConfig.current.isTv && !kIsWeb;
+
 class TrailerPage extends StatefulWidget {
   final String? trailerUrl;
   final bool isTrailerUrl;
@@ -77,6 +79,8 @@ class TrailerPage extends StatefulWidget {
 }
 
 class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
+  // Android TV: focus target when the hidden controls are brought back.
+  final FocusNode _tvPlayFocusNode = FocusNode(debugLabel: 'trailer-play');
   Player? _player;
   VideoController? _videoController;
   YoutubePlayerController? _youtubeController;
@@ -130,18 +134,24 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    SystemChrome.setPreferredOrientations(const [
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    // Android TV is always landscape with no system bars; switching modes
+    // there only reconfigures the video surface (freeze / misplaced video).
+    if (!_isAndroidTvBuild) {
+      SystemChrome.setPreferredOrientations(const [
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    }
     if (_hasUrl) _initPlayer();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
+    // Not on `inactive`: that is a transient focus loss (TV volume bar,
+    // system overlays) and the trailer never resumed afterwards.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
       unawaited(_player?.pause());
       unawaited(_androidController?.pause());
@@ -379,13 +389,16 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _tvPlayFocusNode.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _hideControlsTimer?.cancel();
     unawaited(_disposePlayer());
     _youtubeController?.dispose();
     WakelockPlus.disable();
 
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    if (!_isAndroidTvBuild) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
     SystemChrome.setPreferredOrientations(
       FlavorConfig.current.isTv
           ? const [
@@ -447,8 +460,22 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
     if (event is! KeyDownEvent) {
       return KeyEventResult.ignored;
     }
+    final wasHidden = !_showControls;
     _showControlsTemporarily();
     final key = event.logicalKey;
+    // Android TV: when the controls were hidden, OK/arrows just bring them
+    // back (with focus on Play) instead of acting on an invisible button.
+    if (wasHidden &&
+        ResponsiveWidget.isAndroidTv(context) &&
+        (OttTvRemoteKey.isDirectional(key) ||
+            OttTvRemoteKey.activate.contains(key))) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _tvPlayFocusNode.context != null) {
+          _tvPlayFocusNode.requestFocus();
+        }
+      });
+      return KeyEventResult.handled;
+    }
     if (OttTvRemoteKey.playPause.contains(key) ||
         key == LogicalKeyboardKey.space) {
       _togglePlayback();
@@ -539,6 +566,10 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
       duration: const Duration(milliseconds: 250),
       child: IgnorePointer(
         ignoring: !_showControls,
+        // Android TV: hidden controls must not keep the remote focus,
+        // otherwise OK presses an invisible button.
+        child: ExcludeFocus(
+        excluding: !_showControls && ResponsiveWidget.isAndroidTv(context),
         child: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -634,6 +665,7 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
                       const SizedBox(width: 36),
                       OttTvFocus(
                         autofocus: true,
+                        focusNode: _tvPlayFocusNode,
                         onTap: _togglePlayback,
                         borderRadius: 36,
                         semanticLabel: _isPlaying ? 'Pause' : 'Play',
@@ -692,6 +724,7 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
             ),
           ),
         ),
+        ),
       ),
     );
   }
@@ -715,7 +748,11 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
         inactiveTrackColor: Colors.white24,
         thumbColor: Theme.of(context).primaryColor,
       ),
-      child: Slider(
+      // Android TV: a focused Slider swallows all arrow keys, trapping the
+      // remote. Seeking is done with the rewind/forward controls instead.
+      child: ExcludeFocus(
+        excluding: ResponsiveWidget.isAndroidTv(context),
+        child: Slider(
         min: 0,
         max: durationMs.toDouble(),
         value: posMs.clamp(0, durationMs).toDouble(),
@@ -730,6 +767,7 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
           }
           setState(() {});
         },
+      ),
       ),
     );
   }
@@ -912,6 +950,9 @@ class _TrailerPreviewState extends State<TrailerPreview>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Ignore the transient `inactive` state (TV volume bar, overlays); it
+    // made previews stop and restart on their own.
+    if (state == AppLifecycleState.inactive) return;
     _appIsActive = state == AppLifecycleState.resumed;
     if (!_appIsActive) {
       unawaited(_player?.pause());
@@ -1570,7 +1611,11 @@ class _TrailerPreviewState extends State<TrailerPreview>
         inactiveTrackColor: Colors.white24,
         thumbColor: Theme.of(context).primaryColor,
       ),
-      child: Slider(
+      // Android TV: a focused Slider swallows all arrow keys, trapping the
+      // remote. Seeking is done with the rewind/forward controls instead.
+      child: ExcludeFocus(
+        excluding: ResponsiveWidget.isAndroidTv(context),
+        child: Slider(
         min: 0,
         max: durationMs.toDouble(),
         value: positionMs.clamp(0, durationMs).toDouble(),
@@ -1585,6 +1630,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
           }
           setState(() {});
         },
+      ),
       ),
     );
   }

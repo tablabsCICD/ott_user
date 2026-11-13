@@ -8,8 +8,9 @@ class ProfileShimmer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMobile = ResponsiveWidget.isMobile(context);
-    final headerWidth = isMobile ? double.infinity : 500.0;
-    final cardMaxWidth = isMobile ? double.infinity : 600.0;
+    final isTv = ResponsiveWidget.isAndroidTv(context);
+    final headerWidth = isMobile ? double.infinity : (isTv ? 400.0 : 500.0);
+    final cardMaxWidth = isMobile ? double.infinity : (isTv ? 480.0 : 600.0);
 
     return SingleChildScrollView(
       child: Center(
@@ -67,7 +68,7 @@ class ProfileShimmer extends StatelessWidget {
     final isDesktop = ResponsiveWidget.isDesktop(context);
 
     return Container(
-      height: 280,
+      height: ResponsiveWidget.isAndroidTv(context) ? 210 : 280,
       width: width,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

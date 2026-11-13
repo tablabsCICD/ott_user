@@ -161,6 +161,14 @@ class _CustomTextFieldState extends State<CustomTextField> {
               actions: <Type, Action<Intent>>{
                 ActivateIntent: CallbackAction<ActivateIntent>(
                   onInvoke: (_) {
+                    // TV: OK on a read-only picker field (e.g. date of birth)
+                    // opens its picker instead of the keyboard.
+                    if (_isTvInput &&
+                        (widget.readOnly ?? false) &&
+                        widget.onTap != null) {
+                      widget.onTap!.call();
+                      return null;
+                    }
                     if (_isTvInput) {
                       _showTextInputKeyboard();
                     }

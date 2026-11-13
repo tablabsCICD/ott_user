@@ -195,11 +195,23 @@ class GiftCard extends StatelessWidget {
     final showMovieDetailsButton =
         !ResponsiveWidget.isDesktop(context) && onMovieDetails != null;
 
-    return OttTvFocus(
+    // TV: Down from the card selects Copy, Right moves to Share, OK runs the
+    // selected action, Up returns to the card. (Inline buttons can't be
+    // reached by the remote otherwise.)
+    final tvActions = <VoidCallback>[
+      if (couponCode != null && onCopy != null) onCopy!,
+      if (couponCode != null && onShare != null) onShare!,
+    ];
+    final copyIndex = couponCode != null && onCopy != null ? 0 : -1;
+    final shareIndex =
+        couponCode != null && onShare != null ? tvActions.length - 1 : -1;
+
+    return OttTvActionsCard(
       onTap: onTap,
+      actions: tvActions,
       borderRadius: 16,
       semanticLabel: title,
-      child: Card(
+      builder: (context, selectedAction) => Card(
         color: theme.cardColor,
         elevation: 4,
         shape: RoundedRectangleBorder(
@@ -295,11 +307,9 @@ class GiftCard extends StatelessWidget {
                         ),
                       ),
                       if (onCopy != null)
-                        OttTvFocus(
+                        OttTvActionHighlight(
+                          selected: selectedAction == copyIndex,
                           borderRadius: 20,
-                          scale: 1.05,
-                          semanticLabel: "Copy coupon code",
-                          onTap: onCopy,
                           child: IconButton(
                             icon: const Icon(Icons.copy, size: 18),
                             color: theme.primaryColor,
@@ -308,11 +318,9 @@ class GiftCard extends StatelessWidget {
                           ),
                         ),
                       if (onShare != null)
-                        OttTvFocus(
+                        OttTvActionHighlight(
+                          selected: selectedAction == shareIndex,
                           borderRadius: 20,
-                          scale: 1.05,
-                          semanticLabel: "Share gift link",
-                          onTap: onShare,
                           child: IconButton(
                             icon: const Icon(Icons.share, size: 18),
                             color: theme.primaryColor,

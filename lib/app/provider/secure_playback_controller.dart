@@ -262,6 +262,8 @@ class SecurePlaybackController extends ChangeNotifier {
     }
   }
 
+  static const Duration minimumRefreshInterval = Duration(seconds: 45);
+
   static Duration refreshDelay({
     required DateTime expiresAt,
     required DateTime now,
@@ -275,8 +277,15 @@ class SecurePlaybackController extends ChangeNotifier {
     _refreshTimer?.cancel();
     final expiry = _expiresAt;
     if (_disposed || expiry == null) return;
-    final delay =
+    final computed =
         refreshDelay(expiresAt: expiry, now: DateTime.now(), lead: refreshLead);
+    // Never refresh back-to-back. With a short-lived link or a TV whose clock
+    // runs ahead of the server, the computed delay is zero after every
+    // refresh, and each refresh rebuilds the player: an endless loop of
+    // loader / play / pause. If the link really expires sooner, the player's
+    // HTTP 403 triggers handlePlayerHttp403() as before.
+    final delay =
+        computed < minimumRefreshInterval ? minimumRefreshInterval : computed;
     SecurityDebugLog.event(
       'REFRESH',
       'Next signed-access refresh scheduled in ${delay.inSeconds} seconds.',

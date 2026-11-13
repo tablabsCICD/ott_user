@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/widgets/movieCard.dart';
+import 'package:ott/app/widgets/tv_card_scale.dart';
 import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -312,6 +313,7 @@ class _CategoryContentPageState extends State<CategoryContentPage>
                     );
                   }
 
+                  final isTv = ResponsiveWidget.isAndroidTv(context);
                   final targetCardWidth = isDesktop ? 312.0 : 296.0;
                   int crossAxisCount =
                       ((availableWidth + _gap) / (targetCardWidth + _gap))
@@ -319,10 +321,20 @@ class _CategoryContentPageState extends State<CategoryContentPage>
                   if (crossAxisCount < 1) crossAxisCount = 1;
                   if (isTablet && crossAxisCount > 3) crossAxisCount = 3;
                   if (isDesktop && crossAxisCount > 4) crossAxisCount = 4;
+                  // TV: same number of (scaled-down) cards per row as the
+                  // home rows.
+                  if (isTv) crossAxisCount = TvCardScale.visibleCards.floor();
 
                   final cardWidth =
                       (availableWidth - ((crossAxisCount - 1) * _gap)) /
                           crossAxisCount;
+                  // On TV the card keeps its original design size and is
+                  // scaled down uniformly to fit the cell.
+                  final tvScale = isTv
+                      ? TvCardScale.forWidth(cardWidth, MovieCard.itemWidth)
+                      : null;
+                  final gridItemHeight =
+                      tvScale?.size(_cardHeight) ?? _cardHeight;
 
                   return CustomScrollView(
                     controller: _scrollController,
@@ -349,8 +361,20 @@ class _CategoryContentPageState extends State<CategoryContentPage>
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
                               final content = _contents[index];
+                              if (tvScale != null) {
+                                return tvScale.wrap(
+                                  baseWidth: MovieCard.itemWidth,
+                                  baseHeight: _cardHeight,
+                                  child: MovieCard(
+                                    movie: content,
+                                    cardWidth: MovieCard.itemWidth,
+                                    cardMargin: 0,
+                                    onContentUpdated: _replaceContent,
+                                  ),
+                                );
+                              }
                               return SizedBox(
-                                height: _cardHeight,
+                                height: gridItemHeight,
                                 child: MovieCard(
                                   movie: content,
                                   cardWidth: cardWidth,
@@ -366,7 +390,7 @@ class _CategoryContentPageState extends State<CategoryContentPage>
                             crossAxisCount: crossAxisCount,
                             mainAxisSpacing: _gap,
                             crossAxisSpacing: _gap,
-                            mainAxisExtent: _cardHeight,
+                            mainAxisExtent: gridItemHeight,
                           ),
                         ),
                       ),

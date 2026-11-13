@@ -22,6 +22,7 @@ import 'package:ott/app/widgets/shimmer%20loader/shimmer_loader.dart';
 import 'package:ott/app/widgets/video_skip_controls.dart';
 import 'package:ott/data/models/anti_piracy_models.dart';
 import 'package:ott/data/models/shorts.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -109,8 +110,10 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused ||
+    // Not on `inactive`: that's a transient focus loss (TV volume bar,
+    // system overlays) and the short stayed paused afterwards.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
       unawaited(_controller?.pause());
     }
@@ -454,6 +457,24 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       return KeyEventResult.ignored;
     }
     final key = event.logicalKey;
+
+    if (ResponsiveWidget.isAndroidTv(context)) {
+      final isOk = OttTvRemoteKey.activate.contains(key);
+      final controlHasFocus = FocusManager.instance.primaryFocus != node;
+      // A control (Back, Like, Share, Episodes, ...) has focus: let the
+      // arrows move between controls and OK press the focused one.
+      if (controlHasFocus &&
+          (isOk || OttTvRemoteKey.isDirectional(key))) {
+        return KeyEventResult.ignored;
+      }
+      // On the video: Right moves into the on-screen controls, which the
+      // remote couldn't reach before. Forward-seek stays on the media key.
+      if (!controlHasFocus && key == LogicalKeyboardKey.arrowRight) {
+        node.nextFocus();
+        return KeyEventResult.handled;
+      }
+    }
+
     if (OttTvRemoteKey.playPause.contains(key) ||
         key == LogicalKeyboardKey.select ||
         key == LogicalKeyboardKey.enter ||
@@ -1079,7 +1100,12 @@ ${short.durationSec ?? ''}
               final part = _parts[i];
               final active = i == _currentIndex;
 
-              return GestureDetector(
+              // OttTvFocus: tappable on mobile, focusable with the TV remote
+              // (current episode gets the initial focus).
+              return OttTvFocus(
+                autofocus: active,
+                borderRadius: 10,
+                semanticLabel: "Episode ${part.partNumber}",
                 onTap: () async {
                   Navigator.pop(context);
                   _pageController.jumpToPage(i);

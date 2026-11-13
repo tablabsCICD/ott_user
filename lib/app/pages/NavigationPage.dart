@@ -152,7 +152,9 @@ class _NavigationPageState extends State<NavigationPage> {
         backgroundColor: selectedThemeData.scaffoldBackgroundColor,
         body: Stack(
           children: [
-            isTvLayout
+            isTvLayout && ResponsiveWidget.isAndroidTv(context)
+                ? _buildTvShell(context, selectedThemeData, visiblePageIndex)
+                : isTvLayout
                 ? Row(
                     children: [
                       AnimatedContainer(
@@ -624,6 +626,165 @@ class _NavigationPageState extends State<NavigationPage> {
     );
   }
 
+  // ===========================================================================
+  // ANDROID TV SIDEBAR (compact rail that expands over the content)
+  // ===========================================================================
+  static const double _tvRailWidth = 68;
+  static const double _tvRailExpandedWidth = 208;
+
+  Widget _buildTvShell(BuildContext context, ThemeData theme, int pageIndex) {
+    return Stack(
+      children: [
+        // Content always reserves only the collapsed rail width, so the
+        // poster rows never re-layout when the sidebar expands.
+        Padding(
+          padding: const EdgeInsets.only(left: _tvRailWidth),
+          child: _buildCurrentPage(pageIndex),
+        ),
+        Positioned(
+          left: 0,
+          top: 0,
+          bottom: 0,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            width: _isSidebarExpanded ? _tvRailExpandedWidth : _tvRailWidth,
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              boxShadow: _isSidebarExpanded
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        blurRadius: 32,
+                        offset: const Offset(8, 0),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: MouseRegion(
+              onEnter: (_) => _setSidebarExpanded(true),
+              onExit: (_) => _setSidebarExpanded(false),
+              child: Focus(
+                canRequestFocus: false,
+                onFocusChange: _setSidebarExpanded,
+                child: _buildTvDrawerContent(context, theme),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTvDrawerContent(BuildContext context, ThemeData theme) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final lang = AppLocalizations.of(context)!;
+
+    Widget tile({
+      required int index,
+      required IconData icon,
+      required String title,
+      String? homeContentType,
+      VoidCallback? onTap,
+    }) {
+      final isSelected = index == _currentIndex &&
+          (homeContentType == null || homeContentType == _homeContentType);
+      return _TvSidebarTile(
+        icon: icon,
+        title: title,
+        selected: isSelected,
+        expanded: _isSidebarExpanded,
+        onFocused: () => _setSidebarExpanded(true),
+        onTap: () {
+          if (onTap != null) {
+            onTap();
+            return;
+          }
+          if (index == 5) {
+            Provider.of<UserProvider>(context, listen: false).setValue();
+          }
+          _navigateTo(index, homeContentType: homeContentType);
+        },
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Brand logo
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Hero(
+              tag: "logo",
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.asset(
+                  ImageConstant.logo,
+                  height: 40,
+                  width: 40,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          // All items fit on a 1080p TV; scrolling is only a safety net for
+          // unusually small screens.
+          child: ListView(
+            padding: const EdgeInsets.only(bottom: 8),
+            children: [
+              tile(
+                index: 0,
+                icon: Icons.home_rounded,
+                title: lang.home,
+                homeContentType: "MOVIE",
+              ),
+              tile(index: 1, icon: Icons.video_library, title: lang.series),
+              tile(index: 3, icon: Icons.search, title: lang.search),
+              tile(index: 4, icon: Icons.movie, title: lang.watchlist),
+              tile(
+                index: 7,
+                icon: Icons.account_balance_wallet,
+                title: lang.wallet,
+              ),
+              tile(
+                index: 8,
+                icon: Icons.download_rounded,
+                title: "Downloads",
+              ),
+              tile(index: 5, icon: Icons.person, title: lang.profile),
+              tile(index: 9, icon: Icons.settings, title: "Settings"),
+              tile(
+                index: 10,
+                icon: Icons.support_agent_sharp,
+                title: lang.help,
+              ),
+              tile(
+                index: -2,
+                icon: isDark
+                    ? Icons.wb_sunny_outlined
+                    : Icons.nightlight_round,
+                title: isDark ? "Light Theme" : "Dark Theme",
+                onTap: themeProvider.toggleTheme,
+              ),
+              tile(
+                index: -1,
+                icon: Icons.logout,
+                title: lang.logout,
+                onTap: _showLogoutDialog,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   void _showLogoutDialog() {
     final theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
@@ -682,5 +843,114 @@ class _NavigationPageState extends State<NavigationPage> {
 
   Future<void> _logout() async {
     await SessionManager.instance.performLogout(context);
+  }
+}
+
+/// Compact sidebar item for Android TV: icon-only when collapsed, icon + label
+/// when expanded, with a clearly visible focus state.
+class _TvSidebarTile extends StatefulWidget {
+  const _TvSidebarTile({
+    required this.icon,
+    required this.title,
+    required this.selected,
+    required this.expanded,
+    required this.onTap,
+    required this.onFocused,
+  });
+
+  final IconData icon;
+  final String title;
+  final bool selected;
+  final bool expanded;
+  final VoidCallback onTap;
+  final VoidCallback onFocused;
+
+  @override
+  State<_TvSidebarTile> createState() => _TvSidebarTileState();
+}
+
+class _TvSidebarTileState extends State<_TvSidebarTile> {
+  final FocusNode _focusNode = FocusNode(debugLabel: 'tv-sidebar-tile');
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+      child: OttTvFocus(
+        focusNode: _focusNode,
+        borderRadius: 10,
+        scale: 1.0,
+        semanticLabel: widget.title,
+        onTap: widget.onTap,
+        onFocusChange: (focused) {
+          if (focused) widget.onFocused();
+        },
+        onKeyEvent: (node, event) {
+          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+          if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+            final moved = node.focusInDirection(TraversalDirection.right);
+            if (moved) return KeyEventResult.handled;
+            final nextMoved = node.nextFocus();
+            if (nextMoved) return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: ListenableBuilder(
+          listenable: _focusNode,
+          builder: (context, _) {
+            final focused = _focusNode.hasFocus;
+            final color = focused
+                ? Colors.white
+                : widget.selected
+                    ? theme.primaryColor
+                    : theme.canvasColor.withValues(alpha: 0.78);
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 140),
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: focused
+                    ? theme.primaryColor
+                    : widget.selected
+                        ? theme.primaryColor.withValues(alpha: 0.12)
+                        : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(widget.icon, size: 20, color: color),
+                  if (widget.expanded) ...[
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        widget.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
+                        softWrap: false,
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 13,
+                          fontWeight: widget.selected || focused
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
   }
 }

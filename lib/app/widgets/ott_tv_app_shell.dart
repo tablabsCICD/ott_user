@@ -155,3 +155,97 @@ class _OttTvAppShellState extends State<OttTvAppShell> {
     );
   }
 }
+
+/// Pins the Android TV app to a fixed design canvas so that fonts, cards,
+/// spacing and icons have the same physical size on every TV.
+///
+/// Android TVs report very different pixel densities for the same 1080p
+/// panel (for example 960x540, 1280x720 or 1920x1080 logical pixels), which
+/// otherwise makes the whole UI look tiny on some TVs and huge on others.
+/// This lays the app out at [designHeight] logical pixels tall (the width
+/// follows the screen's aspect ratio) and scales it uniformly to fill the
+/// screen. On TVs that already report 540 logical pixels it is a no-op.
+class TvDesignViewport extends StatelessWidget {
+  const TvDesignViewport({super.key, required this.child});
+
+  /// Logical height the TV UI is designed for (1080p at 2x density).
+  static const double designHeight = 540;
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final size = mediaQuery.size;
+    if (size.isEmpty) return child;
+
+    final scale = size.height / designHeight;
+    if ((scale - 1).abs() < 0.01) return child;
+
+    final designSize = Size(size.width / scale, designHeight);
+    EdgeInsets unscale(EdgeInsets insets) => insets / scale;
+
+    return FittedBox(
+      fit: BoxFit.fill,
+      alignment: Alignment.topLeft,
+      child: SizedBox(
+        width: designSize.width,
+        height: designSize.height,
+        child: MediaQuery(
+          data: mediaQuery.copyWith(
+            size: designSize,
+            // Keep images and text rasterised at the panel's real resolution.
+            devicePixelRatio: mediaQuery.devicePixelRatio * scale,
+            padding: unscale(mediaQuery.padding),
+            viewPadding: unscale(mediaQuery.viewPadding),
+            viewInsets: unscale(mediaQuery.viewInsets),
+            systemGestureInsets: unscale(mediaQuery.systemGestureInsets),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+/// Android TV: gives every standard Material control a clearly visible focus
+/// ring (buttons, icon buttons, list tiles, chips, popup items) so the remote
+/// cursor is easy to find even on screens that don't use [OttTvFocus].
+/// Only the focused state is changed; all other styling is preserved.
+ThemeData tvFocusTheme(ThemeData theme) {
+  final ringColor = theme.primaryColor;
+  final ring = BorderSide(color: ringColor, width: 2.5);
+  final focusFill = ringColor.withValues(alpha: 0.28);
+
+  ButtonStyle withRing(ButtonStyle? base) {
+    return (base ?? const ButtonStyle()).copyWith(
+      side: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.focused)) return ring;
+        return base?.side?.resolve(states);
+      }),
+      overlayColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.focused)) return focusFill;
+        return base?.overlayColor?.resolve(states);
+      }),
+    );
+  }
+
+  return theme.copyWith(
+    focusColor: focusFill,
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: withRing(theme.elevatedButtonTheme.style),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: withRing(theme.textButtonTheme.style),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: withRing(theme.outlinedButtonTheme.style),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: withRing(theme.filledButtonTheme.style),
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: withRing(theme.iconButtonTheme.style),
+    ),
+  );
+}

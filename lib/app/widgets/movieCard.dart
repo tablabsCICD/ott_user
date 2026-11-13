@@ -580,6 +580,17 @@ class _MovieCardState extends State<MovieCard> {
                       ]
                     : null, */
                 ),
+                // On TV also outline the focused card (not only while its
+                // trailer plays) so the remote cursor is visible. Painted on
+                // top so it never shrinks the card content.
+                foregroundDecoration:
+                    ResponsiveWidget.isAndroidTv(context) && isHighlighted && !showPreview
+                        ? BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            // Thicker: the row scales the card down on TV.
+                            border: Border.all(color: highlightColor, width: 4),
+                          )
+                        : null,
                 child: Column(
                   children: [
                     /// 🎬 POSTER + PROGRESS BAR STACK
