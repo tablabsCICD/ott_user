@@ -3,10 +3,12 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
+import 'package:ott/app/pages/profile%20page/component/profile_detail_shell.dart';
 import 'package:ott/app/provider/language_provider.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 
@@ -201,6 +203,12 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
     final theme = Theme.of(context);
     final userProvider = context.read<UserProvider>();
 
+    // Android TV: compact header with the Save action, tabs and a dense
+    // language grid sized for the 540 px canvas.
+    if (ResponsiveWidget.isAndroidTv(context)) {
+      return _buildTv(theme, lang, userProvider);
+    }
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -335,6 +343,231 @@ class _ChangeLanguageState extends State<ChangeLanguage> {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // ANDROID TV
+  // ===========================================================================
+
+  static const List<String> _tabTitles = [
+    'Major Indian Languages',
+    'Other Indian Languages',
+    'Foreign Languages',
+  ];
+
+  Widget _buildTv(
+    ThemeData theme,
+    AppLocalizations lang,
+    UserProvider userProvider,
+  ) {
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Consumer<LanguageProvider>(
+        builder: (context, provider, _) {
+          final selectedCount = provider.selectedLanguages.length;
+          final ready = !provider.loading && provider.error == null;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TvDetailHeader(
+                title: "Preferred Languages",
+                subtitle: ready && selectedCount > 0
+                    ? '$selectedCount selected'
+                    : null,
+                trailing: [
+                  if (ready)
+                    TvCompactButton(
+                      label: lang.save,
+                      icon: Icons.check_rounded,
+                      loading: _saving,
+                      onPressed: () => _saveLanguages(userProvider, provider),
+                    ),
+                ],
+              ),
+              Expanded(child: _buildTvBody(theme, provider)),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTvBody(ThemeData theme, LanguageProvider provider) {
+    if (provider.loading) {
+      return Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            color: theme.primaryColor,
+          ),
+        ),
+      );
+    }
+
+    if (provider.error != null) {
+      return Center(
+        child: Text(
+          'Failed to load languages',
+          style: TextStyle(color: theme.canvasColor, fontSize: 13),
+        ),
+      );
+    }
+
+    final sections = [
+      provider.majorIndianLanguages,
+      provider.otherIndianLanguages,
+      provider.foreignLanguages,
+    ];
+    final items = sections[_selectedTabIndex] as List;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: TvDesign.pageGutter),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              for (var i = 0; i < _tabTitles.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                _buildTvTab(_tabTitles[i], i, theme),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: items.isEmpty
+                ? const SizedBox()
+                : GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(2, 4, 2, 20),
+                    itemCount: items.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 150,
+                      mainAxisExtent: 52,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                    ),
+                    itemBuilder: (context, index) =>
+                        _buildTvLanguageTile(items[index], provider, theme),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTvTab(String title, int index, ThemeData theme) {
+    final isSelected = _selectedTabIndex == index;
+
+    return OttTvFocus(
+      autofocus: index == _selectedTabIndex,
+      borderRadius: 16,
+      scale: 1.04,
+      semanticLabel: title,
+      onTap: () {
+        setState(() {
+          _selectedTabIndex = index;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSelected ? theme.primaryColor : theme.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected
+                ? theme.primaryColor
+                : theme.canvasColor.withValues(alpha: 0.12),
+          ),
+        ),
+        child: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: isSelected ? Colors.white : theme.canvasColor,
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvLanguageTile(
+    dynamic language,
+    LanguageProvider provider,
+    ThemeData theme,
+  ) {
+    final isSelected = provider.selectedLanguages.contains(language.name);
+    final String name = language.name;
+    final String native = language.native ?? language.name;
+
+    return OttTvFocus(
+      onTap: () => provider.toggleLanguage(language.name),
+      borderRadius: TvDesign.cardRadius,
+      scale: 1.05,
+      semanticLabel: '$name language',
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? theme.primaryColor : theme.cardColor,
+          borderRadius: BorderRadius.circular(TvDesign.cardRadius),
+          border: Border.all(
+            color: isSelected
+                ? theme.primaryColor
+                : theme.canvasColor.withValues(alpha: 0.06),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    native,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isSelected ? Colors.white : theme.canvasColor,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      color: isSelected
+                          ? Colors.white70
+                          : theme.canvasColor.withValues(alpha: 0.62),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              const Icon(
+                Icons.check_circle_rounded,
+                size: 16,
+                color: Colors.white,
+              ),
+          ],
         ),
       ),
     );

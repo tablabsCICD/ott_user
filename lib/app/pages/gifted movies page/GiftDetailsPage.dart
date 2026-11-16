@@ -4,6 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/provider/giftProvider.dart';
+import 'package:ott/app/widgets/filmytell_poster_image.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
+import 'package:ott/data/models/giftMasterModel.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 // avoid conflict
@@ -61,6 +65,8 @@ Gift code: $couponCode
 
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveWidget.isAndroidTv(context)) return _buildTv(context);
+
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -190,12 +196,7 @@ Gift code: $couponCode
                           children: [
                             if (giftMaster.couponCode != null)
                               GestureDetector(
-                                onTap: () {
-                                  shareGiftLink(
-                                    giftMaster.couponCode!,
-                                    giftMaster.movie?.title ?? "this movie",
-                                  );
-                                },
+                                onTap: () => _shareGift(giftMaster),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 3,
@@ -318,6 +319,376 @@ Gift code: $couponCode
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _shareGift(GiftMasterModel giftMaster) {
+    shareGiftLink(
+      giftMaster.couponCode!,
+      giftMaster.movie?.title ?? "this movie",
+    );
+  }
+
+  // ---------------- Android TV ----------------
+
+  /// Android TV: movie + gift summary on the left (with the share-code
+  /// button), users who claimed on the right. Same provider data, texts and
+  /// share handler ([_shareGift]) as the other layouts.
+  Widget _buildTv(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.canvasColor.withValues(alpha: 0.62);
+
+    Widget centered(String text) => Center(
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: muted, fontSize: 13),
+          ),
+        );
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            TvDesign.pageGutter,
+            16,
+            TvDesign.pageGutter,
+            16,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text("Gift Details", style: TvDesign.pageTitle(theme)),
+              const SizedBox(height: 14),
+              Expanded(
+                child: Consumer<GiftProvider>(
+                  builder: (context, provider, child) {
+                    if (provider.isLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (provider.errorMessage != null) {
+                      return centered(provider.errorMessage!);
+                    }
+                    final giftMaster = provider.giftMaster;
+                    if (giftMaster == null) {
+                      return centered("No gift details found");
+                    }
+
+                    final total = giftMaster.totalGiftCount ?? 0;
+                    final remaining = giftMaster.remainingGiftCount ?? 0;
+                    final used = total - remaining;
+                    final users = giftMaster.user ?? const <GiftUser>[];
+
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 4,
+                          child: SingleChildScrollView(
+                            child: _buildTvGiftPanel(
+                              theme,
+                              giftMaster,
+                              total: total,
+                              remaining: remaining,
+                              used: used,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          flex: 6,
+                          child: Container(
+                            clipBehavior: Clip.antiAlias,
+                            decoration: _tvPanelDecoration(theme),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                TvSectionHeader(
+                                  "Users who claimed",
+                                  padding:
+                                      const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                                  trailing: Text(
+                                    "$used / $total",
+                                    style: TextStyle(
+                                      color: theme.primaryColor,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: users.isEmpty
+                                      ? centered(
+                                          "No users have claimed this gift yet.",
+                                        )
+                                      : ListView.builder(
+                                          padding: const EdgeInsets.fromLTRB(
+                                              10, 0, 10, 10),
+                                          itemCount: users.length,
+                                          itemBuilder: (context, index) =>
+                                              _tvUserRow(
+                                            theme,
+                                            users[index],
+                                            // No share button: start on the
+                                            // first user.
+                                            autofocus: index == 0 &&
+                                                giftMaster.couponCode == null,
+                                          ),
+                                        ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  BoxDecoration _tvPanelDecoration(ThemeData theme) => BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(TvDesign.panelRadius),
+        border: Border.all(color: theme.canvasColor.withValues(alpha: 0.06)),
+      );
+
+  Widget _buildTvGiftPanel(
+    ThemeData theme,
+    GiftMasterModel giftMaster, {
+    required int total,
+    required int remaining,
+    required int used,
+  }) {
+    final movie = giftMaster.movie;
+    final posterUrl = movie?.posterUrlList?.isNotEmpty == true
+        ? movie!.posterUrlList!.first
+        : null;
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: _tvPanelDecoration(theme),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (movie != null) ...[
+            AspectRatio(
+              aspectRatio: TvDesign.imageAspectRatio,
+              child: FilmytellPosterImage(
+                posterUrl: posterUrl,
+                fit: BoxFit.cover,
+                fallbackIcon: Icons.movie_outlined,
+                fallbackIconSize: 32,
+                backgroundColor: theme.scaffoldBackgroundColor,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    movie.title ?? "",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TvDesign.sectionTitle(theme),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    "Price: ₹${movie.price ?? 0}",
+                    style: TextStyle(
+                      color: theme.primaryColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Description: ${movie.description ?? "-"}",
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TvDesign.caption(theme),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (giftMaster.couponCode != null) ...[
+                  OttTvFocus(
+                    autofocus: true,
+                    borderRadius: 8,
+                    scale: 1.03,
+                    semanticLabel: "Share gift link",
+                    onTap: () => _shareGift(giftMaster),
+                    child: Container(
+                      height: 34,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: theme.scaffoldBackgroundColor,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: theme.primaryColor.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              giftMaster.couponCode!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: theme.primaryColor,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.share,
+                            size: 16,
+                            color: theme.canvasColor,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                if (giftMaster.createdDate != null)
+                  _tvInfoRow(
+                    theme,
+                    "Created Date",
+                    DateFormat("dd MMM yyyy").format(
+                      DateTime.fromMillisecondsSinceEpoch(
+                        giftMaster.createdDate!,
+                      ),
+                    ),
+                  ),
+                _tvInfoRow(theme, "Total Gift Count", "$total"),
+                _tvInfoRow(theme, "Remaining", "$remaining"),
+                _tvInfoRow(theme, "Used", "$used"),
+                _tvInfoRow(theme, "Total Paid", "₹${giftMaster.totalPaid ?? 0}"),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tvInfoRow(ThemeData theme, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: theme.canvasColor.withValues(alpha: 0.62),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            value,
+            style: TextStyle(
+              color: theme.canvasColor,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tvUserRow(ThemeData theme, GiftUser user, {bool autofocus = false}) {
+    final hasImage = user.image != null && user.image!.isNotEmpty;
+    final details = [
+      if (user.email != null && user.email!.isNotEmpty) user.email!,
+      if (user.mobile != null && user.mobile!.isNotEmpty) user.mobile!,
+    ].join('  ·  ');
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      // No action: a focus stop so the remote can scroll the list.
+      child: OttTvFocus(
+        autofocus: autofocus,
+        onTap: () {},
+        borderRadius: 8,
+        scale: 1.0,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: theme.canvasColor.withValues(alpha: 0.3),
+                backgroundImage: hasImage ? NetworkImage(user.image!) : null,
+                child: hasImage
+                    ? null
+                    : Icon(
+                        Icons.person,
+                        size: 16,
+                        color: theme.canvasColor.withValues(alpha: 0.7),
+                      ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      user.name ?? "Unknown",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: theme.canvasColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (details.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        details,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TvDesign.caption(theme),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

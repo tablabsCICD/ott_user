@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 class AutoScrollingPosters extends StatefulWidget {
   final List<String> imageUrls;
@@ -102,7 +103,10 @@ class _AutoScrollingPostersState extends State<AutoScrollingPosters> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: AspectRatio(
-                    aspectRatio: 16 / 8, // 🔒 Force 16:8 always
+                    // Android TV: movie imagery is standardised to 16:9.
+                    aspectRatio: ResponsiveWidget.isAndroidTv(context)
+                        ? 16 / 9
+                        : 16 / 8, // 🔒 Force 16:8 always
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Stack(

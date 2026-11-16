@@ -21,6 +21,7 @@ import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/filmytell_poster_image.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
@@ -69,6 +70,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   @override
   void initState() {
     super.initState();
+    FocusManager.instance.addListener(_tvFollowFocus);
     _fetchData();
     Future.delayed(const Duration(seconds: 2), () {
       if (!mounted) return;
@@ -127,12 +129,19 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
 
   @override
   void dispose() {
+    FocusManager.instance.removeListener(_tvFollowFocus);
     _trailerController.pause?.call();
     _teaserController.pause?.call();
     _heroTrailerTimer?.cancel();
     _tvScrollController.dispose();
     _heroFocusNode.dispose();
     super.dispose();
+  }
+
+  /// Android TV: keep the page scrolled to whatever holds the remote focus.
+  void _tvFollowFocus() {
+    if (!mounted || !ResponsiveWidget.isAndroidTv(context)) return;
+    TvDesign.scrollPageToFocus(context, _tvScrollController);
   }
 
   Future<void> _playMovie(Content movie) async {
@@ -314,7 +323,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
   bool get _isAndroidTv => ResponsiveWidget.isAndroidTv(context);
 
   double get _tvSidePadding => _isAndroidTv
-      ? 40
+      ? TvDesign.pageGutter
       : ResponsiveWidget.isDesktop(context)
           ? 64
           : 32;
@@ -516,6 +525,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
 
     return _MovieTvFocusableScale(
       onPressed: goBack,
+      tvBorderRadius: 6,
       child: IconButton(
         onPressed: goBack,
         tooltip: 'Back',
@@ -523,6 +533,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           backgroundColor: theme.primaryColor,
           foregroundColor: Colors.white,
           fixedSize: Size.square(_isAndroidTv ? 38 : 52),
+          tapTargetSize:
+              _isAndroidTv ? MaterialTapTargetSize.shrinkWrap : null,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         ),
         icon: Icon(Icons.arrow_back_rounded, size: _isAndroidTv ? 20 : 28),
@@ -651,6 +663,8 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
           icon: Icons.movie_creation_outlined,
           onPressed: () => _openTrailer(content),
         ),
+        // Android TV: the remote has no other way to add to the watchlist.
+        if (_isAndroidTv) _buildTvBookmarkButton(context, content, theme),
         _buildTvDownloadButton(context, content, theme),
         _tvActionButton(
           theme: theme,
@@ -783,32 +797,45 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     bool emphasized = false,
     bool autofocus = false,
   }) {
+    final tv = _isAndroidTv;
     return _MovieTvFocusableScale(
       onPressed: onPressed,
       autofocus: autofocus,
+      tvBorderRadius: 6,
       child: ElevatedButton.icon(
         onPressed: onPressed,
-        icon: Icon(icon, size: _isAndroidTv ? 18 : 24),
+        icon: Icon(icon, size: tv ? 17 : 24),
         label: Text(
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: _isAndroidTv ? const TextStyle(fontSize: 13) : null,
+          style: tv
+              ? const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)
+              : null,
         ),
         style: ElevatedButton.styleFrom(
+          // Android TV: brand red for the primary action only; secondary
+          // actions are translucent so the primary one stands out.
           backgroundColor: emphasized
               ? theme.primaryColor
-              : theme.primaryColor.withOpacity(0.82),
+              : tv
+                  ? Colors.white.withOpacity(0.16)
+                  : theme.primaryColor.withOpacity(0.82),
           foregroundColor: Colors.white,
           disabledBackgroundColor: Colors.white.withOpacity(0.08),
           disabledForegroundColor: Colors.white,
-          padding: _isAndroidTv
-              ? const EdgeInsets.symmetric(horizontal: 14, vertical: 8)
+          padding: tv
+              ? const EdgeInsets.symmetric(horizontal: 14, vertical: 6)
               : const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
-          minimumSize: Size(0, _isAndroidTv ? 38 : 56),
+          minimumSize: Size(0, tv ? 36 : 56),
+          // Android TV: no touch target padding, so the focus ring hugs
+          // the visible button.
+          tapTargetSize: tv ? MaterialTapTargetSize.shrinkWrap : null,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-          shadowColor: theme.primaryColor.withOpacity(0.45),
-          elevation: emphasized ? 12 : 4,
+          shadowColor: tv
+              ? Colors.black54
+              : theme.primaryColor.withOpacity(0.45),
+          elevation: tv ? (emphasized ? 6 : 0) : (emphasized ? 12 : 4),
         ),
       ),
     );
@@ -839,11 +866,14 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildTvSectionTitle('Cast & Crew'),
-        SizedBox(height: _isAndroidTv ? 8 : 14),
+        SizedBox(height: _isAndroidTv ? 2 : 14),
         SizedBox(
-          height: _isAndroidTv ? 116 : 172,
+          // Avatar + name + role, plus focus headroom.
+          height: _isAndroidTv ? 132 : 172,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
+            // Android TV: room for the focus lift so it is never clipped.
+            padding: _isAndroidTv ? _tvRailPadding : null,
             itemCount: castList.length,
             separatorBuilder: (_, __) =>
                 SizedBox(width: _isAndroidTv ? 10 : 16),
@@ -869,58 +899,72 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     final tv = _isAndroidTv;
     final cardWidth = tv ? 88.0 : 132.0;
     final avatarSize = tv ? 66.0 : 104.0;
-    return _MovieTvFocusableScale(
-      width: cardWidth,
-      onPressed: () {},
-      child: SizedBox(
-        width: cardWidth,
-        child: Column(
-          children: [
-            Container(
-              height: avatarSize,
-              width: avatarSize,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.08),
-                border: Border.all(color: Colors.white.withOpacity(0.14)),
-              ),
-              child: ClipOval(
-                child: imageUrl.isNotEmpty
-                    ? Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            _buildCastInitial(theme, displayName),
-                      )
-                    : _buildCastInitial(theme, displayName),
-              ),
-            ),
-            SizedBox(height: tv ? 6 : 10),
-            Text(
-              displayName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                fontSize: tv ? 12 : null,
-              ),
-            ),
-            if (role.isNotEmpty)
+    final avatar = Container(
+      height: avatarSize,
+      width: avatarSize,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withOpacity(0.08),
+        border: Border.all(color: Colors.white.withOpacity(0.14)),
+      ),
+      child: ClipOval(
+        child: imageUrl.isNotEmpty
+            ? Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) =>
+                    _buildCastInitial(theme, displayName),
+              )
+            : _buildCastInitial(theme, displayName),
+      ),
+    );
+
+    Widget buildCard(Widget avatarChild) => SizedBox(
+          width: cardWidth,
+          child: Column(
+            children: [
+              avatarChild,
+              SizedBox(height: tv ? 6 : 10),
               Text(
-                role,
+                displayName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.58),
-                  fontSize: tv ? 10 : 12,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: tv ? 12 : null,
                 ),
               ),
-          ],
+              if (role.isNotEmpty)
+                Text(
+                  role,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.58),
+                    fontSize: tv ? 10 : 12,
+                  ),
+                ),
+            ],
+          ),
+        );
+
+    return _MovieTvFocusableScale(
+      width: cardWidth,
+      onPressed: () {},
+      tvRevealInRail: true,
+      // Android TV: the focus ring follows the round avatar.
+      tvBuilder: (focused) => buildCard(
+        TvFocusFrame(
+          focused: focused,
+          borderRadius: avatarSize / 2,
+          scale: 1.06,
+          child: avatar,
         ),
       ),
+      child: buildCard(avatar),
     );
   }
 
@@ -979,11 +1023,13 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildTvSectionTitle(title),
-        SizedBox(height: _isAndroidTv ? 8 : 14),
+        SizedBox(height: _isAndroidTv ? 2 : 14),
         SizedBox(
-          height: _isAndroidTv ? 168 : 250,
+          height: _isAndroidTv ? 186 : 250,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
+            // Android TV: room for the focus lift so it is never clipped.
+            padding: _isAndroidTv ? _tvRailPadding : null,
             itemCount: items.length,
             separatorBuilder: (_, __) =>
                 SizedBox(width: _isAndroidTv ? 10 : 16),
@@ -1005,8 +1051,16 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     // Same card proportions, smaller on Android TV.
     final cardWidth = tv ? 200.0 : 300.0;
     final imageHeight = tv ? 113.0 : 170.0;
+    final meta = [
+      if ((content.ageRating ?? '').isNotEmpty) content.ageRating,
+      if ((content.genreList ?? const <String>[]).isNotEmpty)
+        content.genreList!.first,
+    ].whereType<String>().join('  |  ');
     return _MovieTvFocusableScale(
       width: cardWidth,
+      tvRevealInRail: true,
+      tvBorderRadius: TvDesign.cardRadius,
+      tvColor: Colors.white.withOpacity(0.07),
       onPressed: content.id == null
           ? null
           : () {
@@ -1021,7 +1075,9 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
                 ),
               );
             },
-      child: SizedBox(
+      child: tv
+          ? _buildTvRailCardBody(image, content.title, meta)
+          : SizedBox(
         width: cardWidth,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1053,11 +1109,7 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
             ),
             const SizedBox(height: 4),
             Text(
-              [
-                if ((content.ageRating ?? '').isNotEmpty) content.ageRating,
-                if ((content.genreList ?? const <String>[]).isNotEmpty)
-                  content.genreList!.first,
-              ].whereType<String>().join('  |  '),
+              meta,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -1071,13 +1123,78 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     );
   }
 
+  /// Android TV: rail padding that leaves room for the focus lift/shadow;
+  /// the 6 px side inset matches [_buildTvSectionTitle].
+  static const EdgeInsets _tvRailPadding =
+      EdgeInsets.fromLTRB(6, 10, 6, 14);
+
+  /// Android TV rail card: 16:9 artwork with the title and meta underneath,
+  /// framed as one card by [TvFocusFrame] (see [_MovieTvFocusableScale]).
+  Widget _buildTvRailCardBody(String image, String? title, String meta) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AspectRatio(
+          aspectRatio: TvDesign.imageAspectRatio,
+          child: FilmytellPosterImage(
+            posterUrl: image,
+            fit: BoxFit.cover,
+            fallbackIconSize: 32,
+            fallbackIcon: Icons.movie,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(9, 6, 9, 0),
+          child: Text(
+            title ?? 'Untitled',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 12.5,
+            ),
+          ),
+        ),
+        if (meta.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(9, 2, 9, 0),
+            child: Text(
+              meta,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.6),
+                fontSize: 10.5,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _buildTvSectionTitle(String title) {
     final theme = Theme.of(context);
+    if (_isAndroidTv) {
+      return Padding(
+        padding: const EdgeInsets.only(left: 6),
+        child: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      );
+    }
     return Text(
       title,
       style: TextStyle(
         color: theme.primaryColor,
-        fontSize: _isAndroidTv ? 17 : 24,
+        fontSize: 24,
         fontWeight: FontWeight.w900,
       ),
     );
@@ -1615,24 +1732,30 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "Gallery",
-          style: TextStyle(
-            color: theme.primaryColor,
-            fontSize: _isAndroidTv ? 17 : 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        _isAndroidTv
+            ? _buildTvSectionTitle('Gallery')
+            : Text(
+                "Gallery",
+                style: TextStyle(
+                  color: theme.primaryColor,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
         SizedBox(height: _isAndroidTv ? 8 : 12),
         SizedBox(
           height: _isAndroidTv ? 120 : 180,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
+            padding:
+                _isAndroidTv ? const EdgeInsets.symmetric(horizontal: 6) : null,
             itemCount: posters.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            separatorBuilder: (_, __) =>
+                SizedBox(width: _isAndroidTv ? 10 : 12),
             itemBuilder: (context, index) {
               return ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(
+                    _isAndroidTv ? TvDesign.cardRadius : 12),
                 child: Image.network(
                   posters[index],
                   width: _isAndroidTv ? 213 : 320,
@@ -2178,12 +2301,18 @@ class _MovieDetailsPageState extends State<MovieDetailsPage> {
         Text(
           cleanText,
           textAlign: TextAlign.left,
-          maxLines: _isDescriptionExpanded ? null : maxCollapsedLines,
-          overflow: _isDescriptionExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+          // Android TV: the hero has a fixed height, so even the expanded
+          // description is capped (ellipsized) instead of overflowing it.
+          maxLines: _isDescriptionExpanded
+              ? (_isAndroidTv ? 8 : null)
+              : maxCollapsedLines,
+          overflow: _isDescriptionExpanded && !_isAndroidTv
+              ? TextOverflow.visible
+              : TextOverflow.ellipsis,
           style: TextStyle(
             color: Colors.white.withOpacity(0.75),
             fontWeight: FontWeight.normal,
-            fontSize: 14,
+            fontSize: _isAndroidTv ? 13 : 14,
             height: 1.4,
           ),
         ),
@@ -2645,12 +2774,32 @@ class _MovieTvFocusableScale extends StatefulWidget {
     required this.onPressed,
     this.width,
     this.autofocus = false,
+    this.tvBorderRadius = TvDesign.cardRadius,
+    this.tvColor,
+    this.tvRevealInRail = false,
+    this.tvBuilder,
   });
 
   final Widget child;
   final VoidCallback? onPressed;
   final double? width;
   final bool autofocus;
+
+  /// Android TV only: corner radius of the white focus ring (match the
+  /// child's shape).
+  final double tvBorderRadius;
+
+  /// Android TV only: card surface painted under [child] by [TvFocusFrame].
+  final Color? tvColor;
+
+  /// Android TV only: rail cards scroll into view like TV launchers
+  /// ([TvDesign.revealFocused]) instead of just being kept on screen.
+  final bool tvRevealInRail;
+
+  /// Android TV only: builds the content from the focus state for cards that
+  /// frame only part of themselves (e.g. a round avatar). When null, the
+  /// whole [child] is wrapped in a [TvFocusFrame].
+  final Widget Function(bool focused)? tvBuilder;
 
   @override
   State<_MovieTvFocusableScale> createState() => _MovieTvFocusableScaleState();
@@ -2662,26 +2811,42 @@ class _MovieTvFocusableScaleState extends State<_MovieTvFocusableScale> {
 
   bool get _active => _focused || _hovered;
 
+  void _keepVisible() {
+    Scrollable.ensureVisible(
+      context,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
     return FocusableActionDetector(
       enabled: widget.onPressed != null,
       autofocus: widget.autofocus,
       mouseCursor: widget.onPressed == null
           ? SystemMouseCursors.basic
           : SystemMouseCursors.click,
-      onShowFocusHighlight: (value) {
-        if (value) {
-          Scrollable.ensureVisible(
-            context,
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-          );
-        }
-        if (mounted) setState(() => _focused = value);
-      },
+      // Android TV: follow real focus (not the keyboard-highlight mode) so the
+      // initially focused Watch/Rent button shows its ring before any key
+      // has been pressed.
+      onFocusChange: isAndroidTv
+          ? (value) {
+              // The page scrolls vertically to follow focus (see
+              // _tvFollowFocus); here only the rail scrolls sideways.
+              if (value) TvDesign.revealInRow(context);
+              if (mounted) setState(() => _focused = value);
+            }
+          : null,
+      onShowFocusHighlight: isAndroidTv
+          ? null
+          : (value) {
+              if (value) _keepVisible();
+              if (mounted) setState(() => _focused = value);
+            },
       onShowHoverHighlight: (value) {
         if (mounted) setState(() => _hovered = value);
       },
@@ -2693,39 +2858,55 @@ class _MovieTvFocusableScaleState extends State<_MovieTvFocusableScale> {
           },
         ),
       },
-      child: AnimatedScale(
-        scale: _active ? (ResponsiveWidget.isAndroidTv(context) ? 1.04 : 1.055) : 1,
-        duration: const Duration(milliseconds: 160),
-        curve: Curves.easeOutCubic,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          width: widget.width,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: _active
-                ? Border.all(
-                    color: theme.primaryColor,
-                    width: 2.5,
-                  )
-                : Border.all(
-                    color: Colors.transparent,
-                    width: 2.5,
-                  ),
-            boxShadow: _active
-                ? [
-                    BoxShadow(
-                      color: theme.primaryColor.withOpacity(0.45),
-                      blurRadius: 10,
-                      spreadRadius: 1,
+      child: isAndroidTv
+          // Android TV: white ring + soft lift (TvFocusFrame), no red border.
+          ? SizedBox(
+              width: widget.width,
+              // The wrapper owns focus/activation; without this the inner
+              // button was a second focus stop for every remote press.
+              child: ExcludeFocus(
+                child: widget.tvBuilder?.call(_active) ??
+                    TvFocusFrame(
+                      focused: _active,
+                      borderRadius: widget.tvBorderRadius,
+                      color: widget.tvColor,
+                      child: widget.child,
                     ),
-                  ]
-                : null,
-          ),
-          // The wrapper owns focus/activation; without this the inner
-          // button was a second focus stop for every remote press.
-          child: ExcludeFocus(child: widget.child),
-        ),
-      ),
+              ),
+            )
+          : AnimatedScale(
+              scale: _active ? 1.055 : 1,
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOutCubic,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                width: widget.width,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: _active
+                      ? Border.all(
+                          color: theme.primaryColor,
+                          width: 2.5,
+                        )
+                      : Border.all(
+                          color: Colors.transparent,
+                          width: 2.5,
+                        ),
+                  boxShadow: _active
+                      ? [
+                          BoxShadow(
+                            color: theme.primaryColor.withOpacity(0.45),
+                            blurRadius: 10,
+                            spreadRadius: 1,
+                          ),
+                        ]
+                      : null,
+                ),
+                // The wrapper owns focus/activation; without this the inner
+                // button was a second focus stop for every remote press.
+                child: ExcludeFocus(child: widget.child),
+              ),
+            ),
     );
   }
 }

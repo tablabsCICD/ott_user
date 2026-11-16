@@ -47,6 +47,8 @@ class PaymentService {
   /// Creates a payment order using country-based gateway selection:
   /// - India -> Razorpay
   /// - All other countries -> Stripe
+  /// While [PaymentGatewaySelector.stripeEnabled] is false, every order is a
+  /// Razorpay order.
   Future<PaymentOrder> createOrder({
     required double amount,
     required int userId,
@@ -57,7 +59,8 @@ class PaymentService {
     final gateway = gatewayOverride ??
         PaymentGatewaySelector.selectGateway(country: country);
 
-    if (gateway == PaymentGatewayType.stripe) {
+    if (gateway == PaymentGatewayType.stripe &&
+        PaymentGatewaySelector.stripeEnabled) {
       final selectedCurrency = currency ??
           PaymentGatewaySelector.getDefaultCurrency(country: country);
       return _stripeService.createOrder(
@@ -90,7 +93,8 @@ class PaymentService {
             ? PaymentGatewayType.stripe
             : PaymentGatewaySelector.selectGateway(country: country));
 
-    if (gateway == PaymentGatewayType.stripe) {
+    if (gateway == PaymentGatewayType.stripe &&
+        PaymentGatewaySelector.stripeEnabled) {
       return _stripeService.openCheckout(
         order: order,
         amount: amount,

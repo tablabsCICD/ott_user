@@ -561,6 +561,13 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
 
   Widget _buildControlOverlay() {
     final title = widget.content.title ?? 'Trailer';
+    // Android TV: overlay sized for the 540 px TV canvas (20 px safe gutter,
+    // smaller transport icons). Presentation only.
+    final tv = ResponsiveWidget.isAndroidTv(context);
+    final edge = tv ? 20.0 : 16.0;
+    final seekIconSize = tv ? 34.0 : 42.0;
+    final playIconSize = tv ? 48.0 : 58.0;
+    final transportGap = tv ? 28.0 : 36.0;
     return AnimatedOpacity(
       opacity: _showControls ? 1.0 : 0.0,
       duration: const Duration(milliseconds: 250),
@@ -589,8 +596,8 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
               children: [
                 Positioned(
                   top: 10,
-                  left: 16,
-                  right: 16,
+                  left: edge,
+                  right: edge,
                   child: Row(
                     children: [
                       OttTvFocus(
@@ -609,9 +616,9 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
                           title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 18,
+                            fontSize: tv ? 16 : 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -655,14 +662,14 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
                         borderRadius: 30,
                         semanticLabel: 'Rewind 10 seconds',
                         child: IconButton(
-                          iconSize: 42,
+                          iconSize: seekIconSize,
                           icon: const Icon(Icons.replay_10_rounded,
                               color: Colors.white),
                           onPressed: () =>
                               _seekBy(const Duration(seconds: -10)),
                         ),
                       ),
-                      const SizedBox(width: 36),
+                      SizedBox(width: transportGap),
                       OttTvFocus(
                         autofocus: true,
                         focusNode: _tvPlayFocusNode,
@@ -670,7 +677,7 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
                         borderRadius: 36,
                         semanticLabel: _isPlaying ? 'Pause' : 'Play',
                         child: IconButton(
-                          iconSize: 58,
+                          iconSize: playIconSize,
                           icon: Icon(
                             _isPlaying
                                 ? Icons.pause_circle_filled_rounded
@@ -680,13 +687,13 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
                           onPressed: _togglePlayback,
                         ),
                       ),
-                      const SizedBox(width: 36),
+                      SizedBox(width: transportGap),
                       OttTvFocus(
                         onTap: () => _seekBy(const Duration(seconds: 10)),
                         borderRadius: 30,
                         semanticLabel: 'Forward 10 seconds',
                         child: IconButton(
-                          iconSize: 42,
+                          iconSize: seekIconSize,
                           icon: const Icon(Icons.forward_10_rounded,
                               color: Colors.white),
                           onPressed: () =>
@@ -698,8 +705,8 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
                 ),
                 Positioned(
                   bottom: 14,
-                  left: 24,
-                  right: 24,
+                  left: tv ? edge : 24,
+                  right: tv ? edge : 24,
                   child: Row(
                     children: [
                       Text(

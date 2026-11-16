@@ -47,7 +47,11 @@ void main() {
       );
     });
 
-    test('routes all other countries to Stripe with USD default currency', () {
+    test(
+        PaymentGatewaySelector.stripeEnabled
+            ? 'routes all other countries to Stripe with USD default currency'
+            : 'routes all other countries to Razorpay (INR) while Stripe is disabled',
+        () {
       final nonIndiaCountries = [
         'US',
         'USA',
@@ -77,16 +81,29 @@ void main() {
           isFalse,
           reason: '$country should NOT be detected as India',
         );
-        expect(
-          PaymentGatewaySelector.selectGateway(country: country),
-          PaymentGatewayType.stripe,
-          reason: '$country should route to Stripe',
-        );
-        expect(
-          PaymentGatewaySelector.getDefaultCurrency(country: country),
-          'USD',
-          reason: '$country should default to USD',
-        );
+        if (PaymentGatewaySelector.stripeEnabled) {
+          expect(
+            PaymentGatewaySelector.selectGateway(country: country),
+            PaymentGatewayType.stripe,
+            reason: '$country should route to Stripe',
+          );
+          expect(
+            PaymentGatewaySelector.getDefaultCurrency(country: country),
+            'USD',
+            reason: '$country should default to USD',
+          );
+        } else {
+          expect(
+            PaymentGatewaySelector.selectGateway(country: country),
+            PaymentGatewayType.razorpay,
+            reason: '$country should route to Razorpay while Stripe is off',
+          );
+          expect(
+            PaymentGatewaySelector.getDefaultCurrency(country: country),
+            'INR',
+            reason: '$country should use INR while Stripe is off',
+          );
+        }
       }
     });
   });

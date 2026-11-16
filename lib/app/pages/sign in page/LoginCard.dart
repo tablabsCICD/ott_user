@@ -13,6 +13,7 @@ import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/widgets/LanguageDropdown.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
@@ -277,8 +278,12 @@ class _LoginCardState extends State<LoginCard>
     ThemeData theme,
     bool useTvKeypad,
   ) {
+    // Android TV (540 px canvas): tighter, Netflix-like proportions. Desktop
+    // web and landscape tablets keep the original sizes.
+    final tv = ResponsiveWidget.isAndroidTv(context);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 16),
+      padding: EdgeInsets.symmetric(horizontal: tv ? 40 : 56, vertical: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -286,7 +291,7 @@ class _LoginCardState extends State<LoginCard>
           Expanded(
             flex: 5,
             child: Padding(
-              padding: const EdgeInsets.only(right: 48),
+              padding: EdgeInsets.only(right: tv ? 36 : 48),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,32 +313,32 @@ class _LoginCardState extends State<LoginCard>
                       borderRadius: BorderRadius.circular(20),
                       child: Image.asset(
                         ImageConstant.logo,
-                        height: 64,
+                        height: tv ? 44 : 64,
                         fit: BoxFit.contain,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  SizedBox(height: tv ? 18 : 28),
 
                   /// Dynamic Headline
                   Text(
                     otpSent ? "Verify Mobile Number" : "Sign In to Continue",
                     style: GoogleFonts.outfit(
-                      fontSize: 34,
+                      fontSize: tv ? 24 : 34,
                       fontWeight: FontWeight.bold,
                       color: theme.canvasColor,
                       letterSpacing: -0.5,
                       height: 1.15,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: tv ? 8 : 12),
 
                   /// Subtitle / Context
                   if (!otpSent) ...[
                     Text(
                       "Enter your mobile number to get instant access to unlimited movies, exclusive originals, and live entertainment.",
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: tv ? 12.5 : 15,
                         color: theme.canvasColor.withValues(alpha: 0.72),
                         height: 1.5,
                       ),
@@ -344,14 +349,14 @@ class _LoginCardState extends State<LoginCard>
                         Text(
                           "Code sent to ",
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: tv ? 12.5 : 15,
                             color: theme.canvasColor.withValues(alpha: 0.72),
                           ),
                         ),
                         Text(
                           "$selectedCode $_mobileNumberForOtp",
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: tv ? 12.5 : 15,
                             fontWeight: FontWeight.bold,
                             color: theme.primaryColor,
                           ),
@@ -360,7 +365,7 @@ class _LoginCardState extends State<LoginCard>
                     ),
                   ],
 
-                  const SizedBox(height: 36),
+                  SizedBox(height: tv ? 22 : 36),
 
                   /// Feature Badges
                   _buildFeatureBadge(
@@ -368,20 +373,23 @@ class _LoginCardState extends State<LoginCard>
                     title: "Unlimited Entertainment",
                     subtitle: "Stream thousands of blockbuster movies & shows",
                     theme: theme,
+                    compact: tv,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: tv ? 10 : 16),
                   _buildFeatureBadge(
                     icon: Icons.hd_outlined,
                     title: "4K Ultra HD & Dolby Sound",
                     subtitle: "Experience cinema-grade picture and audio",
                     theme: theme,
+                    compact: tv,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: tv ? 10 : 16),
                   _buildFeatureBadge(
                     icon: Icons.devices_outlined,
                     title: "Watch Across Devices",
                     subtitle: "Resume seamlessly on TV, Mobile & Web",
                     theme: theme,
+                    compact: tv,
                   ),
                 ],
               ),
@@ -397,7 +405,7 @@ class _LoginCardState extends State<LoginCard>
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: SizedBox(
-                  width: 350,
+                  width: tv ? 340 : 350,
                   child: _buildTvFormCard(context, lang, theme),
                 ),
               ),
@@ -413,41 +421,47 @@ class _LoginCardState extends State<LoginCard>
     required String title,
     required String subtitle,
     required ThemeData theme,
+    bool compact = false,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: EdgeInsets.all(compact ? 7 : 10),
           decoration: BoxDecoration(
             color: theme.primaryColor.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(compact ? 10 : 12),
             border: Border.all(
               color: theme.primaryColor.withValues(alpha: 0.25),
               width: 1,
             ),
           ),
-          child: Icon(icon, color: theme.primaryColor, size: 20),
+          child: Icon(icon,
+              color: theme.primaryColor, size: compact ? 16 : 20),
         ),
-        const SizedBox(width: 14),
+        SizedBox(width: compact ? 12 : 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
+                maxLines: compact ? 1 : null,
+                overflow: compact ? TextOverflow.ellipsis : null,
                 style: TextStyle(
                   color: theme.canvasColor,
-                  fontSize: 14,
+                  fontSize: compact ? 12.5 : 14,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
+                maxLines: compact ? 1 : null,
+                overflow: compact ? TextOverflow.ellipsis : null,
                 style: TextStyle(
                   color: theme.canvasColor.withValues(alpha: 0.60),
-                  fontSize: 12,
+                  fontSize: compact ? 10.5 : 12,
                 ),
               ),
             ],
@@ -466,15 +480,19 @@ class _LoginCardState extends State<LoginCard>
     ThemeData theme,
   ) {
     final resendReady = _resendSecondsRemaining <= 0;
+    // Android TV: TvDesign panel (radius 12, hairline border), 36 px button.
+    final tv = ResponsiveWidget.isAndroidTv(context);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
       decoration: BoxDecoration(
-        color: theme.cardColor.withValues(alpha: 0.88),
-        borderRadius: BorderRadius.circular(20),
+        color: theme.cardColor.withValues(alpha: tv ? 0.94 : 0.88),
+        borderRadius: BorderRadius.circular(tv ? TvDesign.panelRadius : 20),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.12),
-          width: 1.2,
+          color: tv
+              ? theme.canvasColor.withValues(alpha: 0.06)
+              : Colors.white.withValues(alpha: 0.12),
+          width: tv ? 1 : 1.2,
         ),
         boxShadow: [
           BoxShadow(
@@ -618,6 +636,7 @@ class _LoginCardState extends State<LoginCard>
                 onDigit: _appendTvDigit,
                 onBackspace: _removeTvDigit,
                 onDone: _handleTvDone,
+                keyHeight: tv ? 34 : 38,
               ),
 
               const SizedBox(height: 10),
@@ -639,11 +658,11 @@ class _LoginCardState extends State<LoginCard>
                     },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
-                      height: 40,
+                      height: tv ? 36 : 40,
                       decoration: BoxDecoration(
                         color: theme.primaryColor
                             .withValues(alpha: focused ? 1.0 : 0.75),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(tv ? 10 : 12),
                         border: Border.all(
                           color: focused ? Colors.white : Colors.transparent,
                           width: 2,
@@ -675,7 +694,7 @@ class _LoginCardState extends State<LoginCard>
                                   Text(
                                     otpSent ? lang.verifyOtp : lang.sendOtp,
                                     style: GoogleFonts.outfit(
-                                      fontSize: 15,
+                                      fontSize: tv ? 14 : 15,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
                                       letterSpacing: 0.5,
@@ -1690,12 +1709,14 @@ class _TvNumberPad extends StatelessWidget {
     required this.onDigit,
     required this.onBackspace,
     required this.onDone,
+    this.keyHeight = 38,
   });
 
   final List<FocusNode> focusNodes;
   final ValueChanged<String> onDigit;
   final VoidCallback onBackspace;
   final VoidCallback onDone;
+  final double keyHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -1722,11 +1743,11 @@ class _TvNumberPad extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: EdgeInsets.zero,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         mainAxisSpacing: 6,
         crossAxisSpacing: 8,
-        mainAxisExtent: 38,
+        mainAxisExtent: keyHeight,
       ),
       itemCount: keys.length,
       itemBuilder: (context, index) {

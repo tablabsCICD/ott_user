@@ -8,6 +8,7 @@ import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/notification%20page/NotificationDetailPage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/data/models/response/push_notification_response.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -139,6 +140,41 @@ class _NotificationPageState extends State<NotificationPage> {
         Provider.of<ThemeProvider>(context, listen: true).getTheme;
     final lang = AppLocalizations.of(context)!;
 
+    if (ResponsiveWidget.isAndroidTv(context)) {
+      // Android TV: full-screen page with a compact title instead of the red
+      // app bar (the remote's Back key closes it) and ~48 px list rows.
+      return Scaffold(
+        backgroundColor: selectedThemeData.scaffoldBackgroundColor,
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  TvDesign.pageGutter,
+                  16,
+                  TvDesign.pageGutter,
+                  10,
+                ),
+                child: Text(
+                  lang.notification,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TvDesign.pageTitle(selectedThemeData),
+                ),
+              ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () => _loadNotifications(),
+                  child: _body(selectedThemeData),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: selectedThemeData.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -158,6 +194,8 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 
   Widget _body(ThemeData theme) {
+    final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
+
     if (_isLoading) {
       return Center(
         child: CircularProgressIndicator(color: theme.primaryColor),
@@ -168,22 +206,58 @@ class _NotificationPageState extends State<NotificationPage> {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          SizedBox(height: MediaQuery.of(context).size.height * 0.28),
-          Icon(Icons.error_outline, size: 72, color: theme.primaryColor),
+          SizedBox(
+            height: MediaQuery.of(context).size.height *
+                (isAndroidTv ? 0.18 : 0.28),
+          ),
+          Icon(
+            Icons.error_outline,
+            size: isAndroidTv ? 48 : 72,
+            color: theme.primaryColor,
+          ),
           const SizedBox(height: 14),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Text(
               _errorMessage!,
               textAlign: TextAlign.center,
-              style: TextStyle(color: theme.canvasColor, fontSize: 15),
+              style: TextStyle(
+                color: theme.canvasColor,
+                fontSize: isAndroidTv ? 13 : 15,
+              ),
             ),
           ),
           const SizedBox(height: 18),
           Center(
             child: ElevatedButton(
+              // Android TV: give the remote a starting point.
+              autofocus: isAndroidTv,
               onPressed: () => _loadNotifications(),
               child: const Text('Retry'),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (_notifications.isEmpty && isAndroidTv) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          const SizedBox(height: 110),
+          Icon(
+            Icons.notifications_off,
+            size: 48,
+            color: theme.canvasColor.withValues(alpha: 0.45),
+          ),
+          const SizedBox(height: 10),
+          Center(
+            child: Text(
+              'No Notifications',
+              style: TextStyle(
+                fontSize: 14,
+                color: theme.canvasColor.withValues(alpha: 0.6),
+              ),
             ),
           ),
         ],
@@ -207,26 +281,15 @@ class _NotificationPageState extends State<NotificationPage> {
       );
     }
 
+    if (isAndroidTv) return _tvList(theme);
+
     return ListView.separated(
       padding: const EdgeInsets.all(12),
       itemCount: _notifications.length + (_hasMore ? 1 : 0),
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         if (index == _notifications.length) {
-          return Center(
-            child: TextButton(
-              onPressed: _isLoadingMore
-                  ? null
-                  : () => _loadNotifications(loadMore: true),
-              child: _isLoadingMore
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Load more'),
-            ),
-          );
+          return Center(child: _loadMoreButton());
         }
 
         final item = _notifications[index];
@@ -279,6 +342,144 @@ class _NotificationPageState extends State<NotificationPage> {
           child: card,
         );
       },
+    );
+  }
+
+  // ===========================================================================
+  // ANDROID TV
+  // ===========================================================================
+
+  Widget _loadMoreButton() {
+    return TextButton(
+      onPressed:
+          _isLoadingMore ? null : () => _loadNotifications(loadMore: true),
+      child: _isLoadingMore
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Text('Load more'),
+    );
+  }
+
+  /// Android TV: compact rows (icon, title + one-line preview, time) inside a
+  /// readable column; the first row takes the initial focus.
+  Widget _tvList(ThemeData theme) {
+    return Align(
+      alignment: Alignment.topLeft,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 820),
+        child: ListView.separated(
+          padding: const EdgeInsets.fromLTRB(
+            TvDesign.pageGutter,
+            4,
+            TvDesign.pageGutter,
+            TvDesign.pageGutter,
+          ),
+          itemCount: _notifications.length + (_hasMore ? 1 : 0),
+          separatorBuilder: (_, __) => const SizedBox(height: 6),
+          itemBuilder: (context, index) {
+            if (index == _notifications.length) {
+              return Center(child: _loadMoreButton());
+            }
+            return _tvRow(theme, _notifications[index], autofocus: index == 0);
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _tvRow(
+    ThemeData theme,
+    PushNotificationItem item, {
+    bool autofocus = false,
+  }) {
+    final isPending = item.deliveryStatus?.toUpperCase() == 'PENDING';
+    final accent = isPending ? Colors.orange : theme.primaryColor;
+    final time = item.displayDate;
+
+    return OttTvFocus(
+      onTap: () => _openNotification(item),
+      autofocus: autofocus,
+      borderRadius: TvDesign.cardRadius,
+      scale: 1.02,
+      semanticLabel: item.title,
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(TvDesign.cardRadius),
+          border: Border.all(
+            color: theme.canvasColor.withValues(alpha: 0.06),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.18),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isPending ? Icons.schedule : Icons.notifications_active,
+                color: accent,
+                size: 15,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: theme.canvasColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    item.body,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: theme.canvasColor.withValues(alpha: 0.65),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (time != null) ...[
+              const SizedBox(width: 12),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 160),
+                child: Text(
+                  time,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TvDesign.caption(theme),
+                ),
+              ),
+            ],
+            const SizedBox(width: 6),
+            Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: theme.canvasColor.withValues(alpha: 0.5),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

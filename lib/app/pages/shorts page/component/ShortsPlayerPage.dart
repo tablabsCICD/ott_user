@@ -676,7 +676,14 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                 ],
               ),
               const SizedBox(height: 6),
-              GestureDetector(
+              _tvFocusable(
+                label: _isMetaExpanded ? 'See less' : 'See more',
+                onTap: () {
+                  setState(() {
+                    _isMetaExpanded = !_isMetaExpanded;
+                  });
+                },
+                child: GestureDetector(
                 onTap: () {
                   setState(() {
                     _isMetaExpanded = !_isMetaExpanded;
@@ -802,6 +809,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                   ),
                 ),
               ),
+              ),
             ],
           ),
         ),
@@ -875,7 +883,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     bool isActive = false,
   }) {
     final theme = Theme.of(context);
-    return InkWell(
+    final button = InkWell(
       onTap: onTap,
       child: Column(
         children: [
@@ -903,6 +911,30 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
           ),
         ],
       ),
+    );
+    return _tvFocusable(
+      label: label,
+      // Stays focusable while a like request is running (OK does nothing),
+      // so the remote focus doesn't jump away.
+      onTap: onTap ?? () {},
+      child: button,
+    );
+  }
+
+  /// Android TV: makes an overlay control a remote focus stop with the white
+  /// focus ring (OttTvFocus). Other platforms get [child] unchanged.
+  Widget _tvFocusable({
+    required Widget child,
+    required VoidCallback onTap,
+    required String label,
+    double borderRadius = 14,
+  }) {
+    if (!ResponsiveWidget.isAndroidTv(context)) return child;
+    return OttTvFocus(
+      onTap: onTap,
+      borderRadius: borderRadius,
+      semanticLabel: label,
+      child: child,
     );
   }
 
@@ -953,7 +985,11 @@ ${short.durationSec ?? ''}
       bottom: 24,
       child: Column(
         children: [
-          InkWell(
+          _tvFocusable(
+            label: 'Episodes',
+            borderRadius: 12,
+            onTap: _openEpisodes,
+            child: InkWell(
             onTap: _openEpisodes,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
@@ -995,6 +1031,7 @@ ${short.durationSec ?? ''}
               ),
             ),
           ),
+          ),
           _videoProgressBar(),
         ],
       ),
@@ -1022,7 +1059,12 @@ ${short.durationSec ?? ''}
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
           ),
-          child: Slider(
+          // Android TV: a focused Slider swallows every arrow key and traps
+          // the remote (same as the other players). Seeking stays on the
+          // rewind/forward controls and Left/Right on the video.
+          child: ExcludeFocus(
+            excluding: ResponsiveWidget.isAndroidTv(context),
+            child: Slider(
             min: 0,
             max: duration.toDouble(),
             value: controller.state.position.inMilliseconds
@@ -1033,6 +1075,7 @@ ${short.durationSec ?? ''}
             onChanged: (value) {
               controller.seek(Duration(milliseconds: value.round()));
             },
+          ),
           ),
         ),
       ),
@@ -1091,8 +1134,10 @@ ${short.durationSec ?? ''}
           padding: const EdgeInsets.all(20),
           child: GridView.builder(
             itemCount: totalParts,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 5,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              // Android TV: the landscape sheet fits a full row of compact
+              // tiles instead of five very large squares.
+              crossAxisCount: ResponsiveWidget.isAndroidTv(context) ? 10 : 5,
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
             ),
@@ -1151,18 +1196,27 @@ ${short.durationSec ?? ''}
   }
 
   Widget _backButton() {
+    final tv = ResponsiveWidget.isAndroidTv(context);
+    void goBack() {
+      _controller?.pause();
+      Navigator.pop(context);
+    }
+
     return Positioned(
-      top: MediaQuery.of(context).padding.top + 12,
-      left: 12,
-      child: InkWell(
-        onTap: () {
-          _controller?.pause();
-          Navigator.pop(context);
-        },
-        child: const CircleAvatar(
-          radius: 18,
-          backgroundColor: Colors.black45,
-          child: Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18),
+      top: MediaQuery.of(context).padding.top + (tv ? 16 : 12),
+      left: tv ? 20 : 12,
+      child: _tvFocusable(
+        label: 'Back',
+        borderRadius: 18,
+        onTap: goBack,
+        child: InkWell(
+          onTap: goBack,
+          child: const CircleAvatar(
+            radius: 18,
+            backgroundColor: Colors.black45,
+            child:
+                Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18),
+          ),
         ),
       ),
     );

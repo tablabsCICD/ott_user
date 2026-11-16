@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ott/app/flavor/app_flavor.dart';
 import 'package:ott/app/widgets/ott_tv_app_shell.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 class OttTvFocus extends StatefulWidget {
@@ -111,7 +112,12 @@ class _OttTvFocusState extends State<OttTvFocus> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final focusColor = widget.focusColor ?? theme.primaryColor;
+    final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
+    // Android TV: a neutral outline (white on dark, near-black on light)
+    // reads on the page and on brand-red buttons alike (a red ring
+    // disappears on red controls).
+    final focusColor = widget.focusColor ??
+        (isAndroidTv ? TvDesign.focusRingColor(theme) : theme.primaryColor);
 
     final isMobile =
         ResponsiveWidget.isMobile(context) && !FlavorConfig.current.isTv;
@@ -148,21 +154,24 @@ class _OttTvFocusState extends State<OttTvFocus> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(widget.borderRadius),
                 border: Border.all(
-                  color: _focused ? focusColor : Colors.transparent,
+                  color: _focused && !isAndroidTv
+                      ? focusColor
+                      : Colors.transparent,
                   width: 1,
                 ),
-                boxShadow: null,
+                // Android TV: focused controls lift off the page.
+                boxShadow: _focused && isAndroidTv
+                    ? TvDesign.controlShadowFor(theme)
+                    : null,
               ),
-              // Android TV: a thicker outline that is easy to spot from the
+              // Android TV: a crisp outline that is easy to spot from the
               // sofa. Painted on top so it never changes the layout size.
-              foregroundDecoration:
-                  _focused && ResponsiveWidget.isAndroidTv(context)
-                      ? BoxDecoration(
-                          borderRadius:
-                              BorderRadius.circular(widget.borderRadius),
-                          border: Border.all(color: focusColor, width: 2.5),
-                        )
-                      : null,
+              foregroundDecoration: _focused && isAndroidTv
+                  ? BoxDecoration(
+                      borderRadius: BorderRadius.circular(widget.borderRadius),
+                      border: Border.all(color: focusColor, width: 2),
+                    )
+                  : null,
               child: Focus(
                 canRequestFocus: false,
                 descendantsAreFocusable: false,

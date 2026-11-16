@@ -6,10 +6,12 @@ import 'package:ott/app/core/services/session_manager.dart';
 import 'package:ott/app/core/utils/image_url_utils.dart';
 import 'package:ott/app/core/utils/text_capitalization_formatter.dart';
 import 'package:ott/app/pages/profile%20page/component/EditProfilePage.dart';
+import 'package:ott/app/pages/profile%20page/component/profile_detail_shell.dart';
 import 'package:ott/app/provider/userProvider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/presentation/web_landing/utils/post_logout_navigation.dart';
 import 'package:provider/provider.dart';
@@ -42,6 +44,7 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    if (ResponsiveWidget.isAndroidTv(context)) return _buildTv(theme);
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -148,6 +151,322 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           },
         ),
       ),
+    );
+  }
+
+  // ===========================================================================
+  // ANDROID TV
+  // ===========================================================================
+
+  Widget _buildTv(ThemeData theme) {
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const TvDetailHeader(title: "Account Details"),
+          Expanded(
+            child: Consumer<UserProvider>(
+              builder: (context, userProvider, _) {
+                final user = userProvider.userObj;
+                final location = user.location;
+
+                String v(String? value) => (value == null ||
+                        value.trim().isEmpty)
+                    ? "Not added"
+                    : value;
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: TvDesign.pageGutter,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 240,
+                        child: _tvSummaryPanel(theme, user),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.topLeft,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 520),
+                            child: ListView(
+                              padding: const EdgeInsets.only(bottom: 20),
+                              children: [
+                                _tvSection(theme, "Contact & Personal", [
+                                  _tvField(theme, "Mobile Number",
+                                      v(user.mobileNumber)),
+                                  _tvField(theme, "Email Address",
+                                      v(user.emailId)),
+                                  _tvField(
+                                    theme,
+                                    "Name",
+                                    v([user.firstName, user.lastName]
+                                        .where((s) =>
+                                            s != null && s.trim().isNotEmpty)
+                                        .join(' ')),
+                                  ),
+                                  _tvField(theme, "Birthday", v(user.dob)),
+                                ]),
+                                const SizedBox(height: 12),
+                                _tvSection(theme, "Address", [
+                                  _tvField(theme, "Address Line",
+                                      v(location?.officeBuilding)),
+                                  _tvField(theme, "City",
+                                      v(location?.city ?? location?.taluka)),
+                                  _tvField(theme, "District",
+                                      v(location?.district)),
+                                  _tvField(
+                                      theme, "State", v(location?.state)),
+                                  _tvField(
+                                      theme, "Country", v(location?.country)),
+                                  _tvField(
+                                      theme, "Pincode", v(location?.pincode)),
+                                ]),
+                                const SizedBox(height: 12),
+                                _tvDeleteAccountPanel(theme, userProvider),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tvSummaryPanel(ThemeData theme, dynamic user) {
+    final profilePhotoUrl = normalizeNetworkImageUrl(user.profilePhoto);
+    final name = [user.firstName, user.lastName]
+        .where((s) => s != null && s.toString().trim().isNotEmpty)
+        .join(' ');
+    const avatarSize = 64.0;
+
+    Widget fallback() => Image.asset(
+          ImageConstant.profile,
+          width: avatarSize,
+          height: avatarSize,
+          fit: BoxFit.cover,
+        );
+
+    return TvPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(
+            child: Hero(
+              tag: "profile",
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: avatarSize,
+                    height: avatarSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: theme.scaffoldBackgroundColor,
+                      border: Border.all(color: theme.primaryColor, width: 2),
+                    ),
+                    child: ClipOval(
+                      child: profilePhotoUrl.isEmpty
+                          ? fallback()
+                          : Image.network(
+                              profilePhotoUrl,
+                              width: avatarSize,
+                              height: avatarSize,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => fallback(),
+                            ),
+                    ),
+                  ),
+                  if (user.verified ?? false)
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: theme.cardColor,
+                        ),
+                        child: const Icon(
+                          Icons.verified,
+                          color: Colors.blue,
+                          size: 14,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            name.isNotEmpty ? name : 'User',
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: theme.canvasColor,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          if ((user.mobileNumber ?? '').toString().trim().isNotEmpty) ...[
+            const SizedBox(height: 3),
+            Text(
+              user.mobileNumber.toString(),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TvDesign.caption(theme),
+            ),
+          ],
+          const SizedBox(height: 14),
+          TvCompactButton(
+            label: "Edit Profile",
+            icon: Icons.person_outline,
+            expand: true,
+            autofocus: true,
+            onPressed: _openEditProfile,
+          ),
+          const SizedBox(height: 8),
+          TvCompactButton(
+            label: "Edit Address",
+            icon: Icons.location_on_outlined,
+            expand: true,
+            primary: false,
+            onPressed: _showEditAddressDialog,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Read-only fields laid out two per row.
+  Widget _tvSection(ThemeData theme, String title, List<Widget> fields) {
+    final rows = <Widget>[];
+    for (var i = 0; i < fields.length; i += 2) {
+      if (rows.isNotEmpty) rows.add(const SizedBox(height: 10));
+      rows.add(
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: fields[i]),
+            const SizedBox(width: 12),
+            Expanded(
+              child: i + 1 < fields.length
+                  ? fields[i + 1]
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TvSectionHeader(title, padding: const EdgeInsets.fromLTRB(4, 0, 4, 6)),
+        TvPanel(
+          padding: const EdgeInsets.all(12),
+          child: Column(children: rows),
+        ),
+      ],
+    );
+  }
+
+  Widget _tvField(ThemeData theme, String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TvDesign.caption(theme),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: theme.canvasColor,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _tvDeleteAccountPanel(ThemeData theme, UserProvider userProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TvSectionHeader(
+          "Account Deletion",
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 6),
+        ),
+        TvPanel(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.redAccent,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "Delete your Filmytell account and personal profile data. Purchases, wallet activity, support tickets, and records required for legal, tax, security, or fraud-prevention purposes may be retained as required by law.",
+                      style: TextStyle(
+                        color: theme.canvasColor.withValues(alpha: 0.74),
+                        height: 1.4,
+                        fontSize: 11.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  TvCompactButton(
+                    label: "Deletion Info",
+                    icon: Icons.open_in_new,
+                    primary: false,
+                    onPressed: _isDeletingAccount ? null : _openDeletionPage,
+                  ),
+                  const SizedBox(width: 10),
+                  TvCompactButton(
+                    label: _isDeletingAccount ? "Deleting..." : "Delete",
+                    icon: Icons.delete_forever,
+                    danger: true,
+                    loading: _isDeletingAccount,
+                    onPressed: () => _confirmAndDeleteAccount(userProvider),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -374,6 +693,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           ),
           actions: [
             OttTvFocus(
+              // Android TV: start on the safe choice.
+              autofocus: ResponsiveWidget.isAndroidTv(dialogContext),
               borderRadius: 8,
               scale: 1.05,
               semanticLabel: "Cancel deletion",
@@ -502,181 +823,198 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
           builder: (context, provider, _) {
             final selectedThemeData = Theme.of(context);
 
+            final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
+
             return AlertDialog(
               backgroundColor: selectedThemeData.scaffoldBackgroundColor,
               title: const Text("Edit Address"),
+              // Android TV: compact title and a fixed form width that fits
+              // the 540 px canvas.
+              titleTextStyle: isAndroidTv
+                  ? TvDesign.sectionTitle(selectedThemeData)
+                      .copyWith(fontSize: 16)
+                  : null,
+              insetPadding: isAndroidTv
+                  ? const EdgeInsets.symmetric(horizontal: 40, vertical: 20)
+                  : null,
+              contentPadding: isAndroidTv
+                  ? const EdgeInsets.fromLTRB(20, 12, 20, 4)
+                  : null,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               content: SingleChildScrollView(
                 child: Form(
                   key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CustomTextField(
-                        textInputType: TextInputType.text,
-                        controller: provider.officeBuildingController,
-                        label: 'Address',
-                        hintText: 'Search your address',
-                        prefixIcon: Icon(
-                          Icons.location_on_outlined,
-                          color: selectedThemeData.canvasColor,
+                  child: SizedBox(
+                    width: isAndroidTv ? 440 : null,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CustomTextField(
+                          textInputType: TextInputType.text,
+                          controller: provider.officeBuildingController,
+                          label: 'Address',
+                          hintText: 'Search your address',
+                          prefixIcon: Icon(
+                            Icons.location_on_outlined,
+                            color: selectedThemeData.canvasColor,
+                          ),
+                          autofocus: ResponsiveWidget.isTabletOrTv(context),
+                          isValidator: false,
+                          onValueChange: provider.searchAddressSuggestions,
                         ),
-                        autofocus: ResponsiveWidget.isTabletOrTv(context),
-                        isValidator: false,
-                        onValueChange: provider.searchAddressSuggestions,
-                      ),
-                      const SizedBox(height: 8),
-                      OttTvFocus(
-                        borderRadius: 8,
-                        onTap: provider.isFetchingCurrentLocation
-                            ? null
-                            : provider.useCurrentLocationFromGoogle,
-                        child: OutlinedButton.icon(
-                          onPressed: provider.isFetchingCurrentLocation
+                        const SizedBox(height: 8),
+                        OttTvFocus(
+                          borderRadius: 8,
+                          onTap: provider.isFetchingCurrentLocation
                               ? null
                               : provider.useCurrentLocationFromGoogle,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: selectedThemeData.primaryColor,
-                            side: BorderSide(
-                              color: selectedThemeData.primaryColor,
+                          child: OutlinedButton.icon(
+                            onPressed: provider.isFetchingCurrentLocation
+                                ? null
+                                : provider.useCurrentLocationFromGoogle,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: selectedThemeData.primaryColor,
+                              side: BorderSide(
+                                color: selectedThemeData.primaryColor,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          icon: provider.isFetchingCurrentLocation
-                              ? SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: selectedThemeData.primaryColor,
-                                  ),
-                                )
-                              : const Icon(Icons.my_location),
-                          label: Text(
-                            provider.isFetchingCurrentLocation
-                                ? 'Fetching location...'
-                                : 'Use current location',
-                          ),
-                        ),
-                      ),
-                      if (provider.addressSuggestions.isNotEmpty)
-                        Container(
-                          margin: const EdgeInsets.only(top: 6, bottom: 8),
-                          decoration: BoxDecoration(
-                            color: selectedThemeData.cardColor,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: selectedThemeData.primaryColor
-                                  .withOpacity(0.25),
-                            ),
-                          ),
-                          child: ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: provider.addressSuggestions.length,
-                            separatorBuilder: (_, __) => Divider(
-                              height: 1,
-                              color: selectedThemeData.canvasColor
-                                  .withOpacity(0.08),
-                            ),
-                            itemBuilder: (context, index) {
-                              final suggestion =
-                                  provider.addressSuggestions[index];
-                              return OttTvFocus(
-                                borderRadius: 6,
-                                onTap: () {
-                                  provider.selectAddressSuggestion(suggestion);
-                                },
-                                child: ListTile(
-                                  dense: true,
-                                  leading: Icon(
-                                    Icons.place_outlined,
-                                    color: selectedThemeData.primaryColor,
-                                  ),
-                                  title: Text(
-                                    suggestion['description'] ?? '',
-                                    style: TextStyle(
-                                      color: selectedThemeData.canvasColor,
-                                      fontSize: 13,
+                            icon: provider.isFetchingCurrentLocation
+                                ? SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: selectedThemeData.primaryColor,
                                     ),
-                                  ),
-                                  onTap: () {
-                                    provider
-                                        .selectAddressSuggestion(suggestion);
-                                  },
-                                ),
-                              );
-                            },
+                                  )
+                                : const Icon(Icons.my_location),
+                            label: Text(
+                              provider.isFetchingCurrentLocation
+                                  ? 'Fetching location...'
+                                  : 'Use current location',
+                            ),
                           ),
                         ),
-                      _buildEditableLocationDropdown(
-                        context: context,
-                        selectedThemeData: selectedThemeData,
-                        controller: provider.countryController,
-                        label: 'Country',
-                        hintText: 'Enter country',
-                        options: provider.countryOptions,
-                        onChanged: (value) {
-                          if (value.trim().isEmpty) {
-                            provider.loadStateOptionsByCountry('');
-                          }
-                        },
-                        onFieldSubmitted: provider.loadStateOptionsByCountry,
-                        onOptionSelected: provider.loadStateOptionsByCountry,
-                      ),
-                      _buildEditableLocationDropdown(
-                        context: context,
-                        selectedThemeData: selectedThemeData,
-                        controller: provider.stateController,
-                        label: 'State',
-                        hintText: 'Enter state',
-                        options: provider.stateOptions,
-                        onChanged: (value) {
-                          if (value.trim().isEmpty) {
-                            provider.loadDistrictOptionsByState('');
-                          }
-                        },
-                        onFieldSubmitted: provider.loadDistrictOptionsByState,
-                        onOptionSelected: provider.loadDistrictOptionsByState,
-                      ),
-                      _buildEditableLocationDropdown(
-                        context: context,
-                        selectedThemeData: selectedThemeData,
-                        controller: provider.districtController,
-                        label: 'District',
-                        hintText: 'Enter district',
-                        options: provider.districtOptions,
-                        onChanged: (value) {
-                          if (value.trim().isEmpty) {
-                            provider.loadTalukaOptionsByDistrict('');
-                          }
-                        },
-                        onFieldSubmitted: provider.loadTalukaOptionsByDistrict,
-                        onOptionSelected: provider.loadTalukaOptionsByDistrict,
-                      ),
-                      _buildEditableLocationDropdown(
-                        context: context,
-                        selectedThemeData: selectedThemeData,
-                        controller: provider.cityController,
-                        label: 'City',
-                        hintText: 'Enter city',
-                        options: provider.talukaOptions,
-                      ),
-                      _buildEditableLocationDropdown(
-                        context: context,
-                        selectedThemeData: selectedThemeData,
-                        controller: provider.pinCodeDateController,
-                        label: 'Pincode',
-                        hintText: 'Enter pincode',
-                        options: provider.pincodeOptions,
-                        keyboardType: TextInputType.number,
-                        isRequired: false,
-                      ),
-                    ],
+                        if (provider.addressSuggestions.isNotEmpty)
+                          Container(
+                            margin: const EdgeInsets.only(top: 6, bottom: 8),
+                            decoration: BoxDecoration(
+                              color: selectedThemeData.cardColor,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: selectedThemeData.primaryColor
+                                    .withOpacity(0.25),
+                              ),
+                            ),
+                            child: ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: provider.addressSuggestions.length,
+                              separatorBuilder: (_, __) => Divider(
+                                height: 1,
+                                color: selectedThemeData.canvasColor
+                                    .withOpacity(0.08),
+                              ),
+                              itemBuilder: (context, index) {
+                                final suggestion =
+                                    provider.addressSuggestions[index];
+                                return OttTvFocus(
+                                  borderRadius: 6,
+                                  onTap: () {
+                                    provider.selectAddressSuggestion(suggestion);
+                                  },
+                                  child: ListTile(
+                                    dense: true,
+                                    leading: Icon(
+                                      Icons.place_outlined,
+                                      color: selectedThemeData.primaryColor,
+                                    ),
+                                    title: Text(
+                                      suggestion['description'] ?? '',
+                                      style: TextStyle(
+                                        color: selectedThemeData.canvasColor,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      provider
+                                          .selectAddressSuggestion(suggestion);
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        _buildEditableLocationDropdown(
+                          context: context,
+                          selectedThemeData: selectedThemeData,
+                          controller: provider.countryController,
+                          label: 'Country',
+                          hintText: 'Enter country',
+                          options: provider.countryOptions,
+                          onChanged: (value) {
+                            if (value.trim().isEmpty) {
+                              provider.loadStateOptionsByCountry('');
+                            }
+                          },
+                          onFieldSubmitted: provider.loadStateOptionsByCountry,
+                          onOptionSelected: provider.loadStateOptionsByCountry,
+                        ),
+                        _buildEditableLocationDropdown(
+                          context: context,
+                          selectedThemeData: selectedThemeData,
+                          controller: provider.stateController,
+                          label: 'State',
+                          hintText: 'Enter state',
+                          options: provider.stateOptions,
+                          onChanged: (value) {
+                            if (value.trim().isEmpty) {
+                              provider.loadDistrictOptionsByState('');
+                            }
+                          },
+                          onFieldSubmitted: provider.loadDistrictOptionsByState,
+                          onOptionSelected: provider.loadDistrictOptionsByState,
+                        ),
+                        _buildEditableLocationDropdown(
+                          context: context,
+                          selectedThemeData: selectedThemeData,
+                          controller: provider.districtController,
+                          label: 'District',
+                          hintText: 'Enter district',
+                          options: provider.districtOptions,
+                          onChanged: (value) {
+                            if (value.trim().isEmpty) {
+                              provider.loadTalukaOptionsByDistrict('');
+                            }
+                          },
+                          onFieldSubmitted: provider.loadTalukaOptionsByDistrict,
+                          onOptionSelected: provider.loadTalukaOptionsByDistrict,
+                        ),
+                        _buildEditableLocationDropdown(
+                          context: context,
+                          selectedThemeData: selectedThemeData,
+                          controller: provider.cityController,
+                          label: 'City',
+                          hintText: 'Enter city',
+                          options: provider.talukaOptions,
+                        ),
+                        _buildEditableLocationDropdown(
+                          context: context,
+                          selectedThemeData: selectedThemeData,
+                          controller: provider.pinCodeDateController,
+                          label: 'Pincode',
+                          hintText: 'Enter pincode',
+                          options: provider.pincodeOptions,
+                          keyboardType: TextInputType.number,
+                          isRequired: false,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -694,28 +1032,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                 ),
                 OttTvFocus(
                   borderRadius: 6,
-                  onTap: () async {
-                    if (!formKey.currentState!.validate()) return;
-                    final result = await provider.updateUserLocation();
-                    if (!mounted) return;
-
-                    if (result['success'] == true) {
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setBool('isLoggedIn', true);
-                      CustomToast.show(
-                        context,
-                        "Address updated successfully!",
-                        isSuccess: true,
-                      );
-                      Navigator.of(dialogContext).pop();
-                    } else {
-                      CustomToast.show(
-                        context,
-                        'Failure: ${result['message']}',
-                        isSuccess: false,
-                      );
-                    }
-                  },
+                  onTap: () =>
+                      _saveAddress(formKey, provider, dialogContext),
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: selectedThemeData.primaryColor,
@@ -724,28 +1042,8 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                     ),
-                    onPressed: () async {
-                      if (!formKey.currentState!.validate()) return;
-                      final result = await provider.updateUserLocation();
-                      if (!mounted) return;
-
-                      if (result['success'] == true) {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setBool('isLoggedIn', true);
-                        CustomToast.show(
-                          context,
-                          "Address updated successfully!",
-                          isSuccess: true,
-                        );
-                        Navigator.of(dialogContext).pop();
-                      } else {
-                        CustomToast.show(
-                          context,
-                          'Failure: ${result['message']}',
-                          isSuccess: false,
-                        );
-                      }
-                    },
+                    onPressed: () =>
+                        _saveAddress(formKey, provider, dialogContext),
                     child: const Text("Save"),
                   ),
                 ),
@@ -755,6 +1053,35 @@ class _AccountDetailsPageState extends State<AccountDetailsPage> {
         );
       },
     );
+  }
+
+  /// Save action of the Edit Address dialog (shared by the remote/OK handler
+  /// and the button's own press handler).
+  Future<void> _saveAddress(
+    GlobalKey<FormState> formKey,
+    UserProvider provider,
+    BuildContext dialogContext,
+  ) async {
+    if (!formKey.currentState!.validate()) return;
+    final result = await provider.updateUserLocation();
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+      CustomToast.show(
+        context,
+        "Address updated successfully!",
+        isSuccess: true,
+      );
+      Navigator.of(dialogContext).pop();
+    } else {
+      CustomToast.show(
+        context,
+        'Failure: ${result['message']}',
+        isSuccess: false,
+      );
+    }
   }
 
   Widget _buildEditableLocationDropdown({

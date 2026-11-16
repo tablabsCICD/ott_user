@@ -11,6 +11,7 @@ import 'package:ott/app/widgets/filmytell_poster_image.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/app/widgets/shimmer%20loader/comming_soon_shimmer.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -241,10 +242,15 @@ class _WatchlistPageState extends State<WatchlistPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
+    // Android TV: in-tab page without the red app bar; a compact title row
+    // holds the filters and the grid shows four 16:9 tiles per row.
+    final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
+      appBar: isAndroidTv
+          ? null
+          : AppBar(
         elevation: 0,
         backgroundColor: theme.primaryColor,
         foregroundColor: Colors.white,
@@ -258,7 +264,10 @@ class _WatchlistPageState extends State<WatchlistPage> {
       ),
       body: Column(
         children: [
-          _segmentedToggle(theme),
+          if (isAndroidTv)
+            SafeArea(bottom: false, child: _tvHeader(theme, lang))
+          else
+            _segmentedToggle(theme),
           Expanded(
             child: isLoading
                 ? const ComingSoonShimmer(
@@ -274,6 +283,27 @@ class _WatchlistPageState extends State<WatchlistPage> {
 
                       if (items.isEmpty) {
                         return _emptyState(theme, showSegmentedToggle: false);
+                      }
+
+                      if (isAndroidTv) {
+                        return GridView.builder(
+                          padding: const EdgeInsets.fromLTRB(
+                            TvDesign.pageGutter,
+                            10,
+                            TvDesign.pageGutter,
+                            TvDesign.pageGutter,
+                          ),
+                          itemCount: items.length,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 4,
+                            mainAxisSpacing: 16,
+                            crossAxisSpacing: 14,
+                            childAspectRatio: TvDesign.imageAspectRatio,
+                          ),
+                          itemBuilder: (_, i) =>
+                              _netflixCard(context, items[i]),
+                        );
                       }
 
                       return GridView.builder(
@@ -297,14 +327,16 @@ class _WatchlistPageState extends State<WatchlistPage> {
     );
   }
 
+  List<({WatchlistFilter value, String label})> get _filterItems => const [
+        (value: WatchlistFilter.available, label: "Available"),
+        (value: WatchlistFilter.downloaded, label: "Downloaded"),
+        (value: WatchlistFilter.gifted, label: "Gifted"),
+        (value: WatchlistFilter.expired, label: "Expired"),
+      ];
+
   // 🔁 Segmented Toggle
   Widget _segmentedToggle(ThemeData theme) {
-    final items = <({WatchlistFilter value, String label})>[
-      (value: WatchlistFilter.available, label: "Available"),
-      (value: WatchlistFilter.downloaded, label: "Downloaded"),
-      (value: WatchlistFilter.gifted, label: "Gifted"),
-      (value: WatchlistFilter.expired, label: "Expired"),
-    ];
+    final items = _filterItems;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -327,30 +359,72 @@ class _WatchlistPageState extends State<WatchlistPage> {
     );
   }
 
+  /// Android TV: page title on the left, compact filter pills on the right.
+  Widget _tvHeader(ThemeData theme, AppLocalizations lang) {
+    final items = _filterItems;
+    final title = widget.initialFilter == WatchlistFilter.downloaded
+        ? lang.downloads
+        : lang.watchlist;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        TvDesign.pageGutter,
+        14,
+        TvDesign.pageGutter,
+        8,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TvDesign.pageTitle(theme),
+            ),
+          ),
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            _filterChip(theme, items[i].value, items[i].label),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _filterChip(
     ThemeData theme,
     WatchlistFilter value,
     String label,
   ) {
     final selected = selectedFilter == value;
+    final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
 
     final chip = AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeInOut,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5),
+      padding: isAndroidTv
+          ? const EdgeInsets.symmetric(horizontal: 14, vertical: 5)
+          : const EdgeInsets.symmetric(horizontal: 18, vertical: 5),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(isAndroidTv ? 14 : 10),
 
         // ✅ Selected state (like your image)
-        color: selected ? theme.primaryColor : Colors.transparent,
+        color: selected
+            ? theme.primaryColor
+            : isAndroidTv
+                ? theme.cardColor
+                : Colors.transparent,
 
         border: Border.all(
           color: selected
               ? theme.primaryColor
-              : theme.canvasColor.withOpacity(0.6),
+              : isAndroidTv
+                  ? theme.canvasColor.withValues(alpha: 0.06)
+                  : theme.canvasColor.withOpacity(0.6),
         ),
 
-        boxShadow: selected
+        boxShadow: selected && !isAndroidTv
             ? [
                 BoxShadow(
                   color: theme.primaryColor.withOpacity(0.25),
@@ -363,9 +437,13 @@ class _WatchlistPageState extends State<WatchlistPage> {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 14,
+          fontSize: isAndroidTv ? 12 : 14,
           fontWeight: FontWeight.w600,
-          color: selected ? Colors.white : theme.primaryColor,
+          color: selected
+              ? Colors.white
+              : isAndroidTv
+                  ? theme.canvasColor.withValues(alpha: 0.8)
+                  : theme.primaryColor,
         ),
       ),
     );
@@ -379,8 +457,12 @@ class _WatchlistPageState extends State<WatchlistPage> {
 
     return OttTvFocus(
       onTap: () => _onFilterSelected(value),
-      borderRadius: 10,
+      borderRadius: isAndroidTv ? 14 : 10,
       scale: 1.04,
+      // Android TV: start on the active filter so the remote has a cursor
+      // even while the grid is still loading.
+      autofocus: isAndroidTv && selected,
+      semanticLabel: isAndroidTv ? label : null,
       child: chip,
     );
   }
@@ -450,14 +532,18 @@ class _WatchlistPageState extends State<WatchlistPage> {
   Widget _netflixCard(BuildContext context, _WatchlistEntry content) {
     final theme = Theme.of(context);
     final item = content.movie;
+    // Android TV: compact 16:9 tile type and badges for the 4-column grid.
+    final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
+    final double radius = isAndroidTv ? TvDesign.cardRadius : 16;
+    final double inset = isAndroidTv ? 10 : 12;
 
     // `deleteSelected`: Android TV remote has the Delete button selected.
     Widget buildCard({bool deleteSelected = false}) => ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(radius),
       child: Stack(
         children: [
           Positioned.fill(
-            child: _posterBackground(item),
+            child: _posterBackground(item, cover: isAndroidTv),
           ),
           Positioned.fill(
             child: Container(
@@ -475,9 +561,9 @@ class _WatchlistPageState extends State<WatchlistPage> {
             ),
           ),
           Positioned(
-            left: 12,
-            right: 12,
-            bottom: 12,
+            left: inset,
+            right: inset,
+            bottom: inset,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -485,24 +571,38 @@ class _WatchlistPageState extends State<WatchlistPage> {
                   item.title ?? '',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontSize: isAndroidTv ? 12.5 : 14,
+                    fontWeight: isAndroidTv ? FontWeight.w700 : FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: isAndroidTv ? 2 : 4),
                 Row(
                   children: [
-                    const Icon(Icons.schedule, size: 12, color: Colors.white70),
+                    Icon(Icons.schedule,
+                        size: isAndroidTv ? 11 : 12, color: Colors.white70),
                     const SizedBox(width: 4),
-                    Text(
-                      item.rentlDuration ?? 'NA',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
+                    if (isAndroidTv)
+                      Flexible(
+                        child: Text(
+                          item.rentlDuration ?? 'NA',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 10.5,
+                          ),
+                        ),
+                      )
+                    else
+                      Text(
+                        item.rentlDuration ?? 'NA',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ],
@@ -515,11 +615,11 @@ class _WatchlistPageState extends State<WatchlistPage> {
               child: Container(
                 color: Colors.black.withOpacity(0.55),
                 alignment: Alignment.center,
-                child: const Text(
+                child: Text(
                   "Expired",
                   style: TextStyle(
                     color: Colors.redAccent,
-                    fontSize: 16,
+                    fontSize: isAndroidTv ? 13 : 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -591,11 +691,14 @@ class _WatchlistPageState extends State<WatchlistPage> {
                       ),
                       child: IconButton(
                         visualDensity: VisualDensity.compact,
-                        constraints:
-                            const BoxConstraints.tightFor(width: 32, height: 32),
+                        constraints: isAndroidTv
+                            ? const BoxConstraints.tightFor(
+                                width: 26, height: 26)
+                            : const BoxConstraints.tightFor(
+                                width: 32, height: 32),
                         padding: EdgeInsets.zero,
-                        icon: const Icon(Icons.delete_outline,
-                            color: Colors.white, size: 18),
+                        icon: Icon(Icons.delete_outline,
+                            color: Colors.white, size: isAndroidTv ? 15 : 18),
                         onPressed: () => _deleteDownload(item),
                       ),
                     ),
@@ -612,7 +715,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
               bottom: 0,
               child: LinearProgressIndicator(
                 value: (item.watchedPercentage! / 100).clamp(0.0, 1.0),
-                minHeight: 4,
+                minHeight: isAndroidTv ? 3 : 4,
                 backgroundColor: Colors.white24,
                 valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor),
               ),
@@ -629,7 +732,6 @@ class _WatchlistPageState extends State<WatchlistPage> {
       );
     }
 
-    final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
     final VoidCallback? onTap = content.active == true
         ? () => _playContent(item)
         // Android TV: keep expired titles focusable so the remote can still
@@ -649,8 +751,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
         onTap: onTap,
         onAction: () => _deleteDownload(item),
         actionDirection: TraversalDirection.up,
-        borderRadius: 16,
-        scale: 1.035,
+        borderRadius: radius,
+        scale: TvDesign.cardFocusScale,
         builder: (context, actionSelected) =>
             buildCard(deleteSelected: actionSelected),
       );
@@ -658,13 +760,14 @@ class _WatchlistPageState extends State<WatchlistPage> {
 
     return OttTvFocus(
       onTap: onTap,
-      borderRadius: 16,
-      scale: 1.035,
+      borderRadius: radius,
+      scale: TvDesign.cardFocusScale,
+      semanticLabel: isAndroidTv ? item.title : null,
       child: card,
     );
   }
 
-  Widget _posterBackground(Content item) {
+  Widget _posterBackground(Content item, {bool cover = false}) {
     final posterUrl =
         item.posterUrlList?.isNotEmpty == true ? item.posterUrlList!.first : '';
     if (posterUrl.isEmpty) {
@@ -673,6 +776,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
 
     return FilmytellPosterImage(
       posterUrl: posterUrl,
+      // Android TV: fill the 16:9 tile edge to edge.
+      fit: cover ? BoxFit.cover : BoxFit.contain,
       fallbackIconSize: 42,
       fallbackIcon: Icons.movie_creation_outlined,
     );
@@ -708,18 +813,20 @@ class _WatchlistPageState extends State<WatchlistPage> {
     final emptyTitle = isOffline || selectedFilter == WatchlistFilter.downloaded
         ? "No downloaded content found"
         : "No content found";
+    final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
     return Column(
       children: [
         if (showSegmentedToggle) _segmentedToggle(theme),
         const Spacer(),
         Icon(Icons.video_library_outlined,
-            size: 80, color: theme.canvasColor.withOpacity(0.6)),
+            size: isAndroidTv ? 48 : 80,
+            color: theme.canvasColor.withOpacity(0.6)),
         const SizedBox(height: 12),
         Text(
           emptyTitle,
           style: TextStyle(
             color: theme.canvasColor,
-            fontSize: 16,
+            fontSize: isAndroidTv ? 13 : 16,
           ),
         ),
         const Spacer(),

@@ -11,8 +11,11 @@ import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/filmytell_poster_image.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/data/models/content.dart';
+import 'package:ott/data/models/response/walletHistory.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 import '../../provider/themeProvider.dart';
@@ -68,6 +71,10 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
     moviePrice = double.tryParse(widget.movie.price.toString()) ?? 0.0;
     final totalCoins =
         moviePrice * (widget.giftCount == 0 ? 1 : widget.giftCount);
+
+    if (ResponsiveWidget.isAndroidTv(context)) {
+      return _buildTv(context, totalCoins);
+    }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -547,6 +554,9 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                   ),
                   actions: [
                     TextButton(
+                      // Android TV: start on Cancel so a held OK can't
+                      // confirm a purchase by accident.
+                      autofocus: ResponsiveWidget.isAndroidTv(dialogContext),
                       onPressed:
                           isBusy ? null : () => Navigator.pop(dialogContext),
                       child: const Text("Cancel"),
@@ -922,5 +932,464 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
       );
       debugPrint('Invoice generation error: $error');
     }
+  }
+
+  // ---------------- Android TV ----------------
+
+  /// Android TV checkout: the movie (16:9 art, title, rent duration, price)
+  /// on the left; order summary, wallet status, the primary action, the gift
+  /// card redeem link and wallet history on the right. [totalCoins] is the
+  /// value computed in [build]; the actions are the existing handlers
+  /// ([_showConfirmationDialog], [_showRechargeDialog], [_showGiftDialog]).
+  Widget _buildTv(BuildContext context, double totalCoins) {
+    final theme = Theme.of(context);
+    final movie = widget.movie;
+    final posterUrl = movie.posterUrlList?.isNotEmpty == true
+        ? movie.posterUrlList!.first
+        : null;
+    final rentDuration = (movie.rentlDuration ?? '').trim();
+    final typeLabel = (movie.type ?? '').trim();
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            TvDesign.pageGutter,
+            16,
+            TvDesign.pageGutter,
+            16,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Checkout', style: TvDesign.pageTitle(theme)),
+              const SizedBox(height: 2),
+              Text(
+                widget.giftCount > 0
+                    ? 'Gift ${widget.giftCount} e-ticket${widget.giftCount == 1 ? '' : 's'}'
+                    : 'Rent this $_contentLabel',
+                style: TvDesign.caption(theme),
+              ),
+              const SizedBox(height: 14),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // -------- The movie --------
+                    Expanded(
+                      flex: 4,
+                      child: SingleChildScrollView(
+                        child: _tvPanel(
+                          theme,
+                          padding: EdgeInsets.zero,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AspectRatio(
+                                aspectRatio: TvDesign.imageAspectRatio,
+                                child: FilmytellPosterImage(
+                                  posterUrl: posterUrl,
+                                  fit: BoxFit.cover,
+                                  fallbackIcon: Icons.movie_outlined,
+                                  fallbackIconSize: 36,
+                                  backgroundColor:
+                                      theme.scaffoldBackgroundColor,
+                                ),
+                              ),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      movie.title ?? "",
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TvDesign.sectionTitle(theme),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: [
+                                        if (typeLabel.isNotEmpty)
+                                          _tvTag(
+                                            theme,
+                                            typeLabel.toUpperCase(),
+                                          ),
+                                        if (rentDuration.isNotEmpty)
+                                          _tvTag(
+                                            theme,
+                                            "Rent duration: $rentDuration",
+                                            icon: Icons.schedule,
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      "Price: ₹ ${moviePrice.toStringAsFixed(0)}",
+                                      style: TextStyle(
+                                        color: theme.canvasColor,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+
+                    // -------- Order summary + pay + history --------
+                    Expanded(
+                      flex: 6,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Consumer<WalletProvider>(
+                              builder: (_, provider, __) =>
+                                  _buildTvOrderPanel(
+                                theme,
+                                provider,
+                                totalCoins,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildTvTransactionPanel(theme),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvOrderPanel(
+    ThemeData theme,
+    WalletProvider provider,
+    double totalCoins,
+  ) {
+    final hasBalance = provider.walletBalance >= totalCoins;
+    final statusColor = hasBalance ? Colors.green : theme.primaryColor;
+
+    return _tvPanel(
+      theme,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Order summary', style: TvDesign.sectionTitle(theme)),
+          const SizedBox(height: 10),
+          widget.giftCount == 0
+              ? _tvSummaryRow(
+                  theme,
+                  'Price',
+                  "₹ ${moviePrice.toStringAsFixed(0)}",
+                )
+              : _tvSummaryRow(
+                  theme,
+                  'Gifts',
+                  "₹ ${moviePrice.toStringAsFixed(0)} × ${widget.giftCount} Gifts",
+                ),
+          const SizedBox(height: 8),
+          _tvSummaryRow(
+            theme,
+            'Total',
+            "₹ ${totalCoins.toStringAsFixed(0)}",
+            emphasize: true,
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(TvDesign.cardRadius),
+              border: Border.all(color: statusColor.withValues(alpha: 0.35)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.account_balance_wallet,
+                  size: 16,
+                  color: statusColor,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "Wallet: ₹ ${provider.walletBalance.toStringAsFixed(0)}",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          // One button whose action follows the balance (as on mobile); kept
+          // as a single widget so focus survives a balance refresh.
+          SizedBox(
+            height: 36,
+            child: ElevatedButton.icon(
+              autofocus: true,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              icon: Icon(
+                hasBalance ? Icons.check : Icons.add_circle,
+                size: 16,
+                color: Colors.white,
+              ),
+              label: Text(
+                hasBalance ? "Proceed to Pay" : "Recharge Wallet",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              onPressed: hasBalance
+                  ? () => _showConfirmationDialog(
+                        provider,
+                        totalCoins,
+                        widget.movie.id!,
+                        widget.giftCount,
+                      )
+                  : () => _showRechargeDialog(context),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: TextButton(
+              onPressed: _showGiftDialog,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                minimumSize: const Size(0, 30),
+              ),
+              child: Text.rich(
+                TextSpan(
+                  style: TextStyle(color: theme.canvasColor, fontSize: 12),
+                  children: [
+                    const TextSpan(text: 'Have a '),
+                    TextSpan(
+                      text: widget.movie.title ?? "",
+                      style: TextStyle(color: theme.primaryColor),
+                    ),
+                    const TextSpan(text: ' Gift Card?'),
+                  ],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTvTransactionPanel(ThemeData theme) {
+    return Consumer<WalletProvider>(
+      builder: (context, walletProvider, _) {
+        final transactions = walletProvider.filteredTransactionHistory;
+        final muted = theme.canvasColor.withValues(alpha: 0.62);
+
+        return _tvPanel(
+          theme,
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 6),
+                child: Text(
+                  "Transaction History",
+                  style: TvDesign.sectionTitle(theme),
+                ),
+              ),
+              if (transactions.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: Text(
+                    "No transactions yet",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: muted, fontSize: 12),
+                  ),
+                )
+              else
+                for (final tx in transactions)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    // Focusable only so the remote can scroll the history.
+                    child: OttTvFocus(
+                      onTap: () {},
+                      borderRadius: 8,
+                      scale: 1.0,
+                      child: _tvTransactionRow(theme, tx),
+                    ),
+                  ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _tvTransactionRow(ThemeData theme, Transactions tx) {
+    final isCredit = tx.action?.toLowerCase() == "credit";
+    final date = DateTime.fromMillisecondsSinceEpoch(tx.date ?? 0);
+    final reason = (tx.reason ?? '').toString().trim();
+    final amountColor = isCredit ? Colors.green : Colors.red;
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 44),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  tx.status ?? "NA",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: theme.canvasColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  [
+                    if (reason.isNotEmpty) reason,
+                    DateFormat('dd MMM yyyy • hh:mm a').format(date),
+                  ].join('  ·  '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TvDesign.caption(theme),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            "₹ ${isCredit ? "+" : "-"}${tx.amount?.toStringAsFixed(0) ?? "--"}",
+            style: TextStyle(
+              color: amountColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tvPanel(
+    ThemeData theme, {
+    required Widget child,
+    EdgeInsetsGeometry padding = const EdgeInsets.all(16),
+  }) {
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(TvDesign.panelRadius),
+        border: Border.all(color: theme.canvasColor.withValues(alpha: 0.06)),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _tvTag(ThemeData theme, String text, {IconData? icon}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: theme.primaryColor),
+            const SizedBox(width: 4),
+          ],
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: theme.canvasColor.withValues(alpha: 0.85),
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tvSummaryRow(
+    ThemeData theme,
+    String label,
+    String value, {
+    bool emphasize = false,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: theme.canvasColor.withValues(alpha: 0.62),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          value,
+          style: TextStyle(
+            color: emphasize ? theme.primaryColor : theme.canvasColor,
+            fontSize: emphasize ? 18 : 12.5,
+            fontWeight: emphasize ? FontWeight.w800 : FontWeight.w600,
+          ),
+        ),
+      ],
+    );
   }
 }

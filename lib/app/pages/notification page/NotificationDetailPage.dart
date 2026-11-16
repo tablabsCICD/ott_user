@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/data/models/response/push_notification_response.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
@@ -19,6 +20,10 @@ class NotificationDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context, listen: true).getTheme;
     final hasAttachments = notification.attachments.isNotEmpty;
+
+    if (ResponsiveWidget.isAndroidTv(context)) {
+      return _buildAndroidTv(context, theme, hasAttachments);
+    }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -52,18 +57,74 @@ class NotificationDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _header(BuildContext context, ThemeData theme) {
+  /// Android TV: full-screen reading view. The text sits in a centred column
+  /// at most 640 px wide; Up/Down scroll it (OttTvKeyScroll) and then move on
+  /// to the attachments, which open with OK exactly like the other layouts.
+  Widget _buildAndroidTv(
+    BuildContext context,
+    ThemeData theme,
+    bool hasAttachments,
+  ) {
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const maxTextWidth = 640.0;
+            final side = constraints.maxWidth > maxTextWidth + 40
+                ? (constraints.maxWidth - maxTextWidth) / 2
+                : TvDesign.pageGutter;
+            return OttTvKeyScroll(
+              child: ListView(
+                primary: true,
+                padding: EdgeInsets.fromLTRB(side, 18, side, 28),
+                children: [
+                  Text(
+                    'Notification',
+                    style: TvDesign.caption(theme).copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _header(context, theme, tv: true),
+                  const SizedBox(height: 14),
+                  _messageCard(theme, tv: true),
+                  const SizedBox(height: 14),
+                  _detailsSection(theme, tv: true),
+                  if (hasAttachments) ...[
+                    const SizedBox(height: 14),
+                    _attachmentsSection(context, theme, tv: true),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  BoxDecoration _tvPanel(ThemeData theme) => BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(TvDesign.panelRadius),
+        border: Border.all(color: theme.canvasColor.withValues(alpha: 0.06)),
+      );
+
+  Widget _header(BuildContext context, ThemeData theme, {bool tv = false}) {
     final status = notification.deliveryStatus ?? 'UNKNOWN';
     final priority = notification.priority ?? 'NORMAL';
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.primaryColor.withOpacity(0.18)),
-      ),
+      padding: EdgeInsets.all(tv ? 14 : 16),
+      decoration: tv
+          ? _tvPanel(theme)
+          : BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: theme.primaryColor.withOpacity(0.18)),
+            ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -71,8 +132,8 @@ class NotificationDetailPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                height: 44,
-                width: 44,
+                height: tv ? 34 : 44,
+                width: tv ? 34 : 44,
                 decoration: BoxDecoration(
                   color: theme.primaryColor.withOpacity(0.14),
                   shape: BoxShape.circle,
@@ -80,7 +141,7 @@ class NotificationDetailPage extends StatelessWidget {
                 child: Icon(
                   _statusIcon(status),
                   color: theme.primaryColor,
-                  size: 22,
+                  size: tv ? 18 : 22,
                 ),
               ),
               const SizedBox(width: 12),
@@ -98,12 +159,12 @@ class NotificationDetailPage extends StatelessWidget {
                       ),
                     ),
                     if (_clean(notification.displayDate) != null) ...[
-                      const SizedBox(height: 8),
+                      SizedBox(height: tv ? 6 : 8),
                       Row(
                         children: [
                           Icon(
                             Icons.event_outlined,
-                            size: 15,
+                            size: tv ? 13 : 15,
                             color: theme.canvasColor.withOpacity(0.62),
                           ),
                           const SizedBox(width: 6),
@@ -114,7 +175,7 @@ class NotificationDetailPage extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: theme.canvasColor.withOpacity(0.68),
-                                fontSize: 12,
+                                fontSize: tv ? 10.5 : 12,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -132,25 +193,32 @@ class NotificationDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _messageCard(ThemeData theme) {
+  Widget _messageCard(ThemeData theme, {bool tv = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle(theme, 'Message', Icons.chat_bubble_outline_rounded),
-        const SizedBox(height: 10),
+        _sectionTitle(
+          theme,
+          'Message',
+          Icons.chat_bubble_outline_rounded,
+          tv: tv,
+        ),
+        SizedBox(height: tv ? 8 : 10),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: theme.cardColor,
-            borderRadius: BorderRadius.circular(8),
-          ),
+          decoration: tv
+              ? _tvPanel(theme)
+              : BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
           child: Text(
             notification.body,
             style: TextStyle(
               color: theme.canvasColor.withOpacity(0.86),
-              fontSize: 15,
-              height: 1.5,
+              fontSize: tv ? 13 : 15,
+              height: tv ? 1.55 : 1.5,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -159,7 +227,7 @@ class NotificationDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _detailsSection(ThemeData theme) {
+  Widget _detailsSection(ThemeData theme, {bool tv = false}) {
     final rows = <_InfoItem>[
       _InfoItem('Subject', notification.emailSubject, Icons.subject_outlined),
       _InfoItem('Sent By', notification.sentBy, Icons.person_outline),
@@ -171,19 +239,21 @@ class NotificationDetailPage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle(theme, 'Details', Icons.info_outline_rounded),
-        const SizedBox(height: 10),
+        _sectionTitle(theme, 'Details', Icons.info_outline_rounded, tv: tv),
+        SizedBox(height: tv ? 8 : 10),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: theme.cardColor,
-            borderRadius: BorderRadius.circular(8),
-          ),
+          decoration: tv
+              ? _tvPanel(theme)
+              : BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
           child: Column(
             children: [
               for (var i = 0; i < rows.length; i++) ...[
-                _infoRow(theme, rows[i]),
+                _infoRow(theme, rows[i], tv: tv),
                 if (i != rows.length - 1)
                   Divider(
                     height: 1,
@@ -197,7 +267,11 @@ class NotificationDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _attachmentsSection(BuildContext context, ThemeData theme) {
+  Widget _attachmentsSection(
+    BuildContext context,
+    ThemeData theme, {
+    bool tv = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -206,12 +280,13 @@ class NotificationDetailPage extends StatelessWidget {
           'Attachments',
           Icons.attach_file_rounded,
           count: notification.attachments.length,
+          tv: tv,
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: tv ? 8 : 10),
         ...notification.attachments.map(
           (attachment) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _attachmentTile(context, theme, attachment),
+            padding: EdgeInsets.only(bottom: tv ? 8 : 10),
+            child: _attachmentTile(context, theme, attachment, tv: tv),
           ),
         ),
       ],
@@ -223,18 +298,22 @@ class NotificationDetailPage extends StatelessWidget {
     String title,
     IconData icon, {
     int? count,
+    bool tv = false,
   }) {
+    final label = count == null ? title : '$title ($count)';
     return Row(
       children: [
-        Icon(icon, color: theme.primaryColor, size: 18),
+        Icon(icon, color: theme.primaryColor, size: tv ? 15 : 18),
         const SizedBox(width: 8),
         Text(
-          count == null ? title : '$title ($count)',
-          style: TextStyle(
-            color: theme.canvasColor,
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
-          ),
+          label,
+          style: tv
+              ? TvDesign.sectionTitle(theme)
+              : TextStyle(
+                  color: theme.canvasColor,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
         ),
       ],
     );
@@ -266,22 +345,23 @@ class NotificationDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _infoRow(ThemeData theme, _InfoItem item) {
+  Widget _infoRow(ThemeData theme, _InfoItem item, {bool tv = false}) {
     final value = item.value?.toString().trim() ?? '';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: EdgeInsets.symmetric(vertical: tv ? 8 : 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            height: 30,
-            width: 30,
+            height: tv ? 26 : 30,
+            width: tv ? 26 : 30,
             decoration: BoxDecoration(
               color: theme.primaryColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(item.icon, color: theme.primaryColor, size: 16),
+            child: Icon(item.icon,
+                color: theme.primaryColor, size: tv ? 14 : 16),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -292,7 +372,7 @@ class NotificationDetailPage extends StatelessWidget {
                   item.label,
                   style: TextStyle(
                     color: theme.canvasColor.withOpacity(0.58),
-                    fontSize: 12,
+                    fontSize: tv ? 10.5 : 12,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -301,7 +381,7 @@ class NotificationDetailPage extends StatelessWidget {
                   value,
                   style: TextStyle(
                     color: theme.canvasColor,
-                    fontSize: 14,
+                    fontSize: tv ? 12.5 : 14,
                     height: 1.25,
                     fontWeight: FontWeight.w600,
                   ),
@@ -317,30 +397,35 @@ class NotificationDetailPage extends StatelessWidget {
   Widget _attachmentTile(
     BuildContext context,
     ThemeData theme,
-    PushNotificationAttachment attachment,
-  ) {
+    PushNotificationAttachment attachment, {
+    bool tv = false,
+  }) {
     final fileName = _clean(attachment.fileName) ?? 'Attachment';
+    final double thumb = tv ? 40 : 54;
     final fileUrl = _clean(attachment.fileUrl);
     final fileType = _clean(attachment.fileType);
     final fileSize = _formatFileSize(attachment.fileSize);
     final image = _isImageAttachment(attachment) && fileUrl != null;
 
     return OttTvFocus(
-      borderRadius: 8,
+      borderRadius: tv ? TvDesign.cardRadius : 8,
+      scale: tv ? 1.02 : 1.04,
       semanticLabel: 'Open $fileName',
       onTap: () => _openAttachment(context, fileUrl),
       child: Container(
-        padding: const EdgeInsets.all(10),
+        padding: EdgeInsets.all(tv ? 8 : 10),
         decoration: BoxDecoration(
           color: theme.cardColor,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: theme.canvasColor.withOpacity(0.08)),
+          borderRadius: BorderRadius.circular(tv ? TvDesign.cardRadius : 8),
+          border: Border.all(
+            color: theme.canvasColor.withOpacity(tv ? 0.06 : 0.08),
+          ),
         ),
         child: Row(
           children: [
             Container(
-              height: 54,
-              width: 54,
+              height: thumb,
+              width: thumb,
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: theme.primaryColor.withOpacity(0.1),
@@ -369,10 +454,10 @@ class NotificationDetailPage extends StatelessWidget {
                     style: TextStyle(
                       color: theme.canvasColor,
                       fontWeight: FontWeight.w800,
-                      fontSize: 14,
+                      fontSize: tv ? 13 : 14,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  SizedBox(height: tv ? 3 : 5),
                   Text(
                     [
                       if (fileType != null) fileType,
@@ -382,19 +467,19 @@ class NotificationDetailPage extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: theme.canvasColor.withOpacity(0.58),
-                      fontSize: 12,
+                      fontSize: tv ? 10.5 : 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   if (fileUrl != null) ...[
-                    const SizedBox(height: 3),
+                    SizedBox(height: tv ? 2 : 3),
                     Text(
                       Uri.tryParse(fileUrl)?.host ?? fileUrl,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: theme.primaryColor,
-                        fontSize: 12,
+                        fontSize: tv ? 10.5 : 12,
                         fontWeight: FontWeight.w700,
                       ),
                     ),

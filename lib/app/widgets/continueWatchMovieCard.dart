@@ -26,6 +26,8 @@ import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/app/widgets/filmytell_poster_image.dart';
+import 'package:ott/app/widgets/ott_tv_app_shell.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -436,6 +438,9 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
     final posterUrl = widget.movie.posterUrlList?.isNotEmpty == true
         ? widget.movie.posterUrlList!.first
         : null;
+    if (ResponsiveWidget.isAndroidTv(context)) {
+      return _buildTvCard(theme, posterUrl);
+    }
     final showPreview = _isPreviewPlaying;
     final highlightColor = theme.brightness == Brightness.light
         ? const Color.fromARGB(255, 185, 169, 169)
@@ -551,6 +556,131 @@ class _ContinueWatchMovieCardState extends State<ContinueWatchMovieCard> {
 
     /*/// ⋮ OPTIONS BUTTON
         _optionButton(context, widget.movie),*/
+  }
+
+  /// Android TV: same horizontal card and design size (itemWidth x 220 incl.
+  /// margins), with a 16:9 image, watch progress, the shared premium focus
+  /// treatment, and OK resuming playback exactly like a tap on mobile.
+  Widget _buildTvCard(ThemeData theme, String? posterUrl) {
+    final movie = widget.movie;
+    final focused = _isFocused || _isHovered;
+    final progress = ((movie.watchedPercentage ?? 0) / 100).clamp(0.0, 1.0);
+
+    return Focus(
+      onFocusChange: (hasFocus) {
+        if (mounted && _isFocused != hasFocus) {
+          setState(() => _isFocused = hasFocus);
+        }
+        if (hasFocus) TvDesign.revealFocused(context);
+      },
+      onKeyEvent: (node, event) {
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (OttTvRemoteKey.activate.contains(event.logicalKey)) {
+          _playContent();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: GestureDetector(
+        onTap: _playContent,
+        child: Container(
+          width: ContinueWatchMovieCard.itemWidth,
+          margin: const EdgeInsets.fromLTRB(
+            ContinueWatchMovieCard.itemMargin,
+            12,
+            ContinueWatchMovieCard.itemMargin,
+            ContinueWatchMovieCard.itemMargin,
+          ),
+          child: TvFocusFrame(
+            focused: focused,
+            color: theme.cardColor,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AspectRatio(
+                  aspectRatio: TvDesign.imageAspectRatio,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      FilmytellPosterImage(
+                        posterUrl: posterUrl,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.topCenter,
+                        fallbackIconSize: 40,
+                      ),
+                      Center(
+                        child: AnimatedOpacity(
+                          opacity: focused ? 1 : 0.75,
+                          duration: TvDesign.focusDuration,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.55),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white70,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.play_arrow_rounded,
+                              color: Colors.white,
+                              size: 30,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 4,
+                          backgroundColor: Colors.white24,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            theme.primaryColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            movie.title ?? 'No Title',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: theme.canvasColor,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '${(progress * 100).round()}%',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: theme.canvasColor.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildMediaPreview(

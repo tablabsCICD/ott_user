@@ -37,6 +37,9 @@ import 'package:ott/app/pages/notification%20page/NotificationPage.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/movieCard.dart';
 import 'package:ott/app/widgets/tv_card_scale.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
+import 'package:ott/app/widgets/ott_tv_app_shell.dart';
+import 'package:ott/app/widgets/filmytell_poster_image.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -585,7 +588,7 @@ class _HomePageState extends State<HomePage>
                                   context, dashboardProvider),
                             ),
                           SizedBox(
-                            height: 20,
+                            height: tvScale != null ? 6 : 20,
                           ),
                           showContentLoader
                               ? _buildDashboardSectionLoader(
@@ -686,7 +689,13 @@ class _HomePageState extends State<HomePage>
                                                                     .movies!
                                                                     .isEmpty)
                                                             ? SizedBox.shrink()
-                                                            : OttTvFocus(
+                                                            : tvScale != null
+                                                                // TV: plain title; "see all" is the
+                                                                // last tile of the row instead.
+                                                                ? TvSectionHeader(
+                                                                    "${dashboardData.language} - ${dashboardData.category}",
+                                                                  )
+                                                                : OttTvFocus(
                                                                 onTap: () {
                                                                   Navigator
                                                                       .push(
@@ -798,10 +807,24 @@ class _HomePageState extends State<HomePage>
                                                                       (dashboardData
                                                                               .isRowLoading
                                                                           ? 1
-                                                                          : 0),
+                                                                          : 0) +
+                                                                      (tvScale != null ? 1 : 0),
                                                                   itemBuilder:
                                                                       (context,
                                                                           i) {
+                                                                    // TV: trailing "View all" tile.
+                                                                    if (tvScale != null &&
+                                                                        i ==
+                                                                            dashboardData.movies!.length +
+                                                                                (dashboardData.isRowLoading ? 1 : 0)) {
+                                                                      return tvScale.wrap(
+                                                                        baseWidth: MovieCard.itemExtent,
+                                                                        baseHeight: 270,
+                                                                        child: _TvViewAllTile(
+                                                                          onTap: () => _openCategory(dashboardData),
+                                                                        ),
+                                                                      );
+                                                                    }
                                                                     if (i <
                                                                         dashboardData
                                                                             .movies!
@@ -893,6 +916,7 @@ class _HomePageState extends State<HomePage>
     if (heroItems.isEmpty) return const SizedBox.shrink();
 
     final isTv = ResponsiveWidget.isAndroidTv(context);
+    if (isTv) return _buildTvTrendingBanner(context, theme, heroItems);
     // On TV keep the hero to about half the screen so the poster rows start
     // above the fold.
     final height = isTv
@@ -1073,6 +1097,277 @@ class _HomePageState extends State<HomePage>
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _openCategory(DashboardData dashboardData) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CategoryContentPage(
+          categoryTitle:
+              "${dashboardData.language} - ${dashboardData.category}",
+          contents: dashboardData.movies ?? [],
+        ),
+      ),
+    );
+  }
+
+  /// Android TV "Trending" banner: compact horizontal layout — 16:9 image on
+  /// the left, details on the right. One focus stop: Left/Right browse
+  /// titles (Left on the first title moves to the sidebar), OK opens the
+  /// title exactly like the hero's buttons. Same data as the hero.
+  Widget _buildTvTrendingBanner(
+    BuildContext context,
+    ThemeData theme,
+    List<Content> heroItems,
+  ) {
+    const bannerHeight = 196.0;
+    final count = heroItems.length;
+    final current = _currentPage % count;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 0, 6, 10),
+      child: OttTvFocus(
+        autofocus: true,
+        scale: 1,
+        borderRadius: TvDesign.panelRadius,
+        semanticLabel: 'Open ${heroItems[current].title}',
+        onTap: () => _openContentDetails(heroItems[current]),
+        onKeyEvent: (node, event) {
+          if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+            return KeyEventResult.ignored;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+            _moveHeroSlider(count, 1);
+            return KeyEventResult.handled;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+            if (_currentPage % count > 0) {
+              _moveHeroSlider(count, -1);
+              return KeyEventResult.handled;
+            }
+            if (event is KeyRepeatEvent) return KeyEventResult.handled;
+            final moved = node.focusInDirection(TraversalDirection.left);
+            return moved ? KeyEventResult.handled : KeyEventResult.ignored;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(TvDesign.panelRadius),
+          child: SizedBox(
+            height: bannerHeight,
+            width: double.infinity,
+            child: Stack(
+              children: [
+                PageView.builder(
+                  controller: _pageController,
+                  itemCount: count,
+                  physics: const NeverScrollableScrollPhysics(),
+                  onPageChanged: (index) {
+                    setState(() => _currentPage = index);
+                  },
+                  itemBuilder: (context, index) =>
+                      _buildTvTrendingPage(theme, heroItems[index], index),
+                ),
+                Positioned(
+                  right: 14,
+                  bottom: 12,
+                  child: Row(
+                    children: [
+                      Text(
+                        '${current + 1} / $count',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      ...List.generate(math.min(count, 8), (index) {
+                        final active = index == current % 8;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 220),
+                          margin: const EdgeInsets.only(left: 4),
+                          width: active ? 16 : 5,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: active
+                                ? Colors.white
+                                : Colors.white.withValues(alpha: 0.35),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvTrendingPage(ThemeData theme, Content item, int index) {
+    final imageUrl = item.posterUrlList?.first ?? '';
+    final genres =
+        item.genreList?.where((e) => e.trim().isNotEmpty).take(3).join(' • ');
+    final meta = [
+      if (formatReleaseDate(item.releaseDate).isNotEmpty)
+        formatReleaseDate(item.releaseDate),
+      if (genres != null && genres.isNotEmpty) genres,
+      if (item.ratings != null) '★ ${item.ratings!.toStringAsFixed(1)}',
+    ].join('   ');
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Ambient backdrop from the image's own colours.
+        Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.low,
+          errorBuilder: (_, __, ___) => ColoredBox(color: theme.cardColor),
+        ),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xF2000000), Color(0xE6000000), Color(0x99000000)],
+              stops: [0, 0.6, 1],
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 16:9 image.
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: TvDesign.focusShadowFor(theme),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: AspectRatio(
+                    aspectRatio: TvDesign.imageAspectRatio,
+                    child: FilmytellPosterImage(
+                      posterUrl: imageUrl,
+                      fit: BoxFit.cover,
+                      alignment: Alignment.topCenter,
+                      fallbackIconSize: 36,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '#${index + 1} TRENDING',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 9,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      item.title ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        height: 1.1,
+                      ),
+                    ),
+                    if (meta.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        meta,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 10.5,
+                        ),
+                      ),
+                    ],
+                    if ((item.description ?? '').trim().isNotEmpty) ...[
+                      const SizedBox(height: 7),
+                      Text(
+                        item.description!.trim(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _tvBannerPill(Icons.play_arrow_rounded, 'Watch Now',
+                            filled: true),
+                        _tvBannerPill(Icons.movie_filter_rounded, 'Trailer',
+                            filled: false),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _tvBannerPill(IconData icon, String label, {required bool filled}) {
+    return Container(
+      height: 26,
+      padding: const EdgeInsets.symmetric(horizontal: 11),
+      decoration: BoxDecoration(
+        color: filled ? Colors.white : Colors.white.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: filled ? Colors.black : Colors.white),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: filled ? Colors.black : Colors.white,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1285,6 +1580,9 @@ class _HomePageState extends State<HomePage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Label
+          if (tvScale != null)
+            const TvSectionHeader("Continue Watching")
+          else
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
             child: Text(
@@ -1447,17 +1745,38 @@ class _HomePageState extends State<HomePage>
   //   return width / posterRatio;
   // }
 
+  ButtonStyle _appBarIconStyle(bool useTransparentAppBar) {
+    final background = useTransparentAppBar
+        ? Colors.white.withOpacity(0.3)
+        : Colors.black.withOpacity(0.2);
+    if (!ResponsiveWidget.isAndroidTv(context)) {
+      return IconButton.styleFrom(backgroundColor: background);
+    }
+    // Android TV: compact, subtle utility buttons.
+    return IconButton.styleFrom(
+      backgroundColor: Colors.white.withValues(alpha: 0.10),
+      fixedSize: const Size(30, 30),
+      minimumSize: const Size(30, 30),
+      padding: EdgeInsets.zero,
+      iconSize: 16,
+    );
+  }
+
   SliverAppBar _buildSliverAppBar(
       BuildContext context, ThemeData selectedThemeData) {
     final lang = AppLocalizations.of(context)!;
     final useTransparentAppBar = !ResponsiveWidget.isMobile(context);
+    final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
 
     return SliverAppBar(
       automaticallyImplyLeading: false,
       forceMaterialTransparency: useTransparentAppBar,
       // expandedHeight: bannerHeight(context),
       floating: false,
-      pinned: true,
+      // Android TV: a slim utility bar that scrolls away with the page so
+      // the content rows get the full screen height.
+      pinned: !isAndroidTv,
+      toolbarHeight: isAndroidTv ? 42 : kToolbarHeight,
       stretch: true,
       surfaceTintColor: Colors.transparent,
       backgroundColor: useTransparentAppBar
@@ -1517,10 +1836,7 @@ class _HomePageState extends State<HomePage>
                     ? selectedThemeData.canvasColor
                     : Colors.white),
             tooltip: lang.search,
-            style: IconButton.styleFrom(
-                backgroundColor: useTransparentAppBar
-                    ? Colors.white.withOpacity(0.3)
-                    : Colors.black.withOpacity(0.2)),
+            style: _appBarIconStyle(useTransparentAppBar),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => SearchPage()),
@@ -1538,10 +1854,7 @@ class _HomePageState extends State<HomePage>
                     ? selectedThemeData.canvasColor
                     : Colors.white),
             tooltip: lang.notification,
-            style: IconButton.styleFrom(
-                backgroundColor: useTransparentAppBar
-                    ? Colors.white.withOpacity(0.3)
-                    : Colors.black.withOpacity(0.2)),
+            style: _appBarIconStyle(useTransparentAppBar),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => NotificationPage()),
@@ -1555,11 +1868,7 @@ class _HomePageState extends State<HomePage>
           id: FeatureTourStepId.language,
           child: IconButton(
             tooltip: lang.selectPreferredLanguage,
-            style: IconButton.styleFrom(
-              backgroundColor: useTransparentAppBar
-                  ? Colors.white.withOpacity(0.3)
-                  : Colors.black.withOpacity(0.2),
-            ),
+            style: _appBarIconStyle(useTransparentAppBar),
             icon: Icon(Icons.language_sharp,
                 color: useTransparentAppBar
                     ? selectedThemeData.canvasColor
@@ -1591,10 +1900,7 @@ class _HomePageState extends State<HomePage>
                           ? selectedThemeData.canvasColor
                           : Colors.white),
                   tooltip: "₹ ${walletProvider.walletBalance.toStringAsFixed(2)}",
-                  style: IconButton.styleFrom(
-                      backgroundColor: useTransparentAppBar
-                          ? Colors.white.withOpacity(0.3)
-                          : Colors.black.withOpacity(0.2)),
+                  style: _appBarIconStyle(useTransparentAppBar),
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => WalletPage()),
@@ -1631,7 +1937,8 @@ class _HomePageState extends State<HomePage>
                           ),
                         ),
                         child: CircleAvatar(
-                          radius: 18,
+                          radius:
+                              ResponsiveWidget.isAndroidTv(context) ? 14 : 18,
                           backgroundColor: selectedThemeData.canvasColor,
                           child: ClipOval(
                             child: Builder(
@@ -1964,6 +2271,46 @@ class _HomePageState extends State<HomePage>
             await getMovieList(
                 dashboardProvider, selectedType, selectedLanguages);
           }
+        }
+
+        if (ResponsiveWidget.isAndroidTv(context)) {
+          // Android TV: compact pill tabs.
+          final isSelected = selectedType == type;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: OttTvFocus(
+              onTap: onSelectType,
+              borderRadius: 999,
+              scale: 1.06,
+              semanticLabel: 'Filter by $type',
+              child: AnimatedContainer(
+                duration: TvDesign.focusDuration,
+                padding:
+                    const EdgeInsets.symmetric(vertical: 5, horizontal: 14),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? selectedThemeData.primaryColor
+                      : Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  type == ContentType.movie
+                      ? lang.movie
+                      : type == ContentType.series
+                          ? lang.series
+                          : ContentType.displayLabel(type),
+                  style: TextStyle(
+                    color: isSelected
+                        ? Colors.white
+                        : selectedThemeData.canvasColor
+                            .withValues(alpha: 0.78),
+                    fontSize: 11.5,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          );
         }
 
         final chip = Container(
@@ -3377,5 +3724,82 @@ class _HomePageState extends State<HomePage>
       },
     );
     StagedRegistrationService.instance.setDialogActive(false);
+  }
+}
+
+
+/// Android TV: "View all" tile at the end of a row, built at the movie
+/// card's design size (scaled with the row like the cards).
+class _TvViewAllTile extends StatefulWidget {
+  const _TvViewAllTile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  State<_TvViewAllTile> createState() => _TvViewAllTileState();
+}
+
+class _TvViewAllTileState extends State<_TvViewAllTile> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Focus(
+      onFocusChange: (focused) {
+        setState(() => _focused = focused);
+        if (focused) TvDesign.revealFocused(context);
+      },
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            OttTvRemoteKey.activate.contains(event.logicalKey)) {
+          widget.onTap();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(
+            MovieCard.itemMargin,
+            12,
+            MovieCard.itemMargin,
+            MovieCard.itemMargin,
+          ),
+          child: TvFocusFrame(
+            focused: _focused,
+            // Subtle lift that works on both themes.
+            color: _focused
+                ? Color.alphaBlend(
+                    theme.canvasColor.withValues(alpha: 0.08),
+                    theme.cardColor,
+                  )
+                : theme.cardColor,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.grid_view_rounded,
+                    size: 40,
+                    color: _focused ? theme.canvasColor : theme.primaryColor,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'View all',
+                    style: TextStyle(
+                      color: theme.canvasColor,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
