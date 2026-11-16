@@ -37,11 +37,6 @@ class DashboardProvider extends BaseProvider {
   int _activeContinueWatchRequestId = 0;
   String? _activeContinueWatchType;
 
-  int _activeDashboardRequestId = 0;
-  String? _activeDashboardType;
-  int _activeContinueWatchRequestId = 0;
-  String? _activeContinueWatchType;
-
   // ==================== DASHBOARD LOAD ====================
 
   Future<void> getDashboardData(
@@ -51,14 +46,9 @@ class DashboardProvider extends BaseProvider {
   ) async {
     final requestId = ++_activeDashboardRequestId;
     _activeDashboardType = type;
-    final requestId = ++_activeDashboardRequestId;
-    _activeDashboardType = type;
 
-    _dashboardData = [];
     _dashboardData = [];
     _isLoadingDashboard = true;
-    notifyListeners();
-
     notifyListeners();
 
     List<DashboardData> finalDashboardData = [];
@@ -104,20 +94,6 @@ class DashboardProvider extends BaseProvider {
         }).toList();
       }
     }
-    notifyListeners();
-  }
-
-  /// Ensure all items in rows strictly match the requested content type
-  void _filterContentByType(List<DashboardData> rows, String expectedType) {
-    final normalizedExpected = expectedType.trim().toUpperCase();
-    for (final row in rows) {
-      if (row.movies != null) {
-        row.movies = row.movies!.where((item) {
-          final itemType = item.type?.trim().toUpperCase();
-          return itemType == normalizedExpected;
-        }).toList();
-      }
-    }
   }
 
   /// Only reset UI loading state — pagination comes from backend
@@ -135,11 +111,6 @@ class DashboardProvider extends BaseProvider {
     int userId,
   ) async {
     if (row.isRowLoading || !row.hasMore) return;
-    if (_activeDashboardType != null &&
-        _activeDashboardType!.trim().toUpperCase() !=
-            type.trim().toUpperCase()) {
-      return;
-    }
     if (_activeDashboardType != null &&
         _activeDashboardType!.trim().toUpperCase() !=
             type.trim().toUpperCase()) {
@@ -166,14 +137,6 @@ class DashboardProvider extends BaseProvider {
         newData = await getDashboardUpcomingPaged(
             type, [row.language!], userId, nextPage);
       }
-
-      if (_activeDashboardType != null &&
-          _activeDashboardType!.trim().toUpperCase() !=
-              type.trim().toUpperCase()) {
-        return;
-      }
-
-      _filterContentByType(newData, type);
 
       if (_activeDashboardType != null &&
           _activeDashboardType!.trim().toUpperCase() !=
@@ -323,19 +286,9 @@ class DashboardProvider extends BaseProvider {
     _continueWatchedMovies.clear();
     notifyListeners();
 
-    final cwRequestId = ++_activeContinueWatchRequestId;
-    _activeContinueWatchType = type;
-
-    _continueWatchedMovies.clear();
-    notifyListeners();
-
     final localSharePreferences = LocalSharePreferences();
     final user = await localSharePreferences.getUser();
     if (user?.id == null) {
-      if (cwRequestId == _activeContinueWatchRequestId) {
-        _continueWatchedMovies.clear();
-        notifyListeners();
-      }
       if (cwRequestId == _activeContinueWatchRequestId) {
         _continueWatchedMovies.clear();
         notifyListeners();
@@ -347,12 +300,6 @@ class DashboardProvider extends BaseProvider {
 
     try {
       var response = await apiHelper.getApi1(apiUrl);
-
-      if (cwRequestId != _activeContinueWatchRequestId ||
-          type.trim().toUpperCase() !=
-              (_activeContinueWatchType ?? '').trim().toUpperCase()) {
-        return;
-      }
 
       if (cwRequestId != _activeContinueWatchRequestId ||
           type.trim().toUpperCase() !=
@@ -373,11 +320,6 @@ class DashboardProvider extends BaseProvider {
             final itemType = item.type?.trim().toUpperCase();
             return itemType == normalizedType;
           }).toList();
-          final normalizedType = type.trim().toUpperCase();
-          _continueWatchedMovies = continueWatchedResponse.data!.where((item) {
-            final itemType = item.type?.trim().toUpperCase();
-            return itemType == normalizedType;
-          }).toList();
         } else {
           _continueWatchedMovies.clear();
         }
@@ -388,13 +330,7 @@ class DashboardProvider extends BaseProvider {
       if (cwRequestId == _activeContinueWatchRequestId) {
         _continueWatchedMovies.clear();
       }
-      if (cwRequestId == _activeContinueWatchRequestId) {
-        _continueWatchedMovies.clear();
-      }
     } finally {
-      if (cwRequestId == _activeContinueWatchRequestId) {
-        notifyListeners();
-      }
       if (cwRequestId == _activeContinueWatchRequestId) {
         notifyListeners();
       }
@@ -402,11 +338,6 @@ class DashboardProvider extends BaseProvider {
   }
 
   void clear() {
-    _activeDashboardRequestId++;
-    _activeContinueWatchRequestId++;
-    _activeDashboardType = null;
-    _activeContinueWatchType = null;
-    _isLoadingDashboard = false;
     _activeDashboardRequestId++;
     _activeContinueWatchRequestId++;
     _activeDashboardType = null;

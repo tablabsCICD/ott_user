@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/widgets/movieCard.dart';
@@ -275,24 +274,21 @@ class _CategoryContentPageState extends State<CategoryContentPage>
              */
 
                   // Standardized card dimensions per platform & responsive breakpoint
-                  final double cardWidth;
-                  const double cardHeight = MovieCard.standardHeight; // 235.0
-                  const double gap = 16.0;
-
+                  final double standardCardWidth;
                   if (availableWidth >= 1800) {
-                    cardWidth = MovieCard.desktopCardWidth; // 300.0
+                    standardCardWidth = MovieCard.desktopCardWidth;
                   } else if (availableWidth >= 1024) {
-                    cardWidth = MovieCard.laptopCardWidth; // 300.0
+                    standardCardWidth = MovieCard.laptopCardWidth;
                   } else if (availableWidth >= 600) {
-                    cardWidth = MovieCard.tabletCardWidth; // 300.0
+                    standardCardWidth = MovieCard.tabletCardWidth;
                   } else {
-                    cardWidth = MovieCard.mobileCardWidth; // 300.0
+                    standardCardWidth = MovieCard.mobileCardWidth;
                   }
 
                   final isTv = ResponsiveWidget.isAndroidTv(context);
-                  final targetCardWidth = isDesktop ? 312.0 : 296.0;
                   int crossAxisCount =
-                      ((availableWidth + gap) / (cardWidth + gap)).floor();
+                      ((availableWidth + _gap) / (standardCardWidth + _gap))
+                          .floor();
                   if (crossAxisCount < 1) crossAxisCount = 1;
                   if (isTablet && crossAxisCount > 3) crossAxisCount = 3;
                   if (isDesktop && crossAxisCount > 4) crossAxisCount = 4;
@@ -316,9 +312,9 @@ class _CategoryContentPageState extends State<CategoryContentPage>
                     slivers: [
                       SliverPadding(
                         padding: EdgeInsets.fromLTRB(
-                          effectiveHorizontalPadding,
+                          horizontalPadding,
                           12,
-                          effectiveHorizontalPadding,
+                          horizontalPadding,
                           24,
                         ),
                         sliver: SliverGrid(

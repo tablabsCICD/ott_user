@@ -22,6 +22,7 @@ import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
+import 'package:ott/app/widgets/continueWatchMovieCard.dart';
 import 'package:ott/app/widgets/continue_watching_banner.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/feature_tour.dart';
@@ -43,7 +44,6 @@ import 'package:ott/app/widgets/filmytell_poster_image.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:geolocator/geolocator.dart';
 import '../../core/services/referral_service.dart';
 import '../../core/services/staged_registration_service.dart';
 import '../../widgets/month_year_picker_dialog.dart';
@@ -89,6 +89,7 @@ class _HomePageState extends State<HomePage>
   final Map<int, GlobalKey> _rowKeys = {};
   final ScrollController _verticalController = ScrollController();
   final GlobalKey _continueWatchKey = GlobalKey();
+  final ScrollController _continueWatchController = ScrollController();
   bool _visibleUpdateScheduled = false;
   bool _isOffline = false;
   bool _continueWatchRefreshInFlight = false;
@@ -201,6 +202,7 @@ class _HomePageState extends State<HomePage>
     _rowKeys.clear();
 
     _verticalController.dispose();
+    _continueWatchController.dispose();
     _pageController.dispose();
     _connectivitySubscription?.cancel();
     super.dispose();
@@ -594,6 +596,15 @@ class _HomePageState extends State<HomePage>
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          const SizedBox(height: 5),
+                          if (ResponsiveWidget.isTabletOrTv(context) &&
+                              selectedType != 'MINI SERIES' &&
+                              selectedType != 'MADIOO')
+                            _buildTvHeroSlider(
+                              context,
+                              selectedThemeData,
+                              dashboardProvider,
+                            ),
                           if (!widget.lockContentType)
                             Container(
                               color: Colors.black,
@@ -671,7 +682,6 @@ class _HomePageState extends State<HomePage>
                                                       _rowActiveIndexes[index]!;
                                                   final rowKey =
                                                       _rowKeys[index]!;
-                                                  final rowIndex = index;
 
                                                   // Attach listener only once.
                                                   if (!controller
@@ -686,71 +696,12 @@ class _HomePageState extends State<HomePage>
                                                               200) {
                                                         if (_userId != null) {
                                                           dashboardProvider
-                                                              .dashboardData
-                                                              .length,
-                                                      itemBuilder:
-                                                          (context, index) {
-                                                        DashboardData
-                                                            dashboardData =
-                                                            dashboardProvider
-                                                                    .dashboardData[
-                                                                index];
-
-                                                        _rowControllers.putIfAbsent(
-                                                            index,
-                                                            () =>
-                                                                ScrollController());
-                                                        _rowActiveIndexes
-                                                            .putIfAbsent(
-                                                                index,
-                                                                () => ValueNotifier<
-                                                                        int?>(
-                                                                    null));
-                                                        _rowItemCounts[index] =
-                                                            dashboardData.movies
-                                                                    ?.length ??
-                                                                0;
-                                                        _rowItems[index] =
-                                                            dashboardData
-                                                                    .movies ??
-                                                                const <Content>[];
-                                                        _scheduleVisibleUpdate();
-                                                        _rowKeys.putIfAbsent(
-                                                            index,
-                                                            () => GlobalKey());
-
-                                                        final controller =
-                                                            _rowControllers[
-                                                                index]!;
-                                                        final activeIndex =
-                                                            _rowActiveIndexes[
-                                                                index]!;
-                                                        final rowKey =
-                                                            _rowKeys[index]!;
-
-                                                        // Attach listener only once.
-                                                        if (!controller
-                                                            .hasListeners) {
-                                                          controller
-                                                              .addListener(() {
-                                                            _scheduleVisibleUpdate();
-
-                                                            if (controller
-                                                                    .position
-                                                                    .pixels >=
-                                                                controller
-                                                                        .position
-                                                                        .maxScrollExtent -
-                                                                    200) {
-                                                              if (_userId !=
-                                                                  null) {
-                                                                dashboardProvider
-                                                                    .loadMoreRowData(
-                                                                        dashboardData,
-                                                                        selectedType,
-                                                                        _userId!)
-                                                                    .whenComplete(
-                                                                        _scheduleVisibleUpdate);
+                                                              .loadMoreRowData(
+                                                                  dashboardData,
+                                                                  selectedType,
+                                                                  _userId!)
+                                                              .whenComplete(
+                                                                  _scheduleVisibleUpdate);
                                                               }
                                                             }
                                                           });
@@ -818,50 +769,47 @@ class _HomePageState extends State<HomePage>
                                                                     );
                                                                   },
                                                                   child:
-                                                                      Padding(
-                                                                    padding:
-                                                                        const EdgeInsets
-                                                                            .symmetric(
-                                                                      horizontal:
-                                                                          4,
-                                                                      vertical:
-                                                                          4,
-                                                                    ),
-                                                                    child: Row(
-                                                                      children: [
-                                                                        Expanded(
+                                                                            Padding(
+                                                                          padding: const EdgeInsets
+                                                                              .symmetric(
+                                                                              horizontal: 4.0,
+                                                                              vertical: 8.0),
                                                                           child:
-                                                                              Text(
-                                                                            "${dashboardData.language} - ${dashboardData.category}",
-                                                                            overflow:
-                                                                                TextOverflow.ellipsis,
-                                                                            style:
-                                                                                GoogleFonts.inter(
-                                                                              fontSize: ResponsiveWidget.isMobile(context)
-                                                                                  ? 18
-                                                                                  : ResponsiveWidget.isAndroidTv(context)
-                                                                                      ? 16
-                                                                                      : 20,
-                                                                              fontWeight: FontWeight.bold,
-                                                                              color: selectedThemeData.canvasColor,
-                                                                            ),
+                                                                              Row(
+                                                                            children: [
+                                                                              Expanded(
+                                                                                child: Text(
+                                                                                  "${dashboardData.language} - ${dashboardData.category}",
+                                                                                  overflow: TextOverflow.ellipsis,
+                                                                                  style: GoogleFonts.inter(
+                                                                                    fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
+                                                                                    fontWeight: FontWeight.bold,
+                                                                                    color: Colors.white,
+                                                                                  ),
+                                                                                ),
+                                                                              ),
+                                                                              Row(
+                                                                                mainAxisSize: MainAxisSize.min,
+                                                                                children: [
+                                                                                  Text(
+                                                                                    "See All",
+                                                                                    style: GoogleFonts.inter(
+                                                                                      fontSize: 14,
+                                                                                      fontWeight: FontWeight.bold,
+                                                                                      color: const Color(0xFFE50914),
+                                                                                    ),
+                                                                                  ),
+                                                                                  const SizedBox(width: 4),
+                                                                                  const Icon(
+                                                                                    Icons.arrow_forward_ios_rounded,
+                                                                                    size: 12,
+                                                                                    color: Color(0xFFE50914),
+                                                                                  ),
+                                                                                ],
+                                                                              ),
+                                                                            ],
                                                                           ),
                                                                         ),
-                                                                        Icon(
-                                                                          Icons
-                                                                              .arrow_forward_ios,
-                                                                          size:
-                                                                              18,
-                                                                          color:
-                                                                              selectedThemeData.primaryColor,
-                                                                        ),
-                                                                        SizedBox(
-                                                                          width:
-                                                                              3,
-                                                                        )
-                                                                      ],
-                                                                    ),
-                                                                  ),
                                                                 ),
                                                               ),
                                                         (dashboardData.movies ==
@@ -935,47 +883,13 @@ class _HomePageState extends State<HomePage>
                                                                             .all(
                                                                             12),
                                                                         child:
-                                                                            Padding(
-                                                                          padding: const EdgeInsets
-                                                                              .symmetric(
-                                                                              horizontal: 4.0,
-                                                                              vertical: 8.0),
-                                                                          child:
-                                                                              Row(
-                                                                            children: [
-                                                                              Expanded(
-                                                                                child: Text(
-                                                                                  "${dashboardData.language} - ${dashboardData.category}",
-                                                                                  overflow: TextOverflow.ellipsis,
-                                                                                  style: GoogleFonts.inter(
-                                                                                    fontSize: ResponsiveWidget.isMobile(context) ? 18 : 20,
-                                                                                    fontWeight: FontWeight.bold,
-                                                                                    color: Colors.white,
-                                                                                  ),
-                                                                                ),
+                                                                            SizedBox(
+                                                                              width: 40,
+                                                                              height: 40,
+                                                                              child: Center(
+                                                                                child: CircularProgressIndicator(strokeWidth: 2),
                                                                               ),
-                                                                              Row(
-                                                                                mainAxisSize: MainAxisSize.min,
-                                                                                children: [
-                                                                                  Text(
-                                                                                    "See All",
-                                                                                    style: GoogleFonts.inter(
-                                                                                      fontSize: 14,
-                                                                                      fontWeight: FontWeight.bold,
-                                                                                      color: const Color(0xFFE50914),
-                                                                                    ),
-                                                                                  ),
-                                                                                  const SizedBox(width: 4),
-                                                                                  const Icon(
-                                                                                    Icons.arrow_forward_ios_rounded,
-                                                                                    size: 12,
-                                                                                    color: Color(0xFFE50914),
-                                                                                  ),
-                                                                                ],
-                                                                              ),
-                                                                            ],
-                                                                          ),
-                                                                        ),
+                                                                            ),
                                                                       );
                                                                     } else {
                                                                       return const SizedBox
@@ -997,11 +911,11 @@ class _HomePageState extends State<HomePage>
                                                                     : 20),
                                                       ],
                                                     ),
-                                        ],
-                                      ),
-                              ],
-                            ),
-                          ),
+                                                  );
+                                                },
+                                              ),
+                                  ],
+                                ),
                         ],
                       );
                     }),
@@ -1681,34 +1595,37 @@ class _HomePageState extends State<HomePage>
       return const SizedBox.shrink();
     }
 
+    // Mobile / tablet / web: full-width continue-watching banner.
+    if (tvScale == null) {
+      return KeyedSubtree(
+        key: _continueWatchKey,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 20.0),
+          child: ContinueWatchingBanner(
+            items: items,
+            selectedType: selectedType,
+            onPlaybackFinished: () {
+              if (mounted) {
+                setState(() {});
+              }
+            },
+          ),
+        ),
+      );
+    }
+
+    // Android TV: horizontal rail of scaled continue-watching cards.
     return KeyedSubtree(
       key: _continueWatchKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Label
-          if (tvScale != null)
-            const TvSectionHeader("Continue Watching")
-          else
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
-            child: Text(
-              "Continue Watching",
-              style: GoogleFonts.inter(
-                fontSize: ResponsiveWidget.isMobile(context)
-                                                                                  ? 18
-                                                                                  : ResponsiveWidget.isAndroidTv(context)
-                                                                                      ? 16
-                                                                                      : 20,
-                fontWeight: FontWeight.bold,
-                color: theme.canvasColor,
-              ),
-            ),
-          ),
+          const TvSectionHeader("Continue Watching"),
 
           // Horizontal list
           SizedBox(
-            height: tvScale?.size(220) ?? 220, //270,
+            height: tvScale.size(220),
             child: ListView.builder(
               controller: _continueWatchController,
               scrollDirection: Axis.horizontal,
@@ -1733,21 +1650,15 @@ class _HomePageState extends State<HomePage>
                   enableTrailerPreview: false,
                 );
                 // On TV the same card is scaled down uniformly.
-                if (tvScale != null) {
-                  return tvScale.wrap(
-                    baseWidth: ContinueWatchMovieCard.itemExtent,
-                    baseHeight: 220,
-                    child: card,
-                  );
-                }
-                return SizedBox(
-                  width: ContinueWatchMovieCard.itemExtent,
+                return tvScale.wrap(
+                  baseWidth: ContinueWatchMovieCard.itemExtent,
+                  baseHeight: 220,
                   child: card,
                 );
               },
             ),
           ),
-          SizedBox(height: tvScale != null ? 8 : 20),
+          const SizedBox(height: 8),
         ],
       ),
     );
@@ -1789,6 +1700,9 @@ class _HomePageState extends State<HomePage>
     final lang = AppLocalizations.of(context)!;
     final useTransparentAppBar = !ResponsiveWidget.isMobile(context);
     final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
+    final hideAppBarLogo = ResponsiveWidget.isTabletOrTv(context) ||
+        FlavorConfig.current.isTv ||
+        FlavorConfig.current.isJio;
 
     return SliverAppBar(
       automaticallyImplyLeading: false,
@@ -2028,11 +1942,10 @@ class _HomePageState extends State<HomePage>
 
         if (ResponsiveWidget.isAndroidTv(context)) {
           // Android TV: compact pill tabs.
-          final isSelected = selectedType == type;
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4.0),
             child: OttTvFocus(
-              onTap: onSelectType,
+              onTap: onSelect,
               borderRadius: 999,
               scale: 1.06,
               semanticLabel: 'Filter by $type',

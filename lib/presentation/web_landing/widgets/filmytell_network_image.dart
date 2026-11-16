@@ -23,7 +23,6 @@ class FilmytellNetworkImage extends StatefulWidget {
   final double? height;
   final BoxFit fit;
   final Alignment alignment;
-  final Alignment alignment;
   final BorderRadius borderRadius;
   final IconData fallbackIcon;
   final bool showShimmer;
@@ -155,9 +154,8 @@ class _FilmytellNetworkImageState extends State<FilmytellNetworkImage> {
           return _buildFallback();
         },
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildShimmer() {
     return _ShimmerBox(

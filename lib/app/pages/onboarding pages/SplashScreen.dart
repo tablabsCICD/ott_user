@@ -68,6 +68,32 @@ class _SplashScreenState extends State<SplashScreen> {
             onTimeout: () => false,
           );
       if (!_isActiveFlow(flowVersion)) return;
+
+      final token = await SessionManager.instance.token.timeout(
+        const Duration(milliseconds: 1000),
+        onTimeout: () => null,
+      );
+      if (!_isActiveFlow(flowVersion)) return;
+
+      final hasToken = token != null && token.trim().isNotEmpty;
+      _isLoggedIn = loggedIn && hasToken;
+      _logWebAuth(
+        'Splash auth check requestedPath=$requestedPath loggedInFlag=$loggedIn hasToken=$hasToken authenticated=$_isLoggedIn',
+      );
+
+      if (widget.initialNavigationRoute == null) {
+        // Minimum splash display duration for branding
+        await Future.delayed(const Duration(seconds: 2));
+        if (!_isActiveFlow(flowVersion)) return;
+      }
+    } catch (e, stack) {
+      if (kDebugMode) {
+        developer.log('Splash flow exception: $e\n$stack', name: 'SplashScreen');
+      }
+    } finally {
+      if (_isActiveFlow(flowVersion) && !_hasNavigated) {
+        _performNavigation(isLoggedIn: _isLoggedIn);
+      }
     }
   }
 

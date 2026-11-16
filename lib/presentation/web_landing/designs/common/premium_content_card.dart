@@ -1,7 +1,8 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:ott/app/widgets/responsive_poster_image.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/presentation/web_landing/designs/theme/landing_theme.dart';
+import 'package:shimmer/shimmer.dart';
 
 /// Premium interactive OTT content card supporting desktop hover scaling,
 /// glowing borders, metadata badges, trailer trigger, and tap actions.
@@ -119,11 +120,10 @@ class _PremiumContentCardState extends State<PremiumContentCard> {
                       child: Icon(
                         Icons.movie_filter_rounded,
                         size: 40,
-                        color: colors.textMuted.withValues(alpha: 0.5),
+                        color: colors.textMuted.withOpacity(0.5),
                       ),
                     ),
                   ),
-                ),
 
                 // Ambient Gradient Overlay
                 Positioned.fill(

@@ -987,6 +987,7 @@ class _ProfilePageState extends State<ProfilePage> {
             color: theme.canvasColor,
             size: actionIconSize,
           ),
+        ),
       ],
       flexibleSpace: FlexibleSpaceBar(
         //titlePadding: const EdgeInsetsDirectional.only(start: 16, bottom: 16),

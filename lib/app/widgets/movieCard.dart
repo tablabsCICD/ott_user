@@ -38,6 +38,14 @@ import 'package:provider/provider.dart';
 import 'package:ott/data/models/content.dart';
 
 class MovieCard extends StatefulWidget {
+  /// Height the redesigned card needs (poster + details); matches the 270px
+  /// rows used on the home screen.
+  static const double standardHeight = 270.0;
+  static const double standardPosterAspectRatio = 16 / 9;
+  static const double mobileCardWidth = 300.0;
+  static const double tabletCardWidth = 300.0;
+  static const double laptopCardWidth = 300.0;
+  static const double desktopCardWidth = 300.0;
   static const double itemWidth = 300;
   static const double itemMargin = 5;
   static const double itemExtent = itemWidth + (itemMargin * 2);
@@ -64,6 +72,28 @@ class MovieCard extends StatefulWidget {
     this.isShortFilmTab = false,
     this.autofocus = false,
   });
+
+  /// Resolves the standardized card width for the given context based on
+  /// responsive viewport breakpoints.
+  static double cardWidthFor(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    if (screenWidth >= 1800) {
+      return desktopCardWidth;
+    } else if (screenWidth >= 1024) {
+      return laptopCardWidth;
+    } else if (screenWidth >= 600) {
+      return tabletCardWidth;
+    } else {
+      return mobileCardWidth;
+    }
+  }
+
+  /// Resolves the standardized item extent (card width + margins).
+  static double cardExtentFor(BuildContext context,
+      [double margin = itemMargin]) {
+    return cardWidthFor(context) + (margin * 2);
+  }
 
   @override
   State<MovieCard> createState() => _MovieCardState();

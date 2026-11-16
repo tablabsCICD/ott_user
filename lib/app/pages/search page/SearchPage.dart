@@ -970,6 +970,7 @@ class SearchMovieCard extends StatefulWidget {
 }
 
 class _SearchMovieCardState extends State<SearchMovieCard> {
+  bool _isLoadingCast = false;
   List<CastMember> _apiCastAndCrew = [];
 
   Content get movie => widget.movie;
@@ -993,6 +994,7 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
     if (contentId == null) return;
 
     setState(() {
+      _isLoadingCast = true;
       _apiCastAndCrew = [];
     });
 
@@ -1017,7 +1019,13 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
                   .toList();
         });
       }
-    } catch (error) {}
+    } catch (error) {
+      debugPrint('Search cast fetch error: $error');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingCast = false);
+      }
+    }
   }
 
   List<CastMember> get _castList {

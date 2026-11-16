@@ -31,7 +31,8 @@ class LoginCard extends StatefulWidget {
   State<LoginCard> createState() => _LoginCardState();
 }
 
-class _LoginCardState extends State<LoginCard> with CodeAutoFill {
+class _LoginCardState extends State<LoginCard>
+    with CodeAutoFill, SingleTickerProviderStateMixin {
   static const int _otpLength = 6;
   static const int _resendCooldownSeconds = 60;
   static const Duration _otpAutoFillTimeout = Duration(seconds: 60);
@@ -68,6 +69,9 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
 
   String selectedCode = '+91';
 
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
   @override
   void initState() {
     super.initState();
@@ -75,6 +79,13 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     _screenLoadWatch.start();
     _mobileFocusNode.addListener(_handleInputFocusChanged);
     _otpFocusNode.addListener(_handleInputFocusChanged);
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
     _checkPendingReferralCode();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       debugPrint('LOGIN_TRACE: LoginCard post frame callback executed');
@@ -93,6 +104,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
 
   @override
   void dispose() {
+    _pulseController.dispose();
     unawaited(_stopOtpAutoFillListener());
     _resendTimer?.cancel();
     _otpAutoFillTimeoutTimer?.cancel();

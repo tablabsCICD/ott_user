@@ -170,7 +170,7 @@ Future<void> _initializeBackgroundServicesSafely() async {
 
     try {
       await NotificationService.instance.init().timeout(const Duration(seconds: 2));
-    } catch (error, stackTrace) {
+    } catch (error) {
       if (kDebugMode) {
         debugPrint('Notification initialization failed: $error');
       }
@@ -186,22 +186,18 @@ Future<void> _initializeBackgroundServicesSafely() async {
 Future<FlavorConfig> _resolveFlavor(FilmytellFlavor? fallbackFlavor) async {
   // 1. Explicit flavor from appFlavor, FLAVOR, or FLUTTER_APP_FLAVOR takes highest priority
   if (FlavorConfig.hasExplicitFlavor) {
-    return FlavorConfig.fromEnvironment();
+    return FlavorConfig.fromEnvironment(fallback: fallbackFlavor);
   }
 
   // 2. Web platform
   if (kIsWeb) return const FlavorConfig.forFlavor(FilmytellFlavor.web);
 
   // 3. Dedicated entrypoint fallback (main_jio.dart, main_tv.dart, etc.)
-  if (fallbackFlavor != null) {
-Future<FlavorConfig> _resolveFlavor(FilmytellFlavor fallbackFlavor) async {
-  final configured = FlavorConfig.fromEnvironment(fallback: fallbackFlavor);
-  if (kIsWeb) return configured;
-
-  if (fallbackFlavor == FilmytellFlavor.tv) {
+  if (fallbackFlavor != null && fallbackFlavor != FilmytellFlavor.mobile) {
     return FlavorConfig.forFlavor(fallbackFlavor);
   }
 
+  // 4. Native Android TV detection
   if (defaultTargetPlatform == TargetPlatform.android) {
     try {
       const channel = MethodChannel('com.filmytell.ott/anti_piracy');
@@ -213,9 +209,10 @@ Future<FlavorConfig> _resolveFlavor(FilmytellFlavor fallbackFlavor) async {
   }
 
   if (fallbackFlavor == FilmytellFlavor.mobile) {
-    return FlavorConfig.forFlavor(fallbackFlavor);
+    return const FlavorConfig.forFlavor(FilmytellFlavor.mobile);
   }
 
+  // 5. Package name detection
   try {
     final packageInfo = await PackageInfo.fromPlatform().timeout(
       const Duration(milliseconds: 500),
@@ -229,7 +226,7 @@ Future<FlavorConfig> _resolveFlavor(FilmytellFlavor fallbackFlavor) async {
     }
   }
 
-  return FlavorConfig.fromEnvironment(fallback: FilmytellFlavor.mobile);
+  return const FlavorConfig.forFlavor(FilmytellFlavor.mobile);
 }
 
 class MyApp extends StatefulWidget {

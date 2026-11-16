@@ -36,6 +36,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:ott/data/models/content.dart';
 
 class ContinueWatchMovieCard extends StatefulWidget {
+  static const double standardHeight = 250.0;
+  static const double standardPosterAspectRatio = 16 / 9;
   static const double itemWidth = 300;
   static const double itemMargin = 5;
   static const double itemExtent = itemWidth + (itemMargin * 2);
