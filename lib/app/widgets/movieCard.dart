@@ -64,7 +64,14 @@ class MovieCard extends StatefulWidget {
     this.onContentUpdated,
     this.isShortFilmTab = false,
     this.posterFit,
+    this.onOpen,
   });
+
+  /// Replaces the default open action (card tap, TV select key and the
+  /// price / Watch Now button). Used where the user already has access to
+  /// the content (e.g. Profile -> Gifted To You), so the button shows
+  /// "Watch Now" instead of the price. Null keeps the default behavior.
+  final VoidCallback? onOpen;
 
   /// Resolves the standardized card width for the given context based on
   /// platform and responsive viewport breakpoints.
@@ -599,7 +606,7 @@ class _MovieCardState extends State<MovieCard> {
                   key == LogicalKeyboardKey.select ||
                   key == LogicalKeyboardKey.space ||
                   key == LogicalKeyboardKey.gameButtonA) {
-                _openDetails();
+                _handleOpen();
                 return KeyEventResult.handled;
               }
               return KeyEventResult.ignored;
@@ -608,7 +615,7 @@ class _MovieCardState extends State<MovieCard> {
               onEnter: (_) => _handleHover(true),
               onExit: (_) => _handleHover(false),
               child: GestureDetector(
-                onTap: _openDetails,
+                onTap: _handleOpen,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
                   curve: Curves.easeOut,
@@ -896,15 +903,18 @@ class _MovieCardState extends State<MovieCard> {
     final contentType = ContentType.normalize(movie.type);
     final isSeries = contentType == ContentType.series;
     final isPurchased = movie.isRental == true;
+    final onOpen = widget.onOpen;
 
-    final shouldShowWatchNow = isSeries || isPurchased;
+    final shouldShowWatchNow = isSeries || isPurchased || onOpen != null;
 
     return GestureDetector(
-      onTap: () => isSeries
-          ? _openDetails()
-          : isPurchased
-              ? _playMovie()
-              : _showCupertinoDialog(context, movie),
+      onTap: () => onOpen != null
+          ? onOpen()
+          : isSeries
+              ? _openDetails()
+              : isPurchased
+                  ? _playMovie()
+                  : _showCupertinoDialog(context, movie),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
         decoration: BoxDecoration(
@@ -933,6 +943,15 @@ class _MovieCardState extends State<MovieCard> {
       id: FeatureTourStepId.download,
       child: child,
     );
+  }
+
+  void _handleOpen() {
+    final onOpen = widget.onOpen;
+    if (onOpen != null) {
+      onOpen();
+      return;
+    }
+    _openDetails();
   }
 
   void _openDetails() {

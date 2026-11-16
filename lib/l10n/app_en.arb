@@ -1358,5 +1358,8 @@
   "newsNoMessageBody": "No message body",
   "newsPayload": "Payload",
   "routeMovieNotFound": "Movie not found",
-  "routeInvalidMovieLink": "The shared movie link is invalid or incomplete."
+  "routeInvalidMovieLink": "The shared movie link is invalid or incomplete.",
+  "giftedToYou": "Gifted To You",
+  "giftedToYouEmptyTitle": "No Gifts Yet",
+  "giftedToYouEmptyMessage": "Movies and content gifted to you will appear here."
 }

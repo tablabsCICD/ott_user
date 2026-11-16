@@ -854,5 +854,8 @@
   "newsNoMessageBody": "ਕੋਈ ਸੁਨੇਹਾ ਨਹੀਂ",
   "newsPayload": "ਪੇਲੋਡ",
   "routeMovieNotFound": "ਫਿਲਮ ਨਹੀਂ ਮਿਲੀ",
-  "routeInvalidMovieLink": "ਸਾਂਝਾ ਕੀਤਾ ਫਿਲਮ ਲਿੰਕ ਅਵੈਧ ਜਾਂ ਅਧੂਰਾ ਹੈ।"
+  "routeInvalidMovieLink": "ਸਾਂਝਾ ਕੀਤਾ ਫਿਲਮ ਲਿੰਕ ਅਵੈਧ ਜਾਂ ਅਧੂਰਾ ਹੈ।",
+  "giftedToYou": "ਤੁਹਾਨੂੰ ਮਿਲੇ ਤੋਹਫ਼ੇ",
+  "giftedToYouEmptyTitle": "ਅਜੇ ਤੱਕ ਕੋਈ ਤੋਹਫ਼ਾ ਨਹੀਂ",
+  "giftedToYouEmptyMessage": "ਤੁਹਾਨੂੰ ਤੋਹਫ਼ੇ ਵਿੱਚ ਮਿਲੀਆਂ ਫ਼ਿਲਮਾਂ ਅਤੇ ਸਮੱਗਰੀ ਇੱਥੇ ਦਿਖਾਈ ਦੇਣਗੀਆਂ।"
 }

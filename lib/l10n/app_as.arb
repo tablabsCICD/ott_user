@@ -854,5 +854,8 @@
   "newsNoMessageBody": "কোনো বাৰ্তা নাই",
   "newsPayload": "পেলোড",
   "routeMovieNotFound": "চলচ্চিত্ৰ পোৱা নগ'ল",
-  "routeInvalidMovieLink": "শ্বেয়াৰ কৰা চলচ্চিত্ৰৰ লিংকটো অবৈধ বা অসম্পূৰ্ণ।"
+  "routeInvalidMovieLink": "শ্বেয়াৰ কৰা চলচ্চিত্ৰৰ লিংকটো অবৈধ বা অসম্পূৰ্ণ।",
+  "giftedToYou": "আপোনাক দিয়া উপহাৰ",
+  "giftedToYouEmptyTitle": "এতিয়ালৈকে কোনো উপহাৰ নাই",
+  "giftedToYouEmptyMessage": "আপোনাক উপহাৰ হিচাপে দিয়া চলচ্চিত্ৰ আৰু সমল ইয়াত দেখা যাব।"
 }

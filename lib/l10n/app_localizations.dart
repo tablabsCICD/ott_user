@@ -5253,6 +5253,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The shared movie link is invalid or incomplete.'**
   String get routeInvalidMovieLink;
+
+  /// No description provided for @giftedToYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Gifted To You'**
+  String get giftedToYou;
+
+  /// No description provided for @giftedToYouEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No Gifts Yet'**
+  String get giftedToYouEmptyTitle;
+
+  /// No description provided for @giftedToYouEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Movies and content gifted to you will appear here.'**
+  String get giftedToYouEmptyMessage;
 }
 
 class _AppLocalizationsDelegate

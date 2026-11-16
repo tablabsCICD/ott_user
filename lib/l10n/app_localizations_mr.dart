@@ -2902,4 +2902,14 @@ class AppLocalizationsMr extends AppLocalizations {
   @override
   String get routeInvalidMovieLink =>
       'शेअर केलेली चित्रपटाची लिंक अवैध किंवा अपूर्ण आहे.';
+
+  @override
+  String get giftedToYou => 'तुम्हाला मिळालेल्या भेटी';
+
+  @override
+  String get giftedToYouEmptyTitle => 'अजून कोणतीही भेट नाही';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'तुम्हाला भेट दिलेले चित्रपट आणि कंटेंट येथे दिसतील.';
 }

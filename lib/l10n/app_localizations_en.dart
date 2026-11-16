@@ -2889,4 +2889,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get routeInvalidMovieLink =>
       'The shared movie link is invalid or incomplete.';
+
+  @override
+  String get giftedToYou => 'Gifted To You';
+
+  @override
+  String get giftedToYouEmptyTitle => 'No Gifts Yet';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'Movies and content gifted to you will appear here.';
 }

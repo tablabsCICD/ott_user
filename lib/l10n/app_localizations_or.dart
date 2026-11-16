@@ -2917,4 +2917,14 @@ class AppLocalizationsOr extends AppLocalizations {
   @override
   String get routeInvalidMovieLink =>
       'ସେୟାର୍ କରାଯାଇଥିବା ଚଳଚ୍ଚିତ୍ର ଲିଙ୍କ୍ ଅବୈଧ କିମ୍ବା ଅସମ୍ପୂର୍ଣ୍ଣ।';
+
+  @override
+  String get giftedToYou => 'ଆପଣଙ୍କୁ ମିଳିଥିବା ଉପହାର';
+
+  @override
+  String get giftedToYouEmptyTitle => 'ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ଉପହାର ନାହିଁ';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'ଆପଣଙ୍କୁ ଉପହାର ଭାବେ ଦିଆଯାଇଥିବା ଚଳଚ୍ଚିତ୍ର ଓ କଣ୍ଟେଣ୍ଟ ଏଠାରେ ଦେଖାଯିବ।';
 }

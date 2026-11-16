@@ -854,5 +854,8 @@
   "newsNoMessageBody": "സന്ദേശ ഉള്ളടക്കമില്ല",
   "newsPayload": "പേലോഡ്",
   "routeMovieNotFound": "സിനിമ കണ്ടെത്തിയില്ല",
-  "routeInvalidMovieLink": "പങ്കിട്ട സിനിമ ലിങ്ക് അസാധുവോ അപൂർണ്ണമോ ആണ്."
+  "routeInvalidMovieLink": "പങ്കിട്ട സിനിമ ലിങ്ക് അസാധുവോ അപൂർണ്ണമോ ആണ്.",
+  "giftedToYou": "നിങ്ങൾക്ക് ലഭിച്ച സമ്മാനങ്ങൾ",
+  "giftedToYouEmptyTitle": "ഇതുവരെ സമ്മാനങ്ങളൊന്നുമില്ല",
+  "giftedToYouEmptyMessage": "നിങ്ങൾക്ക് സമ്മാനമായി ലഭിച്ച സിനിമകളും ഉള്ളടക്കവും ഇവിടെ കാണാം."
 }

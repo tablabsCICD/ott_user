@@ -2906,4 +2906,14 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get routeInvalidMovieLink =>
       'शेयर किया गया फिल्म लिंक अमान्य या अधूरा है।';
+
+  @override
+  String get giftedToYou => 'आपको मिले गिफ्ट';
+
+  @override
+  String get giftedToYouEmptyTitle => 'अभी तक कोई गिफ्ट नहीं';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'आपको गिफ्ट की गई फ़िल्में और कंटेंट यहाँ दिखाई देंगे।';
 }

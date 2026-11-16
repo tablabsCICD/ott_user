@@ -2910,4 +2910,14 @@ class AppLocalizationsAs extends AppLocalizations {
   @override
   String get routeInvalidMovieLink =>
       'শ্বেয়াৰ কৰা চলচ্চিত্ৰৰ লিংকটো অবৈধ বা অসম্পূৰ্ণ।';
+
+  @override
+  String get giftedToYou => 'আপোনাক দিয়া উপহাৰ';
+
+  @override
+  String get giftedToYouEmptyTitle => 'এতিয়ালৈকে কোনো উপহাৰ নাই';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'আপোনাক উপহাৰ হিচাপে দিয়া চলচ্চিত্ৰ আৰু সমল ইয়াত দেখা যাব।';
 }

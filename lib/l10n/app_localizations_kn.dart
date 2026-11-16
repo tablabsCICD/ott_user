@@ -2931,4 +2931,14 @@ class AppLocalizationsKn extends AppLocalizations {
   @override
   String get routeInvalidMovieLink =>
       'ಹಂಚಿಕೊಂಡ ಚಲನಚಿತ್ರ ಲಿಂಕ್ ಅಮಾನ್ಯ ಅಥವಾ ಅಪೂರ್ಣವಾಗಿದೆ.';
+
+  @override
+  String get giftedToYou => 'ನಿಮಗೆ ಬಂದ ಉಡುಗೊರೆಗಳು';
+
+  @override
+  String get giftedToYouEmptyTitle => 'ಇನ್ನೂ ಯಾವುದೇ ಉಡುಗೊರೆಗಳಿಲ್ಲ';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'ನಿಮಗೆ ಉಡುಗೊರೆಯಾಗಿ ನೀಡಿದ ಚಲನಚಿತ್ರಗಳು ಮತ್ತು ವಿಷಯ ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ.';
 }

@@ -2935,4 +2935,14 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get routeInvalidMovieLink =>
       'షేర్ చేసిన సినిమా లింక్ చెల్లనిది లేదా అసంపూర్ణంగా ఉంది.';
+
+  @override
+  String get giftedToYou => 'మీకు వచ్చిన బహుమతులు';
+
+  @override
+  String get giftedToYouEmptyTitle => 'ఇంకా బహుమతులు లేవు';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'మీకు బహుమతిగా ఇచ్చిన సినిమాలు మరియు కంటెంట్ ఇక్కడ కనిపిస్తాయి.';
 }

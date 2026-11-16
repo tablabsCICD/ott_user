@@ -854,5 +854,8 @@
   "newsNoMessageBody": "సందేశం లేదు",
   "newsPayload": "పేలోడ్",
   "routeMovieNotFound": "సినిమా కనబడలేదు",
-  "routeInvalidMovieLink": "షేర్ చేసిన సినిమా లింక్ చెల్లనిది లేదా అసంపూర్ణంగా ఉంది."
+  "routeInvalidMovieLink": "షేర్ చేసిన సినిమా లింక్ చెల్లనిది లేదా అసంపూర్ణంగా ఉంది.",
+  "giftedToYou": "మీకు వచ్చిన బహుమతులు",
+  "giftedToYouEmptyTitle": "ఇంకా బహుమతులు లేవు",
+  "giftedToYouEmptyMessage": "మీకు బహుమతిగా ఇచ్చిన సినిమాలు మరియు కంటెంట్ ఇక్కడ కనిపిస్తాయి."
 }

@@ -2904,4 +2904,14 @@ class AppLocalizationsPa extends AppLocalizations {
 
   @override
   String get routeInvalidMovieLink => 'ਸਾਂਝਾ ਕੀਤਾ ਫਿਲਮ ਲਿੰਕ ਅਵੈਧ ਜਾਂ ਅਧੂਰਾ ਹੈ।';
+
+  @override
+  String get giftedToYou => 'ਤੁਹਾਨੂੰ ਮਿਲੇ ਤੋਹਫ਼ੇ';
+
+  @override
+  String get giftedToYouEmptyTitle => 'ਅਜੇ ਤੱਕ ਕੋਈ ਤੋਹਫ਼ਾ ਨਹੀਂ';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'ਤੁਹਾਨੂੰ ਤੋਹਫ਼ੇ ਵਿੱਚ ਮਿਲੀਆਂ ਫ਼ਿਲਮਾਂ ਅਤੇ ਸਮੱਗਰੀ ਇੱਥੇ ਦਿਖਾਈ ਦੇਣਗੀਆਂ।';
 }

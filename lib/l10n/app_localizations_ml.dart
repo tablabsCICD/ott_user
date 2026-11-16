@@ -2927,4 +2927,14 @@ class AppLocalizationsMl extends AppLocalizations {
   @override
   String get routeInvalidMovieLink =>
       'പങ്കിട്ട സിനിമ ലിങ്ക് അസാധുവോ അപൂർണ്ണമോ ആണ്.';
+
+  @override
+  String get giftedToYou => 'നിങ്ങൾക്ക് ലഭിച്ച സമ്മാനങ്ങൾ';
+
+  @override
+  String get giftedToYouEmptyTitle => 'ഇതുവരെ സമ്മാനങ്ങളൊന്നുമില്ല';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'നിങ്ങൾക്ക് സമ്മാനമായി ലഭിച്ച സിനിമകളും ഉള്ളടക്കവും ഇവിടെ കാണാം.';
 }
