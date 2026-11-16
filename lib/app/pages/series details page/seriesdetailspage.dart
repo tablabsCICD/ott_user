@@ -23,8 +23,10 @@ import 'package:ott/app/provider/series_provider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/filmytell_poster_image.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/seriesModel.dart';
@@ -67,6 +69,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   @override
   void initState() {
     super.initState();
+    FocusManager.instance.addListener(_tvFollowFocus);
     Future.microtask(() {
       _loadInitialData();
       context.read<PlayMediaProvider>().loadLocalResumes();
@@ -75,12 +78,19 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
 
   @override
   void dispose() {
+    FocusManager.instance.removeListener(_tvFollowFocus);
     _trailerController.pause?.call();
     _teaserController.pause?.call();
     _heroTrailerTimer?.cancel();
     _tvScrollController.dispose();
     _heroFocusNode.dispose();
     super.dispose();
+  }
+
+  /// Android TV: keep the page scrolled to whatever holds the remote focus.
+  void _tvFollowFocus() {
+    if (!mounted || !ResponsiveWidget.isAndroidTv(context)) return;
+    TvDesign.scrollPageToFocus(context, _tvScrollController);
   }
 
   Future<void> _loadInitialData() async {
@@ -270,7 +280,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   bool get _isAndroidTv => ResponsiveWidget.isAndroidTv(context);
 
   double get _tvSidePadding => _isAndroidTv
-      ? 40
+      ? TvDesign.pageGutter
       : ResponsiveWidget.isDesktop(context)
           ? 64
           : 32;
@@ -343,11 +353,11 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                           _buildTvSectionTitle(theme, 'Episodes coming soon')
                         else ...[
                           _buildTvSectionTitle(theme, 'Seasons & Episodes'),
-                          SizedBox(height: _isAndroidTv ? 8 : 14),
+                          SizedBox(height: _isAndroidTv ? 2 : 14),
                           _buildTvSeasonSelector(seasons, theme),
                           SizedBox(height: _isAndroidTv ? 12 : 22),
                           _buildTvSeasonHeader(context, season!, theme),
-                          SizedBox(height: _isAndroidTv ? 10 : 18),
+                          SizedBox(height: _isAndroidTv ? 2 : 18),
                           _buildTvEpisodeRail(context, season, theme),
                         ],
                         SizedBox(height: _isAndroidTv ? 20 : 34),
@@ -469,7 +479,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.82),
-                      fontSize: tv ? 14 : 17,
+                      fontSize: tv ? 13 : 17,
                       height: 1.42,
                       fontWeight: FontWeight.w500,
                     ),
@@ -497,13 +507,25 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: TrailerPreview(
-                      trailerUrl: trailerUrl,
-                      content: widget.content,
-                      controller: _trailerController,
-                      autoPlay: false,
-                      muted: true,
-                    ),
+                    child: tv
+                        // Android TV: same 16:9 panel as the movie page.
+                        ? AspectRatio(
+                            aspectRatio: TvDesign.imageAspectRatio,
+                            child: TrailerPreview(
+                              trailerUrl: trailerUrl,
+                              content: widget.content,
+                              controller: _trailerController,
+                              autoPlay: false,
+                              muted: true,
+                            ),
+                          )
+                        : TrailerPreview(
+                            trailerUrl: trailerUrl,
+                            content: widget.content,
+                            controller: _trailerController,
+                            autoPlay: false,
+                            muted: true,
+                          ),
                   ),
                 ),
               ),
@@ -578,6 +600,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
       onPressed: () {
         if (Navigator.canPop(context)) Navigator.pop(context);
       },
+      tvBorderRadius: 6,
       child: IconButton(
         onPressed: () {
           if (Navigator.canPop(context)) Navigator.pop(context);
@@ -586,6 +609,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           backgroundColor: theme.primaryColor,
           foregroundColor: Colors.white,
           fixedSize: Size.square(_isAndroidTv ? 38 : 52),
+          tapTargetSize:
+              _isAndroidTv ? MaterialTapTargetSize.shrinkWrap : null,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         ),
         icon: Icon(Icons.arrow_back_rounded, size: _isAndroidTv ? 20 : 28),
@@ -720,32 +745,45 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     bool emphasized = false,
     bool autofocus = false,
   }) {
+    final tv = _isAndroidTv;
     return _TvFocusableScale(
       onPressed: onPressed,
       autofocus: autofocus,
+      tvBorderRadius: 6,
       child: ElevatedButton.icon(
         onPressed: onPressed,
-        icon: Icon(icon, size: _isAndroidTv ? 18 : 24),
+        icon: Icon(icon, size: tv ? 17 : 24),
         label: Text(
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: _isAndroidTv ? const TextStyle(fontSize: 13) : null,
+          style: tv
+              ? const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)
+              : null,
         ),
         style: ElevatedButton.styleFrom(
+          // Android TV: brand red for the primary action only; secondary
+          // actions are translucent so the primary one stands out.
           backgroundColor: emphasized
               ? theme.primaryColor
-              : theme.primaryColor.withOpacity(0.82),
+              : tv
+                  ? Colors.white.withOpacity(0.16)
+                  : theme.primaryColor.withOpacity(0.82),
           foregroundColor: Colors.white,
           disabledBackgroundColor: Colors.white.withOpacity(0.08),
           disabledForegroundColor: Colors.white,
-          padding: _isAndroidTv
-              ? const EdgeInsets.symmetric(horizontal: 14, vertical: 8)
+          padding: tv
+              ? const EdgeInsets.symmetric(horizontal: 14, vertical: 6)
               : const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
-          minimumSize: Size(0, _isAndroidTv ? 38 : 56),
+          minimumSize: Size(0, tv ? 36 : 56),
+          // Android TV: no touch target padding, so the focus ring hugs
+          // the visible button.
+          tapTargetSize: tv ? MaterialTapTargetSize.shrinkWrap : null,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-          shadowColor: theme.primaryColor.withOpacity(0.45),
-          elevation: emphasized ? 12 : 4,
+          shadowColor: tv
+              ? Colors.black54
+              : theme.primaryColor.withOpacity(0.45),
+          elevation: tv ? (emphasized ? 6 : 0) : (emphasized ? 12 : 4),
         ),
       ),
     );
@@ -754,14 +792,17 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   Widget _buildTvSeasonSelector(List<SeasonEntity> seasons, ThemeData theme) {
     final tv = _isAndroidTv;
     return SizedBox(
-      height: tv ? 42 : 58,
+      height: tv ? 54 : 58,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        // Android TV: room for the focus ring/lift so it is never clipped.
+        padding: tv ? const EdgeInsets.fromLTRB(6, 6, 6, 6) : null,
         itemCount: seasons.length,
         separatorBuilder: (_, __) => SizedBox(width: tv ? 8 : 12),
         itemBuilder: (context, index) {
           final selected = index == _selectedSeasonIndex;
           return _TvFocusableScale(
+            tvBorderRadius: 8,
             onPressed: () {
               setState(() => _selectedSeasonIndex = index);
               _loadSeasonCast(seasons[index].seasonId);
@@ -800,7 +841,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
         season.episodes.any((EpisodeEntity ep) => ep.isPurchased);
     final canPurchaseSeason = !season.isSeasonPurchased && !hasPurchasedEpisode;
 
-    return Row(
+    final header = Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Expanded(
@@ -813,8 +854,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: _isAndroidTv ? 17 : 24,
-                  fontWeight: FontWeight.w900,
+                  fontSize: _isAndroidTv ? 15 : 24,
+                  fontWeight: _isAndroidTv ? FontWeight.w700 : FontWeight.w900,
                 ),
               ),
               SizedBox(height: _isAndroidTv ? 4 : 8),
@@ -841,6 +882,12 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           ),
       ],
     );
+    if (!_isAndroidTv) return header;
+    // Android TV: aligned with the 6 px inset of the rails.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: header,
+    );
   }
 
   Widget _buildTvEpisodeRail(
@@ -849,16 +896,24 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     ThemeData theme,
   ) {
     if (season.episodes.isEmpty) {
-      return Text(
-        'No episodes available yet',
-        style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 16),
+      return Padding(
+        padding: EdgeInsets.only(left: _isAndroidTv ? 6 : 0),
+        child: Text(
+          'No episodes available yet',
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.7),
+            fontSize: _isAndroidTv ? 13 : 16,
+          ),
+        ),
       );
     }
 
     return SizedBox(
-      height: _isAndroidTv ? 204 : 300,
+      height: _isAndroidTv ? 230 : 300,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        // Android TV: room for the focus lift so it is never clipped.
+        padding: _isAndroidTv ? _tvRailPadding : null,
         itemCount: season.episodes.length,
         separatorBuilder: (_, __) => SizedBox(width: _isAndroidTv ? 12 : 18),
         itemBuilder: (context, index) {
@@ -889,6 +944,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
 
     return _TvFocusableScale(
       width: cardWidth,
+      tvRevealInRail: true,
+      tvBorderRadius: TvDesign.cardRadius,
+      tvColor: Colors.white.withOpacity(0.075),
       onPressed: () {
         if (canPlay) {
           _playEpisode(context, season, episode);
@@ -896,7 +954,10 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           _purchaseEpisode(context, season, episode);
         }
       },
-      child: Container(
+      child: tv
+          ? _buildTvEpisodeCardBody(
+              season, episode, theme, canPlay, progress, hasProgress)
+          : Container(
         width: cardWidth,
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.075),
@@ -1046,11 +1107,13 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
       children: [
         for (final row in rails) ...[
           _buildTvSectionTitle(theme, _railTitle(row.category)),
-          SizedBox(height: _isAndroidTv ? 8 : 14),
+          SizedBox(height: _isAndroidTv ? 2 : 14),
           SizedBox(
-            height: _isAndroidTv ? 168 : 250,
+            height: _isAndroidTv ? 186 : 250,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
+              // Android TV: room for the focus lift so it is never clipped.
+              padding: _isAndroidTv ? _tvRailPadding : null,
               itemCount: (row.movies ?? const <Content>[])
                   .where((item) => item.id != widget.content.id)
                   .length,
@@ -1082,8 +1145,16 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     // Same card proportions, smaller on Android TV.
     final cardWidth = tv ? 200.0 : 300.0;
     final imageHeight = tv ? 113.0 : 170.0;
+    final meta = [
+      if ((content.ageRating ?? '').isNotEmpty) content.ageRating,
+      if ((content.genreList ?? const <String>[]).isNotEmpty)
+        content.genreList!.first,
+    ].whereType<String>().join('  |  ');
     return _TvFocusableScale(
       width: cardWidth,
+      tvRevealInRail: true,
+      tvBorderRadius: TvDesign.cardRadius,
+      tvColor: Colors.white.withOpacity(0.07),
       onPressed: () {
         if ((content.type ?? '').toLowerCase() == 'series' &&
             content.id != null) {
@@ -1098,7 +1169,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           );
         }
       },
-      child: SizedBox(
+      child: tv
+          ? _buildTvRailCardBody(image, content.title, meta)
+          : SizedBox(
         width: cardWidth,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1131,11 +1204,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
             ),
             const SizedBox(height: 4),
             Text(
-              [
-                if ((content.ageRating ?? '').isNotEmpty) content.ageRating,
-                if ((content.genreList ?? const <String>[]).isNotEmpty)
-                  content.genreList!.first,
-              ].whereType<String>().join('  |  '),
+              meta,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -1150,13 +1219,200 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   }
 
   Widget _buildTvSectionTitle(ThemeData theme, String title) {
+    if (_isAndroidTv) {
+      // Android TV: white section titles, inset to line up with the cards.
+      return Padding(
+        padding: const EdgeInsets.only(left: 6),
+        child: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      );
+    }
     return Text(
       title,
       style: TextStyle(
         color: theme.primaryColor,
-        fontSize: _isAndroidTv ? 17 : 24,
+        fontSize: 24,
         fontWeight: FontWeight.w900,
       ),
+    );
+  }
+
+  /// Android TV: rail padding that leaves room for the focus lift/shadow;
+  /// the 6 px side inset matches [_buildTvSectionTitle].
+  static const EdgeInsets _tvRailPadding =
+      EdgeInsets.fromLTRB(6, 10, 6, 14);
+
+  /// Android TV rail card: 16:9 artwork with the title and meta underneath,
+  /// framed as one card by [TvFocusFrame] (see [_TvFocusableScale]).
+  Widget _buildTvRailCardBody(String image, String? title, String meta) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AspectRatio(
+          aspectRatio: TvDesign.imageAspectRatio,
+          child: FilmytellPosterImage(
+            posterUrl: image,
+            fit: BoxFit.cover,
+            fallbackIconSize: 32,
+            fallbackIcon: Icons.movie,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(9, 6, 9, 0),
+          child: Text(
+            title ?? 'Untitled',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 12.5,
+            ),
+          ),
+        ),
+        if (meta.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(9, 2, 9, 0),
+            child: Text(
+              meta,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.6),
+                fontSize: 10.5,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// Android TV episode tile: 16:9 still (lock/play badge and resume bar)
+  /// with the episode info underneath. Same data as the non-TV tile.
+  Widget _buildTvEpisodeCardBody(
+    SeasonEntity season,
+    EpisodeEntity episode,
+    ThemeData theme,
+    bool canPlay,
+    double progress,
+    bool hasProgress,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AspectRatio(
+          aspectRatio: TvDesign.imageAspectRatio,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              FilmytellPosterImage(
+                posterUrl: episode.posterUrl,
+                fit: BoxFit.cover,
+                fallbackIconSize: 30,
+              ),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.6),
+                    ],
+                  ),
+                ),
+              ),
+              Center(
+                child: Icon(
+                  canPlay ? Icons.play_circle_fill : Icons.lock_rounded,
+                  color: Colors.white,
+                  size: 34,
+                ),
+              ),
+              if (hasProgress)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 4,
+                    backgroundColor: Colors.white24,
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(theme.primaryColor),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(9, 7, 9, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      episode.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${episode.runtime} min',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.65),
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 3),
+              Text(
+                hasProgress
+                    ? 'Continue watching - ${(progress * 100).round()}%'
+                    : 'Episode ${episode.episodeNumber}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: hasProgress
+                      ? theme.primaryColor
+                      : Colors.white.withOpacity(0.62),
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                episode.description,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.64),
+                  fontSize: 11,
+                  height: 1.25,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -2647,12 +2903,26 @@ class _TvFocusableScale extends StatefulWidget {
     required this.onPressed,
     this.width,
     this.autofocus = false,
+    this.tvBorderRadius = TvDesign.cardRadius,
+    this.tvColor,
+    this.tvRevealInRail = false,
   });
 
   final Widget child;
   final VoidCallback? onPressed;
   final double? width;
   final bool autofocus;
+
+  /// Android TV only: corner radius of the white focus ring (match the
+  /// child's shape).
+  final double tvBorderRadius;
+
+  /// Android TV only: card surface painted under [child] by [TvFocusFrame].
+  final Color? tvColor;
+
+  /// Android TV only: rail cards scroll into view like TV launchers
+  /// ([TvDesign.revealFocused]) instead of just being kept on screen.
+  final bool tvRevealInRail;
 
   @override
   State<_TvFocusableScale> createState() => _TvFocusableScaleState();
@@ -2664,26 +2934,41 @@ class _TvFocusableScaleState extends State<_TvFocusableScale> {
 
   bool get _active => _focused || _hovered;
 
+  void _keepVisible() {
+    Scrollable.ensureVisible(
+      context,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
     return FocusableActionDetector(
       enabled: widget.onPressed != null,
       autofocus: widget.autofocus,
       mouseCursor: widget.onPressed == null
           ? SystemMouseCursors.basic
           : SystemMouseCursors.click,
-      onShowFocusHighlight: (value) {
-        if (value) {
-          Scrollable.ensureVisible(
-            context,
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-          );
-        }
-        if (mounted) setState(() => _focused = value);
-      },
+      // Android TV: follow real focus (not the keyboard-highlight mode) so the
+      // initially focused Watch button shows its ring before any key press.
+      onFocusChange: isAndroidTv
+          ? (value) {
+              // The page scrolls vertically to follow focus (see
+              // _tvFollowFocus); here only the rail scrolls sideways.
+              if (value) TvDesign.revealInRow(context);
+              if (mounted) setState(() => _focused = value);
+            }
+          : null,
+      onShowFocusHighlight: isAndroidTv
+          ? null
+          : (value) {
+              if (value) _keepVisible();
+              if (mounted) setState(() => _focused = value);
+            },
       onShowHoverHighlight: (value) {
         if (mounted) setState(() => _hovered = value);
       },
@@ -2695,39 +2980,54 @@ class _TvFocusableScaleState extends State<_TvFocusableScale> {
           },
         ),
       },
-      child: AnimatedScale(
-        scale: _active ? 1.055 : 1,
-        duration: const Duration(milliseconds: 160),
-        curve: Curves.easeOutCubic,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          width: widget.width,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: _active
-                ? Border.all(
-                    color: theme.primaryColor,
-                    width: 2.5,
-                  )
-                : Border.all(
-                    color: Colors.transparent,
-                    width: 2.5,
-                  ),
-            boxShadow: _active
-                ? [
-                    BoxShadow(
-                      color: theme.primaryColor.withOpacity(0.45),
-                      blurRadius: 10,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : null,
-          ),
-          // The wrapper owns focus/activation; without this the inner
-          // button was a second focus stop for every remote press.
-          child: ExcludeFocus(child: widget.child),
-        ),
-      ),
+      child: isAndroidTv
+          // Android TV: white ring + soft lift (TvFocusFrame), no red border.
+          ? SizedBox(
+              width: widget.width,
+              // The wrapper owns focus/activation; without this the inner
+              // button was a second focus stop for every remote press.
+              child: ExcludeFocus(
+                child: TvFocusFrame(
+                  focused: _active,
+                  borderRadius: widget.tvBorderRadius,
+                  color: widget.tvColor,
+                  child: widget.child,
+                ),
+              ),
+            )
+          : AnimatedScale(
+              scale: _active ? 1.055 : 1,
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOutCubic,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                width: widget.width,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: _active
+                      ? Border.all(
+                          color: theme.primaryColor,
+                          width: 2.5,
+                        )
+                      : Border.all(
+                          color: Colors.transparent,
+                          width: 2.5,
+                        ),
+                  boxShadow: _active
+                      ? [
+                          BoxShadow(
+                            color: theme.primaryColor.withOpacity(0.45),
+                            blurRadius: 10,
+                            spreadRadius: 1,
+                          ),
+                        ]
+                      : null,
+                ),
+                // The wrapper owns focus/activation; without this the inner
+                // button was a second focus stop for every remote press.
+                child: ExcludeFocus(child: widget.child),
+              ),
+            ),
     );
   }
 }

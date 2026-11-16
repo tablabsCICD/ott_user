@@ -23,6 +23,7 @@ import 'package:ott/app/provider/onboarding_tour_provider.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/feature_tour.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/app/route/routes/web_navigation_routes.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -647,10 +648,122 @@ class _NavigationPageState extends State<NavigationPage> {
   // ===========================================================================
   // ANDROID TV SIDEBAR (compact rail that expands over the content)
   // ===========================================================================
-  static const double _tvRailWidth = 68;
-  static const double _tvRailExpandedWidth = 208;
+  static const double _tvRailWidth = TvDesign.railWidth;
+  static const double _tvRailExpandedWidth = TvDesign.railExpandedWidth;
+
+  /// Rail items top to bottom (page index; -2 theme, -1 logout).
+  /// (Short Film / Series is reached from the Home filter tabs.)
+  static const List<int> _tvRailOrder = [0, 3, 4, 7, 8, 5, 9, 10, -2, -1];
+
+  final Map<int, FocusNode> _tvTileNodes = {};
+  FocusNode? _lastContentFocus;
+  bool _tvRailHasFocus = false;
+  bool _tvFocusTrackingAttached = false;
+
+  FocusNode _tvTileNode(int index) => _tvTileNodes.putIfAbsent(
+        index,
+        () => FocusNode(debugLabel: 'tv-rail-$index'),
+      );
+
+  /// Remembers the last focused item of the page content so Right from the
+  /// rail returns exactly there (TV launcher behaviour).
+  void _trackContentFocus() {
+    final primary = FocusManager.instance.primaryFocus;
+    if (primary == null || _tvTileNodes.containsValue(primary)) return;
+    final focusContext = primary.context;
+    if (focusContext == null || !mounted) return;
+    if (ModalRoute.of(focusContext) != ModalRoute.of(context)) return;
+    _lastContentFocus = primary;
+  }
+
+  void _attachTvFocusTracking() {
+    if (_tvFocusTrackingAttached) return;
+    _tvFocusTrackingAttached = true;
+    FocusManager.instance.addListener(_trackContentFocus);
+  }
+
+  @override
+  void dispose() {
+    if (_tvFocusTrackingAttached) {
+      FocusManager.instance.removeListener(_trackContentFocus);
+    }
+    for (final node in _tvTileNodes.values) {
+      node.dispose();
+    }
+    super.dispose();
+  }
+
+  void _handleTvRailFocusChange(bool hasFocus) {
+    final entering = hasFocus && !_tvRailHasFocus;
+    _tvRailHasFocus = hasFocus;
+    _setSidebarExpanded(hasFocus);
+    if (!entering) return;
+    // Entering the rail always lands on the current page's item.
+    final selected = _tvTileNodes[_currentIndex];
+    if (selected != null && !selected.hasFocus && selected.context != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _tvRailHasFocus) selected.requestFocus();
+      });
+    }
+  }
+
+  /// After a rail item opens its page, move focus into that page (the same
+  /// target a Right press would pick), so the rail collapses. Retries while
+  /// the new page is still building/loading; if nothing becomes focusable,
+  /// the rail is collapsed anyway.
+  void _moveFocusIntoPage(FocusNode from, [int attempt = 0]) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Stop if the user has already moved focus somewhere else.
+      if (!mounted || !from.hasPrimaryFocus) return;
+      if (from.focusInDirection(TraversalDirection.right)) return;
+      if (attempt < 12) {
+        Future.delayed(const Duration(milliseconds: 150), () {
+          if (mounted) _moveFocusIntoPage(from, attempt + 1);
+        });
+      } else {
+        _setSidebarExpanded(false);
+      }
+    });
+  }
+
+  KeyEventResult _handleTvRailKey(int index, FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown) {
+      final position = _tvRailOrder.indexOf(index);
+      final next = position + (key == LogicalKeyboardKey.arrowDown ? 1 : -1);
+      // Up/Down stay inside the rail; the ends are walls.
+      if (next >= 0 && next < _tvRailOrder.length) {
+        _tvTileNode(_tvRailOrder[next]).requestFocus();
+      }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowRight) {
+      final last = _lastContentFocus;
+      if (last != null &&
+          last.context != null &&
+          last.context!.mounted &&
+          last.canRequestFocus &&
+          ModalRoute.of(last.context!) == ModalRoute.of(context)) {
+        last.requestFocus();
+        return KeyEventResult.handled;
+      }
+      if (node.focusInDirection(TraversalDirection.right)) {
+        return KeyEventResult.handled;
+      }
+      return node.nextFocus()
+          ? KeyEventResult.handled
+          : KeyEventResult.ignored;
+    }
+    if (key == LogicalKeyboardKey.arrowLeft) return KeyEventResult.handled;
+    return KeyEventResult.ignored;
+  }
 
   Widget _buildTvShell(BuildContext context, ThemeData theme, int pageIndex) {
+    _attachTvFocusTracking();
     return Stack(
       children: [
         // Content always reserves only the collapsed rail width, so the
@@ -658,6 +771,23 @@ class _NavigationPageState extends State<NavigationPage> {
         Padding(
           padding: const EdgeInsets.only(left: _tvRailWidth),
           child: _buildCurrentPage(pageIndex),
+        ),
+        // Dim the page while the rail is open, so the menu reads clearly.
+        Positioned.fill(
+          child: IgnorePointer(
+            child: AnimatedOpacity(
+              opacity: _isSidebarExpanded ? 1 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xF2000000), Color(0x99000000)],
+                    stops: [0.15, 0.6],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
         Positioned(
           left: 0,
@@ -668,23 +798,22 @@ class _NavigationPageState extends State<NavigationPage> {
             curve: Curves.easeOutCubic,
             width: _isSidebarExpanded ? _tvRailExpandedWidth : _tvRailWidth,
             decoration: BoxDecoration(
-              color: theme.cardColor,
-              boxShadow: _isSidebarExpanded
-                  ? [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.55),
-                        blurRadius: 32,
-                        offset: const Offset(8, 0),
-                      ),
-                    ]
-                  : null,
+              color: _isSidebarExpanded
+                  ? theme.scaffoldBackgroundColor
+                  : theme.cardColor.withValues(alpha: 0.92),
+              border: Border(
+                right: BorderSide(
+                  color: theme.canvasColor.withValues(alpha: 0.06),
+                ),
+              ),
             ),
             child: MouseRegion(
               onEnter: (_) => _setSidebarExpanded(true),
-              onExit: (_) => _setSidebarExpanded(false),
+              onExit: (_) => _setSidebarExpanded(_tvRailHasFocus),
               child: Focus(
                 canRequestFocus: false,
-                onFocusChange: _setSidebarExpanded,
+                skipTraversal: true,
+                onFocusChange: _handleTvRailFocusChange,
                 child: _buildTvDrawerContent(context, theme),
               ),
             ),
@@ -709,11 +838,12 @@ class _NavigationPageState extends State<NavigationPage> {
       final isSelected = index == _currentIndex &&
           (homeContentType == null || homeContentType == _homeContentType);
       return _TvSidebarTile(
+        focusNode: _tvTileNode(index),
         icon: icon,
         title: title,
         selected: isSelected,
         expanded: _isSidebarExpanded,
-        onFocused: () => _setSidebarExpanded(true),
+        onKeyEvent: (node, event) => _handleTvRailKey(index, node, event),
         onTap: () {
           if (onTap != null) {
             onTap();
@@ -722,27 +852,63 @@ class _NavigationPageState extends State<NavigationPage> {
           if (index == 5) {
             Provider.of<UserProvider>(context, listen: false).setValue();
           }
+          _lastContentFocus = null;
           _navigateTo(index, homeContentType: homeContentType);
+          // Like TV launchers: choosing a page moves into it, which closes
+          // the rail.
+          _moveFocusIntoPage(_tvTileNode(index));
         },
       );
     }
+
+    final items = <Widget>[
+      tile(
+        index: 0,
+        icon: Icons.home_rounded,
+        title: lang.home,
+        homeContentType: "MOVIE",
+      ),
+      tile(index: 3, icon: Icons.search_rounded, title: lang.search),
+      tile(index: 4, icon: Icons.movie_rounded, title: lang.watchlist),
+      tile(
+        index: 7,
+        icon: Icons.account_balance_wallet_rounded,
+        title: lang.wallet,
+      ),
+      tile(index: 8, icon: Icons.download_rounded, title: "Downloads"),
+      tile(index: 5, icon: Icons.person_rounded, title: lang.profile),
+      tile(index: 9, icon: Icons.settings_rounded, title: "Settings"),
+      tile(index: 10, icon: Icons.support_agent_rounded, title: lang.help),
+      tile(
+        index: -2,
+        icon: isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round,
+        title: isDark ? "Light Theme" : "Dark Theme",
+        onTap: themeProvider.toggleTheme,
+      ),
+      tile(
+        index: -1,
+        icon: Icons.logout_rounded,
+        title: lang.logout,
+        onTap: _showLogoutDialog,
+      ),
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Brand logo
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          padding: const EdgeInsets.fromLTRB(12, 14, 12, 10),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Hero(
               tag: "logo",
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 child: Image.asset(
                   ImageConstant.logo,
-                  height: 40,
-                  width: 40,
+                  height: 32,
+                  width: 32,
                   fit: BoxFit.contain,
                   filterQuality: FilterQuality.high,
                 ),
@@ -751,52 +917,21 @@ class _NavigationPageState extends State<NavigationPage> {
           ),
         ),
         Expanded(
-          // All items fit on a 1080p TV; scrolling is only a safety net for
-          // unusually small screens.
-          child: ListView(
-            padding: const EdgeInsets.only(bottom: 8),
-            children: [
-              tile(
-                index: 0,
-                icon: Icons.home_rounded,
-                title: lang.home,
-                homeContentType: "MOVIE",
+          // Every item fits on the 540 px TV canvas; vertically centred like
+          // TV launchers. Scrolling is only a safety net.
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: ConstrainedBox(
+                constraints:
+                    BoxConstraints(minHeight: constraints.maxHeight - 12),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: items,
+                ),
               ),
-              tile(index: 1, icon: Icons.video_library, title: lang.series),
-              tile(index: 3, icon: Icons.search, title: lang.search),
-              tile(index: 4, icon: Icons.movie, title: lang.watchlist),
-              tile(
-                index: 7,
-                icon: Icons.account_balance_wallet,
-                title: lang.wallet,
-              ),
-              tile(
-                index: 8,
-                icon: Icons.download_rounded,
-                title: "Downloads",
-              ),
-              tile(index: 5, icon: Icons.person, title: lang.profile),
-              tile(index: 9, icon: Icons.settings, title: "Settings"),
-              tile(
-                index: 10,
-                icon: Icons.support_agent_sharp,
-                title: lang.help,
-              ),
-              tile(
-                index: -2,
-                icon: isDark
-                    ? Icons.wb_sunny_outlined
-                    : Icons.nightlight_round,
-                title: isDark ? "Light Theme" : "Dark Theme",
-                onTap: themeProvider.toggleTheme,
-              ),
-              tile(
-                index: -1,
-                icon: Icons.logout,
-                title: lang.logout,
-                onTap: _showLogoutDialog,
-              ),
-            ],
+            ),
           ),
         ),
       ],
@@ -865,105 +1000,105 @@ class _NavigationPageState extends State<NavigationPage> {
 }
 
 /// Compact sidebar item for Android TV: icon-only when collapsed, icon + label
-/// when expanded, with a clearly visible focus state.
-class _TvSidebarTile extends StatefulWidget {
+/// when expanded. Focused = white pill (launcher style); current page = brand
+/// colour with an indicator bar.
+class _TvSidebarTile extends StatelessWidget {
   const _TvSidebarTile({
+    required this.focusNode,
     required this.icon,
     required this.title,
     required this.selected,
     required this.expanded,
     required this.onTap,
-    required this.onFocused,
+    required this.onKeyEvent,
   });
 
+  final FocusNode focusNode;
   final IconData icon;
   final String title;
   final bool selected;
   final bool expanded;
   final VoidCallback onTap;
-  final VoidCallback onFocused;
-
-  @override
-  State<_TvSidebarTile> createState() => _TvSidebarTileState();
-}
-
-class _TvSidebarTileState extends State<_TvSidebarTile> {
-  final FocusNode _focusNode = FocusNode(debugLabel: 'tv-sidebar-tile');
-
-  @override
-  void dispose() {
-    _focusNode.dispose();
-    super.dispose();
-  }
+  final FocusOnKeyEventCallback onKeyEvent;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: OttTvFocus(
-        focusNode: _focusNode,
-        borderRadius: 10,
+        focusNode: focusNode,
+        borderRadius: 8,
         scale: 1.0,
-        semanticLabel: widget.title,
-        onTap: widget.onTap,
-        onFocusChange: (focused) {
-          if (focused) widget.onFocused();
-        },
-        onKeyEvent: (node, event) {
-          if (event is! KeyDownEvent) return KeyEventResult.ignored;
-          if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-            final moved = node.focusInDirection(TraversalDirection.right);
-            if (moved) return KeyEventResult.handled;
-            final nextMoved = node.nextFocus();
-            if (nextMoved) return KeyEventResult.handled;
-          }
-          return KeyEventResult.ignored;
-        },
+        focusColor: Colors.transparent,
+        semanticLabel: title,
+        onTap: onTap,
+        onKeyEvent: onKeyEvent,
         child: ListenableBuilder(
-          listenable: _focusNode,
+          listenable: focusNode,
           builder: (context, _) {
-            final focused = _focusNode.hasFocus;
+            final focused = focusNode.hasFocus;
+            // Focused pill contrasts with the theme: white on dark, near-black
+            // on light.
+            final isDark = theme.brightness == Brightness.dark;
+            final pill = isDark ? Colors.white : const Color(0xFF111111);
+            final onPill = isDark ? Colors.black : Colors.white;
             final color = focused
-                ? Colors.white
-                : widget.selected
+                ? onPill
+                : selected
                     ? theme.primaryColor
-                    : theme.canvasColor.withValues(alpha: 0.78);
+                    : theme.canvasColor.withValues(alpha: 0.72);
             return AnimatedContainer(
               duration: const Duration(milliseconds: 140),
-              height: 38,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              height: 34,
+              padding: EdgeInsets.symmetric(horizontal: expanded ? 9 : 0),
               decoration: BoxDecoration(
                 color: focused
-                    ? theme.primaryColor
-                    : widget.selected
+                    ? pill
+                    : selected
                         ? theme.primaryColor.withValues(alpha: 0.12)
                         : Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: Row(
+              // The label only appears once the rail is wide enough, so
+              // nothing overflows while the rail animates open/closed.
+              child: LayoutBuilder(
+                builder: (context, constraints) =>
+                    !(expanded && constraints.maxWidth > 72)
+                        ? Center(child: Icon(icon, size: 18, color: color))
+                        : Row(
                 children: [
-                  Icon(widget.icon, size: 20, color: color),
-                  if (widget.expanded) ...[
-                    const SizedBox(width: 14),
+                  Icon(icon, size: 18, color: color),
+                  ...[
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        widget.title,
+                        title,
                         maxLines: 1,
                         overflow: TextOverflow.clip,
                         softWrap: false,
                         style: TextStyle(
                           color: color,
-                          fontSize: 13,
-                          fontWeight: widget.selected || focused
+                          fontSize: 12.5,
+                          fontWeight: selected || focused
                               ? FontWeight.w700
                               : FontWeight.w500,
                         ),
                       ),
                     ),
+                    if (selected && !focused)
+                      Container(
+                        width: 4,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                   ],
                 ],
+              ),
               ),
             );
           },

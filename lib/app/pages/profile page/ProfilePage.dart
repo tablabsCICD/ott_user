@@ -19,6 +19,7 @@ import 'package:ott/app/pages/profile%20page/component/account_details_page.dart
 import 'package:ott/app/pages/profile%20page/PurchaseHistoryPage.dart';
 import 'package:ott/app/pages/profile%20page/component/about_filmytell_dialog.dart';
 import 'package:ott/app/pages/profile%20page/component/change_language.dart';
+import 'package:ott/app/pages/profile%20page/component/profile_detail_shell.dart';
 import 'package:ott/app/pages/upcoming%20movies%20page/UpcomingPage.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
 import 'package:ott/app/pages/watchlist%20page/WatchlistPage.dart';
@@ -28,7 +29,8 @@ import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/LanguageDropdown.dart';
 import 'package:ott/app/widgets/gift_claim_dialog.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
-import 'package:ott/app/widgets/shimmer loader/profile_shimmer.dart';
+import 'package:ott/app/widgets/shimmer%20loader/profile_shimmer.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -214,6 +216,13 @@ class _ProfilePageState extends State<ProfilePage> {
     var themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     var selectedThemeData = themeProvider.getTheme;
 
+    final sections = _profileSections(lang, walletBalance);
+
+    // Android TV: two-column settings layout sized for the 540 px canvas.
+    if (_isTv) {
+      return _buildTv(context, theme, lang, sections);
+    }
+
     return Scaffold(
       body: isLoading
           ? ProfileShimmer()
@@ -228,201 +237,19 @@ class _ProfilePageState extends State<ProfilePage> {
                         child: Column(
                           children: [
                             const SizedBox(height: 5),
-                            profileCard(
-                              lang.myCredits,
-                              [
-                                ProfileOption(
-                                  icon: Icons.account_balance_wallet,
-                                  title: lang.wallet,
-                                  balance: walletBalance,
-                                  onTap: () =>
-                                      _openDetail(lang.wallet, WalletPage()),
-                                ),
-                              ],
-                            ),
-                            profileCard(
-                              lang.features,
-                              [
-                                ProfileOption(
-                                  icon: Icons.bookmark,
-                                  title: "Bookmarks",
-                                  onTap: () =>
-                                      _openDetail('Bookmarks', BookmarkPage()),
-                                ),
-                                ProfileOption(
-                                  icon: Icons.history,
-                                  title: lang.watchlist,
-                                  onTap: () => _openDetail(
-                                      lang.watchlist, const WatchlistPage()),
-                                ),
-                                ProfileOption(
-                                  icon: Icons.receipt_long,
-                                  title: lang.purchaseHistory,
-                                  onTap: () => _openDetail(
-                                    lang.purchaseHistory,
-                                    ChangeNotifierProvider(
-                                      create: (_) => PurchaseHistoryProvider(),
-                                      child: const PurchaseHistoryPage(),
+                            for (final section in sections)
+                              profileCard(
+                                section.title,
+                                [
+                                  for (final entry in section.entries)
+                                    ProfileOption(
+                                      icon: entry.icon,
+                                      title: entry.title,
+                                      balance: entry.balance,
+                                      onTap: entry.onTap,
                                     ),
-                                  ),
-                                ),
-                                ProfileOption(
-                                  icon: Icons.download_rounded,
-                                  title: lang.downloads,
-                                  onTap: () => _openDetail(
-                                    lang.downloads,
-                                    const WatchlistPage(
-                                      initialFilter: WatchlistFilter.downloaded,
-                                    ),
-                                  ),
-                                ),
-                                ProfileOption(
-                                  icon: Icons.upcoming,
-                                  title: lang.upcoming,
-                                  onTap: () => _openDetail(
-                                      lang.upcoming, UpcomingPage()),
-                                ),
-                                ProfileOption(
-                                  icon: Icons.notifications,
-                                  title: lang.notification,
-                                  onTap: () => _openDetail(lang.notification,
-                                      const NotificationPage()),
-                                ),
-                                ProfileOption(
-                                  icon: Icons.language_sharp,
-                                  title: lang.selectPreferredLanguage,
-                                  onTap: () {
-                                    _openDetail(lang.selectPreferredLanguage,
-                                        const ChangeLanguage());
-                                  },
-                                ),
-                                ProfileOption(
-                                  icon: Icons.manage_accounts_outlined,
-                                  title: lang.accountDetails,
-                                  onTap: () {
-                                    _openDetail(lang.accountDetails,
-                                        const AccountDetailsPage());
-                                  },
-                                ),
-                                ProfileOption(
-                                  icon: Icons.devices_other_outlined,
-                                  title: 'Registered Devices',
-                                  onTap: () {
-                                    _openDetail('Registered Devices',
-                                        const DeviceManagementPage());
-                                  },
-                                ),
-                              ],
-                            ),
-                            profileCard(
-                              lang.gifts,
-                              [
-                                ProfileOption(
-                                  icon: Icons.history_sharp,
-                                  title: lang.giftedByYou,
-                                  onTap: () => _openDetail(
-                                      lang.giftedByYou, GiftedMoviesPage()),
-                                ),
-                                ProfileOption(
-                                  icon: LucideIcons.gift,
-                                  title: lang.claimGiftCard,
-                                  onTap: () {
-                                    showGiftClaimDialog(context);
-                                  },
-                                ),
-                              ],
-                            ),
-                            profileCard(
-                              lang.feedbackAndInformation,
-                              [
-                                ProfileOption(
-                                  icon: Icons.support_agent_sharp,
-                                  title: lang.help,
-                                  onTap: () => _openDetail(
-                                      lang.help, const HelpSupportPage()),
-                                ),
-                                ProfileOption(
-                                  icon: Icons.tour_rounded,
-                                  title: 'App Tour',
-                                  onTap: () {
-                                    Navigator.of(context).pushReplacement(
-                                      MaterialPageRoute(
-                                        builder: (_) => const NavigationPage(
-                                          initialIndex: 0,
-                                          initialHomeContentType: 'MOVIE',
-                                          startAppTourOnHome: true,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                ProfileOption(
-                                  icon: Icons.file_copy,
-                                  title: "Privacy Policy",
-                                  onTap: () {
-                                    _openPrivacyPolicy();
-                                  },
-                                ),
-                                ProfileOption(
-                                  icon: Icons.file_copy,
-                                  title: "Terms & Condition",
-                                  onTap: () {
-                                    _openTerms();
-                                  },
-                                ),
-                                ProfileOption(
-                                  icon: Icons.info,
-                                  title: lang.aboutFilmytell,
-                                  onTap: () {
-                                    _openDetail(lang.aboutFilmytell,
-                                        const AboutFilmytellScreen());
-                                  },
-                                ),
-                                ProfileOption(
-                                  icon: Icons.source_outlined,
-                                  title: "Open Source Licenses",
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const InAppLicensesPage(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                ProfileOption(
-                                  icon: Icons.star,
-                                  title: lang.rateUs,
-                                  onTap: _openRateUs,
-                                ),
-                              ],
-                            ),
-                            profileCard(
-                              '',
-                              [
-                                (userProvider.userObj.id != null &&
-                                        (userProvider.userObj.id ?? 0) > 0)
-                                    ? ProfileOption(
-                                        icon: Icons.logout,
-                                        title: lang.logout,
-                                        onTap: () {
-                                          _showCupertinoDialog(context);
-                                        },
-                                      )
-                                    : ProfileOption(
-                                        icon: Icons.login,
-                                        title: lang.login,
-                                        onTap: () {
-                                          Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder: (_) => const LoginCard(),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                              ],
-                            ),
+                                ],
+                              ),
                             SizedBox(height: _isTv ? 32 : 250),
                             Opacity(
                               opacity: 0.4,
@@ -461,6 +288,524 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ],
             ),
+    );
+  }
+
+  /// Profile menu shared by the phone/web list and the Android TV layout,
+  /// so both always offer the same entries with the same actions.
+  List<_ProfileSection> _profileSections(
+    AppLocalizations lang,
+    double walletBalance,
+  ) {
+    return [
+      _ProfileSection(lang.myCredits, [
+        _ProfileEntry(
+          icon: Icons.account_balance_wallet,
+          title: lang.wallet,
+          balance: walletBalance,
+          onTap: () => _openDetail(lang.wallet, WalletPage()),
+        ),
+      ]),
+      _ProfileSection(lang.features, [
+        _ProfileEntry(
+          icon: Icons.bookmark,
+          title: "Bookmarks",
+          onTap: () => _openDetail('Bookmarks', BookmarkPage()),
+        ),
+        _ProfileEntry(
+          icon: Icons.history,
+          title: lang.watchlist,
+          onTap: () => _openDetail(lang.watchlist, const WatchlistPage()),
+        ),
+        _ProfileEntry(
+          icon: Icons.receipt_long,
+          title: lang.purchaseHistory,
+          onTap: () => _openDetail(
+            lang.purchaseHistory,
+            ChangeNotifierProvider(
+              create: (_) => PurchaseHistoryProvider(),
+              child: const PurchaseHistoryPage(),
+            ),
+          ),
+        ),
+        _ProfileEntry(
+          icon: Icons.download_rounded,
+          title: lang.downloads,
+          onTap: () => _openDetail(
+            lang.downloads,
+            const WatchlistPage(
+              initialFilter: WatchlistFilter.downloaded,
+            ),
+          ),
+        ),
+        _ProfileEntry(
+          icon: Icons.upcoming,
+          title: lang.upcoming,
+          onTap: () => _openDetail(lang.upcoming, UpcomingPage()),
+        ),
+        _ProfileEntry(
+          icon: Icons.notifications,
+          title: lang.notification,
+          onTap: () =>
+              _openDetail(lang.notification, const NotificationPage()),
+        ),
+        _ProfileEntry(
+          icon: Icons.language_sharp,
+          title: lang.selectPreferredLanguage,
+          onTap: () {
+            _openDetail(lang.selectPreferredLanguage, const ChangeLanguage());
+          },
+        ),
+        _ProfileEntry(
+          icon: Icons.manage_accounts_outlined,
+          title: lang.accountDetails,
+          onTap: () {
+            _openDetail(lang.accountDetails, const AccountDetailsPage());
+          },
+        ),
+        _ProfileEntry(
+          icon: Icons.devices_other_outlined,
+          title: 'Registered Devices',
+          onTap: () {
+            _openDetail('Registered Devices', const DeviceManagementPage());
+          },
+        ),
+      ]),
+      _ProfileSection(lang.gifts, [
+        _ProfileEntry(
+          icon: Icons.history_sharp,
+          title: lang.giftedByYou,
+          onTap: () => _openDetail(lang.giftedByYou, GiftedMoviesPage()),
+        ),
+        _ProfileEntry(
+          icon: LucideIcons.gift,
+          title: lang.claimGiftCard,
+          onTap: () {
+            showGiftClaimDialog(context);
+          },
+        ),
+      ]),
+      _ProfileSection(lang.feedbackAndInformation, [
+        _ProfileEntry(
+          icon: Icons.support_agent_sharp,
+          title: lang.help,
+          onTap: () => _openDetail(lang.help, const HelpSupportPage()),
+        ),
+        _ProfileEntry(
+          icon: Icons.tour_rounded,
+          title: 'App Tour',
+          onTap: _startAppTour,
+        ),
+        _ProfileEntry(
+          icon: Icons.file_copy,
+          title: "Privacy Policy",
+          onTap: () {
+            _openPrivacyPolicy();
+          },
+        ),
+        _ProfileEntry(
+          icon: Icons.file_copy,
+          title: "Terms & Condition",
+          onTap: () {
+            _openTerms();
+          },
+        ),
+        _ProfileEntry(
+          icon: Icons.info,
+          title: lang.aboutFilmytell,
+          onTap: () {
+            _openDetail(lang.aboutFilmytell, const AboutFilmytellScreen());
+          },
+        ),
+        _ProfileEntry(
+          icon: Icons.star,
+          title: lang.rateUs,
+          onTap: _openRateUs,
+        ),
+      ]),
+      _ProfileSection('', [
+        _ProfileEntry(
+          icon: Icons.logout,
+          title: lang.logout,
+          onTap: () {
+            _showCupertinoDialog(context);
+          },
+        ),
+      ]),
+    ];
+  }
+
+  void _startAppTour() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => const NavigationPage(
+          initialIndex: 0,
+          initialHomeContentType: 'MOVIE',
+          startAppTourOnHome: true,
+        ),
+      ),
+    );
+  }
+
+  void _openEditProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const EditProfilePage(),
+      ),
+    );
+  }
+
+  void _toggleTheme() {
+    Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
+  }
+
+  // ===========================================================================
+  // ANDROID TV
+  // ===========================================================================
+
+  /// Opens the locale menu of the TV language selector from the remote.
+  final GlobalKey<PopupMenuButtonState<String>> _tvLanguageMenuKey =
+      GlobalKey<PopupMenuButtonState<String>>();
+
+  Widget _buildTv(
+    BuildContext context,
+    ThemeData theme,
+    AppLocalizations lang,
+    List<_ProfileSection> sections,
+  ) {
+    // Opened as its own route there is no sidebar to leave through, so the
+    // header shows a back button (same rule as the phone app bar).
+    final showBack =
+        widget.onOpenDetail == null && Navigator.of(context).canPop();
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TvDetailHeader(title: lang.profile, showBack: showBack),
+          Expanded(
+            child: isLoading
+                ? Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: theme.primaryColor,
+                      ),
+                    ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      TvDesign.pageGutter,
+                      0,
+                      TvDesign.pageGutter,
+                      0,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 260,
+                          child: _buildTvSummaryColumn(theme, lang),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(child: _buildTvSettingsList(sections)),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTvSummaryColumn(ThemeData theme, AppLocalizations lang) {
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, _) {
+        final user = userProvider.userObj;
+        final first = (user.firstName ?? '').trim();
+        final last = (user.lastName ?? '').trim();
+        final fullName = '$first $last'.trim();
+        final email = (user.emailId ?? '').trim();
+        final mobile = (user.mobileNumber ?? '').trim();
+        final profilePhotoUrl = normalizeNetworkImageUrl(user.profilePhoto);
+        const avatarSize = 56.0;
+
+        Widget avatarFallback() => Image.asset(
+              ImageConstant.profile,
+              width: avatarSize,
+              height: avatarSize,
+              fit: BoxFit.cover,
+            );
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TvPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Hero(
+                          tag: "profile",
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: avatarSize,
+                                height: avatarSize,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: theme.scaffoldBackgroundColor,
+                                  border: Border.all(
+                                    color: theme.primaryColor,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: ClipOval(
+                                  child: profilePhotoUrl.isEmpty
+                                      ? avatarFallback()
+                                      : Image.network(
+                                          profilePhotoUrl,
+                                          width: avatarSize,
+                                          height: avatarSize,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              avatarFallback(),
+                                        ),
+                                ),
+                              ),
+                              if (user.verified ?? false)
+                                Positioned(
+                                  bottom: -1,
+                                  right: -1,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: theme.cardColor,
+                                    ),
+                                    child: const Icon(
+                                      Icons.verified,
+                                      color: Colors.blue,
+                                      size: 14,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                fullName.isNotEmpty ? fullName : 'User',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: theme.canvasColor,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              if (email.isNotEmpty) ...[
+                                const SizedBox(height: 3),
+                                Text(
+                                  email,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TvDesign.caption(theme),
+                                ),
+                              ],
+                              if (mobile.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  mobile,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TvDesign.caption(theme),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    TvCompactButton(
+                      label: lang.editProfile,
+                      icon: Icons.edit_outlined,
+                      expand: true,
+                      onPressed: _openEditProfile,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              TvPanel(
+                padding: const EdgeInsets.all(10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OttTvFocus(
+                        borderRadius: 8,
+                        scale: 1.03,
+                        semanticLabel: lang.translate,
+                        onTap: () =>
+                            _tvLanguageMenuKey.currentState?.showButtonMenu(),
+                        child: LanguageDropdown(
+                          menuKey: _tvLanguageMenuKey,
+                          showSelectedLabel: true,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          // Fills the slot so the focus ring and the
+                          // select box line up.
+                          constraints: const BoxConstraints(
+                            minHeight: 32,
+                            minWidth: double.infinity,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _tvIconAction(
+                      theme,
+                      icon: isDark
+                          ? Icons.wb_sunny_outlined
+                          : Icons.nightlight_round,
+                      label: "Toggle Theme",
+                      onTap: _toggleTheme,
+                    ),
+                    const SizedBox(width: 8),
+                    _tvIconAction(
+                      theme,
+                      icon: Icons.logout,
+                      label: "Logout",
+                      onTap: () => _showCupertinoDialog(context),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Opacity(
+                    opacity: 0.4,
+                    child: CircleAvatar(
+                      radius: 11,
+                      backgroundColor: theme.scaffoldBackgroundColor,
+                      foregroundColor: theme.scaffoldBackgroundColor,
+                      foregroundImage: AssetImage(ImageConstant.logo),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Version - ${AppConstant.appVersion}",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                          ),
+                        ),
+                        const Text(
+                          "Copyright Filmytell - All Rights Reserved.",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 8,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _tvIconAction(
+    ThemeData theme, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return OttTvFocus(
+      borderRadius: 8,
+      scale: 1.06,
+      semanticLabel: label,
+      onTap: onTap,
+      child: Tooltip(
+        message: label,
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: theme.canvasColor.withValues(alpha: 0.12),
+            ),
+          ),
+          child: Icon(icon, size: 18, color: theme.canvasColor),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvSettingsList(List<_ProfileSection> sections) {
+    // The first row takes the initial focus so the remote never starts with
+    // nothing selected.
+    var isFirstRow = true;
+    final children = <Widget>[];
+    for (final section in sections) {
+      final rows = <Widget>[];
+      for (final entry in section.entries) {
+        rows.add(_TvProfileRow(entry: entry, autofocus: isFirstRow));
+        isFirstRow = false;
+      }
+      if (section.title.isNotEmpty) {
+        children.add(
+          TvSectionHeader(
+            section.title,
+            padding: const EdgeInsets.fromLTRB(4, 2, 4, 6),
+          ),
+        );
+      }
+      children.add(
+        TvPanel(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+          child: Column(children: rows),
+        ),
+      );
+      children.add(const SizedBox(height: 12));
+    }
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 16),
+      children: children,
     );
   }
 
@@ -750,14 +1095,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 SizedBox(height: isTv ? 6 : 10),
                 OttTvFocus(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const EditProfilePage(),
-                      ),
-                    );
-                  },
+                  onTap: _openEditProfile,
                   borderRadius: 12,
                   scale: 1.05,
                   semanticLabel: lang.editProfile,
@@ -772,14 +1110,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           )
                         : null,
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const EditProfilePage(),
-                        ),
-                      );
-                    },
+                    onPressed: _openEditProfile,
                     child: Text(
                       lang.editProfile,
                       style: TextStyle(
@@ -902,6 +1233,91 @@ class _ProfileOptionState extends State<ProfileOption> {
       borderRadius: isTv ? 8 : 12,
       scale: 1.025,
       child: option,
+    );
+  }
+}
+
+/// One entry of the profile menu (shared by phone/web and Android TV).
+class _ProfileEntry {
+  const _ProfileEntry({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    this.balance,
+  });
+
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+  final double? balance;
+}
+
+class _ProfileSection {
+  const _ProfileSection(this.title, this.entries);
+
+  final String title;
+  final List<_ProfileEntry> entries;
+}
+
+/// Android TV settings row: 38 px tall, 18 px icon, single focus stop.
+class _TvProfileRow extends StatelessWidget {
+  const _TvProfileRow({required this.entry, this.autofocus = false});
+
+  final _ProfileEntry entry;
+  final bool autofocus;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final balance = entry.balance;
+
+    return OttTvFocus(
+      autofocus: autofocus,
+      onTap: entry.onTap,
+      borderRadius: 8,
+      scale: 1.015,
+      semanticLabel: entry.title,
+      child: SizedBox(
+        height: 38,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            children: [
+              Icon(entry.icon, size: 18, color: theme.primaryColor),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  entry.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: theme.canvasColor,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              if (balance != null) ...[
+                const SizedBox(width: 8),
+                Text(
+                  '₹ ${balance.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: theme.canvasColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 16,
+                color: theme.canvasColor.withValues(alpha: 0.5),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -188,7 +188,6 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
         }
         return;
       } catch (error) {
-
         await controller.dispose();
         if (mounted) setState(() => _hasError = true);
         return;
@@ -217,7 +216,6 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
           if (mounted) setState(() {});
         }))
         ..add(player.stream.error.listen((error) {
-
           if (mounted) setState(() => _hasError = true);
         }));
 
@@ -243,7 +241,6 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
       }
       _scheduleControlsHide();
     } catch (error) {
-
       await player.dispose();
       if (mounted) setState(() => _hasError = true);
     }
@@ -583,6 +580,13 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
 
   Widget _buildControlOverlay() {
     final title = widget.content.title ?? 'Trailer';
+    // Android TV: overlay sized for the 540 px TV canvas (20 px safe gutter,
+    // smaller transport icons). Presentation only.
+    final tv = ResponsiveWidget.isAndroidTv(context);
+    final edge = tv ? 20.0 : 16.0;
+    final seekIconSize = tv ? 34.0 : 42.0;
+    final playIconSize = tv ? 48.0 : 58.0;
+    final transportGap = tv ? 28.0 : 36.0;
     return AnimatedOpacity(
       opacity: _showControls ? 1.0 : 0.0,
       duration: const Duration(milliseconds: 250),
@@ -591,120 +595,157 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
         // Android TV: hidden controls must not keep the remote focus,
         // otherwise OK presses an invisible button.
         child: ExcludeFocus(
-        excluding: !_showControls && ResponsiveWidget.isAndroidTv(context),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.transparent, Colors.black87],
-            ),
-          ),
-          child: Row(
-            children: [
-              Text(
-                _formatDuration(_position),
-                style: const TextStyle(color: Colors.white),
+          excluding: !_showControls && ResponsiveWidget.isAndroidTv(context),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Colors.black87],
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Slider(
-                  value: positionMs.toDouble(),
-                  max: durationMs > 0 ? durationMs.toDouble() : 1,
-                  onChangeStart: (_) {
-                    _controlsTimer?.cancel();
-                    setState(() {
-                      _isSeeking = true;
-                      _controlsVisible = true;
-                    });
-                  },
-                  onChanged: (value) =>
-                      _seekTo(Duration(milliseconds: value.round())),
-                  onChangeEnd: (_) {
-                    setState(() => _isSeeking = false);
-                    _scheduleControlsHide();
-                  },
-                ),
-                Center(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      OttTvFocus(
-                        onTap: () => _seekBy(const Duration(seconds: -10)),
-                        borderRadius: 30,
-                        semanticLabel: 'Rewind 10 seconds',
-                        child: IconButton(
-                          iconSize: 42,
-                          icon: const Icon(Icons.replay_10_rounded,
-                              color: Colors.white),
-                          onPressed: () =>
-                              _seekBy(const Duration(seconds: -10)),
-                        ),
-                      ),
-                      const SizedBox(width: 36),
-                      OttTvFocus(
-                        autofocus: true,
-                        focusNode: _tvPlayFocusNode,
-                        onTap: _togglePlayback,
-                        borderRadius: 36,
-                        semanticLabel: _isPlaying ? 'Pause' : 'Play',
-                        child: IconButton(
-                          iconSize: 58,
-                          icon: Icon(
-                            _isPlaying
-                                ? Icons.pause_circle_filled_rounded
-                                : Icons.play_circle_filled_rounded,
-                            color: Colors.white,
+            ),
+            child: SafeArea(
+              child: Stack(
+                children: [
+                  Positioned(
+                    top: 10,
+                    left: edge,
+                    right: edge,
+                    child: Row(
+                      children: [
+                        OttTvFocus(
+                          onTap: () => Navigator.pop(context),
+                          borderRadius: 24,
+                          semanticLabel: 'Back',
+                          child: IconButton(
+                            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                                color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
                           ),
-                          onPressed: _togglePlayback,
                         ),
-                      ),
-                      const SizedBox(width: 36),
-                      OttTvFocus(
-                        onTap: () => _seekBy(const Duration(seconds: 10)),
-                        borderRadius: 30,
-                        semanticLabel: 'Forward 10 seconds',
-                        child: IconButton(
-                          iconSize: 42,
-                          icon: const Icon(Icons.forward_10_rounded,
-                              color: Colors.white),
-                          onPressed: () =>
-                              _seekBy(const Duration(seconds: 10)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: tv ? 16 : 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                        OttTvFocus(
+                          onTap: _toggleMute,
+                          borderRadius: 24,
+                          semanticLabel: _isMuted ? 'Unmute' : 'Mute',
+                          child: IconButton(
+                            icon: Icon(
+                              _isMuted
+                                  ? Icons.volume_off_rounded
+                                  : Icons.volume_up_rounded,
+                              color: Colors.white,
+                            ),
+                            onPressed: _toggleMute,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        OttTvFocus(
+                          onTap: () => Navigator.pop(context),
+                          borderRadius: 24,
+                          semanticLabel: 'Close Full Screen',
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.fullscreen_exit_rounded,
+                              color: Colors.white,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Positioned(
-                  bottom: 14,
-                  left: 24,
-                  right: 24,
-                  child: Row(
-                    children: [
-                      Text(
-                        _format(_currentPosition),
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 13),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildProgressSlider(),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        _format(_totalDuration),
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 13),
-                      ),
-                    ],
+                  Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        OttTvFocus(
+                          onTap: () => _seekBy(const Duration(seconds: -10)),
+                          borderRadius: 30,
+                          semanticLabel: 'Rewind 10 seconds',
+                          child: IconButton(
+                            iconSize: seekIconSize,
+                            icon: const Icon(Icons.replay_10_rounded,
+                                color: Colors.white),
+                            onPressed: () =>
+                                _seekBy(const Duration(seconds: -10)),
+                          ),
+                        ),
+                        SizedBox(width: transportGap),
+                        OttTvFocus(
+                          autofocus: true,
+                          focusNode: _tvPlayFocusNode,
+                          onTap: _togglePlayback,
+                          borderRadius: 36,
+                          semanticLabel: _isPlaying ? 'Pause' : 'Play',
+                          child: IconButton(
+                            iconSize: playIconSize,
+                            icon: Icon(
+                              _isPlaying
+                                  ? Icons.pause_circle_filled_rounded
+                                  : Icons.play_circle_filled_rounded,
+                              color: Colors.white,
+                            ),
+                            onPressed: _togglePlayback,
+                          ),
+                        ),
+                        SizedBox(width: transportGap),
+                        OttTvFocus(
+                          onTap: () => _seekBy(const Duration(seconds: 10)),
+                          borderRadius: 30,
+                          semanticLabel: 'Forward 10 seconds',
+                          child: IconButton(
+                            iconSize: seekIconSize,
+                            icon: const Icon(Icons.forward_10_rounded,
+                                color: Colors.white),
+                            onPressed: () =>
+                                _seekBy(const Duration(seconds: 10)),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  Positioned(
+                    bottom: 14,
+                    left: tv ? edge : 24,
+                    right: tv ? edge : 24,
+                    child: Row(
+                      children: [
+                        Text(
+                          _format(_currentPosition),
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 13),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildProgressSlider(),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          _format(_totalDuration),
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
         ),
       ),
     );
@@ -734,21 +775,21 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
       child: ExcludeFocus(
         excluding: ResponsiveWidget.isAndroidTv(context),
         child: Slider(
-        min: 0,
-        max: durationMs.toDouble(),
-        value: posMs.clamp(0, durationMs).toDouble(),
-        onChanged: (value) {
-          final target = Duration(milliseconds: value.round());
-          if (_player != null) {
-            _player!.seek(target);
-          } else if (_androidController != null) {
-            _androidController!.seekTo(target);
-          } else if (_youtubeController != null) {
-            _youtubeController!.seekTo(target);
-          }
-          setState(() {});
-        },
-      ),
+          min: 0,
+          max: durationMs.toDouble(),
+          value: posMs.clamp(0, durationMs).toDouble(),
+          onChanged: (value) {
+            final target = Duration(milliseconds: value.round());
+            if (_player != null) {
+              _player!.seek(target);
+            } else if (_androidController != null) {
+              _androidController!.seekTo(target);
+            } else if (_youtubeController != null) {
+              _youtubeController!.seekTo(target);
+            }
+            setState(() {});
+          },
+        ),
       ),
     );
   }
@@ -1002,7 +1043,6 @@ class _TrailerPreviewState extends State<TrailerPreview>
           });
         }
       } catch (error) {
-
         await controller.dispose();
         if (mounted && !_isDisposed) setState(() => _hasError = true);
       }
@@ -1038,7 +1078,6 @@ class _TrailerPreviewState extends State<TrailerPreview>
           }
         }))
         ..add(player.stream.error.listen((error) {
-
           if (mounted && !_isDisposed) {
             setState(() => _hasError = true);
           }
@@ -1067,7 +1106,6 @@ class _TrailerPreviewState extends State<TrailerPreview>
         });
       }
     } catch (error) {
-
       await player.dispose();
       if (mounted && !_isDisposed) {
         setState(() => _hasError = true);
@@ -1473,15 +1511,15 @@ class _TrailerPreviewState extends State<TrailerPreview>
       child: ExcludeFocus(
         excluding: ResponsiveWidget.isAndroidTv(context),
         child: Slider(
-        min: 0,
-        max: durationMs.toDouble(),
-        value: positionMs.clamp(0, durationMs).toDouble(),
-        activeColor: Colors.red,
-        inactiveColor: Colors.white24,
-        onChanged: (value) {
-          player.seek(Duration(milliseconds: value.round()));
-        },
-      ),
+          min: 0,
+          max: durationMs.toDouble(),
+          value: positionMs.clamp(0, durationMs).toDouble(),
+          activeColor: Colors.red,
+          inactiveColor: Colors.white24,
+          onChanged: (value) {
+            player.seek(Duration(milliseconds: value.round()));
+          },
+        ),
       ),
     );
   }

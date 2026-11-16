@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 
 class NewsScreenArgs {
@@ -39,6 +40,8 @@ class NewsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveWidget.isAndroidTv(context)) return _buildAndroidTv(context);
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
@@ -74,6 +77,67 @@ class NewsScreen extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Android TV: full-screen reading view in a centred column at most 640 px
+  /// wide; Up/Down scroll the whole page with the remote (OttTvKeyScroll).
+  Widget _buildAndroidTv(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.canvasColor.withValues(alpha: 0.8);
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const maxTextWidth = 640.0;
+            final side = constraints.maxWidth > maxTextWidth + 40
+                ? (constraints.maxWidth - maxTextWidth) / 2
+                : TvDesign.pageGutter;
+            return OttTvKeyScroll(
+              child: ListView(
+                primary: true,
+                padding: EdgeInsets.fromLTRB(side, 18, side, 28),
+                children: [
+                  Text(
+                    'News',
+                    style: TvDesign.caption(theme).copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(args.title, style: TvDesign.pageTitle(theme)),
+                  const SizedBox(height: 12),
+                  Text(
+                    args.body,
+                    style: TextStyle(color: muted, fontSize: 13, height: 1.55),
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Payload', style: TvDesign.sectionTitle(theme)),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius:
+                          BorderRadius.circular(TvDesign.panelRadius),
+                      border: Border.all(
+                        color: theme.canvasColor.withValues(alpha: 0.06),
+                      ),
+                    ),
+                    child: Text(
+                      args.payload.toString(),
+                      style: TextStyle(color: muted, fontSize: 11.5),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:ott/app/provider/purchase_history_provider.dart';
 import 'package:ott/app/provider/themeProvider.dart';
+import 'package:ott/app/widgets/filmytell_poster_image.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/data/models/response/purchase_history_response.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
@@ -30,6 +32,8 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>().getTheme;
+
+    if (ResponsiveWidget.isAndroidTv(context)) return _buildTv(context);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -251,6 +255,206 @@ class _PurchaseHistoryPageState extends State<PurchaseHistoryPage> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  // ---------------- Android TV ----------------
+
+  static const List<String> _tvTypeFilters = [
+    "All",
+    "Movies",
+    "Series",
+    "Shorts",
+    "Short Films",
+  ];
+
+  /// Android TV: page title, filter chips (same values as the dropdown) and
+  /// the From / To date buttons on one row, then a 2-column grid of compact
+  /// ticket cards. Filters call the same provider methods and [_pickDate].
+  Widget _buildTv(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Consumer<PurchaseHistoryProvider>(
+          builder: (context, provider, _) {
+            final muted = theme.canvasColor.withValues(alpha: 0.62);
+            Widget message(String text) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      text,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: muted, fontSize: 13),
+                    ),
+                  ),
+                );
+
+            final Widget body;
+            if (provider.isLoading) {
+              body = const Center(child: CircularProgressIndicator());
+            } else if (provider.error != null && provider.items.isEmpty) {
+              body = message(provider.error!);
+            } else if (provider.items.isEmpty) {
+              body = message('No purchase history found for selected date.');
+            } else {
+              body = GridView.builder(
+                padding: const EdgeInsets.fromLTRB(
+                  TvDesign.pageGutter,
+                  4,
+                  TvDesign.pageGutter,
+                  TvDesign.pageGutter,
+                ),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 12,
+                  mainAxisExtent: 96,
+                ),
+                itemCount: provider.items.length,
+                itemBuilder: (context, index) =>
+                    _PurchaseHistoryCard(item: provider.items[index]),
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    TvDesign.pageGutter,
+                    16,
+                    TvDesign.pageGutter,
+                    12,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Purchase History', style: TvDesign.pageTitle(theme)),
+                      const SizedBox(height: 12),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        clipBehavior: Clip.none,
+                        child: Row(
+                          children: [
+                            for (final type in _tvTypeFilters) ...[
+                              _tvFilterChip(
+                                theme,
+                                label:
+                                    type == "Shorts" ? "Mini Series" : type,
+                                selected: provider.selectedType == type,
+                                autofocus: provider.selectedType == type,
+                                onTap: () => provider.setSelectedType(type),
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                            const SizedBox(width: 10),
+                            _tvDateButton(
+                              theme,
+                              label: 'From',
+                              date: provider.selectedFromDate,
+                              onTap: () => _pickDate(context, provider, true),
+                            ),
+                            const SizedBox(width: 6),
+                            _tvDateButton(
+                              theme,
+                              label: 'To',
+                              date: provider.selectedToDate,
+                              onTap: () => _pickDate(context, provider, false),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(child: body),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _tvFilterChip(
+    ThemeData theme, {
+    required String label,
+    required bool selected,
+    required bool autofocus,
+    required VoidCallback onTap,
+  }) {
+    return OttTvFocus(
+      autofocus: autofocus,
+      borderRadius: 16,
+      scale: 1.04,
+      onTap: onTap,
+      child: Container(
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? theme.primaryColor : theme.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected
+                ? theme.primaryColor
+                : theme.canvasColor.withValues(alpha: 0.12),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : theme.canvasColor,
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tvDateButton(
+    ThemeData theme, {
+    required String label,
+    required DateTime date,
+    required VoidCallback onTap,
+  }) {
+    return OttTvFocus(
+      borderRadius: 8,
+      scale: 1.04,
+      onTap: onTap,
+      child: Container(
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: theme.primaryColor.withValues(alpha: 0.7),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.date_range, size: 14, color: theme.canvasColor),
+            const SizedBox(width: 6),
+            Text(
+              '$label  ',
+              style: TvDesign.caption(theme),
+            ),
+            Text(
+              DateFormat('dd MMM yyyy').format(date),
+              style: TextStyle(
+                color: theme.canvasColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -548,6 +752,10 @@ class _PurchaseHistoryCard extends StatelessWidget {
     final invoiceUrl = item.invoiceUrl?.trim() ?? '';
     final hasInvoiceUrl = invoiceUrl.isNotEmpty;
 
+    if (ResponsiveWidget.isAndroidTv(context)) {
+      return _buildTv(context, invoiceUrl, hasInvoiceUrl);
+    }
+
     final card = Card(
       color: theme.cardColor,
       child: Padding(
@@ -616,12 +824,178 @@ class _PurchaseHistoryCard extends StatelessWidget {
         ),
       ),
     );
-    // Android TV: entries without invoice buttons have nothing focusable, so
-    // the remote couldn't scroll to them. Make the card itself a focus stop.
-    if (!hasInvoiceUrl && ResponsiveWidget.isAndroidTv(context)) {
-      return OttTvFocus(onTap: () {}, borderRadius: 12, scale: 1.0, child: card);
-    }
     return card;
+  }
+
+  /// Android TV ticket card: 16:9 thumbnail, title, type / date, rent
+  /// duration, invoice number and amount. The card is one focus stop; OK
+  /// opens the invoice, Down selects View / Share (via [OttTvActionsCard]).
+  /// Uses the same [_viewInvoice] / [_shareInvoice] handlers as mobile.
+  Widget _buildTv(
+    BuildContext context,
+    String invoiceUrl,
+    bool hasInvoiceUrl,
+  ) {
+    final theme = Theme.of(context);
+    final content = item.content;
+    final purchaseDate = item.purchaseDate;
+    final posterUrl = content?.posterUrlList?.isNotEmpty == true
+        ? content!.posterUrlList!.first
+        : null;
+    final rentalDuration = (item.rentalDuration ?? '').trim();
+    final muted = theme.canvasColor.withValues(alpha: 0.62);
+    final actions = <VoidCallback>[
+      if (hasInvoiceUrl) () => _viewInvoice(context, invoiceUrl),
+      if (hasInvoiceUrl) () => _shareInvoice(context, invoiceUrl),
+    ];
+
+    Widget actionPill(
+      String label,
+      IconData icon, {
+      required bool selected,
+    }) {
+      return OttTvActionHighlight(
+        selected: selected,
+        borderRadius: 6,
+        child: Container(
+          height: 24,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: theme.canvasColor.withValues(alpha: 0.18),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 12, color: theme.canvasColor),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: theme.canvasColor,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return OttTvActionsCard(
+      onTap: hasInvoiceUrl ? () => _viewInvoice(context, invoiceUrl) : null,
+      actions: actions,
+      borderRadius: TvDesign.cardRadius,
+      scale: 1.0,
+      semanticLabel: content?.title ?? item.itemTitle ?? 'Purchased Content',
+      builder: (context, selectedAction) => Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(TvDesign.cardRadius),
+          border: Border.all(color: theme.canvasColor.withValues(alpha: 0.06)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AspectRatio(
+              aspectRatio: TvDesign.imageAspectRatio,
+              child: FilmytellPosterImage(
+                posterUrl: posterUrl,
+                fit: BoxFit.cover,
+                fallbackIcon: Icons.confirmation_number_outlined,
+                fallbackIconSize: 26,
+                backgroundColor: theme.scaffoldBackgroundColor,
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            content?.title ??
+                                item.itemTitle ??
+                                'Purchased Content',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: theme.canvasColor,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Rs ${(item.amount ?? content?.price ?? 0).toStringAsFixed(2)}',
+                          style: TextStyle(
+                            color: theme.canvasColor,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${item.contentType ?? content?.type ?? 'N/A'}  ·  ${purchaseDate != null ? DateFormat('dd MMM yyyy, hh:mm a').format(purchaseDate) : 'N/A'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TvDesign.caption(theme),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      [
+                        if (rentalDuration.isNotEmpty)
+                          'Duration: $rentalDuration',
+                        'Invoice: ${item.invoiceNumber ?? item.invoiceId ?? 'N/A'}',
+                      ].join('  ·  '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TvDesign.caption(theme),
+                    ),
+                    const SizedBox(height: 6),
+                    if (hasInvoiceUrl)
+                      Row(
+                        children: [
+                          actionPill(
+                            'View Invoice',
+                            Icons.picture_as_pdf_outlined,
+                            selected: selectedAction == 0,
+                          ),
+                          const SizedBox(width: 6),
+                          actionPill(
+                            'Share Invoice',
+                            Icons.share_outlined,
+                            selected: selectedAction == 1,
+                          ),
+                        ],
+                      )
+                    else
+                      Text(
+                        'Invoice URL not available',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: muted, fontSize: 10.5),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _viewInvoice(BuildContext context, String invoiceUrl) async {

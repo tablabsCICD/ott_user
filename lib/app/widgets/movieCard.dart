@@ -28,6 +28,9 @@ import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/feature_tour.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/app/widgets/filmytell_poster_image.dart';
+import 'package:ott/app/widgets/ott_tv_app_shell.dart';
+import 'package:ott/app/widgets/ott_tv_focus.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -47,6 +50,9 @@ class MovieCard extends StatefulWidget {
   final ValueChanged<Content>? onContentUpdated;
   final bool isShortFilmTab;
 
+  /// Android TV only: request focus when first shown (e.g. first grid item).
+  final bool autofocus;
+
   const MovieCard({
     super.key,
     required this.movie,
@@ -56,6 +62,7 @@ class MovieCard extends StatefulWidget {
     this.cardMargin,
     this.onContentUpdated,
     this.isShortFilmTab = false,
+    this.autofocus = false,
   });
 
   @override
@@ -77,6 +84,11 @@ class _MovieCardState extends State<MovieCard> {
   int _previewGeneration = 0;
   Timer? _playDelayTimer;
   Future<void>? _previewStartFuture;
+
+  // Android TV presentation state.
+  bool _isTvMode = false;
+  bool _tvSelectDown = false;
+  bool _tvLongPressHandled = false;
 
   String? _directPreviewUrl(String? rawUrl) {
     final value = DirectTrailerSource.fromBackend(rawUrl);
@@ -381,7 +393,12 @@ class _MovieCardState extends State<MovieCard> {
       return;
     }
 
-    _playDelayTimer = Timer(const Duration(milliseconds: 250), () {
+    // Android TV: wait until the remote rests on a card before spinning up a
+    // trailer player, so fast D-pad scrolling stays smooth.
+    _playDelayTimer = Timer(
+        _isTvMode
+            ? const Duration(milliseconds: 1200)
+            : const Duration(milliseconds: 250), () {
       _playDelayTimer = null;
       _beginPreviewStart();
     });
@@ -511,6 +528,8 @@ class _MovieCardState extends State<MovieCard> {
     final posterUrl = widget.movie.posterUrlList?.isNotEmpty == true
         ? widget.movie.posterUrlList!.first
         : null;
+    _isTvMode = ResponsiveWidget.isAndroidTv(context);
+    if (_isTvMode) return _buildTvCard(theme, lang, posterUrl);
     final showPreview = _isPreviewPlaying;
     final cardWidth = widget.cardWidth ?? MovieCard.itemWidth;
     final cardMargin = widget.cardMargin ?? MovieCard.itemMargin;
@@ -636,6 +655,283 @@ class _MovieCardState extends State<MovieCard> {
         _optionButton(context, widget.movie),
       ],
     );
+  }
+
+  // ===========================================================================
+  // ANDROID TV PRESENTATION
+  // Same horizontal card, same design size (MovieCard.itemWidth x 270 incl.
+  // margins) and same content as on other platforms; the row scales it with
+  // TvCardScale exactly as before. TV differences: a true 16:9 image, a
+  // premium focus treatment, and remote actions — OK opens details, holding
+  // OK (or Menu) opens the card's options (the speed-dial is unreachable).
+  // ===========================================================================
+
+  Widget _buildTvCard(
+    ThemeData theme,
+    AppLocalizations lang,
+    String? posterUrl,
+  ) {
+    final movie = widget.movie;
+    final focused = _isHovered;
+    final cardWidth = widget.cardWidth ?? MovieCard.itemWidth;
+    final cardMargin = widget.cardMargin ?? MovieCard.itemMargin;
+    final rating = movie.ratings ?? 0.0;
+    final meta = [
+      formatReleaseDate(movie.releaseDate),
+      movie.genreList?.join(', ') ?? 'N/A',
+    ].where((e) => e.trim().isNotEmpty).join('  |  ');
+
+    return Focus(
+      autofocus: widget.autofocus,
+      onFocusChange: (hasFocus) {
+        _handleHover(hasFocus);
+        if (hasFocus) {
+          TvDesign.revealFocused(context);
+        } else {
+          _tvSelectDown = false;
+          _tvLongPressHandled = false;
+        }
+      },
+      onKeyEvent: _handleTvKey,
+      child: MouseRegion(
+        onEnter: (_) => _handleHover(true),
+        onExit: (_) => _handleHover(false),
+        child: GestureDetector(
+          onTap: _openDetails,
+          onLongPress: _showTvOptions,
+          child: Container(
+            width: cardWidth,
+            // Same slot as the original card (top margin = room for focus).
+            margin: EdgeInsets.fromLTRB(cardMargin, 12, cardMargin, cardMargin),
+            child: TvFocusFrame(
+              focused: focused,
+              color: theme.cardColor,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AspectRatio(
+                    aspectRatio: TvDesign.imageAspectRatio,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        _buildTvMedia(posterUrl),
+                        if ((movie.watchedPercentage ?? 0) > 0)
+                          _watchProgressBar(theme),
+                        if (movie.isFeatured == true)
+                          const Positioned(
+                            top: 8,
+                            left: 8,
+                            child: _TvCardBadge(label: 'TRAILER'),
+                          ),
+                        AnimatedOpacity(
+                          opacity: focused ? 1 : 0,
+                          duration: TvDesign.focusDuration,
+                          child: const Align(
+                            alignment: Alignment.bottomCenter,
+                            child: _TvOptionsHint(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  movie.title ?? 'No Title',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: theme.canvasColor,
+                                    height: 1.15,
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.star_rounded,
+                                      size: 15,
+                                      color: Color(0xFFFFC107),
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Flexible(
+                                      child: Text(
+                                        '${rating.toStringAsFixed(1)} (${movie.ratingCount ?? 0})',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: theme.canvasColor
+                                              .withValues(alpha: 0.75),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        meta,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          color: theme.canvasColor
+                                              .withValues(alpha: 0.6),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (movie.isFeatured != true) ...[
+                            const SizedBox(width: 8),
+                            _tourWrapDownloadTarget(
+                              _TvActionChip(
+                                label: _primaryActionLabel(lang),
+                                rented: movie.isRental == true,
+                                color: theme.primaryColor,
+                              ),
+                              movie,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// OK opens details on release; holding OK (key repeat) or pressing Menu
+  /// opens the options sheet instead.
+  KeyEventResult _handleTvKey(FocusNode node, KeyEvent event) {
+    final key = event.logicalKey;
+    if (OttTvRemoteKey.menu.contains(key)) {
+      if (event is KeyDownEvent) _showTvOptions();
+      return KeyEventResult.handled;
+    }
+    if (!OttTvRemoteKey.activate.contains(key)) return KeyEventResult.ignored;
+
+    if (event is KeyDownEvent) {
+      _tvSelectDown = true;
+      _tvLongPressHandled = false;
+      return KeyEventResult.handled;
+    }
+    if (event is KeyRepeatEvent) {
+      if (_tvSelectDown && !_tvLongPressHandled) {
+        _tvLongPressHandled = true;
+        _showTvOptions();
+      }
+      return KeyEventResult.handled;
+    }
+    if (event is KeyUpEvent) {
+      // Only act on a press that started on this card (not the release of a
+      // press that closed a dialog or opened this screen).
+      final shouldOpen = _tvSelectDown && !_tvLongPressHandled;
+      _tvSelectDown = false;
+      _tvLongPressHandled = false;
+      if (shouldOpen) _openDetails();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  /// 16:9 poster, or the trailer preview filling the same 16:9 frame.
+  Widget _buildTvMedia(String? posterUrl) {
+    final androidController = _androidPreviewController;
+    if (_isPreviewPlaying &&
+        _isVideoInitialized &&
+        androidController != null &&
+        androidController.value.isInitialized) {
+      final size = androidController.value.size;
+      return ClipRect(
+        child: FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(
+            width: size.width <= 0 ? 16 : size.width,
+            height: size.height <= 0 ? 9 : size.height,
+            child: native_video.VideoPlayer(androidController),
+          ),
+        ),
+      );
+    }
+    final videoController = _videoController;
+    if (_isPreviewPlaying && _isVideoInitialized && videoController != null) {
+      return Video(
+          controller: videoController, fit: BoxFit.cover, controls: null);
+    }
+    return FilmytellPosterImage(
+      posterUrl: posterUrl,
+      fit: BoxFit.cover,
+      alignment: Alignment.topCenter,
+      fallbackIconSize: 44,
+    );
+  }
+
+  /// TV replacement for the speed-dial menu. Same actions, same handlers.
+  Future<void> _showTvOptions() async {
+    final movie = widget.movie;
+    if (movie.id == null) return;
+    final lang = AppLocalizations.of(context)!;
+    final isSeries = movie.type?.toLowerCase() == "series";
+    final isBookmarked =
+        context.read<BookmarkProvider>().isBookmarkedLocally(movie.id ?? 0);
+
+    final actions = <_TvCardAction>[
+      _TvCardAction(Icons.info_outline_rounded, 'View details', _openDetails),
+      if (movie.isFeatured != true)
+        _TvCardAction(
+          movie.isRental == true
+              ? Icons.play_arrow_rounded
+              : Icons.confirmation_number_outlined,
+          _primaryActionLabel(lang),
+          _runPrimaryAction,
+        ),
+      if (movie.isRental != true)
+        _TvCardAction(
+          isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border,
+          isBookmarked ? 'Remove Bookmark' : 'Bookmark',
+          () => unawaited(_toggleBookmark()),
+        ),
+      _TvCardAction(Icons.share_rounded, 'Share', () {
+        showContentShareSheet(
+          context,
+          movie,
+          contentType: _shareContentTypeFor(movie),
+          unavailableMessage: "Content details are not available yet",
+        );
+      }),
+      if (!isSeries)
+        _TvCardAction(LucideIcons.gift, 'Gift', () {
+          _showGiftDialog(context, movie, TextEditingController());
+        }),
+    ];
+
+    final selected = await showDialog<_TvCardAction>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.7),
+      builder: (_) => _TvCardOptionsDialog(movie: movie, actions: actions),
+    );
+    if (!mounted || selected == null) return;
+    selected.onSelected();
   }
 
   Widget _buildMediaPreview(
@@ -842,19 +1138,60 @@ class _MovieCardState extends State<MovieCard> {
     );
   }
 
-  Widget _buildPriceButton(
-      ThemeData theme, AppLocalizations lang, double price) {
+  /// Label of the card's primary action chip (price, or watch when rented).
+  String _primaryActionLabel(AppLocalizations lang) {
     final movie = widget.movie;
+    final price = movie.price ?? 0;
     final isRental = movie.isRental ?? false;
     final isShortFilm = widget.isShortFilmTab ||
         ContentType.normalize(movie.type) == ContentType.shortFilm;
+    return movie.type!.toLowerCase() == 'series'
+        ? isRental
+            ? (isShortFilm ? 'Watch Now' : 'Watch Series')
+            : '₹ $price'
+        : isRental
+            ? isShortFilm
+                ? 'Watch Now'
+                : movie.type?.toLowerCase() == "movie"
+                    ? lang.watchMovie
+                    : lang.watchSeries
+            : "₹ $price";
+  }
 
+  /// The card's primary action: open a series, play a rented title, or
+  /// start the rent flow.
+  void _runPrimaryAction() {
+    final movie = widget.movie;
+    final isRental = movie.isRental ?? false;
+    movie.type!.toLowerCase() == 'series'
+        ? _openDetails()
+        : isRental
+            ? _playMovie()
+            : _showCupertinoDialog(context, movie);
+  }
+
+  Future<void> _toggleBookmark() async {
+    final movie = widget.movie;
+    final bookmarkProvider = context.read<BookmarkProvider>();
+    final bool wasBookmarked =
+        bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
+
+    await bookmarkProvider.toggleBookmark(movie);
+    if (!mounted) return;
+
+    CustomToast.show(
+      context,
+      wasBookmarked
+          ? "${movie.title} removed from bookmarks"
+          : "${movie.title} added to bookmarks",
+      isSuccess: true,
+    );
+  }
+
+  Widget _buildPriceButton(
+      ThemeData theme, AppLocalizations lang, double price) {
     return GestureDetector(
-      onTap: () => movie.type!.toLowerCase() == 'series'
-          ? _openDetails()
-          : isRental
-              ? _playMovie()
-              : _showCupertinoDialog(context, movie),
+      onTap: _runPrimaryAction,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
         decoration: BoxDecoration(
@@ -862,17 +1199,7 @@ class _MovieCardState extends State<MovieCard> {
           color: theme.primaryColor.withOpacity(0.9),
         ),
         child: Text(
-          movie.type!.toLowerCase() == 'series'
-              ? isRental
-                  ? (isShortFilm ? 'Watch Now' : 'Watch Series')
-                  : '₹ $price'
-              : isRental
-                  ? isShortFilm
-                      ? 'Watch Now'
-                      : movie.type?.toLowerCase() == "movie"
-                          ? lang.watchMovie
-                          : lang.watchSeries
-                  : "₹ $price",
+          _primaryActionLabel(lang),
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
@@ -1148,19 +1475,7 @@ class _MovieCardState extends State<MovieCard> {
                     ),
                     backgroundColor: theme.primaryColor,
                     onTap: () async {
-                      final bool wasBookmarked =
-                          bookmarkProvider.isBookmarkedLocally(movie.id ?? 0);
-
-                      await bookmarkProvider.toggleBookmark(movie);
-
-                      CustomToast.show(
-                        context,
-                        wasBookmarked
-                            ? "${movie.title} removed from bookmarks"
-                            : "${movie.title} added to bookmarks",
-                        isSuccess: true,
-                      );
-
+                      await _toggleBookmark();
                       isDialOpen.value = false;
                     },
                   ),
@@ -1345,5 +1660,220 @@ class _MovieCardState extends State<MovieCard> {
       default:
         return DeepLinkContentType.movie;
     }
+  }
+}
+
+// =============================================================================
+// Android TV card helpers
+// =============================================================================
+
+class _TvCardAction {
+  const _TvCardAction(this.icon, this.label, this.onSelected);
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onSelected;
+}
+
+class _TvCardBadge extends StatelessWidget {
+  const _TvCardBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor,
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.4,
+        ),
+      ),
+    );
+  }
+}
+
+/// Price / watch chip (the card's primary action, shown as a label on TV;
+/// it runs from the options sheet or the details page).
+class _TvActionChip extends StatelessWidget {
+  const _TvActionChip({
+    required this.label,
+    required this.rented,
+    required this.color,
+  });
+
+  final String label;
+  final bool rented;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+      decoration: BoxDecoration(
+        color: rented ? const Color(0xFF1B8A3A) : color,
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            rented ? Icons.play_arrow_rounded : Icons.confirmation_number,
+            size: 14,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 4),
+          ConstrainedBox(
+            // Long (localised) labels ellipsize instead of squeezing the
+            // title/rating column.
+            constraints: const BoxConstraints(maxWidth: 110),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown at the bottom of the focused image so the options are discoverable.
+class _TvOptionsHint extends StatelessWidget {
+  const _TvOptionsHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(10, 22, 10, 7),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.transparent, Color(0xD9000000)],
+        ),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.more_horiz_rounded, size: 16, color: Colors.white70),
+          SizedBox(width: 5),
+          Text(
+            'Hold OK for options',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Remote-friendly options sheet for a card. Pops with the chosen action.
+class _TvCardOptionsDialog extends StatelessWidget {
+  const _TvCardOptionsDialog({required this.movie, required this.actions});
+
+  final Content movie;
+  final List<_TvCardAction> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final posterUrl = movie.posterUrlList?.isNotEmpty == true
+        ? movie.posterUrlList!.first
+        : null;
+
+    return Dialog(
+      backgroundColor: theme.cardColor,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(TvDesign.panelRadius),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 340),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: AspectRatio(
+                  aspectRatio: TvDesign.imageAspectRatio,
+                  child: FilmytellPosterImage(
+                    posterUrl: posterUrl,
+                    fit: BoxFit.cover,
+                    fallbackIconSize: 28,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                movie.title ?? 'No Title',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TvDesign.pageTitle(theme).copyWith(fontSize: 15),
+              ),
+              const SizedBox(height: 8),
+              for (var i = 0; i < actions.length; i++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: OttTvFocus(
+                    autofocus: i == 0,
+                    borderRadius: 8,
+                    scale: 1.0,
+                    onTap: () => Navigator.of(context).pop(actions[i]),
+                    child: Container(
+                      height: 30,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: theme.canvasColor.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(actions[i].icon,
+                              size: 15, color: theme.canvasColor),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              actions[i].label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: theme.canvasColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

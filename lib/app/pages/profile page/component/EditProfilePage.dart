@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
+import 'package:ott/app/pages/profile%20page/component/profile_detail_shell.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/month_year_picker_dialog.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
-import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -182,6 +183,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ? NetworkImage(cachedPhoto)
                 : AssetImage(ImageConstant.profile);
 
+    // Android TV: compact two-column form on the 540 px canvas.
+    if (ResponsiveWidget.isAndroidTv(context)) {
+      return _buildTv(userProvider, selectedThemeData, avatarImage);
+    }
+
     return Scaffold(
       backgroundColor: selectedThemeData.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -269,67 +275,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    CustomTextField(
-                      controller: userProvider.nameController,
-                      focusNode: _nameFocusNode,
-                      autofocus: ResponsiveWidget.isTabletOrTv(context),
-                      label: 'Name',
-                      hintText: (() {
-                        final first =
-                            (userProvider.userObj.firstName ?? '').trim();
-                        final last =
-                            (userProvider.userObj.lastName ?? '').trim();
-                        final fullName = '$first $last'.trim();
-                        return fullName.isNotEmpty
-                            ? fullName
-                            : 'Enter your name';
-                      })(),
-                      isValidator: false,
-                      textInputType: TextInputType.name,
-                      capitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.next,
-                      onFieldSubmitted: (_) => _emailFocusNode.requestFocus(),
-                    ),
-                    CustomTextField(
-                      controller: userProvider.emailController,
-                      focusNode: _emailFocusNode,
-                      label: 'Email (Optional)',
-                      isEmail: false,
-                      isValidator: false,
-                      validator: (val) {
-                        if (val != null && val.trim().isNotEmpty) {
-                          final emailRegex =
-                              RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-                          if (!emailRegex.hasMatch(val.trim())) {
-                            return 'Enter valid email';
-                          }
-                        }
-                        return null;
-                      },
-                      hintText:
-                          userProvider.userObj.emailId ?? 'Enter valid email',
-                      textInputType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      onFieldSubmitted: (_) {
-                        _dobFocusNode.requestFocus();
-                        _selectDate(userProvider);
-                      },
-                    ),
-                    CustomTextField(
-                      controller: userProvider.dobController,
-                      focusNode: _dobFocusNode,
-                      label: 'Birth Date (Month & Year)',
-                      isValidator: false,
-                      readOnly: true,
-                      suffixIcon: Icons.calendar_today_outlined,
-                      hintText: userProvider.userObj.dob != null
-                          ? userProvider.userObj.dob!.isNotEmpty
-                              ? userProvider.userObj.dob!
-                              : 'Select birth month and year'
-                          : 'Select birth month and year',
-                      textInputType: TextInputType.datetime,
-                      onTap: () => _selectDate(userProvider),
-                    ),
+                    ..._buildFields(userProvider),
                     const SizedBox(height: 30),
                     OttTvFocus(
                       borderRadius: 6,
@@ -366,6 +312,199 @@ class _EditProfilePageState extends State<EditProfilePage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// Name, email and birth-date fields (shared by phone/web and Android TV).
+  List<Widget> _buildFields(UserProvider userProvider) {
+    return [
+      CustomTextField(
+        controller: userProvider.nameController,
+        focusNode: _nameFocusNode,
+        autofocus: ResponsiveWidget.isTabletOrTv(context),
+        label: 'Name',
+        hintText: (() {
+          final first = (userProvider.userObj.firstName ?? '').trim();
+          final last = (userProvider.userObj.lastName ?? '').trim();
+          final fullName = '$first $last'.trim();
+          return fullName.isNotEmpty ? fullName : 'Enter your name';
+        })(),
+        isValidator: false,
+        textInputType: TextInputType.name,
+        capitalization: TextCapitalization.words,
+        textInputAction: TextInputAction.next,
+        onFieldSubmitted: (_) => _emailFocusNode.requestFocus(),
+      ),
+      CustomTextField(
+        controller: userProvider.emailController,
+        focusNode: _emailFocusNode,
+        label: 'Email (Optional)',
+        isEmail: false,
+        isValidator: false,
+        validator: (val) {
+          if (val != null && val.trim().isNotEmpty) {
+            final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+            if (!emailRegex.hasMatch(val.trim())) {
+              return 'Enter valid email';
+            }
+          }
+          return null;
+        },
+        hintText: userProvider.userObj.emailId ?? 'Enter valid email',
+        textInputType: TextInputType.emailAddress,
+        textInputAction: TextInputAction.next,
+        onFieldSubmitted: (_) {
+          _dobFocusNode.requestFocus();
+          _selectDate(userProvider);
+        },
+      ),
+      CustomTextField(
+        controller: userProvider.dobController,
+        focusNode: _dobFocusNode,
+        label: 'Birth Date (Month & Year)',
+        isValidator: false,
+        readOnly: true,
+        suffixIcon: Icons.calendar_today_outlined,
+        hintText: userProvider.userObj.dob != null
+            ? userProvider.userObj.dob!.isNotEmpty
+                ? userProvider.userObj.dob!
+                : 'Select birth month and year'
+            : 'Select birth month and year',
+        textInputType: TextInputType.datetime,
+        onTap: () => _selectDate(userProvider),
+      ),
+    ];
+  }
+
+  // ===========================================================================
+  // ANDROID TV
+  // ===========================================================================
+
+  Widget _buildTv(
+    UserProvider userProvider,
+    ThemeData theme,
+    ImageProvider avatarImage,
+  ) {
+    void back() => _handleBackPress(context, userProvider, theme);
+    void pickImage() => userProvider.pickImage();
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TvDetailHeader(title: "Edit Profile", onBack: back),
+          Expanded(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: 720 + TvDesign.pageGutter * 2,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: TvDesign.pageGutter,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 200,
+                        child: TvPanel(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Center(
+                                child: SizedBox(
+                                  width: 80,
+                                  height: 80,
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      Hero(
+                                        tag: 'profile',
+                                        child: CircleAvatar(
+                                          radius: 40,
+                                          backgroundColor: theme.cardColor,
+                                          backgroundImage: avatarImage,
+                                        ),
+                                      ),
+                                      if (userProvider.isUploading)
+                                        DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            color: Colors.black
+                                                .withValues(alpha: 0.35),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Center(
+                                            child: SizedBox(
+                                              width: 22,
+                                              height: 22,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2.5,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              TvCompactButton(
+                                label: 'Change photo',
+                                icon: Icons.edit,
+                                primary: false,
+                                expand: true,
+                                loading: userProvider.isUploading,
+                                onPressed: pickImage,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Form(
+                          key: _formKey,
+                          child: ListView(
+                            padding: const EdgeInsets.only(bottom: 20),
+                            children: [
+                              TvPanel(
+                                padding:
+                                    const EdgeInsets.fromLTRB(14, 6, 14, 14),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    ..._buildFields(userProvider),
+                                    const SizedBox(height: 10),
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: TvCompactButton(
+                                        label: "Save",
+                                        icon: Icons.check_rounded,
+                                        loading: userProvider.isUploading,
+                                        onPressed: () =>
+                                            _saveProfile(userProvider),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

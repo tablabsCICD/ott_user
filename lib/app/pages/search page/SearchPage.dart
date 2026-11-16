@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/core/utils/content_type.dart';
@@ -13,6 +14,7 @@ import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/filmytell_poster_image.dart';
 import 'package:ott/app/widgets/shimmer%20loader/search_shimmer.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/data/repositories/demo.dart';
@@ -30,6 +32,7 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   bool isLoading = true;
   final FocusNode _searchFocusNode = FocusNode(debugLabel: 'search-field');
+  final FocusNode _tvFilterFocusNode = FocusNode(debugLabel: 'search-filter');
 
   @override
   void initState() {
@@ -46,6 +49,7 @@ class _SearchPageState extends State<SearchPage> {
   @override
   void dispose() {
     _searchFocusNode.dispose();
+    _tvFilterFocusNode.dispose();
     super.dispose();
   }
 
@@ -80,6 +84,16 @@ class _SearchPageState extends State<SearchPage> {
 
     return Consumer<VideoProvider>(
       builder: (context, provider, child) {
+        if (ResponsiveWidget.isAndroidTv(context)) {
+          return _buildAndroidTv(
+            context,
+            provider,
+            genreSet,
+            languageSet,
+            selectedThemeData,
+            lang,
+          );
+        }
         return Scaffold(
           backgroundColor: selectedThemeData.scaffoldBackgroundColor,
           appBar: AppBar(
@@ -401,26 +415,57 @@ class _SearchPageState extends State<SearchPage> {
     if (suggestions.isEmpty) return const SliverToBoxAdapter();
 
     final theme = Theme.of(context);
+    // Android TV: compact pill row aligned to the page gutter.
+    final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
     return SliverToBoxAdapter(
       child: SizedBox(
-        height: 58,
+        height: isAndroidTv ? 44 : 58,
         child: ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: isAndroidTv
+              ? const EdgeInsets.symmetric(
+                  horizontal: TvDesign.pageGutter,
+                  vertical: 8,
+                )
+              : const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           scrollDirection: Axis.horizontal,
           itemCount: suggestions.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 10),
+          separatorBuilder: (_, __) => SizedBox(width: isAndroidTv ? 8 : 10),
           itemBuilder: (context, index) {
             final suggestion = suggestions[index];
+            if (isAndroidTv) {
+              return OttTvFocus(
+                borderRadius: 14,
+                scale: 1.05,
+                semanticLabel: suggestion,
+                onTap: () => _applySuggestion(provider, suggestion),
+                child: Container(
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: theme.canvasColor.withValues(alpha: 0.10),
+                    ),
+                  ),
+                  child: Text(
+                    suggestion,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: theme.canvasColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              );
+            }
             return OttTvFocus(
               borderRadius: 18,
               scale: 1.06,
               semanticLabel: suggestion,
-              onTap: () {
-                provider.searchContentController.text = suggestion;
-                provider.searchContentController.selection =
-                    TextSelection.collapsed(offset: suggestion.length);
-                provider.searchContent();
-              },
+              onTap: () => _applySuggestion(provider, suggestion),
               child: Chip(
                 backgroundColor: theme.cardColor,
                 side: BorderSide(color: theme.primaryColor.withOpacity(0.45)),
@@ -436,6 +481,246 @@ class _SearchPageState extends State<SearchPage> {
           },
         ),
       ),
+    );
+  }
+
+  /// Puts a suggestion in the search box and runs the search (shared by the
+  /// mobile/tablet chips and the Android TV pills).
+  void _applySuggestion(VideoProvider provider, String suggestion) {
+    provider.searchContentController.text = suggestion;
+    provider.searchContentController.selection =
+        TextSelection.collapsed(offset: suggestion.length);
+    provider.searchContent();
+  }
+
+  // ===========================================================================
+  // ANDROID TV LAYOUT
+  // ===========================================================================
+
+  /// Android TV: fixed header (title, search box, filter) above a scrolling
+  /// area with the suggestion pills and a two-column grid of result cards.
+  /// Uses the same controller, search, filter dialog and cards as the other
+  /// layouts — only the presentation differs.
+  Widget _buildAndroidTv(
+    BuildContext context,
+    VideoProvider provider,
+    Set<String> genreSet,
+    Set<String> languageSet,
+    ThemeData theme,
+    AppLocalizations lang,
+  ) {
+    final results = provider.filteredContentList;
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                TvDesign.pageGutter,
+                12,
+                TvDesign.pageGutter,
+                0,
+              ),
+              child: _buildTvHeader(
+                context,
+                provider,
+                genreSet,
+                languageSet,
+                theme,
+                lang,
+              ),
+            ),
+            Expanded(
+              child: isLoading
+                  ? const SearchShimmer()
+                  : CustomScrollView(
+                      slivers: [
+                        _buildSearchSuggestionsSliver(
+                          context,
+                          provider,
+                          genreSet,
+                          languageSet,
+                        ),
+                        if (results.isEmpty)
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Center(
+                              child: Text(
+                                lang.noContentFound,
+                                style: TextStyle(
+                                  color:
+                                      theme.canvasColor.withValues(alpha: 0.7),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(
+                              TvDesign.pageGutter,
+                              8,
+                              TvDesign.pageGutter,
+                              TvDesign.pageGutter,
+                            ),
+                            // Compact 16:9 landscape tiles, four per row
+                            // (aligned columns, so Down lands in the next
+                            // row).
+                            sliver: SliverLayoutBuilder(
+                              builder: (context, constraints) {
+                                const columns = 4;
+                                const gap = 12.0;
+                                final tileWidth = (constraints.crossAxisExtent -
+                                        gap * (columns - 1)) /
+                                    columns;
+                                return SliverGrid(
+                                  delegate: SliverChildBuilderDelegate(
+                                    (context, index) =>
+                                        SearchMovieCard(movie: results[index]),
+                                    childCount: results.length,
+                                  ),
+                                  gridDelegate:
+                                      SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: columns,
+                                    mainAxisSpacing: gap + 4,
+                                    crossAxisSpacing: gap,
+                                    mainAxisExtent:
+                                        tileWidth * 9 / 16 + _tvTileTextHeight,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvHeader(
+    BuildContext context,
+    VideoProvider provider,
+    Set<String> genreSet,
+    Set<String> languageSet,
+    ThemeData theme,
+    AppLocalizations lang,
+  ) {
+    final activeFilters = [
+      provider.selectedGenre,
+      provider.selectedLanguage,
+      provider.selectedRating,
+    ].where((value) => value != null).length;
+
+    void openFilters() => _showTvFilterDialog(
+          context,
+          provider,
+          genreSet,
+          languageSet,
+          theme,
+          lang,
+        );
+
+    final inputTheme = theme.copyWith(
+      inputDecorationTheme: theme.inputDecorationTheme.copyWith(
+        isDense: true,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      ),
+    );
+
+    return Row(
+      children: [
+        Text(lang.search, style: TvDesign.pageTitle(theme)),
+        const SizedBox(width: 20),
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              // Right at the end of the text moves on to Filter (a text
+              // field otherwise keeps Left/Right for the caret).
+              child: Focus(
+                canRequestFocus: false,
+                skipTraversal: true,
+                onKeyEvent: (node, event) {
+                  if (event is! KeyDownEvent ||
+                      event.logicalKey != LogicalKeyboardKey.arrowRight ||
+                      !_searchFocusNode.hasFocus) {
+                    return KeyEventResult.ignored;
+                  }
+                  final value = provider.searchContentController.value;
+                  final atEnd = !value.selection.isValid ||
+                      (value.selection.isCollapsed &&
+                          value.selection.baseOffset >= value.text.length);
+                  if (!atEnd) return KeyEventResult.ignored;
+                  _tvFilterFocusNode.requestFocus();
+                  return KeyEventResult.handled;
+                },
+                child: Theme(
+                  data: inputTheme,
+                  child: CustomTextField(
+                    controller: provider.searchContentController,
+                    focusNode: _searchFocusNode,
+                    autofocus: true,
+                    hintText: lang.searchContent,
+                    prefixIcon: const Icon(Icons.search, size: 18),
+                    textInputType: TextInputType.text,
+                    textInputAction: TextInputAction.search,
+                    onFieldSubmitted: (_) => provider.searchContent(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        OttTvFocus(
+          focusNode: _tvFilterFocusNode,
+          borderRadius: 18,
+          scale: 1.05,
+          semanticLabel: lang.filter,
+          onTap: openFilters,
+          child: Container(
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: activeFilters > 0 ? theme.primaryColor : theme.cardColor,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: theme.canvasColor.withValues(alpha: 0.06),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.filter_list,
+                  size: 16,
+                  color: activeFilters > 0 ? Colors.white : theme.canvasColor,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  activeFilters > 0
+                      ? '${lang.filter} ($activeFilters)'
+                      : lang.filter,
+                  style: TextStyle(
+                    color: activeFilters > 0 ? Colors.white : theme.canvasColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -668,6 +953,10 @@ class _SearchPageState extends State<SearchPage> {
   }
 }
 
+/// Android TV: height of the text block under a search tile's 16:9 image.
+/// (Sized for three lines incl. taller Devanagari glyphs.)
+const double _tvTileTextHeight = 70;
+
 class SearchMovieCard extends StatefulWidget {
   final Content movie;
 
@@ -776,24 +1065,13 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     final theme = themeProvider.getTheme;
 
+    if (ResponsiveWidget.isAndroidTv(context)) {
+      return _buildTvCard(context, theme);
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        void openDetails() {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ContentType.isMovieLike(movie.type)
-                  ? MovieDetailsPage(
-                      movieId: movie.id!,
-                      contentType: movie.type,
-                    )
-                  : SeriesDetailsPage(
-                      seriesId: movie.id!,
-                      content: movie,
-                    ),
-            ),
-          );
-        }
+        void openDetails() => _openDetails(context);
 
         final card = Card(
           color: theme.cardColor,
@@ -969,11 +1247,226 @@ class _SearchMovieCardState extends State<SearchMovieCard> {
     );
   }
 
+  void _openDetails(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ContentType.isMovieLike(movie.type)
+            ? MovieDetailsPage(
+                movieId: movie.id!,
+                contentType: movie.type,
+              )
+            : SeriesDetailsPage(
+                seriesId: movie.id!,
+                content: movie,
+              ),
+      ),
+    );
+  }
+
+  /// Android TV: the same horizontal card (the grid keeps its 7:3 size) with
+  /// a 16:9 cover image on the left and compact, ellipsized details.
+  Widget _buildTvCard(BuildContext context, ThemeData theme) {
+    final muted = theme.canvasColor.withValues(alpha: 0.68);
+    final bodyStyle = TextStyle(color: muted, fontSize: 10.5, height: 1.3);
+    final labelStyle = TextStyle(
+      color: theme.primaryColor,
+      fontSize: 11,
+      fontWeight: FontWeight.w600,
+    );
+    final posterUrl =
+        movie.posterUrlList != null && movie.posterUrlList!.isNotEmpty
+            ? movie.posterUrlList![0]
+            : null;
+
+    return OttTvFocus(
+      onTap: () => _openDetails(context),
+      borderRadius: TvDesign.cardRadius,
+      scale: TvDesign.cardFocusScale,
+      semanticLabel: movie.title,
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(TvDesign.cardRadius),
+          border: Border.all(
+            color: theme.canvasColor.withValues(alpha: 0.06),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AspectRatio(
+              aspectRatio: TvDesign.imageAspectRatio,
+              child: FilmytellPosterImage(
+                posterUrl: posterUrl,
+                fit: BoxFit.cover,
+                fallbackIconSize: 28,
+                fallbackIcon: Icons.movie,
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(9, 6, 9, 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      movie.title ?? 'No Title',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: theme.canvasColor,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text.rich(
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      TextSpan(
+                        style: TvDesign.caption(theme),
+                        children: [
+                          TextSpan(
+                            text: '★ ${movie.ratings ?? '-'}',
+                            style: const TextStyle(
+                              color: Colors.amberAccent,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const TextSpan(text: '  |  '),
+                          TextSpan(
+                            text: (movie.genreList != null &&
+                                    movie.genreList!.isNotEmpty)
+                                ? movie.genreList!.join(', ')
+                                : 'N/A',
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text.rich(
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      TextSpan(
+                        style: bodyStyle,
+                        children: [
+                          TextSpan(text: 'Dir: ', style: labelStyle),
+                          TextSpan(text: _memberNames(_crewList)),
+                          TextSpan(text: '   Cast: ', style: labelStyle),
+                          TextSpan(text: _memberNames(_castList)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   String _memberNames(List<CastMember> members) {
     final names = members
         .map((member) => member.name?.trim() ?? '')
         .where((name) => name.isNotEmpty)
         .toList();
     return names.isEmpty ? 'N/A' : names.join(', ');
+  }
+
+  Widget _buildPeopleSection(BuildContext context) {
+    final cast = _castList;
+    final crew = _crewList;
+
+    if (_isLoadingCast && cast.isEmpty && crew.isEmpty) {
+      return const SizedBox(
+        height: 18,
+        width: 18,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+
+    if (cast.isEmpty && crew.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (cast.isNotEmpty) _buildPeopleChips(context, 'Cast', cast),
+        if (cast.isNotEmpty && crew.isNotEmpty) const SizedBox(height: 4),
+        if (crew.isNotEmpty) _buildPeopleChips(context, 'Crew', crew),
+      ],
+    );
+  }
+
+  Widget _buildPeopleChips(
+    BuildContext context,
+    String label,
+    List<CastMember> members,
+  ) {
+    final theme = Theme.of(context);
+    final visibleMembers = members.take(4).toList();
+    // Android TV: slimmer chip row so the card keeps its size.
+    final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
+
+    return SizedBox(
+      height: isAndroidTv ? 22 : 28,
+      child: Row(
+        children: [
+          Text(
+            '$label: ',
+            style: TextStyle(
+              color: theme.primaryColor,
+              fontSize: isAndroidTv ? 10.5 : 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: visibleMembers.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (context, index) {
+                return _buildPersonChip(context, visibleMembers[index]);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPersonChip(BuildContext context, CastMember member) {
+    final theme = Theme.of(context);
+    final name = member.name?.trim() ?? 'N/A';
+    final role = member.role?.trim() ?? '';
+    final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
+
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 140),
+      padding: isAndroidTv
+          ? const EdgeInsets.symmetric(horizontal: 7, vertical: 3)
+          : const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.cardColor.withOpacity(0.75),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.canvasColor.withOpacity(0.12)),
+      ),
+      child: Text(
+        role.isEmpty ? name : '$name ($role)',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: theme.canvasColor.withOpacity(0.78),
+          fontSize: isAndroidTv ? 10 : 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
   }
 }

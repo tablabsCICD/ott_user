@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/app/pages/profile%20page/component/profile_detail_shell.dart';
 import 'package:ott/app/provider/onboarding_tour_provider.dart';
 import 'package:ott/app/provider/ticketProvider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -46,6 +48,9 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
   Widget build(BuildContext context) {
     var theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
+
+    // Android TV: support form on the left, sent requests on the right.
+    if (ResponsiveWidget.isAndroidTv(context)) return _buildTv(theme, lang);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -149,6 +154,49 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
   }
 
 
+  void _replayAppTour() {
+    context.read<OnboardingTourProvider>().replayTour(context: context);
+  }
+
+  Future<void> _submitTicket(ThemeData theme, TicketProvider provider) async {
+    if (!(_supportFormKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    final confirmed = await _showSubmitConfirmationDialog(theme);
+    if (!mounted || confirmed != true) return;
+
+    final result = await provider.raiseTicket();
+    if (!mounted) return;
+
+    CustomToast.show(
+      context,
+      result['message']?.toString() ?? 'Something went wrong',
+      isSuccess: result['success'] == true,
+    );
+
+    if (result['success'] == true) {
+      await provider.getRaisedTicketByUserId();
+    }
+  }
+
+  Future<void> _deleteTicket(
+    ThemeData theme,
+    TicketProvider provider,
+    int ticketId,
+  ) async {
+    final shouldDelete = await _showDeleteTicketDialog(theme);
+    if (shouldDelete != true || !context.mounted) return;
+
+    final result = await provider.deleteTicket(ticketId);
+    if (!context.mounted) return;
+
+    CustomToast.show(
+      context,
+      result['message']?.toString() ?? 'Something went wrong',
+      isSuccess: result['success'] == true,
+    );
+  }
 
   Widget _buildAppTourCard(ThemeData theme) {
     return Card(
@@ -158,9 +206,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
         borderRadius: 16,
         scale: 1.02,
         semanticLabel: "App Tour",
-        onTap: () {
-          context.read<OnboardingTourProvider>().replayTour(context: context);
-        },
+        onTap: _replayAppTour,
         child: ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           leading: CircleAvatar(
@@ -180,9 +226,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
           ),
           trailing: Icon(Icons.arrow_forward_ios_rounded,
               size: 16, color: theme.canvasColor.withOpacity(0.7)),
-          onTap: () {
-            context.read<OnboardingTourProvider>().replayTour(context: context);
-          },
+          onTap: _replayAppTour,
         ),
       ),
     );
@@ -322,57 +366,11 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                   semanticLabel: lang.submit,
                   onTap: provider.isSubmitting || provider.isUploading
                       ? null
-                      : () async {
-                          if (!(_supportFormKey.currentState?.validate() ??
-                              false)) {
-                            return;
-                          }
-
-                          final confirmed =
-                              await _showSubmitConfirmationDialog(theme);
-                          if (!mounted || confirmed != true) return;
-
-                          final result = await provider.raiseTicket();
-                          if (!mounted) return;
-
-                          CustomToast.show(
-                            context,
-                            result['message']?.toString() ??
-                                'Something went wrong',
-                            isSuccess: result['success'] == true,
-                          );
-
-                          if (result['success'] == true) {
-                            await provider.getRaisedTicketByUserId();
-                          }
-                        },
+                      : () => _submitTicket(theme, provider),
                   child: ElevatedButton(
                     onPressed: provider.isSubmitting || provider.isUploading
                         ? null
-                        : () async {
-                            if (!(_supportFormKey.currentState?.validate() ??
-                                false)) {
-                              return;
-                            }
-
-                            final confirmed =
-                                await _showSubmitConfirmationDialog(theme);
-                            if (!mounted || confirmed != true) return;
-
-                            final result = await provider.raiseTicket();
-                            if (!mounted) return;
-
-                            CustomToast.show(
-                              context,
-                              result['message']?.toString() ??
-                                  'Something went wrong',
-                              isSuccess: result['success'] == true,
-                            );
-
-                            if (result['success'] == true) {
-                              await provider.getRaisedTicketByUserId();
-                            }
-                          },
+                        : () => _submitTicket(theme, provider),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.primaryColor,
                       foregroundColor: Colors.white,
@@ -639,19 +637,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
                     ),
               onPressed: ticketId == null || provider.deletingTicketId != null
                   ? null
-                  : () async {
-                      final shouldDelete = await _showDeleteTicketDialog(theme);
-                      if (shouldDelete != true || !context.mounted) return;
-
-                      final result = await provider.deleteTicket(ticketId);
-                      if (!context.mounted) return;
-
-                      CustomToast.show(
-                        context,
-                        result['message']?.toString() ?? 'Something went wrong',
-                        isSuccess: result['success'] == true,
-                      );
-                    },
+                  : () => _deleteTicket(theme, provider, ticketId),
             ),
           ],
         ),
@@ -683,6 +669,8 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
           ),
           actions: [
             TextButton(
+              // Android TV: start on the safe choice.
+              autofocus: ResponsiveWidget.isAndroidTv(dialogContext),
               onPressed: () => Navigator.pop(dialogContext, false),
               child: Text(
                 'Cancel',
@@ -700,6 +688,447 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
           ],
         );
       },
+    );
+  }
+
+  // ===========================================================================
+  // ANDROID TV
+  // ===========================================================================
+
+  Widget _buildTv(ThemeData theme, AppLocalizations lang) {
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TvDetailHeader(title: lang.helpAndSupport),
+          Expanded(
+            child: Consumer<TicketProvider>(
+              builder: (context, provider, child) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: TvDesign.pageGutter,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 340,
+                        child: ListView(
+                          padding: const EdgeInsets.only(bottom: 20),
+                          children: [
+                            _buildTvAppTourRow(theme),
+                            const SizedBox(height: 12),
+                            _buildTvFormPanel(theme, lang, provider),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildTvTickets(theme, lang, provider)),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTvAppTourRow(ThemeData theme) {
+    return OttTvFocus(
+      // First control on the page; the query field is not autofocused on TV
+      // because focusing it opens the on-screen keyboard immediately.
+      autofocus: true,
+      onTap: _replayAppTour,
+      borderRadius: TvDesign.panelRadius,
+      scale: 1.02,
+      semanticLabel: "App Tour",
+      child: TvPanel(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: theme.primaryColor.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.tour_rounded,
+                color: theme.primaryColor,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'App Tour',
+                    style: TextStyle(
+                      color: theme.canvasColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Replay the quick guide to important app features.',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TvDesign.caption(theme),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 16,
+              color: theme.canvasColor.withValues(alpha: 0.5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvFormPanel(
+    ThemeData theme,
+    AppLocalizations lang,
+    TicketProvider provider,
+  ) {
+    final busy = provider.isSubmitting || provider.isUploading;
+
+    return TvPanel(
+      child: Form(
+        key: _supportFormKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text("Raise a Ticket", style: TvDesign.sectionTitle(theme)),
+            CustomTextField(
+              controller: provider.topicController,
+              focusNode: _queryFocusNode,
+              hintText: lang.enterYourQuery,
+              textInputType: TextInputType.multiline,
+              maxLine: 4,
+              textInputAction: TextInputAction.next,
+              onFieldSubmitted: (_) => _submitFocusNode.requestFocus(),
+              validator: (value) {
+                final query = value?.trim() ?? '';
+                if (query.isEmpty) {
+                  return 'Please enter your query';
+                }
+                if (query.length < 10) {
+                  return 'Please enter at least 10 characters';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 4),
+            if (provider.uploadedImageUrl != null)
+              Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      provider.uploadedImageUrl ?? "",
+                      width: 48,
+                      height: 48,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 48,
+                        height: 48,
+                        color: theme.primaryColor.withValues(alpha: 0.08),
+                        child: Icon(
+                          Icons.broken_image,
+                          size: 18,
+                          color: theme.primaryColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      "Attachment added",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: theme.canvasColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  TvCompactButton(
+                    label: 'Remove',
+                    icon: Icons.delete,
+                    primary: false,
+                    onPressed: () => provider.clearAttachment(),
+                  ),
+                ],
+              )
+            else
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TvCompactButton(
+                  focusNode: _attachFocusNode,
+                  label: provider.isUploading
+                      ? 'Uploading...'
+                      : lang.attachImage,
+                  icon: Icons.attach_file,
+                  primary: false,
+                  loading: provider.isUploading,
+                  onPressed: () => provider.pickImage(),
+                ),
+              ),
+            const SizedBox(height: 12),
+            TvCompactButton(
+              focusNode: _submitFocusNode,
+              label: lang.submit,
+              expand: true,
+              loading: provider.isSubmitting,
+              onPressed: busy && !provider.isSubmitting
+                  ? null
+                  : () => _submitTicket(theme, provider),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTvTickets(
+    ThemeData theme,
+    AppLocalizations lang,
+    TicketProvider provider,
+  ) {
+    final header = TvSectionHeader(
+      "Your Requests",
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.check_circle_outline_outlined,
+            size: 14,
+            color: theme.primaryColor,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            lang.sent,
+            style: TextStyle(
+              color: theme.primaryColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    Widget body;
+    if (provider.isLoadingTickets && provider.ticketList.isEmpty) {
+      body = Padding(
+        padding: const EdgeInsets.symmetric(vertical: 28),
+        child: Center(
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: theme.primaryColor,
+            ),
+          ),
+        ),
+      );
+    } else if (provider.ticketList.isEmpty) {
+      body = TvPanel(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: Column(
+          children: [
+            Icon(
+              Icons.mark_email_unread_outlined,
+              color: theme.primaryColor,
+              size: 26,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'No sent tickets yet',
+              style: TextStyle(
+                color: theme.canvasColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Your submitted support requests will appear here.',
+              textAlign: TextAlign.center,
+              style: TvDesign.caption(theme),
+            ),
+          ],
+        ),
+      );
+    } else {
+      body = Column(
+        children: [
+          for (final query in provider.ticketList)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _buildTvTicketCard(
+                theme,
+                provider,
+                query.tickedId,
+                query.image,
+                query.topic ?? '',
+                query.feedback ?? '',
+                query.date == null
+                    ? 'Date unavailable'
+                    : DateFormat('dd MMM yyyy, hh:mm a').format(
+                        DateTime.fromMillisecondsSinceEpoch(query.date!),
+                      ),
+              ),
+            ),
+        ],
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 20),
+      children: [header, body],
+    );
+  }
+
+  Widget _buildTvTicketCard(
+    ThemeData theme,
+    TicketProvider provider,
+    int? ticketId,
+    String? imageUrl,
+    String topic,
+    String feedback,
+    String dateText,
+  ) {
+    final attachmentUrl = imageUrl?.trim() ?? '';
+    final deleting = provider.deletingTicketId == ticketId;
+
+    Widget placeholder(IconData icon) => Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: theme.primaryColor.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 18, color: theme.primaryColor),
+        );
+
+    return TvPanel(
+      padding: const EdgeInsets.all(10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          attachmentUrl.isNotEmpty
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    attachmentUrl,
+                    width: 44,
+                    height: 44,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) =>
+                        placeholder(Icons.broken_image),
+                  ),
+                )
+              : placeholder(Icons.help_outline),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  topic,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: theme.canvasColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12.5,
+                  ),
+                ),
+                if (feedback.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    feedback,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: theme.canvasColor.withValues(alpha: 0.7),
+                      fontSize: 11.5,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 5),
+                Row(
+                  children: [
+                    Icon(Icons.access_time, size: 12, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        dateText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 10.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // The ticket's only action; also the focus stop that scrolls the
+          // list on the remote.
+          OttTvFocus(
+            borderRadius: 8,
+            scale: 1.08,
+            semanticLabel: 'Delete ticket',
+            onTap: ticketId == null
+                ? null
+                : provider.deletingTicketId != null
+                    ? () {}
+                    : () => _deleteTicket(theme, provider, ticketId),
+            child: Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: deleting
+                    ? SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: theme.primaryColor,
+                        ),
+                      )
+                    : Icon(Icons.delete, size: 16, color: theme.primaryColor),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

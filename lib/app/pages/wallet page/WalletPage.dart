@@ -7,6 +7,7 @@ import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 import 'package:ott/data/models/response/walletHistory.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
@@ -74,6 +75,8 @@ class _WalletPageState extends State<WalletPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveWidget.isAndroidTv(context)) return _buildTv(context);
+
     final theme = Provider.of<ThemeProvider>(context, listen: false).getTheme;
     final horizontal = ResponsiveWidget.isDesktop(context)
         ? 200.0
@@ -549,10 +552,8 @@ class _WalletPageState extends State<WalletPage> {
     );
   }
 
-  SliverToBoxAdapter _buildWalletSummarySliver(
-    ThemeData theme,
-    WalletProvider provider,
-  ) {
+  /// Summary figures shown on the wallet page (shared by every layout).
+  List<_WalletMetric> _walletMetrics(WalletProvider provider) {
     final transactions = provider.filteredTransactionHistory;
     final totalRevenue = transactions
         .where((tx) => tx.action?.toLowerCase() == "credit")
@@ -564,7 +565,7 @@ class _WalletPageState extends State<WalletPage> {
         .where((tx) => tx.action?.toLowerCase() != "credit")
         .fold<double>(0, (sum, tx) => sum + (tx.amount ?? 0));
 
-    final cards = [
+    return [
       _WalletMetric(
         label: 'Wallet Balance',
         value: _money(provider.walletBalance),
@@ -586,6 +587,13 @@ class _WalletPageState extends State<WalletPage> {
         icon: Icons.history,
       ),
     ];
+  }
+
+  SliverToBoxAdapter _buildWalletSummarySliver(
+    ThemeData theme,
+    WalletProvider provider,
+  ) {
+    final cards = _walletMetrics(provider);
 
     return SliverToBoxAdapter(
       child: Padding(
@@ -961,6 +969,312 @@ class _WalletPageState extends State<WalletPage> {
             SizedBox(width: 16),
             Expanded(child: Text("Updating wallet balance...")),
           ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------- Android TV ----------------
+
+  /// Android TV wallet (in-tab, right of the nav rail): balance, Recharge and
+  /// the summary figures in a panel on the left, transaction and withdraw
+  /// history on the right. Same provider data and the same recharge flow
+  /// ([_showBuyDialog] → [_submitRecharge]) as the other layouts.
+  Widget _buildTv(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            TvDesign.pageGutter,
+            16,
+            TvDesign.pageGutter,
+            16,
+          ),
+          child: Consumer<WalletProvider>(
+            builder: (_, provider, __) {
+              final transactions = provider.filteredTransactionHistory;
+              final withdrawList = transactions
+                  .where((tx) => tx.action?.toLowerCase() != "credit")
+                  .toList();
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Wallet', style: TvDesign.pageTitle(theme)),
+                  const SizedBox(height: 14),
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 300,
+                          child: SingleChildScrollView(
+                            child: _buildTvBalancePanel(theme, provider),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildTvHistoryPanel(
+                            theme,
+                            transactions,
+                            withdrawList,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  BoxDecoration _tvPanelDecoration(ThemeData theme) => BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(TvDesign.panelRadius),
+        border: Border.all(color: theme.canvasColor.withValues(alpha: 0.06)),
+      );
+
+  Widget _buildTvBalancePanel(ThemeData theme, WalletProvider provider) {
+    final metrics = _walletMetrics(provider);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: _tvPanelDecoration(theme),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+            decoration: BoxDecoration(
+              color: theme.primaryColor,
+              borderRadius: BorderRadius.circular(TvDesign.cardRadius),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.account_balance_wallet,
+                  size: 30,
+                  color: Colors.white54,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Available Balance",
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          "₹ ${provider.walletBalance.toStringAsFixed(1)}",
+                          maxLines: 1,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 36,
+            child: ElevatedButton.icon(
+              focusNode: _rechargeButtonFocusNode,
+              autofocus: true,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: _showBuyDialog,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text(
+                "Recharge Wallet",
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          for (var i = 1; i < metrics.length; i++) ...[
+            if (i > 1) const SizedBox(height: 8),
+            _tvMetricRow(theme, metrics[i]),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _tvMetricRow(ThemeData theme, _WalletMetric item) {
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(item.icon, size: 16, color: theme.primaryColor),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              item.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: theme.canvasColor.withValues(alpha: 0.68),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            item.value,
+            style: TextStyle(
+              color: theme.canvasColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTvHistoryPanel(
+    ThemeData theme,
+    List<Transactions> transactions,
+    List<Transactions> withdrawList,
+  ) {
+    final muted = theme.canvasColor.withValues(alpha: 0.62);
+    Widget emptyLine(String text) => Padding(
+          padding: const EdgeInsets.fromLTRB(4, 10, 4, 14),
+          child: Text(text, style: TextStyle(color: muted, fontSize: 12)),
+        );
+
+    // Flattened so the list stays lazy even for long histories.
+    final rows = <Widget>[
+      const TvSectionHeader(
+        "Transaction History",
+        padding: EdgeInsets.fromLTRB(4, 0, 4, 8),
+      ),
+      if (transactions.isEmpty) emptyLine("No transactions"),
+      for (final tx in transactions) _tvTransactionItem(theme, tx),
+      const TvSectionHeader(
+        "Withdraw History",
+        padding: EdgeInsets.fromLTRB(4, 10, 4, 8),
+      ),
+      if (withdrawList.isEmpty) emptyLine("No withdraw transactions"),
+      for (final tx in withdrawList) _tvTransactionItem(theme, tx),
+    ];
+
+    return Container(
+      decoration: _tvPanelDecoration(theme),
+      clipBehavior: Clip.antiAlias,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
+        itemCount: rows.length,
+        itemBuilder: (_, i) => rows[i],
+      ),
+    );
+  }
+
+  Widget _tvTransactionItem(ThemeData theme, Transactions tx) {
+    final isCredit = tx.action?.toLowerCase() == "credit";
+    final amountColor = isCredit ? Colors.green : Colors.red;
+    final reason = tx.reason?.toString().trim() ?? "";
+    final date = DateFormat('dd MMM yyyy • hh:mm a').format(
+      DateTime.fromMillisecondsSinceEpoch(tx.date ?? 0),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      // Rows carry no action; they are focus stops so the remote can scroll
+      // through the history (as in the existing tablet/TV layout).
+      child: OttTvFocus(
+        onTap: () {},
+        borderRadius: 8,
+        scale: 1.0,
+        semanticLabel: '${tx.status ?? 'Transaction'} ${tx.amount ?? 0}',
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 13,
+                backgroundColor: theme.cardColor,
+                foregroundColor: amountColor,
+                child: const Text(
+                  '₹',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      tx.status ?? "",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: theme.canvasColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      reason.isEmpty ? date : '$date  ·  $reason',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TvDesign.caption(theme),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                "${isCredit ? "+" : "-"}${tx.amount?.toStringAsFixed(0) ?? "0"}",
+                style: TextStyle(
+                  color: amountColor,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

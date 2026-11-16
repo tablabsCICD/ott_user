@@ -12,6 +12,8 @@ import 'package:ott/app/widgets/filmytell_poster_image.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/responsive_poster_image.dart';
 import 'package:ott/app/widgets/show_toast.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:provider/provider.dart';
@@ -59,6 +61,17 @@ class BookmarkPosterCard extends StatelessWidget {
             : "${movie.title} added to bookmarks",
         isSuccess: true,
         duration: const Duration(seconds: 1),
+      );
+    }
+
+    if (ResponsiveWidget.isAndroidTv(context)) {
+      return _buildAndroidTv(
+        context,
+        theme: theme,
+        posterUrl: posterUrl,
+        isBookmarked: isBookmarked,
+        openDetails: openDetails,
+        toggleBookmark: toggleBookmark,
       );
     }
 
@@ -142,6 +155,114 @@ class BookmarkPosterCard extends StatelessWidget {
       ),
     );
   }
+
+  /// Android TV: same card (the grid keeps its 1.3 cell) with a 16:9 cover
+  /// image, a one-line title + bookmark button row and a compact rating row.
+  /// Down from the card selects the bookmark button, OK toggles it, Up
+  /// returns to the card — same handlers as the other layouts.
+  Widget _buildAndroidTv(
+    BuildContext context, {
+    required ThemeData theme,
+    required String posterUrl,
+    required bool isBookmarked,
+    required VoidCallback openDetails,
+    required VoidCallback toggleBookmark,
+  }) {
+    return OttTvActionCard(
+      borderRadius: TvDesign.cardRadius,
+      scale: TvDesign.cardFocusScale,
+      onTap: openDetails,
+      onAction: toggleBookmark,
+      actionDirection: TraversalDirection.down,
+      semanticLabel: movie.title,
+      builder: (context, actionSelected) => Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(TvDesign.cardRadius),
+          border: Border.all(
+            color: theme.canvasColor.withValues(alpha: 0.06),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AspectRatio(
+              aspectRatio: TvDesign.imageAspectRatio,
+              child: FilmytellPosterImage(
+                posterUrl: posterUrl,
+                fit: BoxFit.cover,
+                fallbackIconSize: 28,
+                fallbackIcon: Icons.movie,
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 2, 4, 2),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            movie.title ?? "",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: theme.canvasColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        OttTvActionHighlight(
+                          selected: actionSelected,
+                          borderRadius: 12,
+                          child: SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: Icon(
+                              isBookmarked
+                                  ? Icons.bookmark
+                                  : Icons.bookmark_border,
+                              size: 16,
+                              color: actionSelected
+                                  ? Colors.white
+                                  : theme.primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        StarRatingWidget(
+                          rating: movie.ratings ?? 0,
+                          starSize: 10,
+                          textSize: 10,
+                        ),
+                        Flexible(
+                          child: Text(
+                            " (${movie.ratingCount ?? 0})",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TvDesign.caption(theme),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class ShortBookmarkPosterCard extends StatelessWidget {
@@ -155,6 +276,7 @@ class ShortBookmarkPosterCard extends StatelessWidget {
     final bookmarkProvider = context.watch<BookmarkProvider>();
     final bool isBookmarked =
         bookmarkProvider.isShortBookmarkedLocally(short.id);
+    final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
 
     Future<void> openShort() async {
       final user = await LocalSharePreferences.localSharePreferences.getUser();
@@ -197,6 +319,7 @@ class ShortBookmarkPosterCard extends StatelessWidget {
       // TV: Up from the card selects the bookmark button, OK toggles it.
       child: OttTvActionCard(
         borderRadius: 12,
+        scale: isAndroidTv ? TvDesign.cardFocusScale : 1.04,
         onTap: () {
           openShort();
         },
@@ -257,11 +380,14 @@ class ShortBookmarkPosterCard extends StatelessWidget {
             Positioned(
               bottom: 3,
               left: 5,
+              // Android TV: keep long titles inside the narrow tile.
+              right: isAndroidTv ? 5 : null,
               child: Text(
                 short.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
+                  fontSize: isAndroidTv ? 11 : null,
                   fontWeight: FontWeight.w500,
                   color: Colors.white,
                   shadows: [

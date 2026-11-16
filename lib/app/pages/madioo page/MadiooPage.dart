@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/app/widgets/tv/tv_design.dart';
 
 class MadiooPage extends StatefulWidget {
   const MadiooPage({super.key, this.useParentScroll = false});
@@ -62,8 +64,14 @@ class _MadiooPageState extends State<MadiooPage>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Android TV: sized for the 540 px canvas with the shared TV gutter and
+    // some room above, so the message sits under the tabs, not against them.
+    final tv = ResponsiveWidget.isAndroidTv(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: tv
+          ? const EdgeInsets.fromLTRB(
+              TvDesign.pageGutter, 48, TvDesign.pageGutter, 24)
+          : const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -94,8 +102,9 @@ class _MadiooPageState extends State<MadiooPage>
           /// 🎧 Title
           Text(
             "Madioo is Coming Soon",
+            textAlign: tv ? TextAlign.center : null,
             style: GoogleFonts.poppins(
-              fontSize: 22,
+              fontSize: tv ? 20 : 22,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -107,11 +116,11 @@ class _MadiooPageState extends State<MadiooPage>
             "Streaming Hindi songs...\nYour vibe, anytime 🎶",
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
-              fontSize: 14,
+              fontSize: tv ? 13 : 14,
               color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
             ),
           ),
-          const SizedBox(height: 60),
+          SizedBox(height: tv ? 36 : 60),
 
           /// 🎵 Animated Wave Bars
           _buildWaveBars(theme.primaryColor),

@@ -213,9 +213,13 @@ class TvDesignViewport extends StatelessWidget {
 /// cursor is easy to find even on screens that don't use [OttTvFocus].
 /// Only the focused state is changed; all other styling is preserved.
 ThemeData tvFocusTheme(ThemeData theme) {
-  final ringColor = theme.primaryColor;
-  final ring = BorderSide(color: ringColor, width: 2.5);
-  final focusFill = ringColor.withValues(alpha: 0.28);
+  // Neutral outline that reads on every surface, including brand-red filled
+  // buttons: white on the dark theme, near-black on the light theme.
+  final ringColor = theme.brightness == Brightness.dark
+      ? Colors.white
+      : const Color(0xFF111111);
+  final ring = BorderSide(color: ringColor, width: 2);
+  final focusFill = ringColor.withValues(alpha: 0.16);
 
   ButtonStyle withRing(ButtonStyle? base) {
     return (base ?? const ButtonStyle()).copyWith(
