@@ -224,5 +224,11 @@
   "emailSentSuccessfully": "ইমেল সফলভাবে পাঠানো হয়েছে।",
   "failedToSendEmail": "ইমেল পাঠাতে ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
   "message": "বার্তা",
-  "phoneNumber": "ফোন নম্বর"
+  "phoneNumber": "ফোন নম্বর",
+  "giftedToYou": "আপনাকে দেওয়া উপহার",
+  "giftedToYouEmptyTitle": "এখনও কোনো উপহার নেই",
+  "giftedToYouEmptyMessage": "আপনাকে উপহার দেওয়া সিনেমা ও কনটেন্ট এখানে দেখা যাবে।",
+  "giftedToYouRetry": "আবার চেষ্টা করুন",
+  "giftedToYouOffline": "ইন্টারনেট সংযোগ নেই। অনুগ্রহ করে আপনার নেটওয়ার্ক পরীক্ষা করে আবার চেষ্টা করুন।",
+  "giftedToYouLoadError": "কিছু ভুল হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
 }

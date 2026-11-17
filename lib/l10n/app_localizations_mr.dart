@@ -699,4 +699,25 @@ class AppLocalizationsMr extends AppLocalizations {
 
   @override
   String get phoneNumber => 'फोन नंबर';
+
+  @override
+  String get giftedToYou => 'तुम्हाला मिळालेल्या भेटी';
+
+  @override
+  String get giftedToYouEmptyTitle => 'अजून कोणतीही भेट नाही';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'तुम्हाला भेट दिलेले चित्रपट आणि कंटेंट येथे दिसतील.';
+
+  @override
+  String get giftedToYouRetry => 'पुन्हा प्रयत्न करा';
+
+  @override
+  String get giftedToYouOffline =>
+      'इंटरनेट कनेक्शन नाही. कृपया तुमचे नेटवर्क तपासा आणि पुन्हा प्रयत्न करा.';
+
+  @override
+  String get giftedToYouLoadError =>
+      'काहीतरी चूक झाली. कृपया पुन्हा प्रयत्न करा.';
 }

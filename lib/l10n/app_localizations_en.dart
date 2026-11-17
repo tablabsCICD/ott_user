@@ -692,4 +692,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get phoneNumber => 'Phone Number';
+
+  @override
+  String get giftedToYou => 'Gifted To You';
+
+  @override
+  String get giftedToYouEmptyTitle => 'No Gifts Yet';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'Movies and content gifted to you will appear here.';
+
+  @override
+  String get giftedToYouRetry => 'Retry';
+
+  @override
+  String get giftedToYouOffline =>
+      'No internet connection. Please check your network and try again.';
+
+  @override
+  String get giftedToYouLoadError => 'Something went wrong. Please try again.';
 }

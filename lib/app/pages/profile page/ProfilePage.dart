@@ -384,6 +384,14 @@ class _ProfilePageState extends State<ProfilePage> {
             showGiftClaimDialog(context);
           },
         ),
+        _ProfileEntry(
+          icon: Icons.card_giftcard_rounded,
+          title: lang.giftedToYou,
+          onTap: () => _openDetail(
+            lang.giftedToYou,
+            const WatchlistPage.giftedToYou(),
+          ),
+        ),
       ]),
       _ProfileSection(lang.feedbackAndInformation, [
         _ProfileEntry(

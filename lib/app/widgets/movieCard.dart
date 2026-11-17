@@ -71,7 +71,14 @@ class MovieCard extends StatefulWidget {
     this.onContentUpdated,
     this.isShortFilmTab = false,
     this.autofocus = false,
+    this.onOpen,
   });
+
+  /// Replaces the default open action (card tap, TV / keyboard select and
+  /// the price / Watch button). Used where the user already has access to
+  /// the content (Profile -> Gifted To You), so the button shows "Watch Now"
+  /// instead of the price. Null keeps the default behavior.
+  final VoidCallback? onOpen;
 
   /// Resolves the standardized card width for the given context based on
   /// responsive viewport breakpoints.
@@ -586,7 +593,7 @@ class _MovieCardState extends State<MovieCard> {
                 key == LogicalKeyboardKey.select ||
                 key == LogicalKeyboardKey.space ||
                 key == LogicalKeyboardKey.gameButtonA) {
-              _openDetails();
+              _handleOpen();
               return KeyEventResult.handled;
             }
             return KeyEventResult.ignored;
@@ -595,7 +602,7 @@ class _MovieCardState extends State<MovieCard> {
             onEnter: (_) => _handleHover(true),
             onExit: (_) => _handleHover(false),
             child: GestureDetector(
-              onTap: _openDetails,
+              onTap: _handleOpen,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
                 curve: Curves.easeOut,
@@ -727,7 +734,7 @@ class _MovieCardState extends State<MovieCard> {
         onEnter: (_) => _handleHover(true),
         onExit: (_) => _handleHover(false),
         child: GestureDetector(
-          onTap: _openDetails,
+          onTap: _handleOpen,
           onLongPress: _showTvOptions,
           child: Container(
             width: cardWidth,
@@ -878,7 +885,7 @@ class _MovieCardState extends State<MovieCard> {
       final shouldOpen = _tvSelectDown && !_tvLongPressHandled;
       _tvSelectDown = false;
       _tvLongPressHandled = false;
-      if (shouldOpen) _openDetails();
+      if (shouldOpen) _handleOpen();
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -1170,6 +1177,7 @@ class _MovieCardState extends State<MovieCard> {
 
   /// Label of the card's primary action chip (price, or watch when rented).
   String _primaryActionLabel(AppLocalizations lang) {
+    if (widget.onOpen != null) return 'Watch Now';
     final movie = widget.movie;
     final price = movie.price ?? 0;
     final isRental = movie.isRental ?? false;
@@ -1191,6 +1199,11 @@ class _MovieCardState extends State<MovieCard> {
   /// The card's primary action: open a series, play a rented title, or
   /// start the rent flow.
   void _runPrimaryAction() {
+    final onOpen = widget.onOpen;
+    if (onOpen != null) {
+      onOpen();
+      return;
+    }
     final movie = widget.movie;
     final isRental = movie.isRental ?? false;
     movie.type!.toLowerCase() == 'series'
@@ -1250,6 +1263,15 @@ class _MovieCardState extends State<MovieCard> {
       id: FeatureTourStepId.download,
       child: child,
     );
+  }
+
+  void _handleOpen() {
+    final onOpen = widget.onOpen;
+    if (onOpen != null) {
+      onOpen();
+      return;
+    }
+    _openDetails();
   }
 
   void _openDetails() {
@@ -1489,7 +1511,7 @@ class _MovieCardState extends State<MovieCard> {
           childrenButtonSize: Size(buttonSize, compactOverlay ? 32 : 35),
           spacing: 2,
           children: [
-            movie.isRental!
+            (movie.isRental ?? false)
                 ? SpeedDialChild()
                 : SpeedDialChild(
                     label: isBookmarked ? "Remove Bookmark" : "Bookmark",

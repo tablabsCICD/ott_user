@@ -224,5 +224,11 @@
   "emailSentSuccessfully": "Email sent successfully.",
   "failedToSendEmail": "Failed to send email. Please try again.",
   "message": "Message",
-  "phoneNumber": "Phone Number"
+  "phoneNumber": "Phone Number",
+  "giftedToYou": "Gifted To You",
+  "giftedToYouEmptyTitle": "No Gifts Yet",
+  "giftedToYouEmptyMessage": "Movies and content gifted to you will appear here.",
+  "giftedToYouRetry": "Retry",
+  "giftedToYouOffline": "No internet connection. Please check your network and try again.",
+  "giftedToYouLoadError": "Something went wrong. Please try again."
 }

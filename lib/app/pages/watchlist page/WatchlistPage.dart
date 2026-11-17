@@ -2,17 +2,21 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
 import 'package:ott/app/provider/offline_download_provider.dart';
 import 'package:ott/app/provider/playMediaProvider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
 import 'package:ott/app/widgets/filmytell_poster_image.dart';
+import 'package:ott/app/widgets/movieCard.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/responsive_poster_image.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/app/widgets/shimmer%20loader/comming_soon_shimmer.dart';
 import 'package:ott/app/widgets/tv/tv_design.dart';
+import 'package:ott/app/widgets/tv_card_scale.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
@@ -24,9 +28,18 @@ class WatchlistPage extends StatefulWidget {
   const WatchlistPage({
     super.key,
     this.initialFilter = WatchlistFilter.available,
-  });
+  }) : giftedOnly = false;
+
+  /// Profile -> "Gifted To You": the Watchlist "Gifted" list on its own
+  /// screen. Same API and provider; cards are the Home [MovieCard], the
+  /// filter chips are hidden, and it has its own empty / error / retry
+  /// states. Movies and short films play directly, series open details.
+  const WatchlistPage.giftedToYou({super.key})
+      : initialFilter = WatchlistFilter.gifted,
+        giftedOnly = true;
 
   final WatchlistFilter initialFilter;
+  final bool giftedOnly;
 
   @override
   State<WatchlistPage> createState() => _WatchlistPageState();
@@ -38,6 +51,23 @@ class _WatchlistPageState extends State<WatchlistPage> {
   late WatchlistFilter selectedFilter;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
+  /// Gifted To You only: message of the last failed fetch (null = no error).
+  String? _giftedLoadError;
+  Future<void>? _giftedLoad;
+
+  /// Gifted To You only: a card was tapped and its screen is opening / open.
+  /// Ignores repeat taps so the player is not pushed twice.
+  bool _openingContent = false;
+
+  /// Profile sub-pages are hosted in a nested Navigator inside the
+  /// NavigationPage tab body (ProfileDetailShell). The player and details
+  /// must go on the root Navigator: inside the tab body the player's
+  /// landscape lock switches NavigationPage to its wide layout, which rebuilds
+  /// that nested Navigator and drops the player, and system back skips it.
+  /// The Watchlist tab itself already uses the root Navigator.
+  NavigatorState get _contentNavigator =>
+      Navigator.of(context, rootNavigator: widget.giftedOnly);
+
   @override
   void initState() {
     super.initState();
@@ -47,7 +77,54 @@ class _WatchlistPageState extends State<WatchlistPage> {
     _load();
   }
 
-  Future<void> _load() async {
+  Future<void> _load() {
+    if (!widget.giftedOnly) return _loadWatchlist();
+    // Gifted To You: never run two fetches at once (connectivity change,
+    // retry and pull-to-refresh can overlap).
+    return _giftedLoad ??=
+        _loadGifted().whenComplete(() => _giftedLoad = null);
+  }
+
+  Future<void> _loadGifted() async {
+    final purchaseProvider = context.read<PurchaseContentProvider>();
+    final offlineProvider = context.read<OfflineDownloadProvider>();
+    await context.read<PlayMediaProvider>().loadLocalResumes();
+    await _updateConnectionStatus();
+    await offlineProvider.loadDownloadedContents();
+    if (!mounted) return;
+    final lang = AppLocalizations.of(context)!;
+    String? error;
+    if (isOffline) {
+      error = lang.giftedToYouOffline;
+    } else {
+      final result = await _fetchWatchlistContent(
+        purchaseProvider,
+        WatchlistFilter.gifted,
+      );
+      if (result['success'] != true) {
+        final message = result['message']?.toString().trim();
+        error = message == null || message.isEmpty
+            ? lang.giftedToYouLoadError
+            : message;
+      }
+    }
+    if (mounted) {
+      setState(() {
+        _giftedLoadError = error;
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _retryGifted() async {
+    setState(() {
+      _giftedLoadError = null;
+      isLoading = true;
+    });
+    await _load();
+  }
+
+  Future<void> _loadWatchlist() async {
     final purchaseProvider =
         Provider.of<PurchaseContentProvider>(context, listen: false);
     final offlineProvider =
@@ -109,7 +186,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
     setState(() => isLoading = false);
   }
 
-  Future<void> _fetchWatchlistContent(
+  Future<Map<String, Object>> _fetchWatchlistContent(
     PurchaseContentProvider purchaseProvider,
     WatchlistFilter filter,
   ) {
@@ -120,6 +197,31 @@ class _WatchlistPageState extends State<WatchlistPage> {
       isGifted: isGifted,
       isExpired: isExpired,
     );
+  }
+
+  /// Gifted To You: movies / short films play directly, series and mini
+  /// series open their detail screen. Opened on the root Navigator, once per
+  /// tap.
+  Future<void> _openGiftedContent(Content item) async {
+    if (_openingContent || item.id == null) return;
+    _openingContent = true;
+    try {
+      final type = ContentType.normalize(item.type);
+      if (type == ContentType.series ||
+          type == ContentType.miniSeries ||
+          type == 'MINI_SERIES') {
+        await _contentNavigator.push(
+          MaterialPageRoute(
+            builder: (_) =>
+                SeriesDetailsPage(seriesId: item.id!, content: item),
+          ),
+        );
+      } else {
+        await _playContent(item);
+      }
+    } finally {
+      _openingContent = false;
+    }
   }
 
   Future<void> _playContent(Content item) async {
@@ -178,8 +280,9 @@ class _WatchlistPageState extends State<WatchlistPage> {
       return;
     }
 
-    Navigator.push(
-      context,
+    // Awaited so the Gifted To You tap guard stays set while the player is
+    // open; the Watchlist tab does not wait on it.
+    await _contentNavigator.push(
       MaterialPageRoute(
         builder: (_) => PlayMediaPage(
           content: contentToPlay,
@@ -245,6 +348,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
     // Android TV: in-tab page without the red app bar; a compact title row
     // holds the filters and the grid shows four 16:9 tiles per row.
     final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
+
+    if (widget.giftedOnly) return _buildGiftedToYou(context);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -333,6 +438,259 @@ class _WatchlistPageState extends State<WatchlistPage> {
         (value: WatchlistFilter.gifted, label: "Gifted"),
         (value: WatchlistFilter.expired, label: "Expired"),
       ];
+
+  /// Profile -> Gifted To You. Reuses the gifted fetch and entry building of
+  /// the Watchlist "Gifted" tab; cards are the Home [MovieCard].
+  Widget _buildGiftedToYou(BuildContext context) {
+    final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
+    final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
+
+    Widget body;
+    if (isLoading) {
+      body = const ComingSoonShimmer(
+        showSegmentedToggle: false,
+        showActionButton: false,
+      );
+    } else if (_giftedLoadError != null) {
+      body = _giftedMessage(
+        theme,
+        icon: isOffline ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
+        title: _giftedLoadError!,
+        action: OutlinedButton.icon(
+          autofocus: isAndroidTv,
+          onPressed: _retryGifted,
+          icon: const Icon(Icons.refresh_rounded),
+          label: Text(lang.giftedToYouRetry),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: theme.primaryColor,
+            side: BorderSide(color: theme.primaryColor),
+          ),
+        ),
+      );
+    } else {
+      body = Consumer2<PurchaseContentProvider, OfflineDownloadProvider>(
+        builder: (_, purchaseProvider, offlineProvider, __) {
+          final items = _buildEntries(
+            purchaseProvider: purchaseProvider,
+            offlineProvider: offlineProvider,
+          );
+          if (items.isEmpty) {
+            return _giftedMessage(
+              theme,
+              icon: Icons.card_giftcard_rounded,
+              title: lang.giftedToYouEmptyTitle,
+              message: lang.giftedToYouEmptyMessage,
+            );
+          }
+          return _giftedGrid(items);
+        },
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      // Same app bar as the Watchlist page; Android TV uses a title row.
+      appBar: isAndroidTv
+          ? null
+          : AppBar(
+              elevation: 0,
+              backgroundColor: theme.primaryColor,
+              foregroundColor: Colors.white,
+              centerTitle: true,
+              title: Text(
+                lang.giftedToYou,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+      body: Column(
+        children: [
+          if (isAndroidTv)
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  TvDesign.pageGutter,
+                  14,
+                  TvDesign.pageGutter,
+                  8,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    lang.giftedToYou,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TvDesign.pageTitle(theme),
+                  ),
+                ),
+              ),
+            ),
+          Expanded(
+            child: RefreshIndicator(
+              color: theme.primaryColor,
+              onRefresh: _load,
+              child: body,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Same responsive grid as the Home category pages (category_content_page):
+  /// standard MovieCard width per breakpoint; on Android TV the card keeps its
+  /// design size and is scaled to fit, like the Home rows.
+  Widget _giftedGrid(List<_WatchlistEntry> items) {
+    const double gap = 16;
+    const double cardHeight = MovieCard.standardHeight;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isDesktop = ResponsiveWidget.isDesktop(context);
+        final isTablet = ResponsiveWidget.isTablet(context);
+        final isTv = ResponsiveWidget.isAndroidTv(context);
+        final horizontalPadding = isDesktop
+            ? 18.0
+            : isTablet
+                ? 14.0
+                : 10.0;
+        final availableWidth = constraints.maxWidth - horizontalPadding * 2;
+
+        final double standardCardWidth;
+        if (availableWidth >= 1800) {
+          standardCardWidth = MovieCard.desktopCardWidth;
+        } else if (availableWidth >= 1024) {
+          standardCardWidth = MovieCard.laptopCardWidth;
+        } else if (availableWidth >= 600) {
+          standardCardWidth = MovieCard.tabletCardWidth;
+        } else {
+          standardCardWidth = MovieCard.mobileCardWidth;
+        }
+
+        int crossAxisCount =
+            ((availableWidth + gap) / (standardCardWidth + gap)).floor();
+        if (crossAxisCount < 1) crossAxisCount = 1;
+        if (isTablet && crossAxisCount > 3) crossAxisCount = 3;
+        if (isDesktop && crossAxisCount > 4) crossAxisCount = 4;
+        if (isTv) crossAxisCount = TvCardScale.visibleCards.floor();
+
+        final cardWidth =
+            (availableWidth - ((crossAxisCount - 1) * gap)) / crossAxisCount;
+        final tvScale =
+            isTv ? TvCardScale.forWidth(cardWidth, MovieCard.itemWidth) : null;
+        final gridItemHeight = tvScale?.size(cardHeight) ?? cardHeight;
+
+        return GridView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+              horizontalPadding, 12, horizontalPadding, 24),
+          itemCount: items.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            mainAxisSpacing: gap,
+            crossAxisSpacing: gap,
+            mainAxisExtent: gridItemHeight,
+          ),
+          itemBuilder: (_, i) {
+            final entry = items[i];
+            final key = ValueKey('giftedCard-${entry.movie.id}');
+            void onOpen() => _onGiftedCardTap(entry);
+            if (tvScale != null) {
+              return tvScale.wrap(
+                baseWidth: MovieCard.itemWidth,
+                baseHeight: cardHeight,
+                child: MovieCard(
+                  key: key,
+                  movie: entry.movie,
+                  cardWidth: MovieCard.itemWidth,
+                  cardMargin: 0,
+                  autofocus: i == 0,
+                  onOpen: onOpen,
+                ),
+              );
+            }
+            return SizedBox(
+              height: gridItemHeight,
+              child: MovieCard(
+                key: key,
+                movie: entry.movie,
+                cardWidth: cardWidth,
+                cardMargin: 0,
+                onOpen: onOpen,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _onGiftedCardTap(_WatchlistEntry entry) {
+    if (!entry.active) {
+      CustomToast.show(context, 'This title has expired', isSuccess: false);
+      return;
+    }
+    unawaited(_openGiftedContent(entry.movie));
+  }
+
+  /// Scrollable (so pull-to-refresh works) centered empty / error message.
+  Widget _giftedMessage(
+    ThemeData theme, {
+    required IconData icon,
+    required String title,
+    String? message,
+    Widget? action,
+  }) {
+    final isAndroidTv = ResponsiveWidget.isAndroidTv(context);
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon,
+                      size: isAndroidTv ? 48 : 72,
+                      color: theme.canvasColor.withValues(alpha: 0.6)),
+                  const SizedBox(height: 16),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: theme.canvasColor,
+                      fontSize: isAndroidTv ? 15 : 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (message != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: theme.canvasColor.withValues(alpha: 0.7),
+                        fontSize: isAndroidTv ? 12 : 14,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                  if (action != null) ...[
+                    const SizedBox(height: 20),
+                    action,
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   // 🔁 Segmented Toggle
   Widget _segmentedToggle(ThemeData theme) {

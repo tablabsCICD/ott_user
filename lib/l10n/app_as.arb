@@ -209,5 +209,11 @@
   "emailSentSuccessfully": "ইমেইল সফলতাৰে প্ৰেৰণ কৰা হ'ল।",
   "failedToSendEmail": "ইমেইল প্ৰেৰণ কৰাত ব্যৰ্থ হ'ল। অনুগ্ৰহ কৰি পুনৰ চেষ্টা কৰক।",
   "message": "বাৰ্তা",
-  "phoneNumber": "ফোন নম্বৰ"
+  "phoneNumber": "ফোন নম্বৰ",
+  "giftedToYou": "আপোনাক দিয়া উপহাৰ",
+  "giftedToYouEmptyTitle": "এতিয়ালৈকে কোনো উপহাৰ নাই",
+  "giftedToYouEmptyMessage": "আপোনাক উপহাৰ হিচাপে দিয়া চলচ্চিত্ৰ আৰু সমল ইয়াত দেখা যাব।",
+  "giftedToYouRetry": "পুনৰ চেষ্টা কৰক",
+  "giftedToYouOffline": "ইণ্টাৰনেট সংযোগ নাই। অনুগ্ৰহ কৰি আপোনাৰ নেটৱৰ্ক পৰীক্ষা কৰি পুনৰ চেষ্টা কৰক।",
+  "giftedToYouLoadError": "কিবা ভুল হ'ল। অনুগ্ৰহ কৰি পুনৰ চেষ্টা কৰক।"
 }

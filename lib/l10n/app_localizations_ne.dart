@@ -696,4 +696,25 @@ class AppLocalizationsNe extends AppLocalizations {
 
   @override
   String get phoneNumber => 'फोन नम्बर';
+
+  @override
+  String get giftedToYou => 'तपाईंलाई दिइएका उपहार';
+
+  @override
+  String get giftedToYouEmptyTitle => 'अहिलेसम्म कुनै उपहार छैन';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'तपाईंलाई उपहार दिइएका फिल्म र सामग्री यहाँ देखिनेछन्।';
+
+  @override
+  String get giftedToYouRetry => 'फेरि प्रयास गर्नुहोस्';
+
+  @override
+  String get giftedToYouOffline =>
+      'इन्टरनेट जडान छैन। कृपया आफ्नो नेटवर्क जाँच गरेर फेरि प्रयास गर्नुहोस्।';
+
+  @override
+  String get giftedToYouLoadError =>
+      'केही गलत भयो। कृपया फेरि प्रयास गर्नुहोस्।';
 }

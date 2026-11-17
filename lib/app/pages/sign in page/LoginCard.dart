@@ -97,7 +97,16 @@ class _LoginCardState extends State<LoginCard>
       }
       if (!mounted) return;
       if (_useTvKeypad(context)) {
-        _mobileFocusNode.requestFocus();
+        // The TV layout has no text field (the number is shown in a display
+        // box and typed on the on-screen keypad), so _mobileFocusNode is not
+        // attached there. Start on the first keypad key, as the other TV
+        // steps do; otherwise the focus lands on no control at all and the
+        // remote cannot move it.
+        if (_keypadFocusNodes.first.context != null) {
+          _keypadFocusNodes.first.requestFocus();
+        } else {
+          _mobileFocusNode.requestFocus();
+        }
       }
     });
   }
@@ -261,7 +270,13 @@ class _LoginCardState extends State<LoginCard>
 
           /// Main Content
           SafeArea(
+            // Only listens to keys bubbling up from the card. It must not be
+            // focusable itself: it covers the whole screen, so if it took the
+            // focus the D-pad would find no neighbour in any direction and
+            // its key events would never reach the card's own handler.
             child: Focus(
+              canRequestFocus: false,
+              skipTraversal: true,
               onKeyEvent: useTvKeypad ? _handleTvCredentialKey : null,
               child: ResponsiveWidget.isTv(context)
                   ? _buildTvLayout(context, lang, theme, useTvKeypad)
@@ -578,10 +593,10 @@ class _LoginCardState extends State<LoginCard>
 
               if (!otpSent) ...[
                 /// Mobile Number TV Display Box
-                _buildTvMobileDisplayBox(theme),
+                _tvCredentialField(_mobileFocusNode, _buildTvMobileDisplayBox(theme)),
               ] else ...[
                 /// OTP 6-Box TV Slot Display
-                _buildTvOtpSlotDisplay(theme),
+                _tvCredentialField(_otpFocusNode, _buildTvOtpSlotDisplay(theme)),
                 if (_otpHelperText != null) ...[
                   const SizedBox(height: 6),
                   Text(
@@ -809,9 +824,24 @@ class _LoginCardState extends State<LoginCard>
     });
   }
 
+  /// TV number / OTP box: focusable (D-pad, mouse click or tap) with a
+  /// visible focus border. While it has focus, keyboard digits, Backspace /
+  /// Delete and Enter work through [_handleTvCredentialKey], like the keypad.
+  Widget _tvCredentialField(FocusNode node, Widget box) {
+    return Focus(
+      focusNode: node,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: node.requestFocus,
+        child: _TvFocusFrame(focusNode: node, child: box),
+      ),
+    );
+  }
+
   /// Focusable items of the TV card, laid out in the same rows as on screen.
   List<List<FocusNode>> get _tvCardFocusRows => [
         [_languageFocusNode],
+        [if (otpSent) _otpFocusNode else _mobileFocusNode],
         if (otpSent) [_backFocusNode, _resendFocusNode],
         for (var row = 0; row < 4; row++)
           _keypadFocusNodes.sublist(row * 3, row * 3 + 3),
@@ -1672,7 +1702,46 @@ class _LoginCardState extends State<LoginCard>
     setState(() {});
   }
 
+  static final Map<LogicalKeyboardKey, String> _tvRemoteDigits = {
+    LogicalKeyboardKey.digit0: '0',
+    LogicalKeyboardKey.digit1: '1',
+    LogicalKeyboardKey.digit2: '2',
+    LogicalKeyboardKey.digit3: '3',
+    LogicalKeyboardKey.digit4: '4',
+    LogicalKeyboardKey.digit5: '5',
+    LogicalKeyboardKey.digit6: '6',
+    LogicalKeyboardKey.digit7: '7',
+    LogicalKeyboardKey.digit8: '8',
+    LogicalKeyboardKey.digit9: '9',
+    LogicalKeyboardKey.numpad0: '0',
+    LogicalKeyboardKey.numpad1: '1',
+    LogicalKeyboardKey.numpad2: '2',
+    LogicalKeyboardKey.numpad3: '3',
+    LogicalKeyboardKey.numpad4: '4',
+    LogicalKeyboardKey.numpad5: '5',
+    LogicalKeyboardKey.numpad6: '6',
+    LogicalKeyboardKey.numpad7: '7',
+    LogicalKeyboardKey.numpad8: '8',
+    LogicalKeyboardKey.numpad9: '9',
+  };
+
   KeyEventResult _handleTvCredentialKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    // Remotes with a number row (e.g. Jio STB) type straight into the
+    // number / OTP, same as the on-screen keypad.
+    final digit = _tvRemoteDigits[event.logicalKey];
+    if (digit != null) {
+      _appendTvDigit(digit);
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.backspace ||
+        event.logicalKey == LogicalKeyboardKey.delete) {
+      _removeTvDigit();
+      return KeyEventResult.handled;
+    }
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
     if (event.logicalKey == LogicalKeyboardKey.select ||

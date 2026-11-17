@@ -696,4 +696,25 @@ class AppLocalizationsPa extends AppLocalizations {
 
   @override
   String get phoneNumber => 'ਫ਼ੋਨ ਨੰਬਰ';
+
+  @override
+  String get giftedToYou => 'ਤੁਹਾਨੂੰ ਮਿਲੇ ਤੋਹਫ਼ੇ';
+
+  @override
+  String get giftedToYouEmptyTitle => 'ਅਜੇ ਤੱਕ ਕੋਈ ਤੋਹਫ਼ਾ ਨਹੀਂ';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'ਤੁਹਾਨੂੰ ਤੋਹਫ਼ੇ ਵਿੱਚ ਮਿਲੀਆਂ ਫ਼ਿਲਮਾਂ ਅਤੇ ਸਮੱਗਰੀ ਇੱਥੇ ਦਿਖਾਈ ਦੇਣਗੀਆਂ।';
+
+  @override
+  String get giftedToYouRetry => 'ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ';
+
+  @override
+  String get giftedToYouOffline =>
+      'ਇੰਟਰਨੈੱਟ ਕਨੈਕਸ਼ਨ ਨਹੀਂ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ ਨੈੱਟਵਰਕ ਜਾਂਚੋ ਅਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।';
+
+  @override
+  String get giftedToYouLoadError =>
+      'ਕੁਝ ਗਲਤ ਹੋ ਗਿਆ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।';
 }

@@ -698,4 +698,25 @@ class AppLocalizationsAs extends AppLocalizations {
 
   @override
   String get phoneNumber => 'ফোন নম্বৰ';
+
+  @override
+  String get giftedToYou => 'আপোনাক দিয়া উপহাৰ';
+
+  @override
+  String get giftedToYouEmptyTitle => 'এতিয়ালৈকে কোনো উপহাৰ নাই';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'আপোনাক উপহাৰ হিচাপে দিয়া চলচ্চিত্ৰ আৰু সমল ইয়াত দেখা যাব।';
+
+  @override
+  String get giftedToYouRetry => 'পুনৰ চেষ্টা কৰক';
+
+  @override
+  String get giftedToYouOffline =>
+      'ইণ্টাৰনেট সংযোগ নাই। অনুগ্ৰহ কৰি আপোনাৰ নেটৱৰ্ক পৰীক্ষা কৰি পুনৰ চেষ্টা কৰক।';
+
+  @override
+  String get giftedToYouLoadError =>
+      'কিবা ভুল হ\'ল। অনুগ্ৰহ কৰি পুনৰ চেষ্টা কৰক।';
 }

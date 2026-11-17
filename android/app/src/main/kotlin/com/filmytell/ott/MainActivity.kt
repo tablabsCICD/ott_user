@@ -2,6 +2,8 @@ package com.filmytell.ott
 
 import android.os.Bundle
 import android.os.StatFs
+import android.view.InputDevice
+import android.view.MotionEvent
 import android.view.WindowManager
 import com.android.installreferrer.api.InstallReferrerClient
 import com.android.installreferrer.api.InstallReferrerStateListener
@@ -21,6 +23,65 @@ class MainActivity : FlutterActivity() {
 
         // Keep the screen awake during playback-heavy sessions.
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+
+    // TV / Jio STB builds: many TV-box mice and air-mouse remotes report a
+    // click as a SOURCE_MOUSE down/up with buttonState == 0. Flutter's
+    // Android touch processor treats exactly that as a Chromebook trackpad
+    // scroll (PointerPanZoomStart/End, kind=trackpad), so no tap ever reaches
+    // the app and no button can be clicked. Give such events the primary
+    // button, as a regular mouse reports. Applies to the tv / jio flavors and
+    // to any build running on a TV device (e.g. the mobile flavor launched on
+    // a TV, which switches to the TV UI at runtime). Phones, tablets and
+    // Chromebooks keep Flutter's default (real trackpad scrolling).
+    private val isTvBuild by lazy {
+        BuildConfig.FLAVOR == "tv" || BuildConfig.FLAVOR == "jio" || isTvDevice()
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        val fixed = withPrimaryButtonForButtonlessMouse(event)
+            ?: return super.dispatchTouchEvent(event)
+        return try {
+            super.dispatchTouchEvent(fixed)
+        } finally {
+            fixed.recycle()
+        }
+    }
+
+    /** A copy of [event] with BUTTON_PRIMARY set, or null if unchanged. */
+    private fun withPrimaryButtonForButtonlessMouse(event: MotionEvent): MotionEvent? {
+        if (!isTvBuild) return null
+        if (!event.isFromSource(InputDevice.SOURCE_MOUSE)) return null
+        if (event.getToolType(0) != MotionEvent.TOOL_TYPE_MOUSE) return null
+        if (event.buttonState != 0) return null
+        when (event.actionMasked) {
+            // Pressed while down/dragging; ACTION_UP keeps 0 (released).
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> Unit
+            else -> return null
+        }
+        val count = event.pointerCount
+        val properties = Array(count) { index ->
+            MotionEvent.PointerProperties().also { event.getPointerProperties(index, it) }
+        }
+        val coords = Array(count) { index ->
+            MotionEvent.PointerCoords().also { event.getPointerCoords(index, it) }
+        }
+        return MotionEvent.obtain(
+            event.downTime,
+            event.eventTime,
+            event.action,
+            count,
+            properties,
+            coords,
+            event.metaState,
+            MotionEvent.BUTTON_PRIMARY,
+            event.xPrecision,
+            event.yPrecision,
+            event.deviceId,
+            event.edgeFlags,
+            event.source,
+            event.flags,
+        )
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

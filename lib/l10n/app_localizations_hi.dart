@@ -699,4 +699,24 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get phoneNumber => 'फ़ोन नंबर';
+
+  @override
+  String get giftedToYou => 'आपको मिले गिफ्ट';
+
+  @override
+  String get giftedToYouEmptyTitle => 'अभी तक कोई गिफ्ट नहीं';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'आपको गिफ्ट की गई फ़िल्में और कंटेंट यहाँ दिखाई देंगे।';
+
+  @override
+  String get giftedToYouRetry => 'फिर से कोशिश करें';
+
+  @override
+  String get giftedToYouOffline =>
+      'इंटरनेट कनेक्शन नहीं है। कृपया अपना नेटवर्क जाँचें और फिर से कोशिश करें।';
+
+  @override
+  String get giftedToYouLoadError => 'कुछ गलत हो गया। कृपया फिर से कोशिश करें।';
 }

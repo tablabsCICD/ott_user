@@ -224,5 +224,11 @@
   "emailSentSuccessfully": "ای میل کامیابی سے بھیج دی گئی۔",
   "failedToSendEmail": "ای میل بھیجنے میں ناکامی۔ براہ کرم دوبارہ کوشش کریں۔",
   "message": "پیغام",
-  "phoneNumber": "فون نمبر"
+  "phoneNumber": "فون نمبر",
+  "giftedToYou": "آپ کو ملے تحفے",
+  "giftedToYouEmptyTitle": "ابھی تک کوئی تحفہ نہیں",
+  "giftedToYouEmptyMessage": "آپ کو تحفے میں دی گئی فلمیں اور مواد یہاں نظر آئیں گے۔",
+  "giftedToYouRetry": "دوبارہ کوشش کریں",
+  "giftedToYouOffline": "انٹرنیٹ کنکشن نہیں ہے۔ براہ کرم اپنا نیٹ ورک چیک کریں اور دوبارہ کوشش کریں۔",
+  "giftedToYouLoadError": "کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔"
 }

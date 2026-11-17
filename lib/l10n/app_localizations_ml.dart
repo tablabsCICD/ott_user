@@ -706,4 +706,25 @@ class AppLocalizationsMl extends AppLocalizations {
 
   @override
   String get phoneNumber => 'ഫോൺ നമ്പർ';
+
+  @override
+  String get giftedToYou => 'നിങ്ങൾക്ക് ലഭിച്ച സമ്മാനങ്ങൾ';
+
+  @override
+  String get giftedToYouEmptyTitle => 'ഇതുവരെ സമ്മാനങ്ങളൊന്നുമില്ല';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'നിങ്ങൾക്ക് സമ്മാനമായി ലഭിച്ച സിനിമകളും ഉള്ളടക്കവും ഇവിടെ കാണാം.';
+
+  @override
+  String get giftedToYouRetry => 'വീണ്ടും ശ്രമിക്കുക';
+
+  @override
+  String get giftedToYouOffline =>
+      'ഇന്റർനെറ്റ് കണക്ഷൻ ഇല്ല. നിങ്ങളുടെ നെറ്റ്‌വർക്ക് പരിശോധിച്ച് വീണ്ടും ശ്രമിക്കുക.';
+
+  @override
+  String get giftedToYouLoadError =>
+      'എന്തോ കുഴപ്പം സംഭവിച്ചു. വീണ്ടും ശ്രമിക്കുക.';
 }

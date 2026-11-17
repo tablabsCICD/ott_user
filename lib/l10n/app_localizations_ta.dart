@@ -706,4 +706,24 @@ class AppLocalizationsTa extends AppLocalizations {
 
   @override
   String get phoneNumber => 'தொலைபேசி எண்';
+
+  @override
+  String get giftedToYou => 'உங்களுக்கு வந்த பரிசுகள்';
+
+  @override
+  String get giftedToYouEmptyTitle => 'இன்னும் பரிசுகள் இல்லை';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'உங்களுக்குப் பரிசளிக்கப்பட்ட திரைப்படங்களும் உள்ளடக்கமும் இங்கே தோன்றும்.';
+
+  @override
+  String get giftedToYouRetry => 'மீண்டும் முயலவும்';
+
+  @override
+  String get giftedToYouOffline =>
+      'இணைய இணைப்பு இல்லை. உங்கள் நெட்வொர்க்கைச் சரிபார்த்து மீண்டும் முயலவும்.';
+
+  @override
+  String get giftedToYouLoadError => 'ஏதோ தவறு நடந்தது. மீண்டும் முயலவும்.';
 }

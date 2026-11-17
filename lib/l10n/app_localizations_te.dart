@@ -704,4 +704,25 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get phoneNumber => 'ఫోన్ నంబర్';
+
+  @override
+  String get giftedToYou => 'మీకు వచ్చిన బహుమతులు';
+
+  @override
+  String get giftedToYouEmptyTitle => 'ఇంకా బహుమతులు లేవు';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'మీకు బహుమతిగా ఇచ్చిన సినిమాలు మరియు కంటెంట్ ఇక్కడ కనిపిస్తాయి.';
+
+  @override
+  String get giftedToYouRetry => 'మళ్లీ ప్రయత్నించండి';
+
+  @override
+  String get giftedToYouOffline =>
+      'ఇంటర్నెట్ కనెక్షన్ లేదు. దయచేసి మీ నెట్‌వర్క్‌ను తనిఖీ చేసి మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get giftedToYouLoadError =>
+      'ఏదో తప్పు జరిగింది. దయచేసి మళ్లీ ప్రయత్నించండి.';
 }

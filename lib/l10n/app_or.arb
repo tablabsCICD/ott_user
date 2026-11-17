@@ -224,5 +224,11 @@
   "emailSentSuccessfully": "ଇମେଲ୍ ସଫଳତାର ସହିତ ପଠାଗଲା।",
   "failedToSendEmail": "ଇମେଲ୍ ପଠାଇବାରେ ବିଫଳ ହେଲା। ଦୟାକରି ପୁନର୍ବାର ଚେଷ୍ଟା କରନ୍ତୁ।",
   "message": "ବାର୍ତ୍ତା",
-  "phoneNumber": "ଫୋନ୍ ନମ୍ବର"
+  "phoneNumber": "ଫୋନ୍ ନମ୍ବର",
+  "giftedToYou": "ଆପଣଙ୍କୁ ମିଳିଥିବା ଉପହାର",
+  "giftedToYouEmptyTitle": "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ଉପହାର ନାହିଁ",
+  "giftedToYouEmptyMessage": "ଆପଣଙ୍କୁ ଉପହାର ଭାବେ ଦିଆଯାଇଥିବା ଚଳଚ୍ଚିତ୍ର ଓ କଣ୍ଟେଣ୍ଟ ଏଠାରେ ଦେଖାଯିବ।",
+  "giftedToYouRetry": "ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ",
+  "giftedToYouOffline": "ଇଣ୍ଟରନେଟ୍ ସଂଯୋଗ ନାହିଁ। ଦୟାକରି ଆପଣଙ୍କ ନେଟୱର୍କ ଯାଞ୍ଚ କରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।",
+  "giftedToYouLoadError": "କିଛି ଭୁଲ ହୋଇଗଲା। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।"
 }

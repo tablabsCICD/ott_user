@@ -703,4 +703,25 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get phoneNumber => 'ಫೋನ್ ಸಂಖ್ಯೆ';
+
+  @override
+  String get giftedToYou => 'ನಿಮಗೆ ಬಂದ ಉಡುಗೊರೆಗಳು';
+
+  @override
+  String get giftedToYouEmptyTitle => 'ಇನ್ನೂ ಯಾವುದೇ ಉಡುಗೊರೆಗಳಿಲ್ಲ';
+
+  @override
+  String get giftedToYouEmptyMessage =>
+      'ನಿಮಗೆ ಉಡುಗೊರೆಯಾಗಿ ನೀಡಿದ ಚಲನಚಿತ್ರಗಳು ಮತ್ತು ವಿಷಯ ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ.';
+
+  @override
+  String get giftedToYouRetry => 'ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ';
+
+  @override
+  String get giftedToYouOffline =>
+      'ಇಂಟರ್ನೆಟ್ ಸಂಪರ್ಕವಿಲ್ಲ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ನೆಟ್‌ವರ್ಕ್ ಪರಿಶೀಲಿಸಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
+
+  @override
+  String get giftedToYouLoadError =>
+      'ಏನೋ ತಪ್ಪಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.';
 }

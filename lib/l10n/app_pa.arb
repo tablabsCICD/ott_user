@@ -224,5 +224,11 @@
   "emailSentSuccessfully": "ਈਮੇਲ ਸਫਲਤਾਪੂਰਵਕ ਭੇਜੀ ਗਈ।",
   "failedToSendEmail": "ਈਮੇਲ ਭੇਜਣ ਵਿੱਚ ਅਸਫਲ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
   "message": "ਸੁਨੇਹਾ",
-  "phoneNumber": "ਫ਼ੋਨ ਨੰਬਰ"
+  "phoneNumber": "ਫ਼ੋਨ ਨੰਬਰ",
+  "giftedToYou": "ਤੁਹਾਨੂੰ ਮਿਲੇ ਤੋਹਫ਼ੇ",
+  "giftedToYouEmptyTitle": "ਅਜੇ ਤੱਕ ਕੋਈ ਤੋਹਫ਼ਾ ਨਹੀਂ",
+  "giftedToYouEmptyMessage": "ਤੁਹਾਨੂੰ ਤੋਹਫ਼ੇ ਵਿੱਚ ਮਿਲੀਆਂ ਫ਼ਿਲਮਾਂ ਅਤੇ ਸਮੱਗਰੀ ਇੱਥੇ ਦਿਖਾਈ ਦੇਣਗੀਆਂ।",
+  "giftedToYouRetry": "ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ",
+  "giftedToYouOffline": "ਇੰਟਰਨੈੱਟ ਕਨੈਕਸ਼ਨ ਨਹੀਂ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ ਨੈੱਟਵਰਕ ਜਾਂਚੋ ਅਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
+  "giftedToYouLoadError": "ਕੁਝ ਗਲਤ ਹੋ ਗਿਆ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।"
 }

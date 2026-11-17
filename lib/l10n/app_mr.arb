@@ -224,5 +224,11 @@
   "emailSentSuccessfully": "ईमेल यशस्वीरित्या पाठवला.",
   "failedToSendEmail": "ईमेल पाठवण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.",
   "message": "संदेश",
-  "phoneNumber": "फोन नंबर"
+  "phoneNumber": "फोन नंबर",
+  "giftedToYou": "तुम्हाला मिळालेल्या भेटी",
+  "giftedToYouEmptyTitle": "अजून कोणतीही भेट नाही",
+  "giftedToYouEmptyMessage": "तुम्हाला भेट दिलेले चित्रपट आणि कंटेंट येथे दिसतील.",
+  "giftedToYouRetry": "पुन्हा प्रयत्न करा",
+  "giftedToYouOffline": "इंटरनेट कनेक्शन नाही. कृपया तुमचे नेटवर्क तपासा आणि पुन्हा प्रयत्न करा.",
+  "giftedToYouLoadError": "काहीतरी चूक झाली. कृपया पुन्हा प्रयत्न करा."
 }
