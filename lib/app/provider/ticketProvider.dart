@@ -17,6 +17,7 @@ import 'dart:io' as io;
 import 'package:http/http.dart' as http;
 import 'package:universal_html/html.dart' as html;
 import 'baseProvider.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class TicketProvider extends BaseProvider {
   final List<TicketRaised> _ticketList = [];
@@ -35,18 +36,15 @@ class TicketProvider extends BaseProvider {
   Future<Map<String, Object>> raiseTicket() async {
     final topic = topicController.text.trim();
     if (topic.isEmpty) {
-      return {'success': false, 'message': 'Please enter your query'};
+      return {'success': false, 'message': appL10n().helpPleaseEnterQuery};
     }
     if (topic.length < 10) {
-      return {
-        'success': false,
-        'message': 'Query must be at least 10 characters'
-      };
+      return {'success': false, 'message': appL10n().msgQueryMinLength};
     }
 
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
     if (user == null || user.id == null) {
-      return {'success': false, 'message': 'User details not found'};
+      return {'success': false, 'message': appL10n().msgUserDetailsNotFound};
     }
 
     _isSubmitting = true;
@@ -83,33 +81,32 @@ class TicketProvider extends BaseProvider {
             notifyListeners();
             return {
               'success': true,
-              'message':
-                  raiseTicketResponse.message ?? 'Ticket raised successfully'
+              'message': raiseTicketResponse.message ??
+                  appL10n().msgTicketRaisedSuccessfully
             };
           } else {
-
             return {
               'success': false,
-              'message': raiseTicketResponse.message ?? 'No data returned'
+              'message':
+                  raiseTicketResponse.message ?? appL10n().msgNoDataReturned
             };
           }
         } else {
-
           return {
             'success': false,
-            'message': raiseTicketResponse.message ?? 'Error in response'
+            'message':
+                raiseTicketResponse.message ?? appL10n().msgErrorInResponse
           };
         }
       } else {
-        return {'failure': true, 'message': 'Something went wrong!'};
+        return {
+          'failure': true,
+          'message': appL10n().msgSomethingWentWrongExclaim
+        };
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-
-      return {
-        'success': false,
-        'message': 'An error occurred while adding user: $error'
-      };
+      return {'success': false, 'message': appL10n().msgErrorAddingUser};
     } finally {
       _isSubmitting = false;
       notifyListeners();
@@ -119,7 +116,7 @@ class TicketProvider extends BaseProvider {
   Future<Map<String, Object>> getRaisedTicketByUserId() async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
     if (user == null || user.id == null) {
-      return {'success': false, 'message': 'User details not found'};
+      return {'success': false, 'message': appL10n().msgUserDetailsNotFound};
     }
 
     _isLoadingTickets = true;
@@ -146,34 +143,32 @@ class TicketProvider extends BaseProvider {
               'message': getRaiseTicketListResponse.message!
             };
           } else {
-
             _ticketList.clear();
             notifyListeners();
             return {
               'success': false,
-              'message':
-                  getRaiseTicketListResponse.message ?? 'No data returned'
+              'message': getRaiseTicketListResponse.message ??
+                  appL10n().msgNoDataReturned
             };
           }
         } else {
-
           _ticketList.clear();
           notifyListeners();
           return {
             'success': false,
-            'message': getRaiseTicketListResponse.message ?? 'Error in response'
+            'message': getRaiseTicketListResponse.message ??
+                appL10n().msgErrorInResponse
           };
         }
       } else {
-        return {'failure': true, 'message': 'Something went wrong!'};
+        return {
+          'failure': true,
+          'message': appL10n().msgSomethingWentWrongExclaim
+        };
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-
-      return {
-        'success': false,
-        'message': 'An error occurred while adding user: $error'
-      };
+      return {'success': false, 'message': appL10n().msgErrorAddingUser};
     } finally {
       _isLoadingTickets = false;
       notifyListeners();
@@ -190,7 +185,7 @@ class TicketProvider extends BaseProvider {
     try {
       final response = await apiHelper.deleteApi(apiUrl);
       if (response.statusCode == 200) {
-        String message = 'Ticket deleted successfully';
+        String message = appL10n().msgTicketDeletedSuccessfully;
         try {
           final responseBody = json.decode(response.body);
           if (responseBody is Map<String, dynamic> &&
@@ -204,13 +199,9 @@ class TicketProvider extends BaseProvider {
         return {'success': true, 'message': message};
       }
 
-      return {'success': false, 'message': 'Unable to delete ticket'};
+      return {'success': false, 'message': appL10n().msgUnableToDeleteTicket};
     } catch (error) {
-
-      return {
-        'success': false,
-        'message': 'An error occurred while deleting ticket'
-      };
+      return {'success': false, 'message': appL10n().msgErrorDeletingTicket};
     } finally {
       _deletingTicketId = null;
       notifyListeners();

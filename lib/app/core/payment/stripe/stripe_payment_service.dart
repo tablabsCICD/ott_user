@@ -11,6 +11,7 @@ import 'package:ott/app/core/payment/stripe/stripe_config.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/user.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class StripePaymentService {
   StripePaymentService({
@@ -41,7 +42,8 @@ class StripePaymentService {
     final centsAmount = (amount * 100).round();
 
     final urls = <String>[
-      ApiConstant.createStripeCheckoutSession(amount, userId, currency: currency),
+      ApiConstant.createStripeCheckoutSession(amount, userId,
+          currency: currency),
       '${ApiConstant.baseUrl}api/stripe/create-checkout-session?amount=$normalizedAmount&userId=$userId&currency=$currency',
       '${ApiConstant.baseUrl}api/stripe/create-checkout-session?amount=$centsAmount&customerId=$userId&currency=$currency',
       '${ApiConstant.baseUrl}api/stripe/create-order?amount=$normalizedAmount&userId=$userId&currency=$currency',
@@ -59,14 +61,16 @@ class StripePaymentService {
           'POST Stripe response status: ${postResponse.statusCode}, body: ${postResponse.body}',
         );
         if (postResponse.statusCode == 200) {
-          final order = _tryParseOrder(postResponse.body, fallbackCurrency: currency);
+          final order =
+              _tryParseOrder(postResponse.body, fallbackCurrency: currency);
           if (order != null) return order;
         }
 
         final getResponse = await _apiHelper.getApi(url);
         lastStatusCode = getResponse.statusCode;
         if (getResponse.statusCode == 200) {
-          final order = _tryParseOrder(getResponse.body, fallbackCurrency: currency);
+          final order =
+              _tryParseOrder(getResponse.body, fallbackCurrency: currency);
           if (order != null) return order;
         }
       } catch (error) {
@@ -82,7 +86,8 @@ class StripePaymentService {
     );
   }
 
-  PaymentOrder? _tryParseOrder(String bodyString, {String fallbackCurrency = 'USD'}) {
+  PaymentOrder? _tryParseOrder(String bodyString,
+      {String fallbackCurrency = 'USD'}) {
     try {
       final body = jsonDecode(bodyString);
       if (body is! Map<String, dynamic>) return null;
@@ -95,20 +100,24 @@ class StripePaymentService {
           'amount': data['amount'],
           'currency': data['currency'] ?? fallbackCurrency,
           'receipt': data['receipt'] ?? '',
-          'checkoutUrl': data['checkoutUrl'] ?? data['url'] ?? data['sessionUrl'],
+          'checkoutUrl':
+              data['checkoutUrl'] ?? data['url'] ?? data['sessionUrl'],
           'publishableKey': data['publishableKey'],
           'clientSecret': data['clientSecret'],
         });
       }
 
-      if (body.containsKey('id') || body.containsKey('sessionId') || body.containsKey('url')) {
+      if (body.containsKey('id') ||
+          body.containsKey('sessionId') ||
+          body.containsKey('url')) {
         return PaymentOrder.fromJson({
           'orderId': body['orderId'] ?? body['id'] ?? body['sessionId'],
           'sessionId': body['sessionId'] ?? body['id'] ?? body['orderId'],
           'amount': body['amount'],
           'currency': body['currency'] ?? fallbackCurrency,
           'receipt': body['receipt'] ?? '',
-          'checkoutUrl': body['checkoutUrl'] ?? body['url'] ?? body['sessionUrl'],
+          'checkoutUrl':
+              body['checkoutUrl'] ?? body['url'] ?? body['sessionUrl'],
           'publishableKey': body['publishableKey'],
           'clientSecret': body['clientSecret'],
         });
@@ -126,36 +135,36 @@ class StripePaymentService {
     int plan = 0,
   }) async {
     if (!isSupportedPlatform) {
-      return const PaymentResult(
+      return PaymentResult(
         success: false,
-        message: 'Stripe checkout is only available on web, Android, and iOS.',
+        message: appL10n().sysPaymentStripeCheckoutUnsupportedPlatform,
         gateway: PaymentGatewayType.stripe,
       );
     }
 
     final user = await _getUser();
     if (user?.id == null) {
-      return const PaymentResult(
+      return PaymentResult(
         success: false,
-        message: 'User not found',
+        message: appL10n().msgUserNotFound,
         gateway: PaymentGatewayType.stripe,
       );
     }
 
     final checkoutUrl = order.checkoutUrl?.trim() ?? '';
     if (checkoutUrl.isEmpty) {
-      return const PaymentResult(
+      return PaymentResult(
         success: false,
-        message: 'Invalid Stripe checkout URL returned from server.',
+        message: appL10n().sysPaymentInvalidStripeCheckoutUrl,
         gateway: PaymentGatewayType.stripe,
       );
     }
 
     final uri = Uri.tryParse(checkoutUrl);
     if (uri == null || (uri.scheme != 'https' && uri.scheme != 'http')) {
-      return const PaymentResult(
+      return PaymentResult(
         success: false,
-        message: 'Invalid Stripe checkout link.',
+        message: appL10n().sysPaymentInvalidStripeCheckoutLink,
         gateway: PaymentGatewayType.stripe,
       );
     }
@@ -169,9 +178,9 @@ class StripePaymentService {
       );
 
       if (!launched) {
-        return const PaymentResult(
+        return PaymentResult(
           success: false,
-          message: 'Unable to launch Stripe checkout.',
+          message: appL10n().sysPaymentUnableLaunchStripeCheckout,
           gateway: PaymentGatewayType.stripe,
         );
       }
@@ -185,9 +194,10 @@ class StripePaymentService {
         currency: order.currency,
       );
     } catch (error) {
+      debugPrint('Stripe checkout error: $error');
       return PaymentResult(
         success: false,
-        message: 'Stripe checkout error: $error',
+        message: appL10n().sysPaymentStripeCheckoutError,
         sessionId: order.sessionId ?? order.orderId,
         gateway: PaymentGatewayType.stripe,
       );
@@ -234,11 +244,13 @@ class StripePaymentService {
       success: success,
       message: message ??
           (success
-              ? 'Payment verified successfully.'
-              : 'Payment verification failed. Please contact support if money was deducted.'),
+              ? appL10n().sysPaymentVerifiedSuccessfully
+              : appL10n().sysPaymentVerificationFailedContactSupport),
       orderId: sessionId,
       sessionId: sessionId,
-      paymentId: body['paymentIntentId']?.toString() ?? body['transactionId']?.toString() ?? sessionId,
+      paymentId: body['paymentIntentId']?.toString() ??
+          body['transactionId']?.toString() ??
+          sessionId,
       gateway: PaymentGatewayType.stripe,
     );
   }
@@ -253,8 +265,7 @@ class StripePaymentService {
 
     return {
       'success': false,
-      'message':
-          'Payment verification returned an invalid response. Please contact support if money was deducted.',
+      'message': appL10n().sysPaymentVerificationInvalidResponse,
     };
   }
 

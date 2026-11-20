@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/data/models/response/push_notification_response.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:ott/app/widgets/filmytell_app_bar.dart';
 
 class NotificationDetailPage extends StatelessWidget {
   const NotificationDetailPage({
@@ -18,26 +20,22 @@ class NotificationDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context, listen: true).getTheme;
     final hasAttachments = notification.attachments.isNotEmpty;
+    final lang = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
+      appBar: FilmytellAppBar(
         automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
-        forceMaterialTransparency: true,
-        foregroundColor: theme.canvasColor,
-        title: const Text(
-          'Notification',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
+        title: lang.notification,
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           _header(context, theme),
           const SizedBox(height: 16),
-          _messageCard(theme),
+          _messageCard(theme, lang),
           const SizedBox(height: 16),
-          _detailsSection(theme),
+          _detailsSection(theme, lang),
           if (hasAttachments) ...[
             const SizedBox(height: 18),
             _attachmentsSection(context, theme),
@@ -127,11 +125,11 @@ class NotificationDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _messageCard(ThemeData theme) {
+  Widget _messageCard(ThemeData theme, AppLocalizations lang) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle(theme, 'Message', Icons.chat_bubble_outline_rounded),
+        _sectionTitle(theme, lang.message, Icons.chat_bubble_outline_rounded),
         const SizedBox(height: 10),
         Container(
           width: double.infinity,
@@ -154,11 +152,13 @@ class NotificationDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _detailsSection(ThemeData theme) {
+  Widget _detailsSection(ThemeData theme, AppLocalizations lang) {
     final rows = <_InfoItem>[
-      _InfoItem('Subject', notification.emailSubject, Icons.subject_outlined),
-      _InfoItem('Sent By', notification.sentBy, Icons.person_outline),
-      _InfoItem('Sent Date', notification.sentDateTime, Icons.send_outlined),
+      _InfoItem(
+          lang.notifSubject, notification.emailSubject, Icons.subject_outlined),
+      _InfoItem(lang.notifSentBy, notification.sentBy, Icons.person_outline),
+      _InfoItem(
+          lang.notifSentDate, notification.sentDateTime, Icons.send_outlined),
     ].where((item) => _clean(item.value?.toString()) != null).toList();
 
     if (rows.isEmpty) return const SizedBox.shrink();
@@ -166,7 +166,7 @@ class NotificationDetailPage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionTitle(theme, 'Details', Icons.info_outline_rounded),
+        _sectionTitle(theme, lang.notifDetails, Icons.info_outline_rounded),
         const SizedBox(height: 10),
         Container(
           width: double.infinity,
@@ -198,7 +198,7 @@ class NotificationDetailPage extends StatelessWidget {
       children: [
         _sectionTitle(
           theme,
-          'Attachments',
+          AppLocalizations.of(context)!.notifAttachments,
           Icons.attach_file_rounded,
           count: notification.attachments.length,
         ),
@@ -314,7 +314,8 @@ class NotificationDetailPage extends StatelessWidget {
     ThemeData theme,
     PushNotificationAttachment attachment,
   ) {
-    final fileName = _clean(attachment.fileName) ?? 'Attachment';
+    final fileName = _clean(attachment.fileName) ??
+        AppLocalizations.of(context)!.notifAttachment;
     final fileUrl = _clean(attachment.fileUrl);
     final fileType = _clean(attachment.fileType);
     final fileSize = _formatFileSize(attachment.fileSize);
@@ -471,7 +472,10 @@ class NotificationDetailPage extends StatelessWidget {
     final text = url?.trim();
     if (text == null || text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Attachment URL is not available.')),
+        SnackBar(
+          content:
+              Text(AppLocalizations.of(context)!.notifAttachmentUrlUnavailable),
+        ),
       );
       return;
     }
@@ -482,7 +486,10 @@ class NotificationDetailPage extends StatelessWidget {
     if (!opened) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to open attachment.')),
+        SnackBar(
+          content:
+              Text(AppLocalizations.of(context)!.notifUnableToOpenAttachment),
+        ),
       );
     }
   }

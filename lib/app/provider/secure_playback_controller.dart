@@ -7,6 +7,7 @@ import 'package:ott/app/core/repositories/secure_playback_repository.dart';
 import 'package:ott/app/core/services/playback_analytics_coordinator.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/data/models/anti_piracy_models.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 enum SecurePlaybackState {
   preparingSecurity,
@@ -150,9 +151,9 @@ class SecurePlaybackController extends ChangeNotifier {
         'Secure startup failed with an unexpected error; sanitized details are in HTTP_DIAGNOSTIC.',
       );
       await _analytics.stopCurrentSession();
-      await _handleFailure(const SecurePlaybackException(
+      await _handleFailure(SecurePlaybackException(
         SecurePlaybackFailure.invalidResponse,
-        'Secure playback could not be prepared.',
+        appL10n().msgSecurePlaybackNotPrepared,
       ));
     }
   }
@@ -210,9 +211,9 @@ class SecurePlaybackController extends ChangeNotifier {
         stackTrace,
       );
       await _pausePlayer();
-      await _handleFailure(const SecurePlaybackException(
+      await _handleFailure(SecurePlaybackException(
         SecurePlaybackFailure.invalidResponse,
-        'Secure playback could not be refreshed. Please retry.',
+        appL10n().msgSecurePlaybackNotRefreshed,
       ));
     }
   }

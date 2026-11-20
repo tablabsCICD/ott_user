@@ -1,5 +1,6 @@
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 Future<Map<String, dynamic>> openRazorpayWebCheckoutImpl(
   Map<String, Object?> options,
@@ -14,7 +15,7 @@ Future<Map<String, dynamic>> openRazorpayWebCheckoutImpl(
   if (jsResult == null) {
     return {
       'success': false,
-      'message': 'Unexpected empty response from Razorpay web checkout.',
+      'message': appL10n().sysRazorpayWebCheckoutEmptyResponse,
     };
   }
 
@@ -25,6 +26,6 @@ Future<Map<String, dynamic>> openRazorpayWebCheckoutImpl(
 
   return {
     'success': false,
-    'message': 'Unexpected response from Razorpay web checkout.',
+    'message': appL10n().sysRazorpayWebCheckoutUnexpectedResponse,
   };
 }

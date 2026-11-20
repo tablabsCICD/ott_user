@@ -9,10 +9,11 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:video_player/video_player.dart' as native_video;
+import 'package:intl/intl.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/services/gifted_content_info_service.dart';
 import 'package:ott/app/core/utils/direct_trailer_source.dart';
 import 'package:ott/app/core/utils/content_type.dart';
-import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
@@ -50,9 +51,19 @@ class MovieCard extends StatefulWidget {
   final int? index;
   final double? cardWidth;
   final double? cardMargin;
+
+  /// Overrides [standardHeight] (e.g. a grid that widens cards to fill the
+  /// row and grows the 16:9 poster to match). Null keeps the standard height.
+  final double? cardHeight;
   final ValueChanged<Content>? onContentUpdated;
   final bool isShortFilmTab;
   final BoxFit? posterFit;
+
+  /// Card is shown in the Home "Gifted To You" row: adds the GIFTED badge.
+  final bool isGifted;
+
+  /// Gift dates for that card, when the gifted-content API provides them.
+  final GiftedContentInfo? giftInfo;
 
   const MovieCard({
     super.key,
@@ -61,10 +72,26 @@ class MovieCard extends StatefulWidget {
     this.index,
     this.cardWidth,
     this.cardMargin,
+    this.cardHeight,
     this.onContentUpdated,
     this.isShortFilmTab = false,
     this.posterFit,
+    this.isGifted = false,
+    this.giftInfo,
+    this.onOpen,
+    this.onWatchNow,
   });
+
+  /// Replaces the default open action (card tap, TV select key and — unless
+  /// [onWatchNow] is set — the price / Watch Now button). Null keeps the
+  /// default behavior (open the details page).
+  final VoidCallback? onOpen;
+
+  /// Watch Now button action, separate from the card tap. Used where the user
+  /// already has access to the content (e.g. Profile -> Gifted To You): the
+  /// button shows "Watch Now" instead of the price and calls this. The button
+  /// has its own tap handler, so it never triggers the card tap.
+  final VoidCallback? onWatchNow;
 
   /// Resolves the standardized card width for the given context based on
   /// platform and responsive viewport breakpoints.
@@ -108,17 +135,12 @@ class _MovieCardState extends State<MovieCard> {
   Timer? _playDelayTimer;
   Future<void>? _previewStartFuture;
 
+  bool get _hasValidTrailer =>
+      DirectTrailerSource.hasValidTrailer(widget.movie.trailerUrl);
+
   String? _directPreviewUrl(String? rawUrl) {
-    final value = DirectTrailerSource.fromBackend(rawUrl);
-    if (value == null) return null;
-    final uri = Uri.tryParse(value);
-    if (uri == null || !uri.hasScheme) return null;
-
-    final host = uri.host.toLowerCase();
-    final isYoutube = host.contains('youtube.com') || host == 'youtu.be';
-    if (isYoutube) return null;
-
-    return value;
+    if (!DirectTrailerSource.hasValidTrailer(rawUrl)) return null;
+    return DirectTrailerSource.fromBackend(rawUrl);
   }
 
   @override
@@ -175,32 +197,44 @@ class _MovieCardState extends State<MovieCard> {
 
   Future<bool> _ensureVideoInitialized() async {
     if (_isVideoInitialized) return true;
+    if (!_hasValidTrailer) return false;
 
     final trailerUrl = _directPreviewUrl(widget.movie.trailerUrl);
     if (trailerUrl == null) return false;
     final generation = _previewGeneration;
 
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      final controller = native_video.VideoPlayerController.networkUrl(
-        Uri.parse(trailerUrl),
-      );
       try {
+        final uri = Uri.tryParse(trailerUrl);
+        if (uri == null) return false;
+        final controller = native_video.VideoPlayerController.networkUrl(uri);
         await controller.initialize();
+        if (controller.value.hasError) {
+          await controller.dispose();
+          return false;
+        }
         await controller.setLooping(true);
         await controller.setVolume(_isMuted ? 0 : 1);
         if (!mounted ||
             generation != _previewGeneration ||
             !_isPlayTriggerActive ||
-            _activePreviewState != this) {
+            !_hasValidTrailer) {
           await controller.dispose();
           return false;
         }
+        controller.addListener(() {
+          if (controller.value.hasError) {
+            _stopAndDisposePreview('controller error during playback');
+            if (mounted) setState(() {});
+          }
+        });
         _androidPreviewController = controller;
-        setState(() => _isVideoInitialized = true);
+        if (mounted) {
+          setState(() => _isVideoInitialized = true);
+        }
         _logPreview('Android ExoPlayer trailer initialized');
         return true;
       } catch (error) {
-        await controller.dispose();
         return false;
       }
     }
@@ -226,6 +260,7 @@ class _MovieCardState extends State<MovieCard> {
           if (_activePreviewState == this) {
             _activePreviewState = null;
           }
+          if (mounted) setState(() {});
         }));
 
       SecurityDebugLog.event(
@@ -238,7 +273,7 @@ class _MovieCardState extends State<MovieCard> {
       if (!mounted ||
           generation != _previewGeneration ||
           !_isPlayTriggerActive ||
-          _activePreviewState != this) {
+          !_hasValidTrailer) {
         for (final subscription in _previewSubscriptions) {
           unawaited(subscription.cancel());
         }
@@ -260,6 +295,7 @@ class _MovieCardState extends State<MovieCard> {
     } catch (e) {
       await player.dispose();
       _disposeVideoController();
+      if (mounted) setState(() {});
       return false;
     }
   }
@@ -323,18 +359,24 @@ class _MovieCardState extends State<MovieCard> {
   void didUpdateWidget(covariant MovieCard oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    final movieChanged = oldWidget.movie.id != widget.movie.id ||
+        oldWidget.movie.trailerUrl != widget.movie.trailerUrl;
+
+    if (movieChanged) {
+      _playDelayTimer?.cancel();
+      _stopAndDisposePreview('movie data changed');
+      if (_activePreviewState == this) {
+        _activePreviewState = null;
+      }
+    }
+
     if (oldWidget.activeIndexListenable != widget.activeIndexListenable) {
       oldWidget.activeIndexListenable
           ?.removeListener(_handleActiveIndexChanged);
       widget.activeIndexListenable?.addListener(_handleActiveIndexChanged);
       _handleActiveIndexChanged();
-    } else if (oldWidget.index != widget.index) {
+    } else if (oldWidget.index != widget.index || movieChanged) {
       _handleActiveIndexChanged();
-    }
-
-    if (oldWidget.movie.trailerUrl != widget.movie.trailerUrl) {
-      _playDelayTimer?.cancel();
-      _stopAndDisposePreview('trailer url changed');
     }
   }
 
@@ -353,7 +395,9 @@ class _MovieCardState extends State<MovieCard> {
     setState(() => _isHovered = hovering);
 
     if (hovering) {
-      _schedulePreview();
+      if (_hasValidTrailer) {
+        _schedulePreview();
+      }
     } else {
       _playDelayTimer?.cancel();
       _stopAndDisposePreview('hover lost');
@@ -365,7 +409,8 @@ class _MovieCardState extends State<MovieCard> {
 
   void _handleActiveIndexChanged() {
     final activeIndex = widget.activeIndexListenable?.value;
-    final shouldAutoPlay = _isAutoPlayDevice &&
+    final shouldAutoPlay = _hasValidTrailer &&
+        _isAutoPlayDevice &&
         widget.index != null &&
         activeIndex != null &&
         activeIndex == widget.index;
@@ -402,6 +447,7 @@ class _MovieCardState extends State<MovieCard> {
   }
 
   void _schedulePreview() {
+    if (!_hasValidTrailer) return;
     if (_playDelayTimer != null) return;
     if (_isStartingPreview || _isPreviewPlaying) return;
     if (!_isPlayTriggerActive) return;
@@ -428,34 +474,36 @@ class _MovieCardState extends State<MovieCard> {
   }
 
   bool get _isPlayTriggerActive {
-    return _isHovered || _isAutoPlayActive;
+    return _hasValidTrailer && (_isHovered || _isAutoPlayActive);
   }
 
   Future<void> _startPreviewIfEligible() async {
     if (!mounted) return;
+    if (!_hasValidTrailer) return;
     if (!_isPlayTriggerActive) return;
     if (_isStartingPreview || _isPreviewPlaying) return;
 
     _isStartingPreview = true;
     final generation = ++_previewGeneration;
     try {
-      _activatePreview();
-
       final ready = await _ensureVideoInitialized();
       if (!ready || !mounted) {
         if (_activePreviewState == this) {
           _activePreviewState = null;
         }
         _stopAndDisposePreview('not ready');
+        if (mounted) setState(() {});
         return;
       }
 
       if (!_isPlayTriggerActive ||
-          generation != _previewGeneration ||
-          _activePreviewState != this) {
+          !_hasValidTrailer ||
+          generation != _previewGeneration) {
         _stopAndDisposePreview('stale start');
         return;
       }
+
+      _activatePreview();
 
       _ensureMuted();
 
@@ -479,6 +527,7 @@ class _MovieCardState extends State<MovieCard> {
       if (_activePreviewState == this) {
         _activePreviewState = null;
       }
+      if (mounted) setState(() {});
     } finally {
       _isStartingPreview = false;
     }
@@ -551,7 +600,7 @@ class _MovieCardState extends State<MovieCard> {
 
     return SizedBox(
       width: cardWidth,
-      height: MovieCard.standardHeight,
+      height: widget.cardHeight ?? MovieCard.standardHeight,
       child: Stack(
         children: [
           Focus(
@@ -568,7 +617,7 @@ class _MovieCardState extends State<MovieCard> {
                   key == LogicalKeyboardKey.select ||
                   key == LogicalKeyboardKey.space ||
                   key == LogicalKeyboardKey.gameButtonA) {
-                _openDetails();
+                _handleOpen();
                 return KeyEventResult.handled;
               }
               return KeyEventResult.ignored;
@@ -577,7 +626,7 @@ class _MovieCardState extends State<MovieCard> {
               onEnter: (_) => _handleHover(true),
               onExit: (_) => _handleHover(false),
               child: GestureDetector(
-                onTap: _openDetails,
+                onTap: _handleOpen,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
                   curve: Curves.easeOut,
@@ -589,12 +638,14 @@ class _MovieCardState extends State<MovieCard> {
                     top: showPreview ? 1 : 3,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF141418),
+                    color: theme.cardColor,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: showPreview
                           ? highlightColor
-                          : const Color(0xFF26262C),
+                          : (theme.brightness == Brightness.dark
+                              ? const Color(0xFF26262C)
+                              : Colors.grey.shade300),
                       width: showPreview ? 2.0 : 1.0,
                     ),
                   ),
@@ -631,6 +682,14 @@ class _MovieCardState extends State<MovieCard> {
             ),
           ),
 
+          /// 🎁 GIFTED BADGE (Gifted To You row only; top-left of the poster)
+          if (widget.isGifted)
+            Positioned(
+              left: cardMargin + 8,
+              top: (showPreview ? 1 : 3) + 8,
+              child: IgnorePointer(child: _giftedBadge(theme, lang)),
+            ),
+
           /// ⋮ OPTIONS BUTTON
           _optionButton(context, widget.movie),
         ],
@@ -641,10 +700,12 @@ class _MovieCardState extends State<MovieCard> {
   Widget _buildMediaPreview(
       String? posterUrl, ThemeData theme, Content content, bool showPreview) {
     final androidController = _androidPreviewController;
-    if (showPreview &&
+    if (_hasValidTrailer &&
+        showPreview &&
         _isVideoInitialized &&
         androidController != null &&
-        androidController.value.isInitialized) {
+        androidController.value.isInitialized &&
+        !androidController.value.hasError) {
       return Container(
         color: Colors.black,
         child: Stack(
@@ -672,7 +733,9 @@ class _MovieCardState extends State<MovieCard> {
               bottom: 5,
               child: Semantics(
                 button: true,
-                label: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                label: _isMuted
+                    ? AppLocalizations.of(context)!.cardUnmuteTrailer
+                    : AppLocalizations.of(context)!.cardMuteTrailer,
                 child: Material(
                   color: Colors.black54,
                   shape: const CircleBorder(),
@@ -681,7 +744,9 @@ class _MovieCardState extends State<MovieCard> {
                     constraints:
                         const BoxConstraints(minWidth: 20, minHeight: 20),
                     iconSize: 12,
-                    tooltip: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                    tooltip: _isMuted
+                        ? AppLocalizations.of(context)!.cardUnmuteTrailer
+                        : AppLocalizations.of(context)!.cardMuteTrailer,
                     icon: Icon(
                       _isMuted ? Icons.volume_off : Icons.volume_up,
                       color: Colors.white,
@@ -695,7 +760,11 @@ class _MovieCardState extends State<MovieCard> {
         ),
       );
     }
-    if (showPreview && _isVideoInitialized && _videoController != null) {
+    if (_hasValidTrailer &&
+        showPreview &&
+        _isVideoInitialized &&
+        _videoController != null &&
+        _previewPlayer != null) {
       return Container(
         color: Colors.black,
         child: Stack(
@@ -719,7 +788,9 @@ class _MovieCardState extends State<MovieCard> {
               bottom: 5,
               child: Semantics(
                 button: true,
-                label: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                label: _isMuted
+                    ? AppLocalizations.of(context)!.cardUnmuteTrailer
+                    : AppLocalizations.of(context)!.cardMuteTrailer,
                 child: Material(
                   color: Colors.black54,
                   shape: const CircleBorder(),
@@ -728,7 +799,9 @@ class _MovieCardState extends State<MovieCard> {
                     constraints:
                         const BoxConstraints(minWidth: 25, minHeight: 25),
                     iconSize: 20,
-                    tooltip: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+                    tooltip: _isMuted
+                        ? AppLocalizations.of(context)!.cardUnmuteTrailer
+                        : AppLocalizations.of(context)!.cardMuteTrailer,
                     icon: Icon(
                       _isMuted ? Icons.volume_off : Icons.volume_up,
                       color: Colors.white,
@@ -839,12 +912,11 @@ class _MovieCardState extends State<MovieCard> {
   Widget _buildContentSection(ThemeData theme, AppLocalizations lang) {
     final movie = widget.movie;
     final price = movie.price ?? 0;
-    final dateStr = formatReleaseDate(movie.releaseDate);
     final genreStr = (movie.genreList != null && movie.genreList!.isNotEmpty)
         ? movie.genreList!.join(', ')
-        : 'Drama';
-    //  final metadataText = dateStr.isNotEmpty ? '$dateStr | $genreStr' : genreStr;
+        : lang.cardDefaultGenre;
     final metadataText = genreStr;
+    final giftLine = widget.isGifted ? _giftInfoLine(theme, lang) : null;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       child: Row(
@@ -860,27 +932,30 @@ class _MovieCardState extends State<MovieCard> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    movie.title ?? 'No Title',
+                    movie.title ?? lang.noTitle,
                     style: GoogleFonts.inter(
                       fontSize: 12.5,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: theme.canvasColor,
                       height: 1.15,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    metadataText,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  // Gifted cards show their gift status in place of the
+                  // genre line (same height); otherwise the genre line.
+                  giftLine ??
+                      Text(
+                        metadataText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: theme.canvasColor.withValues(alpha: 0.7),
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                 ],
               ),
             ),
@@ -894,9 +969,9 @@ class _MovieCardState extends State<MovieCard> {
                     borderRadius: BorderRadius.circular(6),
                     color: const Color(0xFFE50914),
                   ),
-                  child: const Text(
-                    "Watch Now",
-                    style: TextStyle(
+                  child: Text(
+                    lang.watchNow,
+                    style: const TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
@@ -912,71 +987,115 @@ class _MovieCardState extends State<MovieCard> {
     );
   }
 
+  Widget _giftedBadge(ThemeData theme, AppLocalizations lang) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: theme.primaryColor,
+        borderRadius: BorderRadius.circular(6),
+        boxShadow: const [
+          BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 1)),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(LucideIcons.gift, size: 11, color: Colors.white),
+          const SizedBox(width: 4),
+          Text(
+            lang.watchlistGifted.toUpperCase(),
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontSize: 9.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Expiry (with Expiring soon / Expired) or, without an expiry, the gift
+  /// date. Null when the API gave neither, so the genre line stays.
+  Widget? _giftInfoLine(ThemeData theme, AppLocalizations lang) {
+    final info = widget.giftInfo;
+    if (info == null || !info.hasDetails) return null;
+    final locale = Localizations.localeOf(context).toString();
+    String format(DateTime date) {
+      try {
+        return DateFormat('dd MMM yyyy', locale).format(date);
+      } catch (_) {
+        return DateFormat('dd MMM yyyy').format(date);
+      }
+    }
+
+    final muted = theme.canvasColor.withValues(alpha: 0.7);
+    final String text;
+    Color color = muted;
+    final expiry = info.expiresOn;
+    final status = info.statusAt(DateTime.now());
+    if (status == GiftStatus.expired) {
+      text = lang.watchlistExpired;
+      color = theme.colorScheme.error;
+    } else if (expiry != null) {
+      switch (status) {
+        case GiftStatus.expiringSoon:
+          text = lang.giftCardExpiringSoon(format(expiry));
+          color = Colors.orange.shade700;
+        case GiftStatus.active:
+        case GiftStatus.expired:
+        case null:
+          text = lang.giftCardExpiresOn(format(expiry));
+      }
+    } else {
+      text = lang.giftCardGiftedOn(format(info.giftedOn!));
+    }
+
+    return Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: GoogleFonts.inter(
+        color: color,
+        fontSize: 10.5,
+        fontWeight: color == muted ? FontWeight.w500 : FontWeight.w700,
+      ),
+    );
+  }
+
   Widget _buildPriceButton(
       ThemeData theme, AppLocalizations lang, double price) {
     final movie = widget.movie;
-    final isRental = movie.isRental ?? false;
-    final isShortFilm = widget.isShortFilmTab ||
-        ContentType.normalize(movie.type) == ContentType.shortFilm;
+    final contentType = ContentType.normalize(movie.type);
+    final isSeries = contentType == ContentType.series;
+    final isPurchased = movie.isRental == true;
+    final onOpen = widget.onWatchNow ?? widget.onOpen;
 
-    final isSeries = (movie.type?.toLowerCase() ?? '') == 'series';
-    final hasDiscount = !isRental &&
-        movie.discountedPrice != null &&
-        movie.discountedPrice! < price;
+    final shouldShowWatchNow = isSeries || isPurchased || onOpen != null;
 
     return GestureDetector(
-      onTap: () => isSeries
-          ? _openDetails()
-          : isRental
-              ? _playMovie()
-              : _showCupertinoDialog(context, movie),
+      onTap: () => onOpen != null
+          ? onOpen()
+          : isSeries
+              ? _openDetails()
+              : isPurchased
+                  ? _playMovie()
+                  : _showCupertinoDialog(context, movie),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(6),
           color: const Color(0xFFE50914),
         ),
-        child: hasDiscount
-            ? Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '₹ $price',
-                    style: const TextStyle(
-                      fontSize: 9.5,
-                      decoration: TextDecoration.lineThrough,
-                      color: Colors.white70,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '₹ ${movie.discountedPrice!.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              )
-            : Text(
-                isSeries
-                    ? isRental
-                        ? (isShortFilm ? 'Watch Now' : 'Watch Series')
-                        : '₹ $price'
-                    : isRental
-                        ? isShortFilm
-                            ? 'Watch Now'
-                            : movie.type?.toLowerCase() == "movie"
-                                ? lang.watchMovie
-                                : lang.watchSeries
-                        : (isShortFilm || price == 0 ? 'Watch Now' : '₹ $price'),
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
+        child: Text(
+          shouldShowWatchNow ? lang.watchNow : '₹ $price',
+          style: const TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
       ),
     );
   }
@@ -991,6 +1110,15 @@ class _MovieCardState extends State<MovieCard> {
       id: FeatureTourStepId.download,
       child: child,
     );
+  }
+
+  void _handleOpen() {
+    final onOpen = widget.onOpen;
+    if (onOpen != null) {
+      onOpen();
+      return;
+    }
+    _openDetails();
   }
 
   void _openDetails() {
@@ -1059,9 +1187,28 @@ class _MovieCardState extends State<MovieCard> {
       );
       CustomToast.show(
         context,
-        "Video is not available",
+        AppLocalizations.of(context)!.cardVideoNotAvailable,
         isSuccess: false,
       );
+      return;
+    }
+
+    final isSeries = ContentType.isSeries(contentToPlay.type);
+    if (isSeries) {
+      await _disposePreviewBeforeSecurePlayback();
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SeriesDetailsPage(
+            seriesId: contentToPlay.id ?? movie.id!,
+            content: contentToPlay,
+          ),
+        ),
+      ).then((_) {
+        if (!mounted) return;
+        context.read<DashboardProvider>().getContinueWatchedMovieList("SERIES");
+      });
       return;
     }
 
@@ -1079,7 +1226,7 @@ class _MovieCardState extends State<MovieCard> {
           content: contentToPlay,
           seasonIndex: 0,
           episodeIndex: 0,
-          seasons: [],
+          seasons: null,
         ),
       ),
     ).then((_) {
@@ -1122,7 +1269,7 @@ class _MovieCardState extends State<MovieCard> {
           children: [
             const SizedBox(height: 10),
             Text(
-              '${lang.rentDuration}: ${movie.rentlDuration ?? 'NA'}',
+              '${lang.rentDuration}: ${movie.rentlDuration ?? lang.cardNotApplicable}',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -1131,7 +1278,7 @@ class _MovieCardState extends State<MovieCard> {
             ),
             const SizedBox(height: 10),
             Text(
-              'Do you want to rent ${movie.title ?? ''}?',
+              lang.cardRentConfirm(movie.title ?? ''),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -1143,12 +1290,12 @@ class _MovieCardState extends State<MovieCard> {
         actions: [
           CupertinoDialogAction(
             textStyle: TextStyle(color: theme.canvasColor),
-            child: const Text('Cancel'),
+            child: Text(lang.cancel),
             onPressed: () => Navigator.pop(context),
           ),
           CupertinoDialogAction(
             textStyle: TextStyle(color: theme.primaryColor),
-            child: const Text("Continue"),
+            child: Text(lang.homeContinue),
             onPressed: () {
               Navigator.pop(context);
               Navigator.push(
@@ -1203,6 +1350,7 @@ class _MovieCardState extends State<MovieCard> {
 
   Widget _optionButton(BuildContext context, Content movie) {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
     final bool isSeries = movie.type?.toLowerCase() == "series";
     final double cardWidth = widget.cardWidth ?? MovieCard.itemWidth;
     final bool compactOverlay =
@@ -1240,7 +1388,9 @@ class _MovieCardState extends State<MovieCard> {
             (movie.isRental ?? false)
                 ? SpeedDialChild()
                 : SpeedDialChild(
-                    label: isBookmarked ? "Remove Bookmark" : "Bookmark",
+                    label: isBookmarked
+                        ? lang.cardRemoveBookmark
+                        : lang.cardBookmark,
                     labelBackgroundColor: theme.cardColor,
                     labelStyle: TextStyle(
                       color: theme.canvasColor,
@@ -1261,8 +1411,8 @@ class _MovieCardState extends State<MovieCard> {
                       CustomToast.show(
                         context,
                         wasBookmarked
-                            ? "${movie.title} removed from bookmarks"
-                            : "${movie.title} added to bookmarks",
+                            ? lang.cardRemovedFromBookmarks('${movie.title}')
+                            : lang.cardAddedToBookmarks('${movie.title}'),
                         isSuccess: true,
                       );
 
@@ -1272,7 +1422,7 @@ class _MovieCardState extends State<MovieCard> {
 
             /// 🔗 Share
             SpeedDialChild(
-              label: "Share",
+              label: lang.cardShare,
               labelBackgroundColor: theme.cardColor,
               labelStyle: TextStyle(
                 color: theme.canvasColor,
@@ -1286,7 +1436,7 @@ class _MovieCardState extends State<MovieCard> {
                   context,
                   movie,
                   contentType: _shareContentTypeFor(movie),
-                  unavailableMessage: "Content details are not available yet",
+                  unavailableMessage: lang.cardContentDetailsNotAvailable,
                 );
               },
             ),
@@ -1294,7 +1444,7 @@ class _MovieCardState extends State<MovieCard> {
             /// 🎁 Gift (movies only)
             if (!isSeries)
               SpeedDialChild(
-                label: "Gift",
+                label: lang.cardGift,
                 labelBackgroundColor: theme.cardColor,
                 labelStyle: TextStyle(
                   color: theme.canvasColor,
@@ -1329,6 +1479,7 @@ class _MovieCardState extends State<MovieCard> {
     TextEditingController countController,
   ) {
     final theme = Theme.of(context);
+    final lang = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
@@ -1353,16 +1504,16 @@ class _MovieCardState extends State<MovieCard> {
                       Icon(LucideIcons.gift,
                           color: theme.primaryColor, size: 20),
                       const SizedBox(width: 8),
-                      const Text(
-                        "Gift Movie",
-                        style: TextStyle(
+                      Text(
+                        lang.cardGiftMovie,
+                        style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    "How many people do you want to gift this movie to?",
+                    lang.cardGiftHowMany,
                     style: TextStyle(
                       fontSize: 13,
                       color: theme.canvasColor.withValues(alpha: 0.7),
@@ -1371,7 +1522,7 @@ class _MovieCardState extends State<MovieCard> {
                   const SizedBox(height: 10),
                   CustomTextField(
                     controller: countController,
-                    hintText: "Recipients",
+                    hintText: lang.cardRecipients,
                     isDigits: true,
                     textInputType: TextInputType.number,
                     backgroundColor: theme.scaffoldBackgroundColor,
@@ -1382,7 +1533,7 @@ class _MovieCardState extends State<MovieCard> {
                     children: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text("Cancel"),
+                        child: Text(lang.cancel),
                       ),
                       const SizedBox(width: 10),
                       ElevatedButton(
@@ -1400,7 +1551,7 @@ class _MovieCardState extends State<MovieCard> {
                           if (count == null || count <= 0) {
                             CustomToast.show(
                               context,
-                              'Enter a valid number',
+                              lang.cardEnterValidNumber,
                               isSuccess: false,
                             );
                             return;
@@ -1417,9 +1568,10 @@ class _MovieCardState extends State<MovieCard> {
                             ),
                           );
                         },
-                        child: const Text(
-                          "Continue",
-                          style: TextStyle(color: Colors.white, fontSize: 13),
+                        child: Text(
+                          lang.homeContinue,
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 13),
                         ),
                       ),
                     ],

@@ -5,12 +5,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart' hide PlayerState;
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:ott/app/core/utils/app_orientation.dart';
 import 'package:ott/app/core/utils/direct_trailer_source.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:video_player/video_player.dart' as native_video;
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:ott/app/widgets/video_skip_controls.dart';
+import 'package:ott/l10n/app_localizations.dart';
 
 import '../../../../data/models/content.dart';
 import '../../../core/constant/api_constant.dart';
@@ -84,10 +86,7 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    SystemChrome.setPreferredOrientations(const [
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
+    unawaited(AppOrientation.lockLandscape());
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     if (_hasUrl) _initPlayer();
   }
@@ -166,7 +165,6 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
         }
         return;
       } catch (error) {
-
         await controller.dispose();
         if (mounted) setState(() => _hasError = true);
         return;
@@ -195,7 +193,6 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
           if (mounted) setState(() {});
         }))
         ..add(player.stream.error.listen((error) {
-
           if (mounted) setState(() => _hasError = true);
         }));
 
@@ -221,7 +218,6 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
       }
       _scheduleControlsHide();
     } catch (error) {
-
       await player.dispose();
       if (mounted) setState(() => _hasError = true);
     }
@@ -409,7 +405,8 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
     WakelockPlus.disable();
 
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    // Portrait on exit; manual rotation is re-enabled afterwards.
+    unawaited(AppOrientation.restoreDefault());
     if (kDebugMode) {
       debugPrint('TRAILER_FLOW: Trailer player disposed');
     }
@@ -432,8 +429,9 @@ class _TrailerPageState extends State<TrailerPage> with WidgetsBindingObserver {
             else
               Center(
                 child: _hasError || !_hasUrl
-                    ? const Text('Unable to play this trailer.',
-                        style: TextStyle(color: Colors.white))
+                    ? Text(
+                        AppLocalizations.of(context)!.playerUnableToPlayTrailer,
+                        style: const TextStyle(color: Colors.white))
                     : CircularProgressIndicator(
                         color: Theme.of(context).primaryColor),
               ),
@@ -688,6 +686,78 @@ class _TrailerPreviewState extends State<TrailerPreview>
       DirectTrailerSource.fromBackend(widget.trailerUrl) ?? '';
   String? get _youtubeId => _extractYoutubeId(_trailerUrl);
 
+  bool get _isPlaying {
+    final android = _androidController;
+    if (android != null && android.value.isInitialized) {
+      return android.value.isPlaying;
+    }
+    final player = _player;
+    if (player != null) {
+      return player.state.playing;
+    }
+    final youtube = _youtubeController;
+    if (youtube != null) {
+      return youtube.value.isPlaying;
+    }
+    return false;
+  }
+
+  void _onControllerUpdate() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _stopAudio() {
+    unawaited(_player?.setVolume(0));
+    unawaited(_androidController?.setVolume(0));
+    _youtubeController?.mute();
+  }
+
+  void _pauseTrailer() {
+    _manuallyPaused = true;
+    _stopAudio();
+    unawaited(_player?.pause());
+    unawaited(_androidController?.pause());
+    _youtubeController?.pause();
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _playTrailer() {
+    _manuallyPaused = false;
+    if (!_appIsActive) return;
+
+    final androidVol = _isMuted ? 0.0 : 1.0;
+    unawaited(_androidController?.setVolume(androidVol));
+    unawaited(_androidController?.play());
+
+    final mediaKitVol = _isMuted ? 0.0 : 100.0;
+    unawaited(_player?.setVolume(mediaKitVol));
+    unawaited(_player?.play());
+
+    if (_youtubeController != null) {
+      if (_isMuted) {
+        _youtubeController!.mute();
+      } else {
+        _youtubeController!.unMute();
+      }
+      _youtubeController!.play();
+    }
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _togglePlayPause() {
+    if (_isPlaying) {
+      _pauseTrailer();
+    } else {
+      _playTrailer();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -696,35 +766,25 @@ class _TrailerPreviewState extends State<TrailerPreview>
     _appIsActive = WidgetsBinding.instance.lifecycleState == null ||
         WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
 
-    widget.controller.pause = () {
-      _manuallyPaused = true;
-      _player?.pause();
-      _androidController?.pause();
-      _youtubeController?.pause();
-    };
-
-    widget.controller.play = () {
-      _manuallyPaused = false;
-      if (!_appIsActive) return;
-      _player?.play();
-      _androidController?.play();
-      _youtubeController?.play();
-    };
+    widget.controller.pause = _pauseTrailer;
+    widget.controller.play = _playTrailer;
+    widget.controller.stopAudio = _stopAudio;
 
     widget.controller.mute = () {
       if (mounted) setState(() => _isMuted = true);
-      _player?.setVolume(0);
-      _androidController?.setVolume(0);
-      _youtubeController?.mute();
+      _stopAudio();
     };
 
     widget.controller.unmute = () {
       if (mounted) setState(() => _isMuted = false);
-      _player?.setVolume(100);
-      _androidController?.setVolume(1);
-      _youtubeController?.unMute();
+      if (_isPlaying) {
+        unawaited(_player?.setVolume(100));
+        unawaited(_androidController?.setVolume(1));
+        _youtubeController?.unMute();
+      }
     };
     widget.controller.disposePlayer = _disposeControllerAsync;
+    widget.controller.isPlaying = () => _isPlaying;
 
     if (widget.trailerUrl?.isNotEmpty == true) {
       _initializationFuture = _init();
@@ -735,13 +795,12 @@ class _TrailerPreviewState extends State<TrailerPreview>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _appIsActive = state == AppLifecycleState.resumed;
     if (!_appIsActive) {
+      _stopAudio();
       unawaited(_player?.pause());
       unawaited(_androidController?.pause());
       _youtubeController?.pause();
     } else if (widget.autoPlay && !_manuallyPaused) {
-      unawaited(_player?.play());
-      unawaited(_androidController?.play());
-      _youtubeController?.play();
+      _playTrailer();
     }
   }
 
@@ -755,6 +814,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
     final currentToken = ++_initToken;
     final youtubeId = _youtubeId;
     if (youtubeId != null && youtubeId.isNotEmpty) {
+      _youtubeController?.removeListener(_onControllerUpdate);
       _youtubeController?.dispose();
       final controller = YoutubePlayerController(
         initialVideoId: youtubeId,
@@ -765,8 +825,10 @@ class _TrailerPreviewState extends State<TrailerPreview>
         ),
       );
 
-      if (!widget.muted) {
+      if (!_isMuted && !_manuallyPaused) {
         controller.unMute();
+      } else {
+        controller.mute();
       }
       if (!widget.autoPlay || _manuallyPaused || !_appIsActive) {
         controller.pause();
@@ -777,6 +839,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
         return;
       }
 
+      controller.addListener(_onControllerUpdate);
       if (mounted) {
         setState(() {
           _hasError = false;
@@ -798,15 +861,29 @@ class _TrailerPreviewState extends State<TrailerPreview>
       final controller = native_video.VideoPlayerController.networkUrl(uri);
       try {
         await controller.initialize();
+        if (_isDisposed || currentToken != _initToken || _manuallyPaused) {
+          await controller.setVolume(0);
+          await controller.pause();
+          if (_isDisposed || currentToken != _initToken) {
+            await controller.dispose();
+            return;
+          }
+        }
         await controller.setLooping(true);
-        await controller.setVolume(widget.muted ? 0 : 1);
+        final vol = (_isMuted || _manuallyPaused) ? 0.0 : 1.0;
+        await controller.setVolume(vol);
         if (widget.autoPlay && !_manuallyPaused && _appIsActive) {
           await controller.play();
+        } else {
+          await controller.pause();
         }
         if (_isDisposed || currentToken != _initToken) {
+          await controller.setVolume(0);
+          await controller.pause();
           await controller.dispose();
           return;
         }
+        controller.addListener(_onControllerUpdate);
         if (mounted) {
           setState(() {
             _hasError = false;
@@ -814,7 +891,6 @@ class _TrailerPreviewState extends State<TrailerPreview>
           });
         }
       } catch (error) {
-
         await controller.dispose();
         if (mounted && !_isDisposed) setState(() => _hasError = true);
       }
@@ -850,7 +926,6 @@ class _TrailerPreviewState extends State<TrailerPreview>
           }
         }))
         ..add(player.stream.error.listen((error) {
-
           if (mounted && !_isDisposed) {
             setState(() => _hasError = true);
           }
@@ -861,12 +936,25 @@ class _TrailerPreviewState extends State<TrailerPreview>
         'Passing the direct backend trailer URL to the embedded media_kit player.',
       );
       await player.open(Media(_trailerUrl), play: false);
-      await player.setVolume(widget.muted ? 0 : 100);
+      if (_isDisposed || currentToken != _initToken || _manuallyPaused) {
+        await player.setVolume(0);
+        await player.pause();
+        if (_isDisposed || currentToken != _initToken) {
+          await player.dispose();
+          return;
+        }
+      }
+      final vol = (_isMuted || _manuallyPaused) ? 0.0 : 100.0;
+      await player.setVolume(vol);
       if (widget.autoPlay && !_manuallyPaused && _appIsActive) {
         await player.play();
+      } else {
+        await player.pause();
       }
 
       if (_isDisposed || currentToken != _initToken) {
+        await player.setVolume(0);
+        await player.pause();
         await player.dispose();
         return;
       }
@@ -879,7 +967,6 @@ class _TrailerPreviewState extends State<TrailerPreview>
         });
       }
     } catch (error) {
-
       await player.dispose();
       if (mounted && !_isDisposed) {
         setState(() => _hasError = true);
@@ -900,29 +987,31 @@ class _TrailerPreviewState extends State<TrailerPreview>
       return;
     }
     if (oldWidget.muted != widget.muted) {
-      unawaited(_player?.setVolume(widget.muted ? 0 : 100));
-      unawaited(_androidController?.setVolume(widget.muted ? 0 : 1));
+      _isMuted = widget.muted;
+      final vol = _isMuted ? 0.0 : 1.0;
+      unawaited(_player?.setVolume(_isMuted ? 0 : 100));
+      unawaited(_androidController?.setVolume(vol));
       widget.muted ? _youtubeController?.mute() : _youtubeController?.unMute();
     }
     if (oldWidget.autoPlay != widget.autoPlay) {
       if (widget.autoPlay && !_manuallyPaused && _appIsActive) {
-        unawaited(_player?.play());
-        unawaited(_androidController?.play());
-        _youtubeController?.play();
+        _playTrailer();
       } else {
-        unawaited(_player?.pause());
-        unawaited(_androidController?.pause());
-        _youtubeController?.pause();
+        _pauseTrailer();
       }
     }
   }
 
   void _disposeController() {
     _initToken++;
+    _stopAudio();
     for (final subscription in _subscriptions) {
       unawaited(subscription.cancel());
     }
     _subscriptions.clear();
+
+    _androidController?.removeListener(_onControllerUpdate);
+    _youtubeController?.removeListener(_onControllerUpdate);
 
     final player = _player;
     final androidController = _androidController;
@@ -944,13 +1033,23 @@ class _TrailerPreviewState extends State<TrailerPreview>
   }
 
   Future<void> _disposeControllerAsync() async {
+    _manuallyPaused = true;
     _initToken++;
+    _stopAudio();
+    unawaited(_player?.pause());
+    unawaited(_androidController?.pause());
+    _youtubeController?.pause();
+
     await _initializationFuture;
     _initializationFuture = null;
     for (final subscription in _subscriptions) {
       await subscription.cancel();
     }
     _subscriptions.clear();
+
+    _androidController?.removeListener(_onControllerUpdate);
+    _youtubeController?.removeListener(_onControllerUpdate);
+
     final player = _player;
     final androidController = _androidController;
     _player = null;
@@ -984,7 +1083,9 @@ class _TrailerPreviewState extends State<TrailerPreview>
     widget.controller.play = null;
     widget.controller.mute = null;
     widget.controller.unmute = null;
+    widget.controller.stopAudio = null;
     widget.controller.disposePlayer = null;
+    widget.controller.isPlaying = null;
     _disposeController();
     super.dispose();
   }
@@ -1057,17 +1158,19 @@ class _TrailerPreviewState extends State<TrailerPreview>
       _isMuted = !_isMuted;
     });
 
-    if (_player != null) {
-      unawaited(_player!.setVolume(_isMuted ? 0 : 100));
-    }
-    if (_androidController != null) {
-      unawaited(_androidController!.setVolume(_isMuted ? 0 : 1));
-    }
-    if (_youtubeController != null) {
-      if (_isMuted) {
-        _youtubeController!.mute();
-      } else {
-        _youtubeController!.unMute();
+    if (_isPlaying) {
+      if (_player != null) {
+        unawaited(_player!.setVolume(_isMuted ? 0 : 100));
+      }
+      if (_androidController != null) {
+        unawaited(_androidController!.setVolume(_isMuted ? 0 : 1));
+      }
+      if (_youtubeController != null) {
+        if (_isMuted) {
+          _youtubeController!.mute();
+        } else {
+          _youtubeController!.unMute();
+        }
       }
     }
   }
@@ -1078,7 +1181,9 @@ class _TrailerPreviewState extends State<TrailerPreview>
       bottom: bottomOffset,
       child: Semantics(
         button: true,
-        label: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+        label: _isMuted
+            ? AppLocalizations.of(context)!.cardUnmuteTrailer
+            : AppLocalizations.of(context)!.cardMuteTrailer,
         child: Material(
           color: Colors.black54,
           shape: const CircleBorder(),
@@ -1086,7 +1191,9 @@ class _TrailerPreviewState extends State<TrailerPreview>
             padding: const EdgeInsets.all(4),
             constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
             iconSize: 16,
-            tooltip: _isMuted ? 'Unmute trailer' : 'Mute trailer',
+            tooltip: _isMuted
+                ? AppLocalizations.of(context)!.cardUnmuteTrailer
+                : AppLocalizations.of(context)!.cardMuteTrailer,
             onPressed: _toggleMute,
             icon: Icon(
               _isMuted ? Icons.volume_off : Icons.volume_up,
@@ -1104,14 +1211,44 @@ class _TrailerPreviewState extends State<TrailerPreview>
       bottom: 8,
       child: Semantics(
         button: true,
-        label: 'Play trailer fullscreen',
+        label: AppLocalizations.of(context)!.playerPlayTrailerFullscreen,
         child: Material(
           color: Colors.black54,
           shape: const CircleBorder(),
           child: IconButton(
-            tooltip: 'Fullscreen trailer',
+            tooltip: AppLocalizations.of(context)!.playerFullscreenTrailer,
             onPressed: _openFullscreenTrailer,
             icon: const Icon(Icons.fullscreen, color: Colors.white),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _centerPlayPauseOverlay() {
+    final playing = _isPlaying;
+    return Center(
+      child: Semantics(
+        button: true,
+        label: playing
+            ? AppLocalizations.of(context)!.playerPauseTrailer
+            : AppLocalizations.of(context)!.playerPlayTrailerAction,
+        child: Material(
+          color: Colors.black.withOpacity(0.45),
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: _togglePlayPause,
+            child: Container(
+              width: 52,
+              height: 52,
+              alignment: Alignment.center,
+              child: Icon(
+                playing ? Icons.pause : Icons.play_arrow,
+                size: 30,
+                color: Colors.white,
+              ),
+            ),
           ),
         ),
       ),
@@ -1128,7 +1265,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
           children: [
             Center(
               child: Text(
-                "Trailer unavailable",
+                AppLocalizations.of(context)!.playerTrailerUnavailable,
                 style: TextStyle(color: Colors.white.withOpacity(0.7)),
               ),
             ),
@@ -1148,6 +1285,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
           fit: StackFit.expand,
           children: [
             native_video.VideoPlayer(androidController),
+            _centerPlayPauseOverlay(),
             _volumeButton(),
             _fullscreenButton(),
           ],
@@ -1196,31 +1334,12 @@ class _TrailerPreviewState extends State<TrailerPreview>
                   controls: null,
                 ),
               ),
+              _centerPlayPauseOverlay(),
               if (_showControls) ...[
                 Positioned.fill(
                   child: Container(color: Colors.black.withOpacity(0.35)),
                 ),
-                Center(
-                  child: IconButton(
-                    iconSize: 40,
-                    icon: Icon(
-                      player.state.playing
-                          ? Icons.pause_circle_filled
-                          : Icons.play_circle_filled,
-                      color: Colors.white,
-                    ),
-                    onPressed: () {
-                      if (player.state.playing) {
-                        _manuallyPaused = true;
-                        player.pause();
-                      } else {
-                        _manuallyPaused = false;
-                        if (_appIsActive) player.play();
-                      }
-                      setState(() {});
-                    },
-                  ),
-                ),
+                _centerPlayPauseOverlay(),
                 Center(
                   child: VideoSkipControls(
                     onBackward: () =>
@@ -1316,6 +1435,7 @@ class _TrailerPreviewState extends State<TrailerPreview>
                   ),
                 ),
               ),
+              _centerPlayPauseOverlay(),
               _volumeButton(),
               _fullscreenButton(),
               if (_showControls)
@@ -1342,5 +1462,7 @@ class TrailerPreviewController {
   VoidCallback? play;
   VoidCallback? mute;
   VoidCallback? unmute;
+  VoidCallback? stopAudio;
   Future<void> Function()? disposePlayer;
+  bool Function()? isPlaying;
 }

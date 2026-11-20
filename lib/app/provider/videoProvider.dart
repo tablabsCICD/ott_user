@@ -6,6 +6,8 @@ import 'package:ott/data/models/response/getRatingsAndReview.dart';
 import 'package:ott/data/models/response/saveRatingAndReview.dart';
 import 'dart:convert';
 
+import 'package:ott/app/core/utils/content_sort.dart';
+
 import '../../data/models/content.dart';
 import '../../data/models/request/getAllVideoResponse.dart';
 import '../../data/models/user.dart';
@@ -13,6 +15,7 @@ import '../core/constant/api_constant.dart';
 import '../core/network/api_helper.dart';
 import '../core/utils/sharepreferences.dart';
 import 'baseProvider.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class VideoProvider extends BaseProvider {
   VideoProvider() : super('Ideal') {
@@ -70,14 +73,11 @@ class VideoProvider extends BaseProvider {
         if (searchResponse.success == true) {
           if (searchResponse.data!.contentList != null) {
             _filteredContentList.clear();
-            _filteredContentList = searchResponse.data!.contentList!;
+            _filteredContentList =
+                sortContentNewestFirst(searchResponse.data!.contentList!);
             notifyListeners();
-          } else {
-
-          }
-        } else {
-
-        }
+          } else {}
+        } else {}
       } else if (response.statusCode == 404) {
         Map<String, dynamic> responseBody = json.decode(response.body);
         GetAllVideoResponse searchResponse =
@@ -90,9 +90,7 @@ class VideoProvider extends BaseProvider {
         throw Exception(
             'Failed to fetch content. Status code: ${response.statusCode}');
       }
-    } catch (error) {
-
-    }
+    } catch (error) {}
   }
 
   // Search all content
@@ -111,16 +109,15 @@ class VideoProvider extends BaseProvider {
         if (searchResponse.success == true) {
           if (searchResponse.data != null) {
             _filteredContentList.clear();
-            _filteredContentList = searchResponse.data!.contentList!;
+            _filteredContentList =
+                sortContentNewestFirst(searchResponse.data!.contentList!);
             notifyListeners();
           } else {
-
             _filteredContentList.clear();
           }
           notifyListeners();
         } else {
           _filteredContentList.clear();
-
         }
         notifyListeners();
       } else if (response.statusCode == 404) {
@@ -135,9 +132,7 @@ class VideoProvider extends BaseProvider {
         throw Exception(
             'Failed to fetch content. Status code: ${response.statusCode}');
       }
-    } catch (error) {
-
-    }
+    } catch (error) {}
   }
 
   @override
@@ -163,18 +158,13 @@ class VideoProvider extends BaseProvider {
             _upcomingContentList = searchResponse.data!.contentList!;
 
             notifyListeners();
-          } else {
-
-          }
-        } else {
-
-        }
+          } else {}
+        } else {}
       } else {
         throw Exception(
             'Failed to fetch content. Status code: ${response.statusCode}');
       }
     } catch (error) {
-
       throw Exception('An error occurred while fetching content.');
     }
   }
@@ -194,18 +184,13 @@ class VideoProvider extends BaseProvider {
             _upcomingContentList = searchResponse.data!.contentList!;
 
             notifyListeners();
-          } else {
-
-          }
-        } else {
-
-        }
+          } else {}
+        } else {}
       } else {
         throw Exception(
             'Failed to fetch content. Status code: ${response.statusCode}');
       }
     } catch (error) {
-
       throw Exception('An error occurred while fetching content.');
     }
   }
@@ -227,6 +212,7 @@ class VideoProvider extends BaseProvider {
           (selectedLanguage == null || language == selectedLanguage) &&
           (selectedRating == null || rating >= selectedRating!);
     }).toList();
+    _filteredContentList = sortContentNewestFirst(_filteredContentList);
 
     notifyListeners();
   }
@@ -286,35 +272,29 @@ class VideoProvider extends BaseProvider {
               'message': saveRatingsAndReviewResponse.message!
             };
           } else {
-
             return {
               'success': false,
-              'message':
-                  saveRatingsAndReviewResponse.message ?? 'No data returned'
+              'message': saveRatingsAndReviewResponse.message ??
+                  appL10n().msgNoDataReturned
             };
           }
         } else {
-
           return {
             'success': false,
-            'message':
-                saveRatingsAndReviewResponse.message ?? 'Error in response'
+            'message': saveRatingsAndReviewResponse.message ??
+                appL10n().msgErrorInResponse
           };
         }
       } else {
         final responseMessage = _messageFromResponseBody(response.body);
         return {
           'success': false,
-          'message': responseMessage ?? 'Something went wrong!'
+          'message': responseMessage ?? appL10n().msgSomethingWentWrongExclaim
         };
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-
-      return {
-        'success': false,
-        'message': 'An error occurred while adding user: $error'
-      };
+      return {'success': false, 'message': appL10n().msgErrorAddingUser};
     }
   }
 
@@ -350,17 +330,17 @@ class VideoProvider extends BaseProvider {
             notifyListeners();
             return {'success': true, 'message': getRatingsAndReview.message!};
           } else {
-
             return {
               'success': false,
-              'message': getRatingsAndReview.message ?? 'No data returned'
+              'message':
+                  getRatingsAndReview.message ?? appL10n().msgNoDataReturned
             };
           }
         } else {
-
           return {
             'success': false,
-            'message': getRatingsAndReview.message ?? 'Error in response'
+            'message':
+                getRatingsAndReview.message ?? appL10n().msgErrorInResponse
           };
         }
       } else if (response.statusCode == 500) {
@@ -371,17 +351,16 @@ class VideoProvider extends BaseProvider {
         //CustomToast.show("Error: ${getRatingsAndReview.message}",isSuccess:false);
         return {
           'success': false,
-          'message': getRatingsAndReview.message ?? 'Error in response'
+          'message': getRatingsAndReview.message ?? appL10n().msgErrorInResponse
         };
       } else {
-        return {'failure': true, 'message': 'Something went wrong!'};
+        return {
+          'failure': true,
+          'message': appL10n().msgSomethingWentWrongExclaim
+        };
       }
     } catch (error) {
-
-      return {
-        'success': false,
-        'message': 'An error occurred while adding user: $error'
-      };
+      return {'success': false, 'message': appL10n().msgErrorAddingUser};
     }
   }
 }

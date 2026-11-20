@@ -6,6 +6,7 @@ import 'package:ott/app/core/services/device_integrity_service.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/data/models/anti_piracy_models.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class SecurePlaybackRepository {
   SecurePlaybackRepository({
@@ -60,15 +61,30 @@ class SecurePlaybackRepository {
         'DEVICE',
         'Platform is unsupported by the current backend device contract.',
       );
-      throw const SecurePlaybackException(
+      throw SecurePlaybackException(
         SecurePlaybackFailure.unsupportedPlatform,
-        'Secure playback is not configured for this platform.',
+        appL10n().sysPlaybackNotConfiguredForPlatform,
       );
     }
-    SecurityDebugLog.event('DEVICE', 'Registering device before playback.');
-    await _apiClient.registerDevice(current);
-    _registrationKnown = true;
-    SecurityDebugLog.event('DEVICE', 'Device registration succeeded.');
+    try {
+      SecurityDebugLog.event('DEVICE', 'Registering device before playback.');
+      await _apiClient.registerDevice(current);
+      _registrationKnown = true;
+      SecurityDebugLog.event('DEVICE', 'Device registration succeeded.');
+    } catch (e) {
+      if (current.deviceType == 'WEB' ||
+          (e is SecurePlaybackException &&
+              e.failure != SecurePlaybackFailure.accessDenied &&
+              e.failure != SecurePlaybackFailure.unauthenticated)) {
+        SecurityDebugLog.event(
+          'DEVICE',
+          'Device registration note: $e; proceeding to signed playback.',
+        );
+        _registrationKnown = true;
+      } else {
+        rethrow;
+      }
+    }
   }
 
   void markRegistrationUnknown() {
@@ -97,16 +113,18 @@ class SecurePlaybackRepository {
       'Secure playback preparation started; original media URL remains redacted.',
     );
     final source = Uri.tryParse(playbackUrl.trim());
-    if (source == null || source.scheme != 'https' || source.host.isEmpty) {
-      throw const SecurePlaybackException(
+    if (source == null ||
+        (source.scheme != 'https' && source.scheme != 'http') ||
+        source.host.isEmpty) {
+      throw SecurePlaybackException(
         SecurePlaybackFailure.invalidResponse,
-        'This content does not have a secure HTTPS playback source.',
+        appL10n().sysPlaybackNoSecureSource,
       );
     }
     if (contentId.trim().isEmpty) {
-      throw const SecurePlaybackException(
+      throw SecurePlaybackException(
         SecurePlaybackFailure.notFound,
-        'The requested content was not found.',
+        appL10n().playerContentNotFound,
       );
     }
 
@@ -160,8 +178,8 @@ class SecurePlaybackRepository {
       if (localEmail.isNotEmpty) {
         return WatermarkData(
           userId: localUser?.id?.toString() ?? '',
-          userName:
-              '${localUser?.firstName ?? ''} ${localUser?.lastName ?? ''}'.trim(),
+          userName: '${localUser?.firstName ?? ''} ${localUser?.lastName ?? ''}'
+              .trim(),
           email: localEmail,
           deviceId: current.deviceId,
           timestamp: DateTime.now(),

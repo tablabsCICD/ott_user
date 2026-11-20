@@ -7,12 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:intl_phone_field/country_picker_dialog.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:ott/app/core/constant/image_constant.dart';
-import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/NavigationPage.dart';
 import 'package:ott/app/provider/language_provider.dart';
-import 'package:ott/app/provider/themeProvider.dart';
 import 'package:ott/app/provider/userProvider.dart';
-import 'package:ott/app/route/routes/app_routes.dart';
 import 'package:ott/app/widgets/LanguageDropdown.dart';
 import 'package:ott/app/widgets/ott_tv_focus.dart';
 import 'package:ott/app/widgets/show_toast.dart';
@@ -22,10 +19,24 @@ import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sms_autofill/sms_autofill.dart';
+import 'package:ott/app/core/constant/prefrense_constant.dart';
+import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/services/referral_service.dart';
+import 'package:ott/app/core/services/gift_deep_link_service.dart';
 
 class LoginCard extends StatefulWidget {
-  const LoginCard({super.key});
+  final String? initialReferralCode;
+  final String? initialGiftCode;
+  final bool? isGiftFlow;
+  final bool? isReferralFlow;
+
+  const LoginCard({
+    super.key,
+    this.initialReferralCode,
+    this.initialGiftCode,
+    this.isGiftFlow,
+    this.isReferralFlow,
+  });
 
   @override
   State<LoginCard> createState() => _LoginCardState();
@@ -60,9 +71,12 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
   Timer? _otpAutoFillTimeoutTimer;
   final Stopwatch _screenLoadWatch = Stopwatch();
   String? _pendingReferralCode;
+  String? _pendingGiftCode;
 
   String selectedCode = '+91';
   final List<String> countryCodes = ['+91', '+1', '+44', '+61', '+971'];
+
+  bool _hasInitializedCodes = false;
 
   @override
   void initState() {
@@ -71,7 +85,6 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     _screenLoadWatch.start();
     _mobileFocusNode.addListener(_handleInputFocusChanged);
     _otpFocusNode.addListener(_handleInputFocusChanged);
-    _checkPendingReferralCode();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (kDebugMode) {
         log(
@@ -84,6 +97,15 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         _mobileFocusNode.requestFocus();
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasInitializedCodes) {
+      _hasInitializedCodes = true;
+      _initializePendingCodes();
+    }
   }
 
   @override
@@ -104,13 +126,206 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     super.dispose();
   }
 
-  Future<void> _checkPendingReferralCode() async {
-    final code = await ReferralService.instance.getPendingReferralCode();
-    if (mounted && code != _pendingReferralCode) {
+  Future<void> _initializePendingCodes() async {
+    // 1. Explicit widget parameters take highest precedence
+    if (widget.isGiftFlow == true ||
+        (widget.initialGiftCode != null &&
+            widget.initialGiftCode!.trim().isNotEmpty)) {
+      final code = widget.initialGiftCode?.trim() ??
+          await GiftDeepLinkService.instance.getPendingGiftCode();
+      if (mounted) {
+        setState(() {
+          _pendingGiftCode = code;
+          _pendingReferralCode = null;
+        });
+      }
+      await ReferralService.instance.clearReferralCode();
+      return;
+    }
+
+    if (widget.isReferralFlow == true ||
+        (widget.initialReferralCode != null &&
+            widget.initialReferralCode!.trim().isNotEmpty)) {
+      final code = widget.initialReferralCode?.trim() ??
+          await ReferralService.instance.getPendingReferralCode();
+      if (mounted) {
+        setState(() {
+          _pendingReferralCode = code;
+          _pendingGiftCode = null;
+        });
+      }
+      await GiftDeepLinkService.instance.clearPendingGiftCode();
+      return;
+    }
+
+    // 2. Check route arguments/settings if available
+    final routeSettings = ModalRoute.of(context)?.settings;
+    final routeArgs = routeSettings?.arguments;
+    if (routeArgs is Map) {
+      if (routeArgs['isGiftFlow'] == true ||
+          routeArgs['flow'] == 'gift' ||
+          routeArgs['giftCode'] != null) {
+        final code = routeArgs['giftCode']?.toString().trim() ??
+            await GiftDeepLinkService.instance.getPendingGiftCode();
+        if (mounted) {
+          setState(() {
+            _pendingGiftCode = code;
+            _pendingReferralCode = null;
+          });
+        }
+        await ReferralService.instance.clearReferralCode();
+        return;
+      }
+      if (routeArgs['isReferralFlow'] == true ||
+          routeArgs['flow'] == 'referral' ||
+          routeArgs['referralCode'] != null) {
+        final code = routeArgs['referralCode']?.toString().trim() ??
+            await ReferralService.instance.getPendingReferralCode();
+        if (mounted) {
+          setState(() {
+            _pendingReferralCode = code;
+            _pendingGiftCode = null;
+          });
+        }
+        await GiftDeepLinkService.instance.clearPendingGiftCode();
+        return;
+      }
+    }
+
+    // 3. Check DeepLinkService active target (deferred install or last runtime target)
+    final pendingTarget =
+        await DeepLinkService.instance.getPendingDeepLinkTarget();
+    final lastTarget = DeepLinkService.instance.lastProcessedTarget;
+    final activeTarget = pendingTarget ?? lastTarget;
+
+    if (activeTarget != null) {
+      if (activeTarget.type == DeepLinkContentType.gift) {
+        var gift = activeTarget.couponCode ??
+            await GiftDeepLinkService.instance.getPendingGiftCode();
+        if (gift != null &&
+            await GiftDeepLinkService.instance.isGiftCodeClaimed(gift)) {
+          await GiftDeepLinkService.instance.clearPendingGiftCode();
+          gift = null;
+        }
+        if (mounted) {
+          setState(() {
+            _pendingGiftCode = gift;
+            _pendingReferralCode = null;
+          });
+        }
+        await ReferralService.instance.clearReferralCode();
+        return;
+      } else if (activeTarget.type == DeepLinkContentType.register) {
+        final ref = activeTarget.referralCode ??
+            await ReferralService.instance.getPendingReferralCode();
+        if (mounted) {
+          setState(() {
+            _pendingReferralCode = ref;
+            _pendingGiftCode = null;
+          });
+        }
+        await GiftDeepLinkService.instance.clearPendingGiftCode();
+        return;
+      }
+    }
+
+    // 4. Retrieve stored codes from persistent storage
+    var storedRef = await ReferralService.instance.getPendingReferralCode();
+    var storedGift = await GiftDeepLinkService.instance.getPendingGiftCode();
+
+    if (storedGift != null &&
+        await GiftDeepLinkService.instance.isGiftCodeClaimed(storedGift)) {
+      await GiftDeepLinkService.instance.clearPendingGiftCode();
+      storedGift = null;
+    }
+
+    // Check if route name indicates registration
+    if (routeSettings?.name == '/register') {
+      if (mounted) {
+        setState(() {
+          _pendingReferralCode = storedRef;
+          _pendingGiftCode = null;
+        });
+      }
+      return;
+    }
+
+    // 5. Evaluate stored codes
+    if (storedRef != null && storedGift != null) {
+      // 5A. Identical code in both storage locations (due to install referrer capturing both)
+      if (storedRef.trim().toUpperCase() == storedGift.trim().toUpperCase()) {
+        final singleCode = storedGift.trim();
+        if (_isCanonicalGiftCode(singleCode)) {
+          // Canonical Gift code (starts with GF)
+          storedGift = singleCode;
+          storedRef = null;
+          await ReferralService.instance.clearReferralCode();
+        } else {
+          // Canonical Referral code
+          storedRef = singleCode;
+          storedGift = null;
+          await GiftDeepLinkService.instance.clearPendingGiftCode();
+        }
+      } else {
+        // 5B. Stored codes are different. Determine which one is the active link.
+        final prefs = await SharedPreferences.getInstance();
+        final lastGiftUri = prefs.getString(
+          SharedPreferencesConstant.lastProcessedGiftUri,
+        );
+        final giftMatchesUri = lastGiftUri != null &&
+            lastGiftUri.toUpperCase().contains(storedGift.toUpperCase());
+
+        if (giftMatchesUri) {
+          // Gift link was explicitly processed
+          storedRef = null;
+          await ReferralService.instance.clearReferralCode();
+        } else if (_isCanonicalReferralCode(storedRef) &&
+            !_isCanonicalGiftCode(storedRef)) {
+          // Referral link takes precedence
+          storedGift = null;
+          await GiftDeepLinkService.instance.clearPendingGiftCode();
+        } else {
+          storedRef = null;
+        }
+      }
+    } else if (storedRef != null && storedGift == null) {
+      // 6. Only storedRef exists. Check if it was actually a gift code mis-saved as referral code
+      if (_isCanonicalGiftCode(storedRef)) {
+        storedGift = storedRef;
+        storedRef = null;
+        await ReferralService.instance.clearReferralCode();
+        await GiftDeepLinkService.instance.savePendingGiftCode(storedGift);
+      }
+    } else if (storedGift != null && storedRef == null) {
+      // 7. Only storedGift exists. Check if it was actually a referral code mis-saved as gift code
+      if (_isCanonicalReferralCode(storedGift) &&
+          !_isCanonicalGiftCode(storedGift)) {
+        storedRef = storedGift;
+        storedGift = null;
+        await GiftDeepLinkService.instance.clearPendingGiftCode();
+        await ReferralService.instance.saveReferralCode(storedRef);
+      }
+    }
+
+    if (mounted) {
       setState(() {
-        _pendingReferralCode = code;
+        _pendingReferralCode = storedRef;
+        _pendingGiftCode = storedGift;
       });
     }
+  }
+
+  static bool _isCanonicalGiftCode(String? code) {
+    if (code == null) return false;
+    final trimmed = code.trim().toUpperCase();
+    return RegExp(r'^GF[A-Z0-9]{8,24}$').hasMatch(trimmed);
+  }
+
+  static bool _isCanonicalReferralCode(String? code) {
+    if (code == null) return false;
+    final trimmed = code.trim().toUpperCase();
+    if (trimmed.startsWith('FILMY') || trimmed.contains('-')) return true;
+    return !_isCanonicalGiftCode(code);
   }
 
   @override
@@ -128,7 +343,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     );
     setState(() {
       _otpAutoFilled = true;
-      _otpHelperText = 'OTP detected automatically.';
+      _otpHelperText =
+          AppLocalizations.of(context)!.authOtpDetectedAutomatically;
     });
 
     Future<void>.delayed(const Duration(milliseconds: 250), () {
@@ -253,7 +469,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              if (_pendingReferralCode != null) ...[
+                              if (_pendingGiftCode != null) ...[
                                 const SizedBox(height: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
@@ -275,12 +491,53 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                         color: theme.primaryColor,
                                       ),
                                       const SizedBox(width: 6),
-                                      Text(
-                                        'Referral Code: $_pendingReferralCode',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: theme.primaryColor,
+                                      Flexible(
+                                        child: Text(
+                                          lang.authGiftCodeLabel(
+                                              _pendingGiftCode!),
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.primaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ] else if (_pendingReferralCode != null) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: theme.primaryColor.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color:
+                                          theme.primaryColor.withOpacity(0.3),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.card_giftcard,
+                                        size: 16,
+                                        color: theme.primaryColor,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          lang.authReferralCodeLabel(
+                                              _pendingReferralCode!),
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.primaryColor,
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -338,7 +595,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                       ),
                                       validator: (value) {
                                         if (value == null || value.isEmpty) {
-                                          return 'Please enter a valid mobile number';
+                                          return lang
+                                              .authEnterValidMobileNumber;
                                         }
 
                                         return null;
@@ -375,8 +633,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                         filled: true,
                                         fillColor: theme.cardColor,
                                         counterText: '',
-                                        hintText:
-                                            'Search by country name and code ..',
+                                        hintText: lang.authSearchCountryHint,
                                         hintStyle:
                                             const TextStyle(fontSize: 14),
                                         // Border properties for search in dropdown
@@ -411,7 +668,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                   initialCountryCode: 'IN', // Default to India
                                   validator: (phone) {
                                     if (phone == null || phone.number.isEmpty) {
-                                      return 'Please enter a valid mobile number';
+                                      return lang.authEnterValidMobileNumber;
                                     }
 
                                     return null;
@@ -532,8 +789,11 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
                                         : _resendOtp,
                                     child: Text(
                                       _resendSecondsRemaining > 0
-                                          ? 'Resend OTP in ${_formatResendTime(_resendSecondsRemaining)}'
-                                          : 'Resend OTP',
+                                          ? lang.authResendOtpIn(
+                                              _formatResendTime(
+                                                  _resendSecondsRemaining),
+                                            )
+                                          : lang.authResendOtp,
                                     ),
                                   ),
                                 ),
@@ -654,7 +914,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     if (mobile.length < 10) {
       CustomToast.show(
         context,
-        'Please enter a valid mobile number',
+        AppLocalizations.of(context)!.authEnterValidMobileNumber,
         isSuccess: false,
       );
       _authRequestInFlight = false;
@@ -674,7 +934,8 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         if (!mounted) return;
 
         final bool success = result?['success'] == true;
-        final String message = result?['message'] ?? 'Something went wrong';
+        final String message =
+            result?['message'] ?? lang.authSomethingWentWrong;
 
         if (success) {
           CustomToast.show(
@@ -696,7 +957,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         } else {
           CustomToast.show(
             context,
-            'Failure: $message',
+            message,
             isSuccess: false,
           );
         }
@@ -704,7 +965,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         final otp = _digitsOnly(_otpController.text);
 
         if (otp.length != _otpLength) {
-          CustomToast.show(context, 'Invalid OTP', isSuccess: false);
+          CustomToast.show(context, lang.authInvalidOtp, isSuccess: false);
           return;
         }
 
@@ -720,7 +981,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         if (!mounted) return;
 
         final bool success = result['success'] == true;
-        final String message = result['message'] ?? 'Something went wrong';
+        final String message = result['message'] ?? lang.authSomethingWentWrong;
 
         if (success) {
           await _stopOtpAutoFillListener();
@@ -748,14 +1009,15 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
             'Post OTP navigation scheduled in ${navigationWatch.elapsedMilliseconds}ms',
           );
         } else {
-          CustomToast.show(context, 'Failure: $message', isSuccess: false);
+          CustomToast.show(context, message, isSuccess: false);
         }
       }
     } catch (e) {
       if (!mounted) return;
+      log('Login request failed: $e');
       CustomToast.show(
         context,
-        'An error occurred: ${e.toString()}',
+        lang.authUnableToLogin,
         isSuccess: false,
       );
     } finally {
@@ -772,7 +1034,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     if (mobile.length < 10) {
       CustomToast.show(
         context,
-        'Please enter a valid mobile number',
+        AppLocalizations.of(context)!.authEnterValidMobileNumber,
         isSuccess: false,
       );
       return;
@@ -783,7 +1045,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
     _authRequestInFlight = true;
     setState(() {
       isLoading = true;
-      _otpHelperText = 'Requesting a new OTP...';
+      _otpHelperText = lang.authRequestingNewOtp;
     });
 
     try {
@@ -791,9 +1053,10 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
       if (!mounted) return;
 
       final success = result?['success'] == true;
-      final message = result?['message']?.toString() ?? 'Something went wrong';
+      final message =
+          result?['message']?.toString() ?? lang.authSomethingWentWrong;
       if (!success) {
-        CustomToast.show(context, 'Failure: $message', isSuccess: false);
+        CustomToast.show(context, message, isSuccess: false);
         setState(() => _otpHelperText = null);
         return;
       }
@@ -809,13 +1072,13 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         isSuccess: true,
       );
       if (mounted) {
-        setState(() => _otpHelperText = 'Waiting for OTP SMS...');
+        setState(() => _otpHelperText = lang.authWaitingForOtpSms);
       }
     } catch (_) {
       if (!mounted) return;
       CustomToast.show(
         context,
-        'Unable to resend OTP. Please try again.',
+        lang.authUnableToResendOtp,
         isSuccess: false,
       );
     } finally {
@@ -840,15 +1103,14 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         unawaited(_stopOtpAutoFillListener());
         if (mounted && otpSent && _otpController.text.length < _otpLength) {
           setState(() {
-            _otpHelperText =
-                'Auto-fill timed out. Please enter the OTP manually.';
+            _otpHelperText = AppLocalizations.of(context)!.authAutoFillTimedOut;
           });
         }
       });
       if (mounted) {
         setState(() {
           _isListeningForOtp = true;
-          _otpHelperText = 'Waiting for OTP SMS...';
+          _otpHelperText = AppLocalizations.of(context)!.authWaitingForOtpSms;
         });
       }
     } catch (error) {
@@ -857,7 +1119,7 @@ class _LoginCardState extends State<LoginCard> with CodeAutoFill {
         setState(() {
           _isListeningForOtp = false;
           _otpHelperText =
-              'Auto-fill is unavailable. Please enter the OTP manually.';
+              AppLocalizations.of(context)!.authAutoFillUnavailable;
         });
       }
     }

@@ -11,6 +11,7 @@ import '../core/network/api_helper.dart';
 import '../core/services/WalletService.dart';
 import '../core/utils/sharepreferences.dart';
 import 'baseProvider.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class WalletProvider extends BaseProvider {
   WalletProvider({
@@ -54,24 +55,22 @@ class WalletProvider extends BaseProvider {
       notifyListeners();
       return {
         'success': true,
-        'message':
-            result['message']?.toString() ?? 'Wallet refreshed successfully.',
+        'message': result['message']?.toString() ??
+            appL10n().msgWalletRefreshedSuccessfully,
       };
     }
 
     return {
       'success': false,
-      'message': result['message']?.toString() ?? 'Failed to refresh wallet',
+      'message':
+          result['message']?.toString() ?? appL10n().msgFailedToRefreshWallet,
     };
   }
 
   Future<Map<String, Object>> onPaymentVerified(
       {double? expectedAmount}) async {
     if (_isAddingBalance) {
-      return {
-        'success': false,
-        'message': 'Recharge already in progress. Please wait.'
-      };
+      return {'success': false, 'message': appL10n().msgRechargeInProgress};
     }
 
     _isAddingBalance = true;
@@ -92,7 +91,7 @@ class WalletProvider extends BaseProvider {
             _walletBalance + 0.01 >= previousBalance + expectedAmount) {
           return {
             'success': true,
-            'message': 'Wallet recharged successfully.',
+            'message': appL10n().walletRechargedSuccessfully,
           };
         }
 
@@ -103,20 +102,20 @@ class WalletProvider extends BaseProvider {
           await refreshWalletData();
           return {
             'success': true,
-            'message': 'Wallet recharged successfully.',
+            'message': appL10n().walletRechargedSuccessfully,
           };
         }
 
         return {
           'success': false,
           'message': fallbackResult['message']?.toString() ??
-              'Payment was verified, but the wallet balance has not updated yet. Please check again in a moment.',
+              appL10n().msgWalletBalanceNotUpdatedYet,
         };
       }
 
       return {
         'success': true,
-        'message': 'Wallet recharged successfully.',
+        'message': appL10n().walletRechargedSuccessfully,
       };
     } finally {
       _isAddingBalance = false;
@@ -133,7 +132,7 @@ class WalletProvider extends BaseProvider {
       if (user?.id == null) {
         return {
           'success': false,
-          'message': 'Please log in again to update your wallet balance.',
+          'message': appL10n().msgLoginAgainToUpdateWallet,
         };
       }
 
@@ -145,8 +144,7 @@ class WalletProvider extends BaseProvider {
       if (response.statusCode != 200) {
         return {
           'success': false,
-          'message':
-              'Payment was successful, but wallet credit failed. Please contact support.',
+          'message': appL10n().msgWalletCreditFailedContactSupport,
         };
       }
 
@@ -154,8 +152,7 @@ class WalletProvider extends BaseProvider {
       if (responseBody is! Map<String, dynamic>) {
         return {
           'success': false,
-          'message':
-              'Payment was successful, but wallet credit returned an invalid response.',
+          'message': appL10n().msgWalletCreditInvalidResponse,
         };
       }
 
@@ -163,8 +160,7 @@ class WalletProvider extends BaseProvider {
       if (walletResponse.success != true) {
         return {
           'success': false,
-          'message': walletResponse.message ??
-              'Payment was successful, but wallet credit failed.',
+          'message': walletResponse.message ?? appL10n().msgWalletCreditFailed,
         };
       }
 
@@ -176,24 +172,20 @@ class WalletProvider extends BaseProvider {
 
       return {
         'success': true,
-        'message': walletResponse.message ?? 'Wallet recharged successfully.',
+        'message':
+            walletResponse.message ?? appL10n().walletRechargedSuccessfully,
       };
     } catch (error) {
-
       return {
         'success': false,
-        'message':
-            'Payment was successful, but wallet credit failed. Please contact support.',
+        'message': appL10n().msgWalletCreditFailedContactSupport,
       };
     }
   }
 
   Future<Map<String, Object>> addBalance(double amount) async {
     if (_isAddingBalance) {
-      return {
-        'success': false,
-        'message': 'Recharge already in progress. Please wait.'
-      };
+      return {'success': false, 'message': appL10n().msgRechargeInProgress};
     }
 
     _isAddingBalance = true;
@@ -224,29 +216,26 @@ class WalletProvider extends BaseProvider {
             notifyListeners();
             return {'success': true, 'message': addUserResponse.message!};
           } else {
-
             return {
               'success': false,
-              'message': addUserResponse.message ?? 'No data returned'
+              'message': addUserResponse.message ?? appL10n().msgNoDataReturned
             };
           }
         } else {
-
           return {
             'success': false,
-            'message': addUserResponse.message ?? 'Error in response'
+            'message': addUserResponse.message ?? appL10n().msgErrorInResponse
           };
         }
       } else {
-        return {'failure': true, 'message': 'Something went wrong!'};
+        return {
+          'failure': true,
+          'message': appL10n().msgSomethingWentWrongExclaim
+        };
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-
-      return {
-        'success': false,
-        'message': 'An error occurred while adding user: $error'
-      };
+      return {'success': false, 'message': appL10n().msgErrorAddingUser};
     } finally {
       _isAddingBalance = false;
       notifyListeners();
@@ -256,10 +245,7 @@ class WalletProvider extends BaseProvider {
   Future<Map<String, Object>> deductBalance(
       double amount, int contentId) async {
     if (_isDeductingBalance) {
-      return {
-        'success': false,
-        'message': 'Payment already in progress. Please wait.'
-      };
+      return {'success': false, 'message': appL10n().msgPaymentInProgress};
     }
 
     _isDeductingBalance = true;
@@ -277,10 +263,10 @@ class WalletProvider extends BaseProvider {
       notifyListeners();
       return {
         'success': true,
-        'message': withdrawAmountresponse.message ?? 'Payment successful'
+        'message':
+            withdrawAmountresponse.message ?? appL10n().msgPaymentSuccessful
       };
     } catch (error) {
-
       return {
         'success': false,
         'message': _cleanWalletError(error),
@@ -298,10 +284,10 @@ class WalletProvider extends BaseProvider {
         normalized.contains('no entitymanager with actual transaction') ||
         normalized.contains("cannot reliably process 'remove' call") ||
         normalized.contains('nested exception is javax.persistence')) {
-      return 'Wallet payment could not be completed. Please try again in a moment.';
+      return appL10n().msgWalletPaymentNotCompleted;
     }
     if (message.trim().isEmpty) {
-      return 'Wallet payment failed. Please try again.';
+      return appL10n().msgWalletPaymentFailed;
     }
     return message;
   }
@@ -321,25 +307,19 @@ class WalletProvider extends BaseProvider {
           notifyListeners();
           return {'success': true, 'message': walletHistory.message!};
         } else {
-
           return {
             'success': false,
-            'message': walletHistory.message ?? 'No data returned'
+            'message': walletHistory.message ?? appL10n().msgNoDataReturned
           };
         }
       } else {
-
         return {
           'success': false,
-          'message': walletHistory.message ?? 'Error in response'
+          'message': walletHistory.message ?? appL10n().msgErrorInResponse
         };
       }
     } catch (error) {
-
-      return {
-        'success': false,
-        'message': 'An error occurred while adding user: $error'
-      };
+      return {'success': false, 'message': appL10n().msgErrorAddingUser};
     }
   }
 
@@ -353,26 +333,21 @@ class WalletProvider extends BaseProvider {
           notifyListeners();
           return {'success': true, 'message': addUserResponse.message!};
         } else {
-
           return {
             'success': false,
-            'message': addUserResponse.message ?? 'No data returned'
+            'message': addUserResponse.message ?? appL10n().msgNoDataReturned
           };
         }
       } else {
-
         return {
           'success': false,
-          'message': addUserResponse.message ?? 'Error in response'
+          'message': addUserResponse.message ?? appL10n().msgErrorInResponse
         };
       }
     } catch (error) {
       _walletBalance = 0.0;
 
-      return {
-        'success': false,
-        'message': 'An error occurred while adding user: $error'
-      };
+      return {'success': false, 'message': appL10n().msgErrorAddingUser};
     }
   }
 

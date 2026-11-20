@@ -10,6 +10,7 @@ import '../core/network/api_helper.dart';
 import '../core/constant/prefrense_constant.dart';
 import '../core/utils/sharepreferences.dart';
 import 'baseProvider.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class PurchaseContentProvider extends BaseProvider {
   static const String _purchaseCacheKey = 'cached_purchase_content';
@@ -25,10 +26,7 @@ class PurchaseContentProvider extends BaseProvider {
     String? orderId,
   }) async {
     if (_isSavingContent) {
-      return {
-        'success': false,
-        'message': 'Purchase already in progress. Please wait.'
-      };
+      return {'success': false, 'message': appL10n().msgPurchaseInProgress};
     }
 
     _isSavingContent = true;
@@ -74,14 +72,12 @@ class PurchaseContentProvider extends BaseProvider {
             notifyListeners();
             return {'success': true, 'message': addUserResponse.message!};
           } else {
-
             return {
               'success': false,
-              'message': addUserResponse.message ?? 'No data returned'
+              'message': addUserResponse.message ?? appL10n().msgNoDataReturned
             };
           }
         } else {
-
           return {
             'success': false,
             'message': _cleanPurchaseError(
@@ -99,11 +95,7 @@ class PurchaseContentProvider extends BaseProvider {
         };
       }
     } catch (error) {
-
-      return {
-        'success': false,
-        'message': _cleanPurchaseError(error)
-      };
+      return {'success': false, 'message': _cleanPurchaseError(error)};
     } finally {
       _isSavingContent = false;
       notifyListeners();
@@ -127,10 +119,10 @@ class PurchaseContentProvider extends BaseProvider {
       return message.replaceFirst('Exception: ', '');
     }
     if (_isServerTransactionError(message)) {
-      return 'Purchase could not be completed. Please try again in a moment.';
+      return appL10n().billingPurchaseNotCompletedTryLater;
     }
 
-    return 'Purchase failed. Please try again.';
+    return appL10n().billingPurchaseFailedTryAgain;
   }
 
   bool _isServerTransactionError(String message) {
@@ -150,7 +142,7 @@ class PurchaseContentProvider extends BaseProvider {
       await _loadPurchaseContentCache();
       return {
         'success': false,
-        'message': 'User data is not available.',
+        'message': appL10n().msgUserDataNotAvailable,
       };
     }
 
@@ -160,12 +152,10 @@ class PurchaseContentProvider extends BaseProvider {
       isExpired: isExpired,
     );
 
-
     ApiHelper apiHelper = ApiHelper();
 
     try {
       var response = await apiHelper.getApi(apiUrl);
-
 
       if (response.statusCode == 200) {
         Map<String, dynamic> responseBody = json.decode(response.body);
@@ -188,43 +178,40 @@ class PurchaseContentProvider extends BaseProvider {
 
               return {
                 'success': true,
-                'message': parsedResponse.message ?? 'Data loaded successfully'
+                'message': parsedResponse.message ??
+                    appL10n().msgDataLoadedSuccessfully
               };
             } else {
-
               return {
                 'success': false,
-                'message': parsedResponse.message ?? 'No data returned'
+                'message': parsedResponse.message ?? appL10n().msgNoDataReturned
               };
             }
           } else {
-
             return {
               'success': false,
-              'message': parsedResponse.message ?? 'Error in response'
+              'message': parsedResponse.message ?? appL10n().msgErrorInResponse
             };
           }
         } catch (e) {
-
-          return {'success': false, 'message': 'Error while parsing data: $e'};
+          return {'success': false, 'message': appL10n().msgErrorParsingData};
         }
       } else {
         await _loadPurchaseContentCache();
         return {
           'success': _userContentList.isNotEmpty,
           'message': _userContentList.isNotEmpty
-              ? 'Loaded cached purchase content.'
-              : 'Something went wrong!',
+              ? appL10n().msgLoadedCachedPurchaseContent
+              : appL10n().msgSomethingWentWrongExclaim,
         };
       }
     } catch (error) {
-
       await _loadPurchaseContentCache();
       return {
         'success': _userContentList.isNotEmpty,
         'message': _userContentList.isNotEmpty
-            ? 'Loaded cached purchase content.'
-            : 'An error occurred while fetching content: $error'
+            ? appL10n().msgLoadedCachedPurchaseContent
+            : appL10n().msgErrorFetchingContent
       };
     }
   }

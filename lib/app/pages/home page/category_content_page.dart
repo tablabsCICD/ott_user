@@ -5,6 +5,8 @@ import 'package:ott/app/widgets/movieCard.dart';
 import 'package:ott/app/route/route_observer.dart';
 import 'package:ott/data/models/content.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
+import 'package:ott/l10n/app_localizations.dart';
+import 'package:ott/app/widgets/filmytell_app_bar.dart';
 
 class CategoryContentPage extends StatefulWidget {
   final String categoryTitle;
@@ -116,13 +118,15 @@ class _CategoryContentPageState extends State<CategoryContentPage>
         (viewStart / rowExtent).floor().clamp(0, totalRows - 1).toInt();
     final lastRow =
         ((viewEnd - 0.001) / rowExtent).floor().clamp(0, totalRows - 1).toInt();
-    final first = (firstRow * crossCount).clamp(0, _contents.length - 1).toInt();
-    final last =
-        (((lastRow + 1) * crossCount) - 1).clamp(0, _contents.length - 1).toInt();
+    final first =
+        (firstRow * crossCount).clamp(0, _contents.length - 1).toInt();
+    final last = (((lastRow + 1) * crossCount) - 1)
+        .clamp(0, _contents.length - 1)
+        .toInt();
     int? index;
     double bestVisibility = 0;
     for (var candidate = first; candidate <= last; candidate++) {
-      if (!(_contents[candidate].trailerUrl?.trim().isNotEmpty ?? false)) {
+      if (!_contents[candidate].hasValidTrailer) {
         continue;
       }
       final candidateRow = (candidate / crossCount).floor();
@@ -173,20 +177,13 @@ class _CategoryContentPageState extends State<CategoryContentPage>
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
+      appBar: FilmytellAppBar(
         automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
-        backgroundColor: theme.primaryColor,
-        foregroundColor: Colors.white,
-        title: Text(
-          widget.categoryTitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
+        title: widget.categoryTitle,
       ),
       body: _contents.isEmpty
-          ? const Center(
-              child: Text('No content available'),
+          ? Center(
+              child: Text(AppLocalizations.of(context)!.noContentAvailable),
             )
           : Padding(
               padding: const EdgeInsets.symmetric(vertical: 10.0),
@@ -293,8 +290,8 @@ class _CategoryContentPageState extends State<CategoryContentPage>
 
                   // Keep card dimensions stable within each breakpoint:
                   // Center the grid of consistently sized cards, absorbing remaining space into side padding
-                  final totalGridWidth =
-                      (crossAxisCount * cardWidth) + ((crossAxisCount - 1) * gap);
+                  final totalGridWidth = (crossAxisCount * cardWidth) +
+                      ((crossAxisCount - 1) * gap);
                   final centeringPadding =
                       math.max(0.0, (availableWidth - totalGridWidth) / 2);
                   final effectiveHorizontalPadding =

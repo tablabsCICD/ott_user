@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ott/app/provider/themeProvider.dart';
+import 'package:ott/l10n/app_localizations.dart';
 
 const List<String> kBirthMonths = [
   'January',
@@ -16,6 +17,39 @@ const List<String> kBirthMonths = [
   'November',
   'December',
 ];
+
+/// Localized display label for an English month name from [kBirthMonths].
+/// The English value itself is kept as the stored/returned data.
+String localizedBirthMonth(AppLocalizations lang, String month) {
+  switch (kBirthMonths.indexOf(month)) {
+    case 0:
+      return lang.pickerJanuary;
+    case 1:
+      return lang.pickerFebruary;
+    case 2:
+      return lang.pickerMarch;
+    case 3:
+      return lang.pickerApril;
+    case 4:
+      return lang.pickerMay;
+    case 5:
+      return lang.pickerJune;
+    case 6:
+      return lang.pickerJuly;
+    case 7:
+      return lang.pickerAugust;
+    case 8:
+      return lang.pickerSeptember;
+    case 9:
+      return lang.pickerOctober;
+    case 10:
+      return lang.pickerNovember;
+    case 11:
+      return lang.pickerDecember;
+    default:
+      return month;
+  }
+}
 
 List<int> getBirthYears() {
   final currentYear = DateTime.now().year;
@@ -74,11 +108,12 @@ Future<Map<String, dynamic>?> showBirthMonthYearPicker({
     builder: (ctx) {
       return StatefulBuilder(
         builder: (dialogCtx, setDialogState) {
+          final lang = AppLocalizations.of(dialogCtx)!;
           String? errorMessage;
           if (selectedYear == currentYear && selectedMonth != null) {
             final monthIndex = kBirthMonths.indexOf(selectedMonth!) + 1;
             if (monthIndex > currentMonth) {
-              errorMessage = 'Birth month cannot be in the future';
+              errorMessage = lang.pickerBirthMonthInFuture;
             }
           }
 
@@ -96,7 +131,7 @@ Future<Map<String, dynamic>?> showBirthMonthYearPicker({
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Select Birth Month & Year',
+                  lang.pickerSelectBirthMonthYear,
                   style: TextStyle(
                     color: themeData.canvasColor,
                     fontSize: 16,
@@ -119,7 +154,7 @@ Future<Map<String, dynamic>?> showBirthMonthYearPicker({
                           value: selectedMonth,
                           isExpanded: true,
                           decoration: InputDecoration(
-                            labelText: 'Month',
+                            labelText: lang.homeMonth,
                             isDense: true,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -131,7 +166,7 @@ Future<Map<String, dynamic>?> showBirthMonthYearPicker({
                                 (m) => DropdownMenuItem(
                                   value: m,
                                   child: Text(
-                                    m,
+                                    localizedBirthMonth(lang, m),
                                     style: TextStyle(
                                       color: themeData.canvasColor,
                                       fontSize: 14,
@@ -155,7 +190,7 @@ Future<Map<String, dynamic>?> showBirthMonthYearPicker({
                           value: selectedYear,
                           isExpanded: true,
                           decoration: InputDecoration(
-                            labelText: 'Year',
+                            labelText: lang.homeYear,
                             isDense: true,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -200,7 +235,10 @@ Future<Map<String, dynamic>?> showBirthMonthYearPicker({
                         ),
                       ),
                       child: Text(
-                        'Selected: $selectedMonth $selectedYear',
+                        lang.pickerSelectedMonthYear(
+                          localizedBirthMonth(lang, selectedMonth!),
+                          '$selectedYear',
+                        ),
                         style: TextStyle(
                           color: themeData.canvasColor,
                           fontWeight: FontWeight.w600,
@@ -226,7 +264,7 @@ Future<Map<String, dynamic>?> showBirthMonthYearPicker({
               TextButton(
                 onPressed: () => Navigator.of(dialogCtx).pop(null),
                 child: Text(
-                  'Cancel',
+                  lang.cancel,
                   style: TextStyle(color: themeData.canvasColor),
                 ),
               ),
@@ -247,9 +285,9 @@ Future<Map<String, dynamic>?> showBirthMonthYearPicker({
                           'year': selectedYear,
                         });
                       },
-                child: const Text(
-                  'Done',
-                  style: TextStyle(
+                child: Text(
+                  lang.done,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),

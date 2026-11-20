@@ -29,6 +29,7 @@ import '../core/services/session_manager.dart';
 import '../core/services/referral_service.dart';
 import '../core/utils/sharepreferences.dart';
 import 'baseProvider.dart';
+import 'package:ott/app/core/utils/app_l10n.dart';
 
 class UserProvider extends BaseProvider {
   UserProvider() : super('Ideal');
@@ -189,17 +190,20 @@ class UserProvider extends BaseProvider {
             await ReferralService.instance.clearReferralCode();
             notifyListeners();
 
-            return {'success': true, 'message': 'User created successfully'};
+            return {
+              'success': true,
+              'message': appL10n().msgUserCreatedSuccessfully
+            };
           } else {
             return {
               'success': false,
-              'message': addUserResponse.message ?? 'No data returned'
+              'message': addUserResponse.message ?? appL10n().msgNoDataReturned
             };
           }
         } else {
           return {
             'success': false,
-            'message': addUserResponse.message ?? 'Error in response'
+            'message': addUserResponse.message ?? appL10n().msgErrorInResponse
           };
         }
       } else if (response.statusCode == 500) {
@@ -208,13 +212,13 @@ class UserProvider extends BaseProvider {
         return {'success': false, 'message': addUserResponse.message};
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       } else {
-        return {'success': false, 'message': 'Something went wrong!'};
+        return {
+          'success': false,
+          'message': appL10n().msgSomethingWentWrongExclaim
+        };
       }
     } catch (error) {
-      return {
-        'success': false,
-        'message': 'An error occurred while adding user: $error'
-      };
+      return {'success': false, 'message': appL10n().msgErrorAddingUser};
     }
   }
 
@@ -223,7 +227,7 @@ class UserProvider extends BaseProvider {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
     if (user == null || user.id == null) {
       print("UPDATE USER: User not found");
-      return {'success': false, 'message': 'User not found'};
+      return {'success': false, 'message': appL10n().msgUserNotFound};
     }
     final userId = user.id!;
     String apiUrl = ApiConstant.editUserById(userId);
@@ -310,13 +314,15 @@ class UserProvider extends BaseProvider {
           } else {
             return {
               'success': false,
-              'message': updateUserResponse.message ?? 'No data returned'
+              'message':
+                  updateUserResponse.message ?? appL10n().msgNoDataReturned
             };
           }
         } else {
           return {
             'success': false,
-            'message': updateUserResponse.message ?? 'Error in response'
+            'message':
+                updateUserResponse.message ?? appL10n().msgErrorInResponse
           };
         }
       } else if (response.statusCode == 401 || response.statusCode == 500) {
@@ -326,17 +332,17 @@ class UserProvider extends BaseProvider {
 
         return {
           'success': false,
-          'message': addUserResponse.message ?? 'Error in response'
+          'message': addUserResponse.message ?? appL10n().msgErrorInResponse
         };
       } else {
-        return {'failure': true, 'message': 'Something went wrong!'};
+        return {
+          'failure': true,
+          'message': appL10n().msgSomethingWentWrongExclaim
+        };
       }
     } catch (error) {
       print("UPDATE USER ERROR: $error");
-      return {
-        'success': false,
-        'message': 'An error occurred while update user: $error'
-      };
+      return {'success': false, 'message': appL10n().msgErrorUpdatingUser};
     }
   }
 
@@ -344,7 +350,7 @@ class UserProvider extends BaseProvider {
   Future<Map<String, Object>> updateUserDetails() async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
     if (user == null || user.id == null) {
-      return {'success': false, 'message': 'User not found'};
+      return {'success': false, 'message': appL10n().msgUserNotFound};
     }
     final userId = user.id!;
     String apiUrl = ApiConstant.editUserById(userId);
@@ -427,13 +433,15 @@ class UserProvider extends BaseProvider {
           } else {
             return {
               'success': false,
-              'message': updateUserResponse.message ?? 'No data returned'
+              'message':
+                  updateUserResponse.message ?? appL10n().msgNoDataReturned
             };
           }
         } else {
           return {
             'success': false,
-            'message': updateUserResponse.message ?? 'Error in response'
+            'message':
+                updateUserResponse.message ?? appL10n().msgErrorInResponse
           };
         }
       } else if (response.statusCode == 401 || response.statusCode == 500) {
@@ -443,18 +451,18 @@ class UserProvider extends BaseProvider {
 
         return {
           'success': false,
-          'message': addUserResponse.message ?? 'Error in response'
+          'message': addUserResponse.message ?? appL10n().msgErrorInResponse
         };
       } else {
-        return {'failure': true, 'message': 'Something went wrong!'};
+        return {
+          'failure': true,
+          'message': appL10n().msgSomethingWentWrongExclaim
+        };
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
       print("UPDATE USER (1st DOB POPUP) ERROR: $error");
-      return {
-        'success': false,
-        'message': 'An error occurred while update user: $error'
-      };
+      return {'success': false, 'message': appL10n().msgErrorUpdatingUser};
     }
   }
 
@@ -462,7 +470,7 @@ class UserProvider extends BaseProvider {
   Future<Map<String, Object>> updateUserLocation() async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
     if (user == null || user.id == null) {
-      return {'success': false, 'message': 'User not found'};
+      return {'success': false, 'message': appL10n().msgUserNotFound};
     }
     final userId = user.id!;
     String apiUrl = ApiConstant.editUserById(userId);
@@ -517,13 +525,15 @@ class UserProvider extends BaseProvider {
           } else {
             return {
               'success': false,
-              'message': updateUserResponse.message ?? 'No data returned'
+              'message':
+                  updateUserResponse.message ?? appL10n().msgNoDataReturned
             };
           }
         } else {
           return {
             'success': false,
-            'message': updateUserResponse.message ?? 'Error in response'
+            'message':
+                updateUserResponse.message ?? appL10n().msgErrorInResponse
           };
         }
       } else if (response.statusCode == 401 || response.statusCode == 500) {
@@ -533,17 +543,17 @@ class UserProvider extends BaseProvider {
 
         return {
           'success': false,
-          'message': addUserResponse.message ?? 'Error in response'
+          'message': addUserResponse.message ?? appL10n().msgErrorInResponse
         };
       } else {
-        return {'failure': true, 'message': 'Something went wrong!'};
+        return {
+          'failure': true,
+          'message': appL10n().msgSomethingWentWrongExclaim
+        };
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      return {
-        'success': false,
-        'message': 'An error occurred while update user: $error'
-      };
+      return {'success': false, 'message': appL10n().msgErrorUpdatingUser};
     }
   }
 
@@ -667,8 +677,7 @@ class UserProvider extends BaseProvider {
       if (!serviceEnabled) {
         return {
           'success': false,
-          'error':
-              'Location services are disabled on your device. Please enable location services in Settings.',
+          'error': appL10n().msgLocationServicesDisabled,
           'isServiceDisabled': true,
         };
       }
@@ -677,8 +686,7 @@ class UserProvider extends BaseProvider {
       if (permission == LocationPermission.deniedForever) {
         return {
           'success': false,
-          'error':
-              'Location permission is permanently denied. Please grant permission in App Settings, or tap Cancel.',
+          'error': appL10n().msgLocationPermissionPermanentlyDenied,
           'isPermanentlyDenied': true,
         };
       }
@@ -690,8 +698,7 @@ class UserProvider extends BaseProvider {
       if (permission == LocationPermission.deniedForever) {
         return {
           'success': false,
-          'error':
-              'Location permission is permanently denied. Please grant permission in App Settings, or tap Cancel.',
+          'error': appL10n().msgLocationPermissionPermanentlyDenied,
           'isPermanentlyDenied': true,
         };
       }
@@ -699,8 +706,7 @@ class UserProvider extends BaseProvider {
       if (permission == LocationPermission.denied) {
         return {
           'success': false,
-          'error':
-              'Location permission was denied. Tap Use Current Location to try again, or Cancel to continue.',
+          'error': appL10n().msgLocationPermissionDenied,
           'isDenied': true,
         };
       }
@@ -714,10 +720,10 @@ class UserProvider extends BaseProvider {
           ),
         );
       } catch (e) {
+        log('Current device GPS position error: $e');
         return {
           'success': false,
-          'error':
-              'Unable to determine GPS location ($e). Please check your GPS and try again.',
+          'error': appL10n().msgUnableToDetermineGpsLocation,
         };
       }
 
@@ -735,8 +741,8 @@ class UserProvider extends BaseProvider {
       if (geocodeResponse.statusCode != 200) {
         return {
           'success': false,
-          'error':
-              'Reverse geocoding service returned status code ${geocodeResponse.statusCode}.',
+          'error': appL10n()
+              .msgReverseGeocodingStatusCode(geocodeResponse.statusCode),
         };
       }
 
@@ -746,8 +752,8 @@ class UserProvider extends BaseProvider {
       if (status != 'OK') {
         return {
           'success': false,
-          'error':
-              'Unable to resolve address (${geocodeBody['error_message'] ?? status}).',
+          'error': appL10n().msgUnableToResolveAddress(
+              '${geocodeBody['error_message'] ?? status}'),
         };
       }
 
@@ -755,7 +761,7 @@ class UserProvider extends BaseProvider {
       if (results.isEmpty) {
         return {
           'success': false,
-          'error': 'No address details found for your current coordinates.',
+          'error': appL10n().msgNoAddressDetailsFound,
         };
       }
 
@@ -774,7 +780,7 @@ class UserProvider extends BaseProvider {
       log('Current device location error: $error');
       return {
         'success': false,
-        'error': 'An unexpected error occurred while fetching location: $error',
+        'error': appL10n().msgUnexpectedLocationError,
       };
     } finally {
       isFetchingCurrentLocation = false;
@@ -971,7 +977,7 @@ class UserProvider extends BaseProvider {
   Future<Map<String, Object>> updateUserLang(List<String> langList) async {
     User? user = await LocalSharePreferences.localSharePreferences.getUser();
     if (user?.id == null) {
-      return {'success': false, 'message': 'User not found'};
+      return {'success': false, 'message': appL10n().msgUserNotFound};
     }
     String apiUrl = ApiConstant.editUserById(user!.id);
 
@@ -1012,13 +1018,15 @@ class UserProvider extends BaseProvider {
           } else {
             return {
               'success': false,
-              'message': updateUserResponse.message ?? 'No data returned'
+              'message':
+                  updateUserResponse.message ?? appL10n().msgNoDataReturned
             };
           }
         } else {
           return {
             'success': false,
-            'message': updateUserResponse.message ?? 'Error in response'
+            'message':
+                updateUserResponse.message ?? appL10n().msgErrorInResponse
           };
         }
       } else if (response.statusCode == 401 || response.statusCode == 500) {
@@ -1028,17 +1036,17 @@ class UserProvider extends BaseProvider {
 
         return {
           'success': false,
-          'message': addUserResponse.message ?? 'Error in response'
+          'message': addUserResponse.message ?? appL10n().msgErrorInResponse
         };
       } else {
-        return {'failure': true, 'message': 'Something went wrong!'};
+        return {
+          'failure': true,
+          'message': appL10n().msgSomethingWentWrongExclaim
+        };
         // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } catch (error) {
-      return {
-        'success': false,
-        'message': 'An error occurred while update user: $error'
-      };
+      return {'success': false, 'message': appL10n().msgErrorUpdatingUser};
     }
   }
 
@@ -1050,7 +1058,9 @@ class UserProvider extends BaseProvider {
     final watch = Stopwatch()..start();
 
     try {
-      var response = await apiHelper.postApiWithoutAuthToken(apiUrl);
+      var response = await apiHelper
+          .postApiWithoutAuthToken(apiUrl)
+          .timeout(_authRequestTimeout);
       _logOtpPerformance(
         'Send OTP API completed in ${watch.elapsedMilliseconds}ms',
       );
@@ -1065,32 +1075,20 @@ class UserProvider extends BaseProvider {
           //log('= $addUserResponse');
           return {
             'success': true,
-            'message': addUserResponse.message ?? 'OTP sent',
+            'message': addUserResponse.message ?? appL10n().msgOtpSent,
             'data': responseBody['data'],
           };
         } else {
           return {
             'success': false,
-            'message': addUserResponse.message ?? 'User not found',
+            'message': addUserResponse.message ?? appL10n().msgUserNotFound,
           };
         }
-      } else if (response.statusCode == 401 ||
-          response.statusCode == 500 ||
-          response.statusCode == 404) {
-        final responseBody = json.decode(response.body);
-        final message = responseBody is Map<String, dynamic>
-            ? responseBody['message']?.toString()
-            : null;
-        return {
-          'success': false,
-          'message': message ?? 'Error in response',
-        };
       } else {
         return {
-          'failure': true,
-          'message': 'Something went wrong!',
+          'success': false,
+          'message': _authErrorMessage(response.statusCode, response.body),
         };
-        // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
     } on io.SocketException {
       _logOtpPerformance(
@@ -1098,15 +1096,22 @@ class UserProvider extends BaseProvider {
       );
       return {
         'success': false,
-        'message':
-            'No internet connection. Please check your network and try again.',
+        'message': _noConnectionMessage,
       };
+    } on TimeoutException {
+      _logOtpPerformance(
+        'Send OTP timed out after ${watch.elapsedMilliseconds}ms',
+      );
+      return {'success': false, 'message': _timeoutMessage};
     } catch (error) {
       _logOtpPerformance(
         'Send OTP failed after ${watch.elapsedMilliseconds}ms',
       );
       log("Error: $error");
-      return {'success': false, 'message': 'error: $error'};
+      return {
+        'success': false,
+        'message': appL10n().msgUnableToSendOtp,
+      };
     }
   }
 
@@ -1145,7 +1150,9 @@ class UserProvider extends BaseProvider {
 
     try {
       final apiWatch = Stopwatch()..start();
-      var response = await apiHelper.postApiWithoutAuthToken(apiUrl);
+      var response = await apiHelper
+          .postApiWithoutAuthToken(apiUrl)
+          .timeout(_authRequestTimeout);
       _logOtpPerformance(
         'Verify OTP API completed in ${apiWatch.elapsedMilliseconds}ms',
       );
@@ -1174,43 +1181,65 @@ class UserProvider extends BaseProvider {
             );
             return {
               'success': true,
-              'message':
-                  addUserResponse.message ?? 'User logged in successfully',
+              'message': addUserResponse.message ??
+                  appL10n().msgUserLoggedInSuccessfully,
               'data': responseBody['data'],
             };
           } else {
             return {
               'success': false,
-              'message': addUserResponse.message ?? 'No data returned'
+              'message': addUserResponse.message ?? appL10n().msgNoDataReturned
             };
           }
         } else {
           return {
             'success': false,
-            'message': addUserResponse.message ?? 'Error in response'
+            'message': addUserResponse.message ?? appL10n().msgErrorInResponse
           };
         }
-      } else if (response.statusCode == 401 ||
-          response.statusCode == 500 ||
-          response.statusCode == 404) {
+      } else {
         return {
           'success': false,
-          'message': SessionManager.extractMessage(response.body) ??
-              'Error in response'
+          'message': _authErrorMessage(response.statusCode, response.body),
         };
-      } else {
-        return {'failure': true, 'message': 'Something went wrong!'};
-        // throw Exception('Failed to add user. Status code: ${response.statusCode}');
       }
+    } on io.SocketException {
+      _logOtpPerformance(
+        'Verify OTP failed after ${totalWatch.elapsedMilliseconds}ms: no connection',
+      );
+      return {'success': false, 'message': _noConnectionMessage};
+    } on TimeoutException {
+      _logOtpPerformance(
+        'Verify OTP timed out after ${totalWatch.elapsedMilliseconds}ms',
+      );
+      return {'success': false, 'message': _timeoutMessage};
     } catch (error) {
       _logOtpPerformance(
         'Verify OTP failed after ${totalWatch.elapsedMilliseconds}ms',
       );
       return {
         'success': false,
-        'message': 'An error occurred while logging user'
+        'message': appL10n().authUnableToLogin,
       };
     }
+  }
+
+  static const Duration _authRequestTimeout = Duration(seconds: 30);
+  static String get _noConnectionMessage => appL10n().msgNoInternetConnection;
+  static String get _timeoutMessage => appL10n().msgServerTimeout;
+
+  /// Uses the backend's own message for any non-200 auth response
+  /// (invalid OTP, inactive account, rate limit, server error),
+  /// with a status-based fallback when the body has no message.
+  static String _authErrorMessage(int statusCode, String body) {
+    final backendMessage = SessionManager.extractMessage(body)?.trim();
+    if (backendMessage != null && backendMessage.isNotEmpty) {
+      return backendMessage;
+    }
+    if (statusCode >= 500) {
+      return appL10n().msgServerErrorTryAgainLater;
+    }
+    return appL10n().msgSomethingWentWrongTryAgain;
   }
 
   void _logOtpPerformance(String message) {

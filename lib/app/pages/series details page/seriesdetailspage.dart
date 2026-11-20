@@ -3,12 +3,14 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:ott/app/core/constant/api_constant.dart';
 import 'package:ott/app/core/network/api_helper.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/utils/release_date_formatter.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/pages/watchlist%20page/component/DisplayTrailer.dart';
 import 'package:ott/app/pages/wallet%20page/MovieBillingPage.dart';
@@ -22,6 +24,7 @@ import 'package:ott/app/provider/series_provider.dart';
 import 'package:ott/app/provider/videoProvider.dart';
 import 'package:ott/app/widgets/StarRatingWidget.dart';
 import 'package:ott/app/widgets/customtextfield.dart';
+import 'package:ott/app/widgets/review_input_field.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/data/models/cast_member.dart';
 import 'package:ott/data/models/content.dart';
@@ -33,6 +36,7 @@ import 'package:provider/provider.dart';
 import '../../provider/playMediaProvider.dart';
 import '../movie details page/component/displayStar.dart';
 import '../movie details page/component/starRating.dart';
+import 'package:ott/app/widgets/content_detail_app_bar.dart';
 
 class SeriesDetailsPage extends StatefulWidget {
   final int seriesId;
@@ -49,6 +53,14 @@ class SeriesDetailsPage extends StatefulWidget {
 }
 
 class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
+  /// Feature flag to control whether individual episode purchase is available.
+  /// Temporarily set to false per business requirement.
+  static const bool showEpisodePurchaseOption = false;
+
+  /// Feature flag to control whether the Gallery section (and its trailer) is rendered.
+  /// Temporarily set to false per business requirement.
+  static const bool showGallerySection = false;
+
   int _selectedSeasonIndex = 0;
   final TrailerPreviewController _trailerController =
       TrailerPreviewController();
@@ -57,10 +69,28 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   final FocusNode _heroFocusNode = FocusNode(debugLabel: 'seriesHero');
   Timer? _heroTrailerTimer;
   bool _isHeroTrailerPlaying = false;
+  bool _isEpisodePlaybackActive = false;
   final ApiHelper _apiHelper = ApiHelper();
   List<CastMember> _seasonCastList = [];
+  List<CastMember> _seasonCrewList = [];
   bool _isLoadingSeasonCast = false;
   int? _loadedSeasonId;
+
+  /// Checks whether the user is an eligible paid user for this series.
+  /// Returns true if the series is rented/purchased, or if any season or episode is purchased.
+  bool _isPaidUser(SeriesProvider provider) {
+    if (widget.content.isRental == true) return true;
+    final series = provider.series;
+    if (series != null) {
+      for (final season in series.seasons) {
+        if (season.isSeasonPurchased) return true;
+        for (final episode in season.episodes) {
+          if (episode.isPurchased) return true;
+        }
+      }
+    }
+    return false;
+  }
 
   @override
   void initState() {
@@ -74,7 +104,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   @override
   void dispose() {
     _trailerController.pause?.call();
+    _trailerController.stopAudio?.call();
     _teaserController.pause?.call();
+    _teaserController.stopAudio?.call();
     _heroTrailerTimer?.cancel();
     _tvScrollController.dispose();
     _heroFocusNode.dispose();
@@ -93,6 +125,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     final seasons = provider.series?.seasons ?? [];
     if (seasons.isNotEmpty) {
       await _loadSeasonCast(seasons[_selectedSeasonIndex].seasonId);
+    } else {
+      await _loadSeasonCast(0);
     }
   }
 
@@ -107,37 +141,65 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     });
 
     try {
-      final response = await _apiHelper.getApi(
-        ApiConstant.getCastByContentIdAndSeasonId(widget.seriesId, seasonId),
-      );
+      final contentId = widget.content.id ?? widget.seriesId;
+      List<CastMember> parsedCast = [];
+      List<CastMember> parsedCrew = [];
 
-      if (response.statusCode == 200) {
-        final responseBody = jsonDecode(response.body) as Map<String, dynamic>;
-        final castData = responseBody['data']?['cast'] as List?;
-
-        final castList = castData == null
-            ? <CastMember>[]
-            : castData
-                .map(
-                    (item) => CastMember.fromJson(item as Map<String, dynamic>))
-                .where((cast) =>
-                    cast.seasonId == null || cast.seasonId == seasonId)
-                .toList();
-
-        if (!mounted) return;
-        setState(() {
-          _seasonCastList = castList;
-        });
-      } else {
-        if (!mounted) return;
-        setState(() {
-          _seasonCastList = [];
-        });
+      // 1. Primary: Try getCastByContentIdAndSeasonId if seasonId > 0
+      if (seasonId > 0) {
+        try {
+          final response = await _apiHelper.getApi(
+            ApiConstant.getCastByContentIdAndSeasonId(contentId, seasonId),
+          );
+          if (response.statusCode == 200) {
+            final resBody = jsonDecode(response.body);
+            final extracted = _extractCastAndCrew(resBody, seasonId: seasonId);
+            parsedCast = extracted.cast;
+            parsedCrew = extracted.crew;
+          }
+        } catch (_) {}
       }
+
+      // 2. Fallback to getCastByContentId if both are empty
+      if (parsedCast.isEmpty && parsedCrew.isEmpty) {
+        try {
+          final response = await _apiHelper.getApi(
+            ApiConstant.getCastByContentId(contentId),
+          );
+          if (response.statusCode == 200) {
+            final resBody = jsonDecode(response.body);
+            final extracted = _extractCastAndCrew(resBody,
+                seasonId: seasonId > 0 ? seasonId : null);
+            parsedCast = extracted.cast;
+            parsedCrew = extracted.crew;
+          }
+        } catch (_) {}
+      }
+
+      // 3. Fallbacks from Content metadata if still empty
+      if (parsedCast.isEmpty) {
+        parsedCast = (widget.content.castList ?? const [])
+            .where((name) => name.trim().isNotEmpty)
+            .map((name) => CastMember(name: name.trim(), role: 'Cast'))
+            .toList();
+      }
+      if (parsedCrew.isEmpty) {
+        parsedCrew = (widget.content.directorList ?? const [])
+            .where((name) => name.trim().isNotEmpty)
+            .map((name) => CastMember(name: name.trim(), role: 'Director'))
+            .toList();
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _seasonCastList = parsedCast;
+        _seasonCrewList = parsedCrew;
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _seasonCastList = [];
+        _seasonCrewList = [];
       });
     } finally {
       if (!mounted) return;
@@ -147,33 +209,199 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     }
   }
 
+  _ParsedCastCrew _extractCastAndCrew(dynamic jsonBody, {int? seasonId}) {
+    final allMembers = <CastMember>[];
+    final explicitCast = <CastMember>[];
+    final explicitCrew = <CastMember>[];
+
+    if (jsonBody is Map) {
+      final map = Map<String, dynamic>.from(jsonBody);
+      final dynamic rawData = map['data'] ?? map;
+
+      if (rawData is Map) {
+        final dataMap = Map<String, dynamic>.from(rawData);
+
+        if (dataMap['cast'] is List) {
+          for (final item in dataMap['cast'] as List) {
+            if (item is Map) explicitCast.add(CastMember.fromJson(item));
+          }
+        }
+        if (dataMap['crew'] is List) {
+          for (final item in dataMap['crew'] as List) {
+            if (item is Map) explicitCrew.add(CastMember.fromJson(item));
+          }
+        }
+        if (dataMap['castAndCrew'] is List) {
+          for (final item in dataMap['castAndCrew'] as List) {
+            if (item is Map) allMembers.add(CastMember.fromJson(item));
+          }
+        }
+      } else if (rawData is List) {
+        for (final item in rawData) {
+          if (item is Map) allMembers.add(CastMember.fromJson(item));
+        }
+      }
+    } else if (jsonBody is List) {
+      for (final item in jsonBody) {
+        if (item is Map) allMembers.add(CastMember.fromJson(item));
+      }
+    }
+
+    bool matchesSeason(CastMember m) =>
+        seasonId == null ||
+        m.seasonId == null ||
+        m.seasonId == 0 ||
+        m.seasonId == seasonId;
+
+    final filteredExplicitCast = explicitCast.where(matchesSeason).toList();
+    final filteredExplicitCrew = explicitCrew.where(matchesSeason).toList();
+    final filteredAll = allMembers.where(matchesSeason).toList();
+
+    final resultCast = <CastMember>[...filteredExplicitCast];
+    final resultCrew = <CastMember>[...filteredExplicitCrew];
+
+    for (final member in filteredAll) {
+      if (_isCastMember(member)) {
+        resultCast.add(member);
+      } else {
+        resultCrew.add(member);
+      }
+    }
+
+    return _ParsedCastCrew(resultCast, resultCrew);
+  }
+
+  static bool _isCastMember(CastMember member) {
+    final role = member.role?.toLowerCase().trim() ?? '';
+    if (role.isEmpty) return true;
+
+    const crewKeywords = {
+      'director',
+      'producer',
+      'writer',
+      'cinematograph',
+      'editor',
+      'music',
+      'composer',
+      'singer',
+      'sound',
+      'creator',
+      'screenplay',
+      'dialogue',
+      'story',
+      'choreograph',
+      'action',
+      'stunt',
+      'crew',
+      'dop',
+      'art director',
+      'costume',
+    };
+
+    return !crewKeywords.any(role.contains);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>().getTheme;
+    // Series & Mini Series share this page. Phones / tablets: the shared
+    // compact red detail app bar (same as Movie & Short Film). Large
+    // landscape (TV / desktop) keeps the cinematic hero with its own back
+    // button.
+    final showDetailAppBar = !ResponsiveWidget.isTv(context);
+    final loadedTitle =
+        context.select<SeriesProvider, String?>((p) => p.series?.title);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: Consumer<SeriesProvider>(
-        builder: (context, provider, _) {
-          if (provider.isLoading) {
-            return Center(
-              child: CircularProgressIndicator(color: theme.primaryColor),
-            );
-          }
+      appBar: showDetailAppBar
+          ? ContentDetailAppBar(
+              title: loadedTitle ?? widget.content.title,
+              rating: widget.content.ratings,
+            )
+          : null,
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          _handleTrailerScrollNotification(notification);
+          return false;
+        },
+        child: Consumer<SeriesProvider>(
+          builder: (context, provider, _) {
+            if (provider.isLoading) {
+              return Center(
+                child: CircularProgressIndicator(color: theme.primaryColor),
+              );
+            }
 
-          if (provider.error != null) {
-            return Center(child: Text(provider.error!));
-          }
+            if (provider.error != null) {
+              return Center(child: Text(provider.error!));
+            }
 
-          SeriesEntity? series = provider.series;
-          if (series == null) return const SizedBox();
+            SeriesEntity? series = provider.series;
+            if (series == null) return const SizedBox();
 
-          List<SeasonEntity> seasons = series.seasons;
-          if (!ResponsiveWidget.isMobile(context)) {
-            return _buildCinematicTvDetails(context, series, seasons, theme);
-          }
+            List<SeasonEntity> seasons = series.seasons;
+            if (!ResponsiveWidget.isMobile(context)) {
+              return _buildCinematicTvDetails(context, series, seasons, theme);
+            }
 
-          if (seasons.isEmpty) {
+            if (seasons.isEmpty) {
+              return CustomScrollView(
+                slivers: [
+                  _buildHero(series, theme),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal:
+                            ResponsiveWidget.isDesktop(context) ? 64 : 16,
+                        vertical: 20,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildTitleBlock(series, theme),
+                          const SizedBox(height: 24),
+                          Text(
+                            AppLocalizations.of(context)!.detailsNoSeasonsYet,
+                            style: TextStyle(
+                              color: theme.canvasColor.withOpacity(0.7),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 26),
+                          _buildDetailsSection(context, widget.content, theme),
+                          if (showGallerySection) ...[
+                            const SizedBox(height: 32),
+                            _buildGallery(widget.content),
+                          ],
+                          if (_isPaidUser(provider)) ...[
+                            const SizedBox(height: 32),
+                            _buildRatingAndReviewsSection(
+                                context, widget.content),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            if (_selectedSeasonIndex >= seasons.length) {
+              _selectedSeasonIndex = 0;
+            }
+
+            SeasonEntity season = seasons[_selectedSeasonIndex];
+
+            if (_loadedSeasonId != season.seasonId && !_isLoadingSeasonCast) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  _loadSeasonCast(season.seasonId);
+                }
+              });
+            }
+
             return CustomScrollView(
               slivers: [
                 _buildHero(series, theme),
@@ -181,86 +409,65 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                   child: Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: ResponsiveWidget.isDesktop(context) ? 64 : 16,
-                      vertical: 20,
+                      vertical: 1,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildTitleBlock(series, theme),
-                        const SizedBox(height: 24),
-                        Text(
-                          'No seasons available yet',
-                          style: TextStyle(
-                            color: theme.canvasColor.withOpacity(0.7),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        const SizedBox(height: 20),
+                        _buildSeasonSelector(seasons, theme),
+                        const SizedBox(height: 20),
+                        _buildSeasonInfo(context, season, theme),
+                        if (_seasonCastList.isNotEmpty ||
+                            _seasonCrewList.isNotEmpty ||
+                            (widget.content.castList?.isNotEmpty ?? false) ||
+                            (widget.content.directorList?.isNotEmpty ??
+                                false) ||
+                            (_isLoadingSeasonCast &&
+                                _loadedSeasonId == season.seasonId)) ...[
+                          const SizedBox(height: 16),
+                          _buildCastSection(context, season, theme),
+                        ],
+                        const SizedBox(height: 16),
+                        if (season.episodes.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24.0),
+                            child: Center(
+                              child: Text(
+                                AppLocalizations.of(context)!
+                                    .detailsNoEpisodesYet,
+                                style: TextStyle(
+                                  color: theme.canvasColor.withOpacity(0.68),
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          ...season.episodes.map(
+                              (e) => _episodeTile(context, season, e, theme)),
+                        Divider(),
                         const SizedBox(height: 26),
                         _buildDetailsSection(context, widget.content, theme),
-                        const SizedBox(height: 32),
-                        _buildGallery(widget.content),
-                        const SizedBox(height: 32),
-                        _buildRatingAndReviewsSection(context, widget.content),
+                        if (showGallerySection) ...[
+                          const SizedBox(height: 32),
+                          _buildGallery(widget.content),
+                        ],
+                        if (_isPaidUser(provider)) ...[
+                          const SizedBox(height: 32),
+                          _buildRatingAndReviewsSection(
+                              context, widget.content),
+                        ],
+                        const SizedBox(height: 60),
                       ],
                     ),
                   ),
                 ),
               ],
             );
-          }
-
-          if (_selectedSeasonIndex >= seasons.length) {
-            _selectedSeasonIndex = 0;
-          }
-
-          SeasonEntity season = seasons[_selectedSeasonIndex];
-
-          if (_loadedSeasonId != season.seasonId && !_isLoadingSeasonCast) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                _loadSeasonCast(season.seasonId);
-              }
-            });
-          }
-
-          return CustomScrollView(
-            slivers: [
-              _buildHero(series, theme),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: ResponsiveWidget.isDesktop(context) ? 64 : 16,
-                    vertical: 1,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTitleBlock(series, theme),
-                      const SizedBox(height: 20),
-                      _buildSeasonSelector(seasons, theme),
-                      const SizedBox(height: 20),
-                      _buildSeasonInfo(context, season, theme),
-                      const SizedBox(height: 16),
-                      _buildCastSection(context, season, theme),
-                      const SizedBox(height: 16),
-                      ...season.episodes
-                          .map((e) => _episodeTile(context, season, e, theme)),
-                      Divider(),
-                      const SizedBox(height: 26),
-                      _buildDetailsSection(context, widget.content, theme),
-                      const SizedBox(height: 32),
-                      _buildGallery(widget.content),
-                      const SizedBox(height: 32),
-                      _buildRatingAndReviewsSection(context, widget.content),
-                      const SizedBox(height: 60),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }
@@ -285,7 +492,10 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !_isHeroTrailerPlaying && _heroTrailerTimer == null) {
+      if (mounted &&
+          !_isEpisodePlaybackActive &&
+          !_isHeroTrailerPlaying &&
+          _heroTrailerTimer == null) {
         _queueHeroTrailerAutoplay();
       }
     });
@@ -311,7 +521,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
         child: FocusTraversalGroup(
           policy: OrderedTraversalPolicy(),
           child: ColoredBox(
-            color: Colors.black,
+            color: theme.scaffoldBackgroundColor,
             child: CustomScrollView(
               controller: _tvScrollController,
               slivers: [
@@ -330,9 +540,15 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (seasons.isEmpty)
-                          _buildTvSectionTitle(theme, 'Episodes coming soon')
+                          _buildTvSectionTitle(
+                              theme,
+                              AppLocalizations.of(context)!
+                                  .detailsEpisodesComingSoon)
                         else ...[
-                          _buildTvSectionTitle(theme, 'Seasons & Episodes'),
+                          _buildTvSectionTitle(
+                              theme,
+                              AppLocalizations.of(context)!
+                                  .detailsSeasonsAndEpisodes),
                           const SizedBox(height: 14),
                           _buildTvSeasonSelector(seasons, theme),
                           const SizedBox(height: 22),
@@ -340,16 +556,29 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                           const SizedBox(height: 18),
                           _buildTvEpisodeRail(context, season, theme),
                         ],
-                        const SizedBox(height: 34),
-                        _buildTvCastSection(context, season, theme),
+                        if (_seasonCastList.isNotEmpty ||
+                            _seasonCrewList.isNotEmpty ||
+                            (widget.content.castList?.isNotEmpty ?? false) ||
+                            (widget.content.directorList?.isNotEmpty ??
+                                false) ||
+                            (_isLoadingSeasonCast &&
+                                _loadedSeasonId == season?.seasonId)) ...[
+                          const SizedBox(height: 34),
+                          _buildTvCastSection(context, season, theme),
+                        ],
                         const SizedBox(height: 34),
                         _buildTvRecommendationRails(context, theme),
                         const SizedBox(height: 34),
                         _buildDetailsSection(context, widget.content, theme),
-                        const SizedBox(height: 28),
-                        _buildGallery(widget.content),
-                        const SizedBox(height: 28),
-                        _buildRatingAndReviewsSection(context, widget.content),
+                        if (showGallerySection) ...[
+                          const SizedBox(height: 28),
+                          _buildGallery(widget.content),
+                        ],
+                        if (_isPaidUser(context.watch<SeriesProvider>())) ...[
+                          const SizedBox(height: 28),
+                          _buildRatingAndReviewsSection(
+                              context, widget.content),
+                        ],
                       ],
                     ),
                   ),
@@ -377,7 +606,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
       focusNode: _heroFocusNode,
       autofocus: true,
       onFocusChange: (hasFocus) {
-        if (hasFocus) {
+        if (hasFocus && !_isEpisodePlaybackActive) {
           _queueHeroTrailerAutoplay();
         } else {
           _stopHeroTrailer();
@@ -413,11 +642,12 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 ),
               ),
             ),
-            Positioned(
-              left: ResponsiveWidget.isDesktop(context) ? 64 : 32,
-              top: MediaQuery.of(context).padding.top + 24,
-              child: _buildTvBackButton(theme),
-            ),
+            if (ResponsiveWidget.isTv(context))
+              Positioned(
+                left: ResponsiveWidget.isDesktop(context) ? 64 : 32,
+                top: MediaQuery.of(context).padding.top + 24,
+                child: _buildTvBackButton(theme),
+              ),
             Positioned(
               left: ResponsiveWidget.isDesktop(context) ? 64 : 32,
               right: size.width * 0.42,
@@ -509,14 +739,15 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
         .join(' / ');
 
     final items = <String>[
-      '${(widget.content.ratings ?? 0).toStringAsFixed(1)} rating',
+      AppLocalizations.of(context)!
+          .detailsRatingValue((widget.content.ratings ?? 0).toStringAsFixed(1)),
       if (releaseYear.isNotEmpty) releaseYear,
       if (genres.isNotEmpty) genres,
       if (languages.isNotEmpty) languages,
       if ((widget.content.ageRating ?? '').trim().isNotEmpty)
         widget.content.ageRating!.trim(),
-      '${seasons.length} ${seasons.length == 1 ? 'season' : 'seasons'}',
-      '$totalEpisodes ${totalEpisodes == 1 ? 'episode' : 'episodes'}',
+      AppLocalizations.of(context)!.detailsSeasonsCount(seasons.length),
+      AppLocalizations.of(context)!.detailsEpisodesCount(totalEpisodes),
     ];
 
     return Wrap(
@@ -578,37 +809,50 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
       children: [
         _tvActionButton(
           theme: theme,
-          label: resume == null ? 'Watch Now' : 'Resume Watching',
+          label: resume == null
+              ? AppLocalizations.of(context)!.watchNow
+              : AppLocalizations.of(context)!.detailsResumeWatching,
           icon: resume == null ? Icons.play_arrow_rounded : Icons.restart_alt,
           emphasized: true,
           onPressed: () {
             final target = resume ?? firstPlayable;
             if (target != null) {
               _playEpisode(context, target.season, target.episode);
+            } else if (seasons.isNotEmpty &&
+                seasons.first.episodes.isNotEmpty) {
+              if (showEpisodePurchaseOption) {
+                _purchaseEpisode(
+                    context, seasons.first, seasons.first.episodes.first);
+              } else if (!((widget.content.isRental == true) ||
+                      seasons.first.isSeasonPurchased) &&
+                  seasons.first.price > 0) {
+                _purchaseSeason(context, seasons.first);
+              }
             }
           },
         ),
         _tvActionButton(
           theme: theme,
-          label: 'Watch Trailer',
+          label: AppLocalizations.of(context)!.watchTrailer,
           icon: Icons.movie_creation_outlined,
           onPressed: _openTrailer,
         ),
         _buildDownloadButton(context, theme),
         _tvActionButton(
           theme: theme,
-          label: 'Share',
+          label: AppLocalizations.of(context)!.cardShare,
           icon: Icons.ios_share_rounded,
           onPressed: () => showContentShareSheet(
             context,
             widget.content,
             contentType: DeepLinkContentType.series,
-            unavailableMessage: "Series details are not available yet",
+            unavailableMessage:
+                AppLocalizations.of(context)!.detailsSeriesDetailsUnavailable,
           ),
         ),
         _tvActionButton(
           theme: theme,
-          label: 'Gift',
+          label: AppLocalizations.of(context)!.cardGift,
           icon: LucideIcons.gift,
           onPressed: () => _showGiftDialog(context, widget.content),
         ),
@@ -624,11 +868,11 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     if (!canDownload) {
       return _tvActionButton(
         theme: theme,
-        label: 'Download',
+        label: AppLocalizations.of(context)!.detailsDownload,
         icon: Icons.download_rounded,
         onPressed: () => CustomToast.show(
           context,
-          'Download is not available for this series.',
+          AppLocalizations.of(context)!.detailsDownloadNotAvailableSeries,
           isSuccess: false,
         ),
       );
@@ -642,10 +886,11 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
         return _tvActionButton(
           theme: theme,
           label: isDownloading
-              ? 'Downloading ${(progress * 100).clamp(0, 100).toStringAsFixed(0)}%'
+              ? AppLocalizations.of(context)!.detailsDownloadingPercent(
+                  (progress * 100).clamp(0, 100).toStringAsFixed(0))
               : isDownloaded
-                  ? 'Downloaded'
-                  : 'Download',
+                  ? AppLocalizations.of(context)!.detailsDownloaded
+                  : AppLocalizations.of(context)!.detailsDownload,
           icon: isDownloaded ? Icons.download_done_rounded : Icons.download,
           onPressed: isDownloading
               ? null
@@ -656,7 +901,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                   if (!context.mounted) return;
                   CustomToast.show(
                     context,
-                    result['message']?.toString() ?? 'Download updated',
+                    result['message']?.toString() ??
+                        AppLocalizations.of(context)!.detailsDownloadUpdated,
                     isSuccess: result['success'] == true,
                   );
                 },
@@ -711,16 +957,19 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
             },
             child: ChoiceChip(
               selected: selected,
-              label: Text('Season ${seasons[index].seasonNumber}'),
+              label: Text(AppLocalizations.of(context)!
+                  .detailsSeasonN(seasons[index].seasonNumber)),
               selectedColor: theme.primaryColor,
               backgroundColor: Colors.red.withOpacity(0.1),
               labelStyle: TextStyle(
-                color: selected ? Colors.white : Colors.white.withOpacity(0.82),
+                color: selected
+                    ? Colors.white
+                    : theme.canvasColor.withOpacity(0.82),
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-              side: BorderSide(color: Colors.white.withOpacity(0.14)),
+              side: BorderSide(color: theme.canvasColor.withOpacity(0.14)),
               onSelected: (_) {
                 setState(() => _selectedSeasonIndex = index);
                 _loadSeasonCast(seasons[index].seasonId);
@@ -737,9 +986,18 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     SeasonEntity season,
     ThemeData theme,
   ) {
-    final hasPurchasedEpisode =
-        season.episodes.any((EpisodeEntity ep) => ep.isPurchased);
-    final canPurchaseSeason = !season.isSeasonPurchased && !hasPurchasedEpisode;
+    final isSeasonPurchased =
+        (widget.content.isRental == true) || season.isSeasonPurchased;
+    final effectiveSeasonPrice = season.price > 0
+        ? season.price.toDouble()
+        : (widget.content.price != null
+            ? widget.content.price!.toDouble()
+            : 0.0);
+    final canPurchaseSeason = !isSeasonPurchased && effectiveSeasonPrice > 0;
+    final priceLabel =
+        effectiveSeasonPrice.truncateToDouble() == effectiveSeasonPrice
+            ? effectiveSeasonPrice.toInt().toString()
+            : effectiveSeasonPrice.toStringAsFixed(2);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -749,11 +1007,12 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Season ${season.seasonNumber}: ${season.title}',
+                AppLocalizations.of(context)!
+                    .detailsSeasonTitle(season.seasonNumber, season.title),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: theme.canvasColor,
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
                 ),
@@ -764,7 +1023,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.68),
+                  color: theme.canvasColor.withOpacity(0.68),
                   fontSize: 15,
                   height: 1.35,
                 ),
@@ -772,10 +1031,13 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
             ],
           ),
         ),
-        if (widget.content.isFeatured != true && canPurchaseSeason)
+        if (widget.content.isFeatured == true)
+          _buildReleaseDateHighlight(context, season)
+        else if (canPurchaseSeason)
           _tvActionButton(
             theme: theme,
-            label: 'Rent Season Rs ${season.price}',
+            label: AppLocalizations.of(context)!
+                .detailsRentSeasonPrice(priceLabel),
             icon: Icons.lock_open_rounded,
             emphasized: true,
             onPressed: () => _purchaseSeason(context, season),
@@ -791,13 +1053,14 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   ) {
     if (season.episodes.isEmpty) {
       return Text(
-        'No episodes available yet',
-        style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 16),
+        AppLocalizations.of(context)!.detailsNoEpisodesYet,
+        style:
+            TextStyle(color: theme.canvasColor.withOpacity(0.7), fontSize: 16),
       );
     }
 
     return SizedBox(
-      height: 300,
+      height: 320,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: season.episodes.length,
@@ -820,8 +1083,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     EpisodeEntity episode,
     ThemeData theme,
   ) {
-    final canPlay =
-        season.isSeasonPurchased || episode.isPurchased || episode.isFree;
+    final isSeasonPurchased =
+        (widget.content.isRental == true) || season.isSeasonPurchased;
+    final canPlay = isSeasonPurchased || episode.isPurchased || episode.isFree;
     final progress = _episodeProgress(context, season, episode);
     final hasProgress = progress > 0.02;
 
@@ -830,16 +1094,18 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
       onPressed: () {
         if (canPlay) {
           _playEpisode(context, season, episode);
-        } else {
+        } else if (showEpisodePurchaseOption) {
           _purchaseEpisode(context, season, episode);
+        } else if (!isSeasonPurchased && season.price > 0) {
+          _purchaseSeason(context, season);
         }
       },
       child: Container(
         width: 360,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.075),
+          color: theme.cardColor,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: theme.canvasColor.withOpacity(0.1)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -919,17 +1185,17 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                           episode.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: theme.canvasColor,
                             fontSize: 16,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
                       ),
                       Text(
-                        '${episode.runtime} min',
+                        _formatRuntimeToHms(episode.runtime),
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.65),
+                          color: theme.canvasColor.withOpacity(0.65),
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
@@ -939,12 +1205,15 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                   const SizedBox(height: 6),
                   Text(
                     hasProgress
-                        ? 'Continue watching - ${(progress * 100).round()}%'
-                        : 'Episode ${episode.episodeNumber}',
+                        ? AppLocalizations.of(context)!
+                            .detailsContinueWatchingPercent(
+                                (progress * 100).round())
+                        : AppLocalizations.of(context)!
+                            .detailsEpisodeN(episode.episodeNumber),
                     style: TextStyle(
                       color: hasProgress
                           ? theme.primaryColor
-                          : Colors.white.withOpacity(0.62),
+                          : theme.canvasColor.withOpacity(0.62),
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                     ),
@@ -955,7 +1224,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.64),
+                      color: theme.canvasColor.withOpacity(0.64),
                       height: 1.25,
                     ),
                   ),
@@ -1065,11 +1334,11 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
             ),
             const SizedBox(height: 10),
             Text(
-              content.title ?? 'Untitled',
+              content.title ?? AppLocalizations.of(context)!.detailsUntitled,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: theme.canvasColor,
                 fontWeight: FontWeight.w800,
                 fontSize: 15,
               ),
@@ -1083,7 +1352,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
               ].whereType<String>().join('  |  '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.white.withOpacity(0.58)),
+              style: TextStyle(color: theme.canvasColor.withOpacity(0.58)),
             ),
           ],
         ),
@@ -1104,17 +1373,23 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
 
   String _railTitle(String? category) {
     final raw = category?.trim();
-    if (raw == null || raw.isEmpty) return 'More Like This';
-    if (raw.toLowerCase().contains('trending')) return 'Trending';
-    if (raw.toLowerCase().contains('latest')) return 'Recommended Series';
-    if (raw.toLowerCase().contains('upcoming')) return 'Related Content';
+    final lang = AppLocalizations.of(context)!;
+    if (raw == null || raw.isEmpty) return lang.detailsMoreLikeThis;
+    if (raw.toLowerCase().contains('trending')) return lang.detailsTrending;
+    if (raw.toLowerCase().contains('latest')) {
+      return lang.detailsRecommendedSeries;
+    }
+    if (raw.toLowerCase().contains('upcoming')) {
+      return lang.detailsRelatedContent;
+    }
     return raw;
   }
 
   void _queueHeroTrailerAutoplay() {
+    if (_isEpisodePlaybackActive) return;
     _heroTrailerTimer?.cancel();
     _heroTrailerTimer = Timer(const Duration(seconds: 2), () {
-      if (!mounted) return;
+      if (!mounted || _isEpisodePlaybackActive) return;
       _heroTrailerTimer = null;
       _trailerController.mute?.call();
       _trailerController.play?.call();
@@ -1126,15 +1401,57 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     _heroTrailerTimer?.cancel();
     _heroTrailerTimer = null;
     _trailerController.pause?.call();
+    _trailerController.stopAudio?.call();
+    _teaserController.pause?.call();
+    _teaserController.stopAudio?.call();
     if (_isHeroTrailerPlaying) {
       setState(() => _isHeroTrailerPlaying = false);
     }
   }
 
+  bool _isUpwardScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) {
+      return false;
+    }
+    if (notification is UserScrollNotification) {
+      return notification.direction == ScrollDirection.reverse;
+    }
+    if (notification is ScrollUpdateNotification) {
+      final delta = notification.scrollDelta;
+      return delta != null && delta > 0;
+    }
+    if (notification is OverscrollNotification) {
+      return notification.overscroll > 0;
+    }
+    return false;
+  }
+
+  void _handleTrailerScrollNotification(ScrollNotification notification) {
+    if (_isUpwardScrollNotification(notification)) {
+      _pauseTrailerOnScrollUp();
+    }
+  }
+
+  void _pauseTrailerOnScrollUp() {
+    final isPlaying = _trailerController.isPlaying?.call();
+    final isPendingAutoplay = _heroTrailerTimer != null;
+    if (isPlaying == false && !isPendingAutoplay && !_isHeroTrailerPlaying) {
+      return;
+    }
+    if (_trailerController.pause == null &&
+        !isPendingAutoplay &&
+        !_isHeroTrailerPlaying) {
+      return;
+    }
+    _stopHeroTrailer();
+  }
+
   _ResumeEpisode? _firstPlayableEpisode(List<SeasonEntity> seasons) {
+    final isSeriesPurchased = widget.content.isRental == true;
     for (final season in seasons) {
+      final isSeasonPurchased = isSeriesPurchased || season.isSeasonPurchased;
       for (final episode in season.episodes) {
-        if (season.isSeasonPurchased || episode.isPurchased || episode.isFree) {
+        if (isSeasonPurchased || episode.isPurchased || episode.isFree) {
           return _ResumeEpisode(season, episode);
         }
       }
@@ -1185,25 +1502,58 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     SeasonEntity season,
     EpisodeEntity episode,
   ) async {
-    _stopHeroTrailer();
-    await _trailerController.disposePlayer?.call();
-    await _teaserController.disposePlayer?.call();
-    if (!context.mounted) return;
-    final shouldRefresh = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PlayMediaPage(
-          videoUrl: episode.videoUrl ?? "",
-          content: widget.content,
-          seasonIndex: season.seasonId,
-          episodeIndex: episode.episodeId,
-          seasons: [season],
-        ),
-      ),
-    );
+    final videoUrl = episode.videoUrl?.trim();
+    if (videoUrl == null || videoUrl.isEmpty) {
+      CustomToast.show(
+        context,
+        AppLocalizations.of(context)!.cardEpisodeVideoNotAvailable,
+        isSuccess: false,
+      );
+      return;
+    }
 
-    if (shouldRefresh == true && context.mounted) {
-      context.read<DashboardProvider>().getContinueWatchedMovieList("SERIES");
+    if (_isEpisodePlaybackActive) return;
+    _isEpisodePlaybackActive = true;
+
+    // Immediately pause trailer and stop trailer audio before initiating episode playback
+    _stopHeroTrailer();
+    _trailerController.pause?.call();
+    _trailerController.stopAudio?.call();
+    _teaserController.pause?.call();
+    _teaserController.stopAudio?.call();
+
+    if (!context.mounted) {
+      _isEpisodePlaybackActive = false;
+      return;
+    }
+
+    final allSeasons =
+        context.read<SeriesProvider>().series?.seasons ?? [season];
+    try {
+      final shouldRefresh = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PlayMediaPage(
+            videoUrl: videoUrl,
+            content: widget.content,
+            seasonIndex: season.seasonId,
+            episodeIndex: episode.episodeId,
+            seasons: allSeasons,
+          ),
+        ),
+      );
+
+      if (shouldRefresh == true && context.mounted) {
+        context.read<DashboardProvider>().getContinueWatchedMovieList("SERIES");
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isEpisodePlaybackActive = false;
+        });
+      } else {
+        _isEpisodePlaybackActive = false;
+      }
     }
   }
 
@@ -1228,9 +1578,11 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
       ),
     );
 
-    if (result == true && mounted) {
-      CustomToast.show(context, "Episode unlocked! Enjoy watching",
+    if (result == true && context.mounted) {
+      CustomToast.show(
+          context, AppLocalizations.of(context)!.detailsEpisodeUnlocked,
           isSuccess: true);
+      await context.read<SeriesProvider>().fetchSeriesDetails(widget.seriesId);
     }
   }
 
@@ -1239,13 +1591,18 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     SeasonEntity season,
   ) async {
     _stopHeroTrailer();
+    final effectivePrice = season.price > 0
+        ? season.price.toDouble()
+        : (widget.content.price != null
+            ? widget.content.price!.toDouble()
+            : 0.0);
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => SeriesBillingPage(
           seriesId: widget.seriesId,
           seasonId: season.seasonId,
-          amount: season.price.toDouble(),
+          amount: effectivePrice,
           isSeason: true,
           seriesTitle: widget.content.title,
           itemTitle: season.title,
@@ -1254,9 +1611,11 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
       ),
     );
 
-    if (result == true && mounted) {
-      CustomToast.show(context, "Season unlocked! Enjoy watching",
+    if (result == true && context.mounted) {
+      CustomToast.show(
+          context, AppLocalizations.of(context)!.detailsSeasonUnlocked,
           isSuccess: true);
+      await context.read<SeriesProvider>().fetchSeriesDetails(widget.seriesId);
     }
   }
 
@@ -1302,7 +1661,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                           color: theme.primaryColor, size: 28),
                       const SizedBox(width: 10),
                       Text(
-                        "Gift This Series",
+                        AppLocalizations.of(context)!.detailsGiftThisSeries,
                         style: theme.textTheme.titleLarge
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
@@ -1310,7 +1669,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    "Enter how many people you'd like to gift this series to.",
+                    AppLocalizations.of(context)!
+                        .detailsGiftSeriesRecipientsPrompt,
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(color: theme.canvasColor),
                   ),
@@ -1319,7 +1679,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                     backgroundColor: theme.scaffoldBackgroundColor,
                     isDigits: true,
                     controller: countController,
-                    hintText: "Number of recipients",
+                    hintText:
+                        AppLocalizations.of(context)!.detailsNumberOfRecipients,
                     textInputType: TextInputType.number,
                   ),
                   const SizedBox(height: 24),
@@ -1328,7 +1689,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                     children: [
                       TextButton(
                         onPressed: () => Navigator.pop(dialogContext),
-                        child: Text("Cancel",
+                        child: Text(AppLocalizations.of(context)!.cancel,
                             style: TextStyle(color: theme.canvasColor)),
                       ),
                       const SizedBox(width: 12),
@@ -1345,7 +1706,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                           if (count == null || count <= 0) {
                             CustomToast.show(
                               dialogContext,
-                              'Please enter valid number',
+                              AppLocalizations.of(context)!
+                                  .detailsEnterValidNumber,
                               isSuccess: false,
                             );
                             return;
@@ -1363,8 +1725,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                             ),
                           );
                         },
-                        child: const Text("Continue",
-                            style: TextStyle(color: Colors.white)),
+                        child: Text(
+                            AppLocalizations.of(context)!.homeContinue,
+                            style: const TextStyle(color: Colors.white)),
                       ),
                     ],
                   ),
@@ -1378,30 +1741,44 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   }
 
   String _releaseYearText(dynamic releaseDate) {
-    final text = releaseDate?.toString().trim() ?? '';
+    if (releaseDate == null) return '';
+    if (releaseDate is DateTime) return releaseDate.year.toString();
+    final numeric = releaseDate is int
+        ? releaseDate
+        : int.tryParse(releaseDate.toString().trim());
+    if (numeric != null && numeric > 1000000000) {
+      final dt = numeric > 100000000000
+          ? DateTime.fromMillisecondsSinceEpoch(numeric)
+          : DateTime.fromMillisecondsSinceEpoch(numeric * 1000);
+      return dt.year.toString();
+    }
+    final text = releaseDate.toString().trim();
     if (text.length >= 4) return text.substring(0, 4);
     return text;
   }
 
   // ---------------- HERO ----------------
 
-  SliverAppBar _buildHero(series, ThemeData theme) {
+  Widget _buildHero(series, ThemeData theme) {
     final bool isMobile = ResponsiveWidget.isMobile(context);
     final bool isTablet = ResponsiveWidget.isTablet(context);
 
-    return SliverAppBar(
-      automaticallyImplyLeading: !(kIsWeb || ResponsiveWidget.isTv(context)),
-      pinned: true,
-      expandedHeight: isMobile
-          ? 250
-          : isTablet
-              ? 420
-              : 560,
-      forceMaterialTransparency: true,
-      backgroundColor: Colors.black,
-      foregroundColor: Colors.white,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
+    // Poster band with the trailer, laid out below the shared detail app bar
+    // (which stays fixed). Mobile height = 16:9 trailer inset 12pt on each
+    // side + 12pt above and below.
+    final mobileTrailerHeight =
+        (MediaQuery.sizeOf(context).width - 24) * 9 / 16;
+    final heroHeight = isMobile
+        ? mobileTrailerHeight + 24
+        : isTablet
+            ? 420.0
+            : 560.0;
+
+    return SliverToBoxAdapter(
+      key: const ValueKey('seriesDetailHero'),
+      child: SizedBox(
+        height: heroHeight,
+        child: Stack(
           fit: StackFit.expand,
           children: [
             /// 🎬 Background Poster
@@ -1413,15 +1790,21 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
 
             /// 🌗 Gradient overlay
             Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black87,
-                    Colors.black87,
-                    Colors.black,
-                  ],
+                  colors: theme.brightness == Brightness.dark
+                      ? const [
+                          Colors.black87,
+                          Colors.black87,
+                          Colors.black,
+                        ]
+                      : [
+                          Colors.black54,
+                          theme.scaffoldBackgroundColor.withOpacity(0.7),
+                          theme.scaffoldBackgroundColor,
+                        ],
                 ),
               ),
             ),
@@ -1507,7 +1890,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           children: [
             StarRatingWidget(
               rating: double.parse(
-                widget.content.ratings!.toStringAsFixed(2),
+                (widget.content.ratings ?? 0.0).toStringAsFixed(2),
               ),
             ),
             Text(
@@ -1533,13 +1916,14 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           runSpacing: 12,
           children: [
             ActionButtonWidget(
-              label: 'Share',
+              label: AppLocalizations.of(context)!.cardShare,
               icon: Icons.qr_code_2_rounded,
               onTap: () => showContentShareSheet(
                 context,
                 widget.content,
                 contentType: DeepLinkContentType.series,
-                unavailableMessage: "Series details are not available yet",
+                unavailableMessage: AppLocalizations.of(context)!
+                    .detailsSeriesDetailsUnavailable,
               ),
             ),
             _buildGifting(context, widget.content),
@@ -1554,7 +1938,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     final TextEditingController countController = TextEditingController();
 
     return ActionButtonWidget(
-      label: 'Gift Series',
+      label: AppLocalizations.of(context)!.detailsGiftSeries,
       icon: LucideIcons.gift,
       onTap: () {
         showDialog(
@@ -1598,7 +1982,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                               ),
                               const SizedBox(width: 10),
                               Text(
-                                "Gift This Series",
+                                AppLocalizations.of(context)!
+                                    .detailsGiftThisSeries,
                                 style: theme.textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -1607,7 +1992,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            "Enter how many people you'd like to gift this series to.",
+                            AppLocalizations.of(context)!
+                                .detailsGiftSeriesRecipientsPrompt,
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: theme.canvasColor,
                             ),
@@ -1617,7 +2003,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                             backgroundColor: theme.scaffoldBackgroundColor,
                             isDigits: true,
                             controller: countController,
-                            hintText: "Number of recipients",
+                            hintText: AppLocalizations.of(context)!
+                                .detailsNumberOfRecipients,
                             textInputType: TextInputType.number,
                           ),
                           const SizedBox(height: 24),
@@ -1627,7 +2014,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                               TextButton(
                                 onPressed: () => Navigator.pop(dialogContext),
                                 child: Text(
-                                  "Cancel",
+                                  AppLocalizations.of(context)!.cancel,
                                   style: TextStyle(color: theme.canvasColor),
                                 ),
                               ),
@@ -1649,7 +2036,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                                   if (count == null || count <= 0) {
                                     CustomToast.show(
                                       dialogContext,
-                                      'Please enter valid number',
+                                      AppLocalizations.of(context)!
+                                          .detailsEnterValidNumber,
                                       isSuccess: false,
                                     );
                                     return;
@@ -1667,9 +2055,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                                     ),
                                   );
                                 },
-                                child: const Text(
-                                  "Continue",
-                                  style: TextStyle(color: Colors.white),
+                                child: Text(
+                                  AppLocalizations.of(context)!.homeContinue,
+                                  style: const TextStyle(color: Colors.white),
                                 ),
                               ),
                             ],
@@ -1710,7 +2098,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                "Season ${seasons[i].seasonNumber}",
+                AppLocalizations.of(context)!
+                    .detailsSeasonN(seasons[i].seasonNumber),
                 style: TextStyle(
                   color: selected
                       ? Colors.white
@@ -1727,10 +2116,20 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
 
   // ---------------- SEASON INFO ----------------
 
-  Widget _buildSeasonInfo(BuildContext context, season, ThemeData theme) {
-    final hasPurchasedEpisode =
-        season.episodes.any((EpisodeEntity ep) => ep.isPurchased);
-    final canPurchaseSeason = !season.isSeasonPurchased && !hasPurchasedEpisode;
+  Widget _buildSeasonInfo(
+      BuildContext context, SeasonEntity season, ThemeData theme) {
+    final isSeasonPurchased =
+        (widget.content.isRental == true) || season.isSeasonPurchased;
+    final effectiveSeasonPrice = season.price > 0
+        ? season.price.toDouble()
+        : (widget.content.price != null
+            ? widget.content.price!.toDouble()
+            : 0.0);
+    final canPurchaseSeason = !isSeasonPurchased && effectiveSeasonPrice > 0;
+    final priceLabel =
+        effectiveSeasonPrice.truncateToDouble() == effectiveSeasonPrice
+            ? effectiveSeasonPrice.toInt().toString()
+            : effectiveSeasonPrice.toStringAsFixed(2);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1740,7 +2139,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Season ${season.seasonNumber}: ${season.title}",
+                AppLocalizations.of(context)!
+                    .detailsSeasonTitle(season.seasonNumber, season.title),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -1759,56 +2159,32 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
               const SizedBox(height: 6),
               widget.content.isFeatured == true
                   ? _buildReleaseDateHighlight(context, season)
-                  : !season.isSeasonPurchased && canPurchaseSeason
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: theme.primaryColor,
-                                disabledBackgroundColor:
-                                    theme.canvasColor.withOpacity(0.2),
-                                disabledForegroundColor:
-                                    theme.canvasColor.withOpacity(0.6),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
+                  : canPurchaseSeason
+                      ? Center(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: theme.primaryColor,
+                              disabledBackgroundColor:
+                                  theme.canvasColor.withOpacity(0.2),
+                              disabledForegroundColor:
+                                  theme.canvasColor.withOpacity(0.6),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              onPressed: () async {
-                                _trailerController.pause?.call();
-                                final result = await Navigator.push<bool>(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => SeriesBillingPage(
-                                      seriesId: widget.seriesId,
-                                      seasonId: season.seasonId,
-                                      amount: season.price.toDouble(),
-                                      isSeason: true,
-                                      seriesTitle: widget.content.title,
-                                      itemTitle: season.title,
-                                      rentalDuration:
-                                          widget.content.rentlDuration,
-                                    ),
-                                  ),
-                                );
-
-                                if (result == true && mounted) {
-                                  CustomToast.show(
-                                    context,
-                                    "Season unlocked! Enjoy watching 🎬",
-                                    isSuccess: true,
-                                  );
-                                }
-                              },
+                            ),
+                            onPressed: () => _purchaseSeason(context, season),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
                               child: Text(
-                                "Rent complete Season ₹${season.price}",
-                                style: TextStyle(
+                                AppLocalizations.of(context)!
+                                    .detailsRentCompleteSeasonPrice(priceLabel),
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
-                          ],
+                          ),
                         )
                       : const SizedBox()
               //: SizedBox(),
@@ -1821,14 +2197,24 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
 
   Widget _buildReleaseDateHighlight(
     BuildContext context,
-    Content content, {
+    dynamic item, {
     bool centered = false,
   }) {
     final theme = Theme.of(context);
-    final releaseDateText = content.releaseDate?.toString().trim();
-    final displayText = (releaseDateText != null && releaseDateText.isNotEmpty)
-        ? 'Release On: $releaseDateText'
-        : 'Release On: Coming Soon';
+    dynamic rawDate;
+    if (item is SeasonEntity) {
+      rawDate =
+          item.releaseDate > 0 ? item.releaseDate : widget.content.releaseDate;
+    } else if (item is Content) {
+      rawDate = item.releaseDate;
+    } else {
+      rawDate = item ?? widget.content.releaseDate;
+    }
+
+    final releaseDateText = formatReleaseDate(rawDate).trim();
+    final displayText = (releaseDateText.isNotEmpty)
+        ? AppLocalizations.of(context)!.detailsReleaseOn(releaseDateText)
+        : AppLocalizations.of(context)!.detailsReleaseOnComingSoon;
 
     final child = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -1864,15 +2250,13 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     SeasonEntity season,
     ThemeData theme,
   ) {
-    final lang = AppLocalizations.of(context)!;
-    final fallbackCast = (widget.content.castList ?? const [])
-        .where((name) => name.trim().isNotEmpty)
-        .map((name) => CastMember(name: name.trim()))
-        .toList();
-    final castList =
-        _seasonCastList.isNotEmpty ? _seasonCastList : fallbackCast;
-
-    if (_isLoadingSeasonCast && _loadedSeasonId == season.seasonId) {
+    if (_isLoadingSeasonCast &&
+        _loadedSeasonId == season.seasonId &&
+        _seasonCastList.isEmpty &&
+        _seasonCrewList.isEmpty &&
+        (widget.content.castList == null || widget.content.castList!.isEmpty) &&
+        (widget.content.directorList == null ||
+            widget.content.directorList!.isEmpty)) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1888,11 +2272,54 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
       );
     }
 
+    final fallbackCast = (widget.content.castList ?? const [])
+        .where((name) => name.trim().isNotEmpty)
+        .map((name) => CastMember(name: name.trim(), role: 'Cast'))
+        .toList();
+    final effectiveCast =
+        _seasonCastList.isNotEmpty ? _seasonCastList : fallbackCast;
+
+    final fallbackCrew = (widget.content.directorList ?? const [])
+        .where((name) => name.trim().isNotEmpty)
+        .map((name) => CastMember(name: name.trim(), role: 'Director'))
+        .toList();
+    final effectiveCrew =
+        _seasonCrewList.isNotEmpty ? _seasonCrewList : fallbackCrew;
+
+    final hasCast = effectiveCast.isNotEmpty;
+    final hasCrew = effectiveCrew.isNotEmpty;
+
+    if (!hasCast && !hasCrew) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (hasCast)
+          _buildCastOrCrewRow(context, AppLocalizations.of(context)!.cast,
+              effectiveCast, theme),
+        if (hasCast && hasCrew) const SizedBox(height: 16),
+        if (hasCrew)
+          _buildCastOrCrewRow(context,
+              AppLocalizations.of(context)!.searchCrew, effectiveCrew, theme),
+      ],
+    );
+  }
+
+  Widget _buildCastOrCrewRow(
+    BuildContext context,
+    String title,
+    List<CastMember> members,
+    ThemeData theme,
+  ) {
+    if (members.isEmpty) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Cast and Crew",
+          title,
           style: TextStyle(
             color: ResponsiveWidget.isMobile(context)
                 ? theme.canvasColor
@@ -1902,22 +2329,17 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
           ),
         ),
         const SizedBox(height: 10),
-        castList.isEmpty
-            ? SizedBox.shrink()
-            : SizedBox(
-                height: 120,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: castList.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (context, index) {
-                    if (castList.isEmpty) {
-                      return const SizedBox.shrink();
-                    }
-                    return _buildCastCard(context, castList[index]);
-                  },
-                ),
-              ),
+        SizedBox(
+          height: 130,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: members.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 14),
+            itemBuilder: (context, index) {
+              return _buildCastCard(context, members[index]);
+            },
+          ),
+        ),
       ],
     );
   }
@@ -1971,6 +2393,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 10,
+                color: theme.canvasColor.withOpacity(0.7),
               ),
             ),
         ],
@@ -1979,9 +2402,12 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   }
 
   Widget _buildCastInitial(ThemeData theme, String displayName) {
+    final initial = displayName.trim().isNotEmpty
+        ? displayName.trim()[0].toUpperCase()
+        : '?';
     return Center(
       child: Text(
-        displayName[0].toUpperCase(),
+        initial,
         style: TextStyle(
           color: theme.primaryColor,
           fontWeight: FontWeight.bold,
@@ -1999,9 +2425,11 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     EpisodeEntity ep,
     ThemeData theme,
   ) {
-    final canPlay = season.isSeasonPurchased || ep.isPurchased || ep.isFree;
+    final isSeasonPurchased =
+        (widget.content.isRental == true) || season.isSeasonPurchased;
+    final canPlay = isSeasonPurchased || ep.isPurchased || ep.isFree;
     final resumeSeconds = context.watch<PlayMediaProvider>().getLocalResume(
-          contentId: widget.content.id!,
+          contentId: widget.content.id ?? widget.seriesId,
           seasonId: season.seasonId,
           episodeId: ep.episodeId,
         );
@@ -2011,29 +2439,13 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
         : 0.0;
 
     return GestureDetector(
-      onTap: () async {
-        if (!canPlay) return;
-
-        await _trailerController.disposePlayer?.call();
-        await _teaserController.disposePlayer?.call();
-        if (!context.mounted) return;
-        final shouldRefresh = await Navigator.push<bool>(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PlayMediaPage(
-              videoUrl: ep.videoUrl ?? "",
-              content: widget.content,
-              seasonIndex: season.seasonId,
-              episodeIndex: ep.episodeId,
-              seasons: [season],
-            ),
-          ),
-        );
-
-        if (shouldRefresh == true && context.mounted) {
-          context
-              .read<DashboardProvider>()
-              .getContinueWatchedMovieList("SERIES");
+      onTap: () {
+        if (canPlay) {
+          _playEpisode(context, season, ep);
+        } else if (showEpisodePurchaseOption) {
+          _purchaseEpisode(context, season, ep);
+        } else if (!isSeasonPurchased && season.price > 0) {
+          _purchaseSeason(context, season);
         }
       },
       child: Container(
@@ -2106,7 +2518,9 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "Ep. ${ep.episodeNumber} • ${ep.runtime} min",
+                          AppLocalizations.of(context)!.detailsEpisodeRuntime(
+                              ep.episodeNumber,
+                              _formatRuntimeToHms(ep.runtime)),
                           style: TextStyle(
                             fontSize: 12,
                             color: theme.canvasColor.withOpacity(0.7),
@@ -2127,7 +2541,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                   ),
 
                   /// 🔐 PRICE BUTTON (if locked)
-                  if (!canPlay)
+                  if (!canPlay && showEpisodePurchaseOption)
                     Padding(
                       padding: const EdgeInsets.only(left: 8),
                       child: ElevatedButton(
@@ -2142,31 +2556,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        onPressed: () async {
-                          _trailerController.pause?.call();
-                          final result = await Navigator.push<bool>(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => SeriesBillingPage(
-                                seriesId: widget.seriesId,
-                                episodeId: ep.episodeId,
-                                amount: ep.price.toDouble(),
-                                isSeason: false,
-                                seriesTitle: widget.content.title,
-                                itemTitle: ep.title,
-                                rentalDuration: widget.content.rentlDuration,
-                              ),
-                            ),
-                          );
-
-                          if (result == true && mounted) {
-                            CustomToast.show(
-                              context,
-                              "Episode unlocked! Enjoy watching 🎬",
-                              isSuccess: true,
-                            );
-                          }
-                        },
+                        onPressed: () => _purchaseEpisode(context, season, ep),
                         child: Text(
                           "₹${ep.price}",
                           style: const TextStyle(
@@ -2235,10 +2625,33 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                   : 'N/A',
               titleStyle,
               contentStyle),
-          _buildTableRow(lang.runtime, "${movie.runtime ?? 0} min", titleStyle,
-              contentStyle),
-          _buildTableRow(lang.price, movie.price?.toString() ?? 'N/A',
+          _buildTableRow(lang.runtime, _formatRuntimeToHms(movie.runtime),
               titleStyle, contentStyle),
+          () {
+            final seasons = context.read<SeriesProvider>().series?.seasons;
+            final selectedSeason =
+                (seasons != null && _selectedSeasonIndex < seasons.length)
+                    ? seasons[_selectedSeasonIndex]
+                    : (seasons != null && seasons.isNotEmpty
+                        ? seasons.first
+                        : null);
+            final double? seasonPrice =
+                selectedSeason?.price != null && selectedSeason!.price > 0
+                    ? selectedSeason.price.toDouble()
+                    : null;
+            final num? effectivePrice =
+                (movie.price != null && movie.price! > 0)
+                    ? movie.price
+                    : seasonPrice;
+            final String priceString = effectivePrice != null &&
+                    effectivePrice > 0
+                ? '₹${effectivePrice.toStringAsFixed(effectivePrice.truncateToDouble() == effectivePrice ? 0 : 2)}'
+                : (movie.price != null && movie.price! > 0
+                    ? '₹${movie.price}'
+                    : (movie.price?.toString() ?? 'N/A'));
+            return _buildTableRow(
+                lang.price, priceString, titleStyle, contentStyle);
+          }(),
           _buildTableRow(
               lang.rentDuration,
               movie.rentlDuration?.toString() ?? 'N/A',
@@ -2249,11 +2662,16 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
               movie.mediaHouseName?.toString() ?? 'N/A',
               titleStyle,
               contentStyle),
-          _buildTableRow(lang.releaseDate, movie.releaseDate ?? 'N/A',
-              titleStyle, contentStyle),
+          _buildTableRow(
+              lang.releaseDate,
+              formatReleaseDate(movie.releaseDate).isNotEmpty
+                  ? formatReleaseDate(movie.releaseDate)
+                  : (movie.releaseDate?.toString() ?? 'N/A'),
+              titleStyle,
+              contentStyle),
           _buildTableRow(
               lang.languages,
-              (movie.languageList!.map((e) => e.language)).join(', '),
+              (movie.languageList?.map((e) => e.language) ?? []).join(', '),
               titleStyle,
               contentStyle),
           _buildTableRow(
@@ -2287,6 +2705,10 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   }
 
   Widget _buildRatingAndReviewsSection(BuildContext context, Content content) {
+    final seriesProvider = context.watch<SeriesProvider>();
+    if (!_isPaidUser(seriesProvider)) {
+      return const SizedBox.shrink();
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -2304,12 +2726,12 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
     return Consumer<VideoProvider>(
       builder: (context, provider, child) => Column(
         children: [
-          const Text(
-            "Rate your experience",
+          Text(
+            AppLocalizations.of(context)!.detailsRateYourExperience,
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 18,
-              color: Colors.white,
+              color: Theme.of(context).canvasColor,
             ),
           ),
           StarRating(
@@ -2318,21 +2740,10 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 setState(() => provider.rating = rating),
           ),
           const SizedBox(height: 7),
-          Container(
-            height: 90,
-            margin: const EdgeInsets.all(10.0),
-            padding: const EdgeInsets.only(bottom: 16.0),
-            child: TextField(
-              maxLines: 9,
-              textCapitalization: TextCapitalization.sentences,
-              inputFormatters: [CapitalizeSentencesTextInputFormatter()],
-              style: const TextStyle(color: Colors.white),
-              controller: provider.reviewController,
-              decoration: const InputDecoration(
-                hintText: "Your Feedback!",
-                border: OutlineInputBorder(),
-              ),
-            ),
+          ReviewInputField(
+            controller: provider.reviewController,
+            hintText: AppLocalizations.of(context)!.detailsYourFeedback,
+            inputFormatters: [CapitalizeSentencesTextInputFormatter()],
           ),
           const SizedBox(height: 7),
           ElevatedButton(
@@ -2346,7 +2757,8 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
             onPressed: () async {
               final contentId = content.id ?? widget.seriesId;
               if (provider.rating == 0) {
-                CustomToast.show(context, "Please select rating..",
+                CustomToast.show(context,
+                    AppLocalizations.of(context)!.detailsPleaseSelectRating,
                     isSuccess: false);
                 return;
               }
@@ -2360,7 +2772,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                   context,
                   message != null && message.isNotEmpty
                       ? message
-                      : "something went wrong to submit review",
+                      : AppLocalizations.of(context)!.detailsReviewSubmitFailed,
                   isSuccess: false,
                 );
                 return;
@@ -2370,15 +2782,15 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 context,
                 message != null && message.isNotEmpty
                     ? message
-                    : 'review submitted successfully',
+                    : AppLocalizations.of(context)!.detailsReviewSubmitted,
                 isSuccess: true,
               );
               await context.read<VideoProvider>().getRatingReview(contentId);
             },
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8.0),
-              child:
-                  Text("Submit Review", style: TextStyle(color: Colors.white)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(AppLocalizations.of(context)!.detailsSubmitReview,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ),
         ],
@@ -2407,7 +2819,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                 DateFormat('yyyy-MM-dd HH:mm:ss').format(date);
             final username = provider.reviewList[index].username;
             final displayName = username == null || username == "null null"
-                ? "Anonymous User"
+                ? AppLocalizations.of(context)!.detailsAnonymousUser
                 : username;
 
             return Container(
@@ -2436,10 +2848,10 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                       Expanded(
                         child: Text(
                           displayName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
-                            color: Colors.white,
+                            color: Theme.of(context).canvasColor,
                           ),
                         ),
                       ),
@@ -2453,10 +2865,10 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                       Flexible(
                         child: Text(
                           formattedDate,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.normal,
                             fontSize: 12,
-                            color: Colors.white,
+                            color: Theme.of(context).canvasColor,
                           ),
                         ),
                       ),
@@ -2465,10 +2877,10 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
                   const SizedBox(height: 10),
                   Text(
                     provider.reviewList[index].title.toString(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.normal,
                       fontSize: 12,
-                      color: Colors.white,
+                      color: Theme.of(context).canvasColor,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -2485,6 +2897,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
   // ---------------- GALLERY ----------------
 
   Widget _buildGallery(Content content) {
+    if (!showGallerySection) return const SizedBox.shrink();
     final theme = Theme.of(context);
     final posters = content.posterUrlList ?? [];
     final teaserUrl = _galleryVideoUrl(content);
@@ -2497,7 +2910,7 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Gallery",
+          AppLocalizations.of(context)!.detailsGallery,
           style: TextStyle(
             color: theme.primaryColor,
             fontSize: 18,
@@ -2564,6 +2977,51 @@ class _SeriesDetailsPageState extends State<SeriesDetailsPage> {
 
     return content.trailerUrl?.trim() ?? '';
   }
+
+  /// Formats episode or movie runtime to hh:mm:ss format.
+  /// Handles minutes (standard Filmytell convention), seconds, and formatted strings.
+  static String _formatRuntimeToHms(dynamic rawRuntime) {
+    if (rawRuntime == null) return "00:00:00";
+    final str = rawRuntime.toString().trim();
+    if (str.isEmpty || str == "0") return "00:00:00";
+
+    // If already in hh:mm:ss format (e.g. 01:23:45 or 1:23:45)
+    final parts = str.split(':');
+    if (parts.length == 3 && parts.every((p) => int.tryParse(p) != null)) {
+      final h = int.parse(parts[0]).toString().padLeft(2, '0');
+      final m = int.parse(parts[1]).toString().padLeft(2, '0');
+      final s = int.parse(parts[2]).toString().padLeft(2, '0');
+      return "$h:$m:$s";
+    }
+
+    // If in mm:ss format (e.g. 45:30)
+    if (parts.length == 2 && parts.every((p) => int.tryParse(p) != null)) {
+      final totalMin = int.parse(parts[0]);
+      final s = int.parse(parts[1]).toString().padLeft(2, '0');
+      final h = (totalMin ~/ 60).toString().padLeft(2, '0');
+      final m = (totalMin % 60).toString().padLeft(2, '0');
+      return "$h:$m:$s";
+    }
+
+    // Parse numeric value (handles e.g. "45 min", "45", 45)
+    final cleaned = str.replaceAll(RegExp(r'[^0-9.]'), '');
+    final numVal = num.tryParse(cleaned);
+    if (numVal == null || numVal <= 0) return "00:00:00";
+
+    int totalSeconds;
+    // In Filmytell, episode/movie runtime is stored in minutes (e.g., 30, 45, 120).
+    // If a value is unusually large (> 360, i.e. > 6 hours), it is passed in seconds.
+    if (numVal > 360) {
+      totalSeconds = numVal.toInt();
+    } else {
+      totalSeconds = (numVal * 60).round();
+    }
+
+    final h = (totalSeconds ~/ 3600).toString().padLeft(2, '0');
+    final m = ((totalSeconds % 3600) ~/ 60).toString().padLeft(2, '0');
+    final s = (totalSeconds % 60).toString().padLeft(2, '0');
+    return "$h:$m:$s";
+  }
 }
 
 class _ResumeEpisode {
@@ -2596,7 +3054,6 @@ class _TvFocusableScaleState extends State<_TvFocusableScale> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return FocusableActionDetector(
       enabled: widget.onPressed != null,
       mouseCursor: widget.onPressed == null
@@ -2637,4 +3094,11 @@ class _TvFocusableScaleState extends State<_TvFocusableScale> {
       ),
     );
   }
+}
+
+class _ParsedCastCrew {
+  final List<CastMember> cast;
+  final List<CastMember> crew;
+
+  const _ParsedCastCrew(this.cast, this.crew);
 }
