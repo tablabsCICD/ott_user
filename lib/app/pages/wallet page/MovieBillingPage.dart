@@ -25,6 +25,7 @@ import '../../provider/themeProvider.dart';
 import '../../provider/dashboardProvider.dart';
 import '../../widgets/show_toast.dart';
 import 'package:ott/app/widgets/filmytell_app_bar.dart';
+import 'package:ott/app/core/utils/movie_wallet_purchase_log.dart';
 
 class MovieBillingPage extends StatefulWidget {
   final Content movie;
@@ -88,11 +89,13 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
             : 16.0;
 
     moviePrice = double.tryParse(widget.movie.price.toString()) ?? 0.0;
-    final effectivePrice = _appliedCoupon != null
+    // Coupons apply only to individual purchases (giftCount == 0); gifts are
+    // charged at full price per gift.
+    final effectivePrice = _appliedCoupon != null && widget.giftCount == 0
         ? _appliedCoupon!.finalPayableAmount
         : moviePrice;
     final totalCoins =
-        moviePrice * (widget.giftCount == 0 ? 1 : widget.giftCount);
+        effectivePrice * (widget.giftCount == 0 ? 1 : widget.giftCount);
     // Split the localized sentence around the title so it can be highlighted.
     const titleMarker = '\u0001';
     final giftCardPromptParts =
@@ -505,6 +508,20 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
 
                               try {
                                 await provider.getBalance();
+                                MovieWalletPurchaseLog.context(
+                                  movieId: widget.movie.id,
+                                  originalAmount: moviePrice *
+                                      (giftCount == 0 ? 1 : giftCount),
+                                  couponCode: giftCount == 0
+                                      ? _appliedCoupon?.couponCode
+                                      : null,
+                                  discountAmount: giftCount == 0
+                                      ? _appliedCoupon?.discountAmount
+                                      : null,
+                                  finalAmount: coins,
+                                  walletBalance: provider.walletBalance,
+                                  giftCount: giftCount,
+                                );
                                 if (provider.walletBalance < coins) {
                                   throw Exception(
                                     lang.walletInsufficientBalanceRecharge,

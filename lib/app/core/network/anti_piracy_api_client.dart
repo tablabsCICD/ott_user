@@ -321,7 +321,9 @@ class AntiPiracyApiClient {
             normalizedKey == 'sessionid' ||
             normalizedKey == 'cloudfrontpolicy' ||
             normalizedKey == 'cloudfrontsignature' ||
-            normalizedKey == 'cloudfrontkeypairid';
+            normalizedKey == 'cloudfrontkeypairid' ||
+            normalizedKey.contains('cookie') ||
+            normalizedKey == 'email';
         return MapEntry(
           key,
           sensitive ? '<redacted>' : _redactSensitiveFields(rawValue),

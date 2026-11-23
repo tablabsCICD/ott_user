@@ -12,6 +12,8 @@ import 'package:ott/app/core/services/session_manager.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
+import 'package:ott/app/core/constant/feature_flags.dart';
+import 'package:ott/app/pages/shorts%20page/component/mini_series_commerce_sheets.dart';
 import 'package:ott/app/provider/secure_playback_controller.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
@@ -25,6 +27,7 @@ import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:video_player/video_player.dart' as native_video;
 
 String _resolveShortPlaybackCountryCode() {
   final countryCode =
@@ -46,8 +49,14 @@ class ShortsPlayerPage extends StatefulWidget {
 
 class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     with WidgetsBindingObserver {
+  // media_kit player: used on web/desktop, and as a fallback on mobile.
   Player? _controller;
   VideoController? _videoController;
+  // Native (ExoPlayer / AVPlayer) player: preferred on Android and iOS, the
+  // same as the movie player. media_kit on mobile falls back to software
+  // rendering on emulators and does not reliably forward CloudFront cookies
+  // to HLS child playlists/segments.
+  native_video.VideoPlayerController? _nativeController;
   SecurePlaybackController? _securePlaybackController;
   final List<StreamSubscription<dynamic>> _playerSubscriptions = [];
   final PageController _pageController = PageController();
@@ -62,6 +71,98 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
   bool _handlingSecureAuthenticationFailure = false;
 
   int get totalParts => _parts.length;
+
+  /// Backend flag: the user owns the whole mini series through a claimed gift.
+  bool _hasFullSeriesGiftAccess = false;
+
+  /// A part plays without payment when it is a free preview, purchased, or
+  /// covered by full-series gift access. All three come from the backend.
+  bool _isPartAccessible(ShortPart part) =>
+      part.isFreePreview || part.isPurchased || _hasFullSeriesGiftAccess;
+
+  bool get _useNativePlayer =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
+  bool get _hasPlayer => _nativeController != null || _controller != null;
+
+  bool get _isPlaying =>
+      _nativeController?.value.isPlaying ??
+      _controller?.state.playing ??
+      false;
+
+  Duration get _position =>
+      _nativeController?.value.position ??
+      _controller?.state.position ??
+      Duration.zero;
+
+  Duration get _duration =>
+      _nativeController?.value.duration ??
+      _controller?.state.duration ??
+      Duration.zero;
+
+  Future<void> _play() async {
+    final native = _nativeController;
+    if (native != null) return native.play();
+    await _controller?.play();
+  }
+
+  Future<void> _pause() async {
+    final native = _nativeController;
+    if (native != null) return native.pause();
+    await _controller?.pause();
+  }
+
+  Future<void> _seekTo(Duration position) async {
+    final native = _nativeController;
+    if (native != null) return native.seekTo(position);
+    await _controller?.seek(position);
+  }
+
+  /// Stops and releases whichever player is currently active.
+  Future<void> _disposeActivePlayer() async {
+    final oldMediaKit = _controller;
+    final oldNative = _nativeController;
+    _controller = null;
+    _videoController = null;
+    _nativeController = null;
+    for (final subscription in _playerSubscriptions) {
+      await subscription.cancel();
+    }
+    _playerSubscriptions.clear();
+    oldNative?.removeListener(_onNativePlayerChanged);
+    await oldNative?.pause();
+    await oldNative?.dispose();
+    await oldMediaKit?.pause();
+    await oldMediaKit?.dispose();
+  }
+
+  bool _lastNativePlaying = false;
+  String _lastNativeError = '';
+
+  void _onNativePlayerChanged() {
+    final controller = _nativeController;
+    if (controller == null) return;
+    final value = controller.value;
+    if (value.isPlaying != _lastNativePlaying) {
+      _lastNativePlaying = value.isPlaying;
+      _securePlaybackController?.onPlayingChanged(value.isPlaying);
+    }
+    final error = value.errorDescription ?? '';
+    if (value.hasError && error != _lastNativeError) {
+      _lastNativeError = error;
+      SecurityDebugLog.event('PLAYER', 'Mini Series native player error.');
+      if (error.contains('403') && _securePlaybackController != null) {
+        unawaited(_securePlaybackController!.handlePlayerHttp403());
+      } else if (mounted) {
+        _hasVideoError = true;
+        _videoErrorMessage =
+            AppLocalizations.of(context)!.playerFailedToLoadVideo;
+      }
+    }
+    if (mounted) setState(() {});
+  }
   int? _parsePartId(ShortPart part) => int.tryParse(part.partId);
 
   @override
@@ -84,6 +185,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
     setState(() {
       _parts = List.from(detail.parts);
+      _hasFullSeriesGiftAccess = detail.hasFullSeriesGiftAccess;
     });
 
     await _loadPart(0);
@@ -98,11 +200,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       unawaited(secureController.stop());
       secureController.dispose();
     }
-    for (final subscription in _playerSubscriptions) {
-      unawaited(subscription.cancel());
-    }
-    _playerSubscriptions.clear();
-    _controller?.dispose();
+    unawaited(_disposeActivePlayer());
     _pageController.dispose();
     super.dispose();
   }
@@ -112,7 +210,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      unawaited(_controller?.pause());
+      unawaited(_pause());
     }
   }
 
@@ -130,6 +228,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
     setState(() {
       _parts = List.from(detail.parts);
+      _hasFullSeriesGiftAccess = detail.hasFullSeriesGiftAccess;
     });
   }
 
@@ -179,17 +278,10 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         await oldSecureController.stop();
         oldSecureController.dispose();
       }
-      final old = _controller;
-      _controller = null;
-      _videoController = null;
-      for (final subscription in _playerSubscriptions) {
-        await subscription.cancel();
-      }
-      _playerSubscriptions.clear();
-      await old?.pause();
-      await old?.dispose();
+      await _disposeActivePlayer();
+      if (mounted) setState(() {});
 
-      if (!part.isFreePreview && !part.isPurchased) {
+      if (!_isPartAccessible(part)) {
         final partId = _parsePartId(part);
         if (partId == null) {
           if (mounted) {
@@ -223,7 +315,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       }
 
       final updated = _parts[index];
-      if (!updated.isFreePreview && !updated.isPurchased) return;
+      if (!_isPartAccessible(updated)) return;
 
       if (updated.videoUrl.trim().isEmpty) {
         if (mounted) {
@@ -241,7 +333,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
           originalPlaybackUrl: updated.videoUrl,
           country: _resolveShortPlaybackCountryCode(),
           mediaLoader: _loadSecureMedia,
-          pausePlayer: () async => _controller?.pause(),
+          pausePlayer: _pause,
           type: "SHORT_PART");
       _securePlaybackController = secureController;
       secureController.addListener(_onSecurePlaybackChanged);
@@ -292,11 +384,13 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     SignedPlaybackResponse authorization, {
     required bool isRefresh,
   }) async {
-    final previousState = _controller?.state;
-    final position = previousState?.position ?? Duration.zero;
-    final wasPlaying = previousState?.playing ?? true;
-    final volume = previousState?.volume ?? 100;
-    final rate = previousState?.rate ?? 1;
+    final hadPlayer = _hasPlayer;
+    final position = _position;
+    final wasPlaying = hadPlayer ? _isPlaying : true;
+    final volume = _controller?.state.volume ?? 100;
+    final rate = _controller?.state.rate ??
+        _nativeController?.value.playbackSpeed ??
+        1;
 
     if (authorization.audioTracks.length > 1 ||
         authorization.subtitleTracks.length > 1) {
@@ -306,18 +400,54 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       );
     }
 
-    final old = _controller;
-    _controller = null;
-    _videoController = null;
-    for (final subscription in _playerSubscriptions) {
-      await subscription.cancel();
-    }
-    _playerSubscriptions.clear();
-    await old?.pause();
-    await old?.dispose();
+    await _disposeActivePlayer();
 
-    final player = Player();
+    if (_useNativePlayer) {
+      final nativeResult = await _loadNativeMedia(
+        authorization,
+        isRefresh: isRefresh,
+        position: position,
+        wasPlaying: wasPlaying,
+        rate: rate,
+      );
+      if (nativeResult != null) return nativeResult;
+      // Native initialization failed: fall through to media_kit.
+    }
+
+    final player = Player(
+      configuration: const PlayerConfiguration(
+        protocolWhitelist: [
+          'udp',
+          'rtp',
+          'tcp',
+          'tls',
+          'data',
+          'file',
+          'http',
+          'https',
+          'crypto',
+        ],
+      ),
+    );
     final videoController = VideoController(player);
+    // Media.httpHeaders alone is not always applied to HLS child playlists
+    // and segments, so also set libmpv's header option (same as the movie
+    // player). Without it, CloudFront signed-cookie segments return 403.
+    if (!kIsWeb && authorization.httpHeaders.isNotEmpty) {
+      try {
+        await (player.platform as dynamic).setProperty(
+          'http-header-fields',
+          authorization.httpHeaders.entries
+              .map((entry) => '${entry.key}: ${entry.value}')
+              .join('\n'),
+        );
+      } catch (_) {
+        SecurityDebugLog.event(
+          'PLAYER',
+          'Native header configuration skipped for platform compatibility.',
+        );
+      }
+    }
     _playerSubscriptions
       ..add(player.stream.position.listen((_) {
         if (mounted) setState(() {});
@@ -404,6 +534,57 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       _videoErrorMessage = null;
     });
     return SecureMediaRestoreResult(isPlaying: player.state.playing);
+  }
+
+  /// Opens the signed part with the platform's native player. Returns null if
+  /// initialization fails so the caller can fall back to media_kit.
+  Future<SecureMediaRestoreResult?> _loadNativeMedia(
+    SignedPlaybackResponse authorization, {
+    required bool isRefresh,
+    required Duration position,
+    required bool wasPlaying,
+    required double rate,
+  }) async {
+    final controller = native_video.VideoPlayerController.networkUrl(
+      Uri.parse(authorization.urlToPlay),
+      httpHeaders: Map<String, String>.unmodifiable(authorization.httpHeaders),
+      videoPlayerOptions: native_video.VideoPlayerOptions(mixWithOthers: false),
+    );
+    try {
+      await controller.initialize();
+    } catch (_) {
+      SecurityDebugLog.event(
+        'PLAYER',
+        'Mini Series native player failed to initialize; falling back to media_kit.',
+      );
+      await controller.dispose();
+      if (!mounted) throw StateError('Mini Series player was disposed');
+      return null;
+    }
+
+    if (!mounted) {
+      await controller.dispose();
+      throw StateError('Mini Series player was disposed');
+    }
+
+    await controller.setLooping(false);
+    await controller.setVolume(1);
+    if (isRefresh) {
+      if (position > Duration.zero) await controller.seekTo(position);
+      await controller.setPlaybackSpeed(rate);
+    }
+
+    _lastNativePlaying = false;
+    _lastNativeError = '';
+    controller.addListener(_onNativePlayerChanged);
+    setState(() {
+      _nativeController = controller;
+      _hasVideoError = false;
+      _videoErrorMessage = null;
+    });
+
+    if (!isRefresh || wasPlaying) await controller.play();
+    return SecureMediaRestoreResult(isPlaying: controller.value.isPlaying);
   }
 
   Future<void> _changePage(int index) async {
@@ -516,16 +697,35 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         ),
       );
     }
+    final videoFit = MediaQuery.of(context).orientation == Orientation.landscape
+        ? BoxFit.contain
+        : BoxFit.cover;
+
+    final native = _nativeController;
+    if (native != null && native.value.isInitialized) {
+      final size = native.value.size;
+      return Positioned.fill(
+        child: ColoredBox(
+          color: Colors.black,
+          child: FittedBox(
+            fit: videoFit,
+            clipBehavior: Clip.hardEdge,
+            child: SizedBox(
+              width: size.width > 0 ? size.width : 1,
+              height: size.height > 0 ? size.height : 1,
+              child: native_video.VideoPlayer(native),
+            ),
+          ),
+        ),
+      );
+    }
+
     if (controller == null || videoController == null) {
       return const ShimmerLoader(
         height: double.infinity,
         width: double.infinity,
       );
     }
-
-    final videoFit = MediaQuery.of(context).orientation == Orientation.landscape
-        ? BoxFit.contain
-        : BoxFit.cover;
 
     return Positioned.fill(
       child: Video(
@@ -737,8 +937,8 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         ),
         _rightButtons(index),
         _bottomEpisodeBar(),
-        if (_controller != null)
-          _controller!.state.playing
+        if (_hasPlayer)
+          _isPlaying
               ? SizedBox()
               : Center(
                   child: Icon(
@@ -792,11 +992,60 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
               AppLocalizations.of(context)!.shortsShareAction, () {
             _shareShortContent(context);
           }),
+          if (FeatureFlags.miniSeriesCommerce) ...[
+            const SizedBox(height: 18),
+            _actionBtn(
+              Icons.lock_open_rounded,
+              AppLocalizations.of(context)!.miniSeriesBuyAllAction,
+              _openFullPurchaseSheet,
+            ),
+            const SizedBox(height: 18),
+            _actionBtn(
+              Icons.card_giftcard_rounded,
+              AppLocalizations.of(context)!.cardGift,
+              _openGiftSheet,
+            ),
+          ],
           //const SizedBox(height: 18),
           // _actionBtn(Icons.visibility_outlined, "${part.views}", null),
         ],
       ),
     );
+  }
+
+  Future<void> _openFullPurchaseSheet() async {
+    final wasPlaying = _isPlaying;
+    await _pause();
+    if (!mounted) return;
+    final purchased = await showMiniSeriesFullPurchaseSheet(
+      context,
+      shortId: widget.short.id,
+      title: widget.short.title,
+    );
+    if (!mounted) return;
+    if (purchased) {
+      // Ownership comes from the backend: reload parts so purchased parts
+      // play without asking for payment.
+      await _refreshFromBackend();
+      if (!mounted) return;
+      if (!_hasPlayer && !_isLoadingPart) {
+        await _loadPart(_currentIndex);
+        return;
+      }
+    }
+    if (wasPlaying) await _play();
+  }
+
+  Future<void> _openGiftSheet() async {
+    final wasPlaying = _isPlaying;
+    await _pause();
+    if (!mounted) return;
+    await showMiniSeriesGiftSheet(
+      context,
+      shortId: widget.short.id,
+      title: widget.short.title,
+    );
+    if (mounted && wasPlaying) await _play();
   }
 
   Widget _actionBtn(
@@ -935,10 +1184,9 @@ ${short.durationSec ?? ''}
   }
 
   Widget _videoProgressBar() {
-    final controller = _controller;
-    if (controller == null) return const SizedBox.shrink();
+    if (!_hasPlayer) return const SizedBox.shrink();
 
-    final duration = controller.state.duration.inMilliseconds;
+    final duration = _duration.inMilliseconds;
     if (duration <= 0) {
       return const SizedBox.shrink();
     }
@@ -958,13 +1206,11 @@ ${short.durationSec ?? ''}
           child: Slider(
             min: 0,
             max: duration.toDouble(),
-            value: controller.state.position.inMilliseconds
-                .clamp(0, duration)
-                .toDouble(),
+            value: _position.inMilliseconds.clamp(0, duration).toDouble(),
             activeColor: theme.primaryColor,
             inactiveColor: Colors.white24,
             onChanged: (value) {
-              controller.seek(Duration(milliseconds: value.round()));
+              unawaited(_seekTo(Duration(milliseconds: value.round())));
             },
           ),
         ),
@@ -973,19 +1219,17 @@ ${short.durationSec ?? ''}
   }
 
   void _togglePlayPause() {
-    final controller = _controller;
-    if (controller == null) return;
-    controller.state.playing ? controller.pause() : controller.play();
+    if (!_hasPlayer) return;
+    unawaited(_isPlaying ? _pause() : _play());
   }
 
   void _seekBy(Duration offset) {
-    final controller = _controller;
-    if (controller == null) return;
+    if (!_hasPlayer) return;
     unawaited(
-      controller.seek(
+      _seekTo(
         boundedSeekPosition(
-          position: controller.state.position,
-          duration: controller.state.duration,
+          position: _position,
+          duration: _duration,
           offset: offset,
         ),
       ),
@@ -993,8 +1237,7 @@ ${short.durationSec ?? ''}
   }
 
   Future<void> _handleDoubleTapLike() async {
-    final controller = _controller;
-    if (controller == null || _parts.isEmpty) {
+    if (!_hasPlayer || _parts.isEmpty) {
       return;
     }
 
@@ -1066,7 +1309,7 @@ ${short.durationSec ?? ''}
                         ),
                       ),
                     ),
-                    if (!part.isPurchased && !part.isFreePreview)
+                    if (!_isPartAccessible(part))
                       const Positioned(
                           right: 4, top: 4, child: Icon(Icons.lock, size: 14)),
                   ],
@@ -1085,7 +1328,7 @@ ${short.durationSec ?? ''}
       left: 12,
       child: InkWell(
         onTap: () {
-          _controller?.pause();
+          unawaited(_pause());
           Navigator.pop(context);
         },
         child: const CircleAvatar(

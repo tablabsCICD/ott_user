@@ -58,6 +58,9 @@ class GiftDeepLinkService {
       return false;
     }
 
+    // Mini Series gift codes: MSG- followed by 32 characters (36 total).
+    if (RegExp(r'^MSG-[A-Za-z0-9]{32}$').hasMatch(trimmed)) return true;
+
     // Must be alphanumeric with optional hyphen/underscore, length between 6 and 32
     final isAlphanumeric = RegExp(r'^[A-Za-z0-9_-]{6,32}$').hasMatch(trimmed);
     return isAlphanumeric;
@@ -198,6 +201,14 @@ class GiftDeepLinkService {
       final captured = Uri.decodeComponent(keyMatch.group(1) ?? '').trim();
       final normalized = normalizeGiftCode(captured);
       if (normalized != null) return normalized;
+    }
+
+    final miniSeriesMatch = RegExp(
+      r'\bMSG-[A-Z0-9]{32}\b',
+      caseSensitive: false,
+    ).firstMatch(trimmed);
+    if (miniSeriesMatch != null) {
+      return normalizeGiftCode(miniSeriesMatch.group(0));
     }
 
     final codePatternMatch = RegExp(

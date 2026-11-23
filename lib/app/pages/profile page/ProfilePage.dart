@@ -1,3 +1,5 @@
+import 'package:ott/app/core/constant/feature_flags.dart';
+import 'package:ott/app/pages/shorts%20page/component/mini_series_gifts_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -315,6 +317,17 @@ class _ProfilePageState extends State<ProfilePage> {
                                     const WatchlistPage.giftedToYou(),
                                   ),
                                 ),
+                                // Mini Series gifts use their own APIs
+                                // (single-use codes); hidden with the flag.
+                                if (FeatureFlags.miniSeriesCommerce)
+                                  ProfileOption(
+                                    icon: Icons.redeem_rounded,
+                                    title: lang.miniSeriesGiftsTitle,
+                                    onTap: () => _openDetail(
+                                      lang.miniSeriesGiftsTitle,
+                                      const MiniSeriesGiftsPage(),
+                                    ),
+                                  ),
                               ],
                             ),
                             profileCard(

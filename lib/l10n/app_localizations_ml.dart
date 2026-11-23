@@ -1126,7 +1126,7 @@ class AppLocalizationsMl extends AppLocalizations {
   String get shortsTrending => 'ട്രെൻഡിംഗ്';
 
   @override
-  String shortsPricePerPartWithLanguages(int coins, String languages) {
+  String shortsPricePerPartWithLanguages(String coins, String languages) {
     return '₹ $coins /ഭാഗം | $languages';
   }
 
@@ -2148,7 +2148,7 @@ class AppLocalizationsMl extends AppLocalizations {
   String get giftEnterGiftCardNumber => 'ഗിഫ്റ്റ് കാർഡ് നമ്പർ നൽകുക';
 
   @override
-  String get giftEnter16DigitNumber => '16 അക്ക നമ്പർ നൽകുക';
+  String get giftEnter16DigitNumber => 'ഗിഫ്റ്റ് കാർഡ് നമ്പർ നൽകുക';
 
   @override
   String get giftRedeem => 'റിഡീം ചെയ്യുക';
@@ -2952,4 +2952,218 @@ class AppLocalizationsMl extends AppLocalizations {
   @override
   String get giftedToYouEmptyMessage =>
       'നിങ്ങൾക്ക് സമ്മാനമായി ലഭിച്ച സിനിമകളും ഉള്ളടക്കവും ഇവിടെ കാണാം.';
+
+  @override
+  String get miniSeriesBuyFull => 'Buy Full Mini Series';
+
+  @override
+  String get miniSeriesBuyAllAction => 'Buy all';
+
+  @override
+  String get miniSeriesGiftTitle => 'Gift Mini Series';
+
+  @override
+  String get miniSeriesGiftHowMany =>
+      'How many people do you want to gift this Mini Series to?';
+
+  @override
+  String miniSeriesTotalParts(int count) {
+    return 'Total parts: $count';
+  }
+
+  @override
+  String miniSeriesPurchasableParts(int count) {
+    return 'Parts to buy: $count';
+  }
+
+  @override
+  String miniSeriesOwnedParts(int count) {
+    return 'Already owned: $count';
+  }
+
+  @override
+  String miniSeriesFreeParts(int count) {
+    return 'Free parts: $count';
+  }
+
+  @override
+  String miniSeriesPartLabel(int number) {
+    return 'Part $number';
+  }
+
+  @override
+  String get miniSeriesPartOwned => 'Owned';
+
+  @override
+  String get miniSeriesPartFree => 'Free';
+
+  @override
+  String miniSeriesFullPrice(String amount) {
+    return 'Full Mini Series price: ₹ $amount';
+  }
+
+  @override
+  String get miniSeriesAlreadyOwned =>
+      'You already own every part of this Mini Series.';
+
+  @override
+  String get miniSeriesFullNotAvailable =>
+      'Full purchase isn\'t available for this Mini Series.';
+
+  @override
+  String get miniSeriesPriceChanged =>
+      'The price has changed. Please review the new price and try again.';
+
+  @override
+  String get miniSeriesPurchaseSuccess =>
+      'Mini Series purchased. All parts are unlocked.';
+
+  @override
+  String miniSeriesGiftPricePerGift(String amount) {
+    return 'Price per gift: ₹ $amount';
+  }
+
+  @override
+  String miniSeriesGiftCountRange(int min, int max) {
+    return 'Enter a number between $min and $max.';
+  }
+
+  @override
+  String miniSeriesGiftCountMin(int min) {
+    return 'Enter a number of at least $min.';
+  }
+
+  @override
+  String get miniSeriesGiftNotAvailable =>
+      'Gifting isn\'t available for this Mini Series.';
+
+  @override
+  String get miniSeriesGiftSuccess => 'Gift purchased successfully.';
+
+  @override
+  String get miniSeriesGiftCodesTitle => 'Your gift codes';
+
+  @override
+  String get miniSeriesGiftCodesHint =>
+      'Each code can be claimed once, by one person. Share a different code with each recipient.';
+
+  @override
+  String miniSeriesGiftCodeStatus(String status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String miniSeriesGiftCodeExpiry(String date) {
+    return 'കാലാവധി: $date';
+  }
+
+  @override
+  String miniSeriesGiftTransaction(String id) {
+    return 'Transaction ID: $id';
+  }
+
+  @override
+  String miniSeriesGiftTotalPaid(String amount) {
+    return 'Total paid: ₹ $amount';
+  }
+
+  @override
+  String get miniSeriesGiftReplayNote =>
+      'This purchase was already completed. Showing your original gift codes; you were not charged again.';
+
+  @override
+  String miniSeriesGiftShareText(String title, String code) {
+    return 'Filmytell-ൽ ഞാൻ നിങ്ങൾക്ക് \"$title\" സമ്മാനിച്ചിരിക്കുന്നു! ഈ ഗിഫ്റ്റ് കോഡ് ഉപയോഗിച്ച് ക്ലെയിം ചെയ്യുക: $code';
+  }
+
+  @override
+  String get miniSeriesGiftUnavailable =>
+      'This Mini Series is not available for gifting.';
+
+  @override
+  String get miniSeriesGiftConflict =>
+      'This payment attempt changed. Please review the details and tap Confirm & Pay again.';
+
+  @override
+  String miniSeriesGiftInsufficientBalance(String required, String available) {
+    return 'Insufficient wallet balance. Required: ₹ $required, available: ₹ $available.';
+  }
+
+  @override
+  String get miniSeriesGiftsTitle => 'മിനി സീരീസ് സമ്മാനങ്ങൾ';
+
+  @override
+  String get miniSeriesGiftsSentTab => 'അയച്ച സമ്മാനങ്ങൾ';
+
+  @override
+  String get miniSeriesGiftsReceivedTab => 'ലഭിച്ച സമ്മാനങ്ങൾ';
+
+  @override
+  String get miniSeriesGiftsSentEmpty =>
+      'നിങ്ങൾ ഇതുവരെ മിനി സീരീസ് സമ്മാനങ്ങളൊന്നും അയച്ചിട്ടില്ല.';
+
+  @override
+  String get miniSeriesGiftsReceivedEmpty =>
+      'നിങ്ങൾക്ക് ഇതുവരെ മിനി സീരീസ് സമ്മാനങ്ങളൊന്നും ലഭിച്ചിട്ടില്ല.';
+
+  @override
+  String miniSeriesGiftPurchasedOn(String date) {
+    return 'വാങ്ങിയത്: $date';
+  }
+
+  @override
+  String miniSeriesGiftClaimedOn(String date) {
+    return 'ക്ലെയിം ചെയ്തത്: $date';
+  }
+
+  @override
+  String miniSeriesGiftPrice(String amount) {
+    return 'സമ്മാന വില: ₹ $amount';
+  }
+
+  @override
+  String get miniSeriesGiftsSentSubtitle =>
+      'പങ്കിടാൻ നിങ്ങൾ വാങ്ങിയ ഗിഫ്റ്റ് കോഡുകൾ. ഓരോ കോഡും ഒരാൾക്ക് ഒരിക്കൽ മാത്രം ക്ലെയിം ചെയ്യാം.';
+
+  @override
+  String get miniSeriesGiftsReceivedSubtitle =>
+      'നിങ്ങൾ ക്ലെയിം ചെയ്ത മിനി സീരീസ് സമ്മാനങ്ങൾ. ഗിഫ്റ്റ് കോഡ് ഉണ്ടോ? ഇവിടെ ക്ലെയിം ചെയ്യുക.';
+
+  @override
+  String get miniSeriesGiftClaimAction => 'ഗിഫ്റ്റ് കോഡ് ക്ലെയിം ചെയ്യുക';
+
+  @override
+  String get miniSeriesGiftStatusAvailable => 'ലഭ്യമാണ്';
+
+  @override
+  String get miniSeriesGiftStatusClaimed => 'ക്ലെയിം ചെയ്തു';
+
+  @override
+  String get miniSeriesGiftStatusExpired => 'കാലഹരണപ്പെട്ടു';
+
+  @override
+  String miniSeriesPricePerPart(String coins) {
+    return '₹ $coins/ഭാഗം';
+  }
+
+  @override
+  String get miniSeriesGiftClaimGift => 'സമ്മാനം ക്ലെയിം ചെയ്യുക';
+
+  @override
+  String miniSeriesGiftedBy(String name) {
+    return 'സമ്മാനിച്ചത്: $name';
+  }
+
+  @override
+  String get miniSeriesGiftSenderFallback => 'ഒരു സുഹൃത്ത്';
+
+  @override
+  String miniSeriesGiftCodeExpiryDate(String date) {
+    return 'ഗിഫ്റ്റ് കോഡ് കാലാവധി തീയതി: $date';
+  }
+
+  @override
+  String miniSeriesGiftAccessValidUntil(String date) {
+    return 'ആക്സസ് സാധുത: $date വരെ';
+  }
 }

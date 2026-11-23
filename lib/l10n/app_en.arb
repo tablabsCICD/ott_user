@@ -433,7 +433,7 @@
   "@shortsPricePerPartWithLanguages": {
     "placeholders": {
       "coins": {
-        "type": "int"
+        "type": "String"
       },
       "languages": {
         "type": "String"
@@ -1006,8 +1006,8 @@
   "billingInvoice": "Invoice",
   "billingAvailable": "Available",
   "billingNotAvailable": "Not available",
-  "giftEnterGiftCardNumber": "Enter Gift Card Number",
-  "giftEnter16DigitNumber": "Enter 16 Digit Number",
+  "giftEnterGiftCardNumber": "Enter gift card number",
+  "giftEnter16DigitNumber": "Enter gift card number",
   "giftRedeem": "Redeem",
   "giftCopiedText": "Copied: {text}",
   "@giftCopiedText": {
@@ -1385,5 +1385,211 @@
   "routeInvalidMovieLink": "The shared movie link is invalid or incomplete.",
   "giftedToYou": "Gifted To You",
   "giftedToYouEmptyTitle": "No Gifts Yet",
-  "giftedToYouEmptyMessage": "Movies and content gifted to you will appear here."
+  "giftedToYouEmptyMessage": "Movies and content gifted to you will appear here.",
+  "miniSeriesBuyFull": "Buy Full Mini Series",
+  "miniSeriesBuyAllAction": "Buy all",
+  "miniSeriesGiftTitle": "Gift Mini Series",
+  "miniSeriesGiftHowMany": "How many people do you want to gift this Mini Series to?",
+  "miniSeriesTotalParts": "Total parts: {count}",
+  "@miniSeriesTotalParts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "miniSeriesPurchasableParts": "Parts to buy: {count}",
+  "@miniSeriesPurchasableParts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "miniSeriesOwnedParts": "Already owned: {count}",
+  "@miniSeriesOwnedParts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "miniSeriesFreeParts": "Free parts: {count}",
+  "@miniSeriesFreeParts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "miniSeriesPartLabel": "Part {number}",
+  "@miniSeriesPartLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "miniSeriesPartOwned": "Owned",
+  "miniSeriesPartFree": "Free",
+  "miniSeriesFullPrice": "Full Mini Series price: ₹ {amount}",
+  "@miniSeriesFullPrice": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesAlreadyOwned": "You already own every part of this Mini Series.",
+  "miniSeriesFullNotAvailable": "Full purchase isn't available for this Mini Series.",
+  "miniSeriesPriceChanged": "The price has changed. Please review the new price and try again.",
+  "miniSeriesPurchaseSuccess": "Mini Series purchased. All parts are unlocked.",
+  "miniSeriesGiftPricePerGift": "Price per gift: ₹ {amount}",
+  "@miniSeriesGiftPricePerGift": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftCountRange": "Enter a number between {min} and {max}.",
+  "@miniSeriesGiftCountRange": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "miniSeriesGiftCountMin": "Enter a number of at least {min}.",
+  "@miniSeriesGiftCountMin": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "miniSeriesGiftNotAvailable": "Gifting isn't available for this Mini Series.",
+  "miniSeriesGiftSuccess": "Gift purchased successfully.",
+  "miniSeriesGiftCodesTitle": "Your gift codes",
+  "miniSeriesGiftCodesHint": "Each code can be claimed once, by one person. Share a different code with each recipient.",
+  "miniSeriesGiftCodeStatus": "Status: {status}",
+  "@miniSeriesGiftCodeStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftCodeExpiry": "Expires: {date}",
+  "@miniSeriesGiftCodeExpiry": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftTransaction": "Transaction ID: {id}",
+  "@miniSeriesGiftTransaction": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftTotalPaid": "Total paid: ₹ {amount}",
+  "@miniSeriesGiftTotalPaid": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftReplayNote": "This purchase was already completed. Showing your original gift codes; you were not charged again.",
+  "miniSeriesGiftShareText": "I've gifted you \"{title}\" on Filmytell! Claim it with gift code: {code}",
+  "@miniSeriesGiftShareText": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftUnavailable": "This Mini Series is not available for gifting.",
+  "miniSeriesGiftConflict": "This payment attempt changed. Please review the details and tap Confirm & Pay again.",
+  "miniSeriesGiftInsufficientBalance": "Insufficient wallet balance. Required: ₹ {required}, available: ₹ {available}.",
+  "@miniSeriesGiftInsufficientBalance": {
+    "placeholders": {
+      "required": {"type": "String"},
+      "available": {"type": "String"}
+    }
+  },
+  "miniSeriesGiftsTitle": "Mini Series Gifts",
+  "miniSeriesGiftsSentTab": "Sent Gifts",
+  "miniSeriesGiftsReceivedTab": "Received Gifts",
+  "miniSeriesGiftsSentEmpty": "You haven't sent any Mini Series gifts yet.",
+  "miniSeriesGiftsReceivedEmpty": "You haven't received any Mini Series gifts yet.",
+  "miniSeriesGiftPurchasedOn": "Purchased: {date}",
+  "@miniSeriesGiftPurchasedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftClaimedOn": "Claimed: {date}",
+  "@miniSeriesGiftClaimedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftPrice": "Gift price: ₹ {amount}",
+  "@miniSeriesGiftPrice": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftsSentSubtitle": "Gift codes you bought to share. Each code can be claimed once, by one person.",
+  "miniSeriesGiftsReceivedSubtitle": "Mini Series gifts you have claimed. Have a gift code? Claim it here.",
+  "miniSeriesGiftClaimAction": "Claim a gift code",
+  "miniSeriesGiftStatusAvailable": "Available",
+  "miniSeriesGiftStatusClaimed": "Claimed",
+  "miniSeriesGiftStatusExpired": "Expired",
+  "miniSeriesPricePerPart": "₹ {coins}/part",
+  "@miniSeriesPricePerPart": {
+    "placeholders": {
+      "coins": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftClaimGift": "Claim Gift",
+  "miniSeriesGiftedBy": "Gifted by: {name}",
+  "@miniSeriesGiftedBy": {
+    "description": "Received gift sender. Not shown until the API returns a sender name.",
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "miniSeriesGiftSenderFallback": "A friend",
+  "miniSeriesGiftCodeExpiryDate": "Gift code expiry date: {date}",
+  "@miniSeriesGiftCodeExpiryDate": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "miniSeriesGiftAccessValidUntil": "Access valid until: {date}",
+  "@miniSeriesGiftAccessValidUntil": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  }
 }

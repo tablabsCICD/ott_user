@@ -8,6 +8,7 @@ import 'package:ott/data/models/response/walletHistory.dart';
 import 'package:ott/data/models/response/withdrawAmountResponse.dart';
 import 'package:ott/data/models/user.dart';
 import 'package:ott/app/core/utils/app_l10n.dart';
+import 'package:ott/app/core/utils/movie_wallet_purchase_log.dart';
 
 class WalletService {
   WalletService({
@@ -65,8 +66,32 @@ class WalletService {
       throw Exception('User not found');
     }
 
-    final response = await _apiHelper.postApi(
-      ApiConstant.withdrawMoneyFromWallet(user!.id!, amount, contentId),
+    final url =
+        ApiConstant.withdrawMoneyFromWallet(user!.id!, amount, contentId);
+    final stopwatch = Stopwatch()..start();
+    MovieWalletPurchaseLog.request(
+      step: 'WALLET_DEDUCT',
+      method: 'POST',
+      url: url,
+      headers: await _apiHelper.headersForDiagnostics(),
+    );
+    final dynamic response;
+    try {
+      response = await _apiHelper.postApi(url);
+    } catch (error, stackTrace) {
+      MovieWalletPurchaseLog.exception(
+        step: 'WALLET_DEDUCT',
+        error: error,
+        stackTrace: stackTrace,
+        elapsed: stopwatch.elapsed,
+      );
+      rethrow;
+    }
+    MovieWalletPurchaseLog.response(
+      step: 'WALLET_DEDUCT',
+      statusCode: response.statusCode as int,
+      body: response.body.toString(),
+      elapsed: stopwatch.elapsed,
     );
     if (response.statusCode != 200) {
       throw Exception('Failed to deduct wallet amount');

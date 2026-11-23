@@ -1,5 +1,25 @@
 import 'package:ott/data/models/content.dart';
 
+// The backend may send numbers as int (20), double (20.0) or text ("20").
+// A strict `as int` / int field assignment throws on 20.0 and fails the whole
+// mini series list, so every number goes through these helpers.
+int _toInt(dynamic value, [int fallback = 0]) => _toIntOrNull(value) ?? fallback;
+
+int? _toIntOrNull(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) {
+    return int.tryParse(value) ?? double.tryParse(value)?.toInt();
+  }
+  return null;
+}
+
+double _toDouble(dynamic value) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0;
+  return 0;
+}
+
 class MiniSeriesPage {
   final List<ShortModel> content;
   final int page;
@@ -21,10 +41,10 @@ class MiniSeriesPage {
           .whereType<Map<String, dynamic>>()
           .map(ShortModel.fromJson)
           .toList(),
-      page: json['number'] as int? ?? json['page'] as int? ?? 0,
-      size: json['size'] as int? ?? rawContent.length,
-      totalPages: json['totalPages'] as int? ?? 0,
-      totalElements: json['totalElements'] as int? ?? rawContent.length,
+      page: _toIntOrNull(json['number']) ?? _toInt(json['page']),
+      size: _toIntOrNull(json['size']) ?? rawContent.length,
+      totalPages: _toInt(json['totalPages']),
+      totalElements: _toIntOrNull(json['totalElements']) ?? rawContent.length,
     );
   }
 }
@@ -35,7 +55,7 @@ class ShortModel {
   final String description;
   final String posterUrl;
   final int totalParts;
-  final int coinsPerPart;
+  final double coinsPerPart;
   final String creatorName;
   final int viewCount;
   final int likeCount;
@@ -64,18 +84,18 @@ class ShortModel {
 
   factory ShortModel.fromJson(Map<String, dynamic> json) {
     return ShortModel(
-      id: json["id"] ?? 0,
+      id: _toInt(json["id"]),
       title: json["title"] ?? "",
       description: json["description"] ?? "",
       posterUrl: json["posterUrl"] ?? "",
-      totalParts: json["totalParts"] ?? 0,
-      coinsPerPart: json["coinsPerPart"] ?? 0,
+      totalParts: _toInt(json["totalParts"]),
+      coinsPerPart: _toDouble(json["coinsPerPart"]),
       creatorName: json["creatorName"] ?? "",
-      viewCount: json["viewCount"] ?? 0,
-      likeCount: json["likeCount"] ?? 0,
+      viewCount: _toInt(json["viewCount"]),
+      likeCount: _toInt(json["likeCount"]),
       isTrending: json["isTrending"] ?? false,
       category: json["category"] ?? "",
-      mediaHouseId: json["mediaHouseId"],
+      mediaHouseId: _toIntOrNull(json["mediaHouseId"]),
       rentlDuration: json["rentlDuration"] ?? "",
       languageList: (json["languageList"] as List? ?? [])
           .map((e) => LanguageList.fromJson(e))
@@ -90,7 +110,7 @@ class ShortDetailModel {
   final String description;
   final String poster;
   final int totalParts;
-  final int coinsPerPart;
+  final double coinsPerPart;
   final String creatorName;
   final int viewCount;
   final int likeCount;
@@ -98,6 +118,10 @@ class ShortDetailModel {
   final String category;
   final List<dynamic> tags;
   final List<ShortPart> parts;
+
+  /// True when the user owns the whole mini series through a claimed gift.
+  /// Backend-provided; every non-free part is then playable without payment.
+  final bool hasFullSeriesGiftAccess;
 
   ShortDetailModel({
     required this.id,
@@ -113,25 +137,27 @@ class ShortDetailModel {
     required this.category,
     required this.tags,
     required this.parts,
+    this.hasFullSeriesGiftAccess = false,
   });
 
   factory ShortDetailModel.fromJson(Map<String, dynamic> json) {
     return ShortDetailModel(
-      id: json["id"] ?? 0,
+      id: _toInt(json["id"]),
       title: json["title"] ?? "",
       description: json["description"] ?? "",
       poster: json["poster"] ?? "",
-      totalParts: json["totalParts"] ?? 0,
-      coinsPerPart: json["coinsPerPart"] ?? 0,
+      totalParts: _toInt(json["totalParts"]),
+      coinsPerPart: _toDouble(json["coinsPerPart"]),
       creatorName: json["creatorName"] ?? "",
-      viewCount: json["viewCount"] ?? 0,
-      likeCount: json["likeCount"] ?? 0,
+      viewCount: _toInt(json["viewCount"]),
+      likeCount: _toInt(json["likeCount"]),
       isTrending: json["isTrending"] ?? false,
       category: json["category"] ?? "",
       tags: json["tags"] ?? [],
       parts: (json["parts"] as List? ?? [])
           .map((e) => ShortPart.fromJson(e))
           .toList(),
+      hasFullSeriesGiftAccess: json["hasFullSeriesGiftAccess"] == true,
     );
   }
 }
@@ -140,7 +166,7 @@ class ShortPart {
   final String partId;
   final int partNumber;
   final String title;
-  final int coins;
+  final double coins;
   bool isLocked;
   bool isPurchased;
   final String videoUrl;
@@ -174,16 +200,16 @@ class ShortPart {
   factory ShortPart.fromJson(Map<String, dynamic> json) {
     return ShortPart(
       partId: json["partId"].toString(),
-      partNumber: json["partNumber"] ?? 0,
+      partNumber: _toInt(json["partNumber"]),
       title: json["title"] ?? "",
-      coins: json["coins"] ?? 0,
+      coins: _toDouble(json["coins"]),
       isLocked: json["isLocked"] ?? json["locked"] ?? false,
       isPurchased: json["isPurchased"] ?? json["purchased"] ?? false,
       videoUrl: json["videoUrl"] ?? "",
       thumbnail: json["thumbnail"] ?? "",
-      durationSec: json["durationSec"] ?? 0,
-      views: json["views"] ?? 0,
-      likes: json["likes"] ?? 0,
+      durationSec: _toInt(json["durationSec"]),
+      views: _toInt(json["views"]),
+      likes: _toInt(json["likes"]),
       nextPartId: json["nextPartId"]?.toString(),
       autoPlayNext: json["autoPlayNext"] ?? false,
       isFreePreview: json["isFreePreview"] ?? json["freePreview"] ?? false,

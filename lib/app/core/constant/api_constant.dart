@@ -1,8 +1,8 @@
 class ApiConstant {
   static const String baseUrl = "https://filmytell.com/ott/";
 
-  //static const String baseUrl =
-  //  "http://ec2-13-201-27-141.ap-south-1.compute.amazonaws.com:8080/ott/";
+  // static const String baseUrl =
+  //     "http://ec2-13-201-27-141.ap-south-1.compute.amazonaws.com:8080/ott/";
 
   static String legacyLogin = "${baseUrl}user/email/login2";
   static String sessionLogout = "${baseUrl}auth/session/logout";
@@ -233,6 +233,35 @@ class ApiConstant {
     };
     return "${baseUrl}api/shortsMaster/purchaseShort?${Uri(queryParameters: query).query}";
   }
+
+  // Mini series gifting / full purchase — real backend endpoints, taken from
+  // the server's /v2/api-docs (present on the EC2 server, not yet on
+  // production). The user is identified by the JWT; no userId parameter.
+  // Request/response field names are not published in the spec yet.
+  // Only used when FeatureFlags.miniSeriesCommerce is on.
+  static String miniSeriesFullPurchaseDetails(dynamic id) =>
+      "${baseUrl}api/mini-series/$id/full-purchase-details";
+
+  /// GET; data: giftUnitPrice, minQuantity, maxQuantity.
+  static String miniSeriesGiftDetails(dynamic id) =>
+      "${baseUrl}api/mini-series/$id/gift-details";
+  static String miniSeriesPurchaseStatus(dynamic id) =>
+      "${baseUrl}api/mini-series/$id/purchase-status";
+
+  /// POST; optional `Idempotency-Key` header; body fields unconfirmed.
+  static String miniSeriesPurchaseFull(dynamic id) =>
+      "${baseUrl}api/mini-series/$id/purchase-full";
+
+  /// POST; body fields unconfirmed.
+  static String miniSeriesGiftPurchase =
+      "${baseUrl}api/mini-series/gift/purchase";
+
+  /// POST; body fields unconfirmed.
+  static String miniSeriesGiftClaim = "${baseUrl}api/mini-series/gift/claim";
+  static String miniSeriesGiftHistory =
+      "${baseUrl}api/mini-series/gift/history";
+  static String miniSeriesGiftReceived =
+      "${baseUrl}api/mini-series/gift/received";
 
   //series
   static String seriesDetails(seriesId, userId) =>

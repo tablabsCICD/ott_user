@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:ott/app/core/utils/mini_series_api_log.dart';
 import 'dart:convert';
 import 'dart:developer';
 import 'package:http/http.dart' as http;
@@ -50,6 +52,9 @@ class ShortProvider extends BaseProvider {
       notifyListeners();
 
       final sections = <ShortsSectionData>[];
+      if (kDebugMode) {
+        debugPrint('[MINI_SERIES_LIBRARY] Loading languages: $effectiveLanguages');
+      }
 
       for (final lang in effectiveLanguages) {
         final latest = await getLatestMiniSeries(language: lang);
@@ -73,7 +78,11 @@ class ShortProvider extends BaseProvider {
 
       _shortSections = sections;
       shorts = sections.expand((row) => row.shorts).toList();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('[MINI_SERIES_LIBRARY] Load failed: ${e.runtimeType}: $e');
+        debugPrintStack(stackTrace: stackTrace, maxFrames: 6);
+      }
       _shortSections = [];
       shorts = [];
       errorMessage = appL10n().msgUnableToLoadMiniSeries;
@@ -112,6 +121,11 @@ class ShortProvider extends BaseProvider {
     // Mini Series dashboard endpoints are authenticated, just like Movies.
     // ApiHelper attaches the current bearer token and applies session handling.
     final response = await ApiHelper().getApi(url.toString());
+    if (kDebugMode) {
+      final raw = response.body.toString();
+      debugPrint('[MINI_SERIES_LIBRARY] GET $url -> ${response.statusCode} '
+          'body: ${raw.length > 600 ? '${raw.substring(0, 600)}...' : raw}');
+    }
 
     if (response.statusCode != 200) {
       throw http.ClientException(
@@ -125,7 +139,12 @@ class ShortProvider extends BaseProvider {
     if (data is! Map<String, dynamic>) {
       throw const FormatException('Mini Series response is missing page data');
     }
-    return MiniSeriesPage.fromJson(data);
+    final result = MiniSeriesPage.fromJson(data);
+    if (kDebugMode) {
+      debugPrint('[MINI_SERIES_LIBRARY] $type/$language: '
+          '${result.content.length} items (total ${result.totalElements})');
+    }
+    return result;
   }
 
   Future<void> fetchShortDetail(int id, int userId) async {
@@ -136,7 +155,36 @@ class ShortProvider extends BaseProvider {
       notifyListeners();
 
       final url = Uri.parse(ApiConstant.shortsDetails(id, userId));
-      final response = await ApiHelper().getApi(url.toString());
+      final apiHelper = ApiHelper();
+      final stopwatch = Stopwatch()..start();
+      // Debug-only logging; carries hasFullSeriesGiftAccess for gift access.
+      MiniSeriesApiLog.request(
+        apiName: MiniSeriesApiLog.detailRefresh,
+        method: 'GET',
+        url: url.toString(),
+        headers: await apiHelper.headersForDiagnostics(),
+      );
+      final dynamic response;
+      try {
+        response = await apiHelper.getApi(url.toString());
+      } catch (error, stackTrace) {
+        MiniSeriesApiLog.exception(
+          apiName: MiniSeriesApiLog.detailRefresh,
+          url: url.toString(),
+          error: error,
+          stackTrace: stackTrace,
+          elapsed: stopwatch.elapsed,
+        );
+        rethrow;
+      }
+      MiniSeriesApiLog.response(
+        apiName: MiniSeriesApiLog.detailRefresh,
+        url: url.toString(),
+        statusCode: response.statusCode as int,
+        body: response.body.toString(),
+        headers: Map<String, String>.from(response.headers as Map),
+        elapsed: stopwatch.elapsed,
+      );
       if (response.statusCode != 200) {
         throw http.ClientException(
           'Mini Series detail request failed (${response.statusCode})',

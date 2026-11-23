@@ -13,6 +13,11 @@ import 'package:ott/app/widgets/customtextfield.dart';
 import 'package:ott/app/widgets/show_toast.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
+import 'package:ott/app/core/services/mini_series_commerce_service.dart';
+import 'package:ott/app/core/utils/sharepreferences.dart';
+import 'package:ott/app/pages/shorts%20page/component/ShortsPlayerPage.dart';
+import 'package:ott/app/provider/shorts_provider.dart';
+import 'package:ott/data/models/mini_series_commerce_models.dart';
 import 'package:provider/provider.dart';
 
 Future<bool?> showGiftClaimDialog(
@@ -65,7 +70,8 @@ class _GiftClaimDialogState extends State<GiftClaimDialog> {
   }
 
   bool get _isCodeValid =>
-      isValidGiftCardCodeLength(_couponCodeController.text);
+      isValidGiftCardCodeLength(_couponCodeController.text) ||
+      isMiniSeriesGiftCode(_couponCodeController.text);
 
   @override
   void dispose() {
@@ -198,6 +204,13 @@ class _GiftClaimDialogState extends State<GiftClaimDialog> {
 
     final couponCode = _normalizeCouponCode(_couponCodeController.text);
 
+    // Mini Series gift codes (MSG- + 32 chars) use their own claim API; movie
+    // gift codes (exactly 16 characters) keep the existing flow below.
+    if (isMiniSeriesGiftCode(couponCode)) {
+      await _claimMiniSeriesGift(couponCode);
+      return;
+    }
+
     // Never call the API unless the code is exactly 16 characters.
     if (!isValidGiftCardCodeLength(couponCode)) return;
 
@@ -264,6 +277,50 @@ class _GiftClaimDialogState extends State<GiftClaimDialog> {
       if (mounted) {
         setState(() => _isClaiming = false);
       }
+    }
+  }
+
+  /// `POST api/mini-series/gift/claim`. Access is granted only after the
+  /// backend confirms (HTTP 2xx and `success: true`); then the claimed Mini
+  /// Series opens when the claim came from a gift link.
+  Future<void> _claimMiniSeriesGift(String giftCode) async {
+    setState(() => _isClaiming = true);
+    try {
+      final result = await MiniSeriesCommerceService().claimGift(giftCode);
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      if (result.success) {
+        await GiftDeepLinkService.instance.markGiftCodeClaimed(giftCode);
+        if (!mounted) return;
+        CustomToast.show(context, result.message, isSuccess: true);
+        final claim = MiniSeriesGiftClaimResult.fromJson(result.data);
+        final navigator = Navigator.of(context);
+        Navigator.pop(context, true);
+        if (widget.isFromDeepLink && claim.miniSeriesId != null) {
+          unawaited(openClaimedMiniSeries(navigator, claim.miniSeriesId!));
+        }
+        return;
+      }
+      // 409 "already claimed" and 410 "expired" can never succeed later, so
+      // stop offering this code from gift links on this device.
+      if (result.statusCode == 410 ||
+          (result.statusCode == 409 &&
+              result.message.toLowerCase().contains('claimed'))) {
+        await GiftDeepLinkService.instance.markGiftCodeClaimed(giftCode);
+        if (!mounted) return;
+      }
+      // Backend messages per Swagger: 403 own gift, 404 invalid code,
+      // 409 already claimed / unavailable, 410 expired.
+      CustomToast.show(
+        context,
+        result.message.isNotEmpty
+            ? result.message
+            : resolveClaimErrorMessage(
+                statusCode: result.statusCode, l10n: l10n),
+        isSuccess: false,
+      );
+    } finally {
+      if (mounted) setState(() => _isClaiming = false);
     }
   }
 }
@@ -347,6 +404,25 @@ String resolveClaimErrorMessage({
 /// exactly 16 characters long (empty, shorter or longer codes are rejected).
 bool isValidGiftCardCodeLength(String value) =>
     _normalizeCouponCode(value).length == 16;
+
+/// Mini Series gift code format (Swagger): `MSG-` followed by 32 characters.
+bool isMiniSeriesGiftCode(String value) =>
+    RegExp(r'^MSG-[A-Z0-9]{32}$').hasMatch(_normalizeCouponCode(value));
+
+/// Opens a Mini Series after a confirmed gift claim; the player reloads
+/// parts and ownership from the backend.
+Future<void> openClaimedMiniSeries(
+    NavigatorState navigator, int miniSeriesId) async {
+  final user = await LocalSharePreferences.localSharePreferences.getUser();
+  if (!navigator.mounted) return;
+  final provider = Provider.of<ShortProvider>(navigator.context, listen: false);
+  await provider.fetchShortDetail(miniSeriesId, user?.id ?? 1);
+  final detail = provider.shortDetail;
+  if (!navigator.mounted || detail == null || detail.id <= 0) return;
+  navigator.push(
+    MaterialPageRoute<void>(builder: (_) => ShortsPlayerPage(short: detail)),
+  );
+}
 
 String _normalizeCouponCode(String value) {
   return value.trim().replaceAll(' ', '').toUpperCase();

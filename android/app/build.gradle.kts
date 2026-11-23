@@ -63,11 +63,18 @@ android {
 
     buildTypes {
         release {
-            require(hasReleaseKeystore) {
+            // Only enforce release signing when a release build is actually
+            // requested, so debug/profile runs work without key.properties.
+            val isReleaseBuildRequested = gradle.startParameter.taskNames.any {
+                it.contains("Release", ignoreCase = true)
+            }
+            require(hasReleaseKeystore || !isReleaseBuildRequested) {
                 "Release signing configuration is missing or incomplete. Check android/key.properties."
             }
 
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.getByName("release")
+            }
 
             // ✅ Enabled R8 obfuscation & resource shrinking (generates mapping.txt)
             isMinifyEnabled = true
