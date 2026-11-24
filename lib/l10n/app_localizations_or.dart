@@ -3156,4 +3156,55 @@ class AppLocalizationsOr extends AppLocalizations {
   String miniSeriesGiftAccessValidUntil(String date) {
     return 'ଆକ୍ସେସ୍ ବୈଧ: $date ପର୍ଯ୍ୟନ୍ତ';
   }
+
+  @override
+  String get shortsEpisodesLabel => 'ଏପିସୋଡ୍';
+
+  @override
+  String get playerMuteSound => 'ଶବ୍ଦ ବନ୍ଦ କରନ୍ତୁ';
+
+  @override
+  String get playerUnmuteSound => 'ଶବ୍ଦ ଚାଲୁ କରନ୍ତୁ';
+
+  @override
+  String get downloadInvoice => 'ଇନଭଏସ୍ ଡାଉନଲୋଡ୍ କରନ୍ତୁ';
+
+  @override
+  String get downloadingInvoice => 'ଇନଭଏସ୍ ଡାଉନଲୋଡ୍ ହେଉଛି…';
+
+  @override
+  String get invoiceDownloadedSuccess => 'ଇନଭଏସ୍ ସଫଳତାର ସହ ଡାଉନଲୋଡ୍ ହେଲା';
+
+  @override
+  String get invoiceDownloadFailed => 'ଇନଭଏସ୍ ଡାଉନଲୋଡ୍ କରିହେଲା ନାହିଁ';
+
+  @override
+  String get invoiceOriginalAmount => 'ମୂଳ ରାଶି';
+
+  @override
+  String get invoiceDiscountLabel => 'ରିହାତି';
+
+  @override
+  String get invoiceCouponLabel => 'କୁପନ୍';
+
+  @override
+  String get invoicePurchaseDate => 'କ୍ରୟ ତାରିଖ';
+
+  @override
+  String get invoiceContentLabel => 'ବିଷୟବସ୍ତୁ';
+
+  @override
+  String get invoiceContentType => 'ବିଷୟବସ୍ତୁ ପ୍ରକାର';
+
+  @override
+  String purchaseGiftedToYouBy(String name) {
+    return 'ଏହି ବିଷୟବସ୍ତୁ ଆପଣଙ୍କୁ $name ଦ୍ୱାରା ଉପହାର ଦିଆଯାଇଛି। ତେଣୁ, ଇନଭଏସ୍ ଉପଲବ୍ଧ ନାହିଁ।';
+  }
+
+  @override
+  String get purchaseGiftInvoiceUnavailable =>
+      'ଏହି ବିଷୟବସ୍ତୁ ଆପଣଙ୍କୁ ଉପହାର ଭାବେ ଦିଆଯାଇଛି। ତେଣୁ, ଇନଭଏସ୍ ଉପଲବ୍ଧ ନାହିଁ।';
+
+  @override
+  String get purchaseNoExpiry => 'କୌଣସି ମିଆଦ ନାହିଁ';
 }

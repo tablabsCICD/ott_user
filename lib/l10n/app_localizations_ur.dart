@@ -3139,4 +3139,55 @@ class AppLocalizationsUr extends AppLocalizations {
   String miniSeriesGiftAccessValidUntil(String date) {
     return 'رسائی درست: $date تک';
   }
+
+  @override
+  String get shortsEpisodesLabel => 'اقساط';
+
+  @override
+  String get playerMuteSound => 'آواز بند کریں';
+
+  @override
+  String get playerUnmuteSound => 'آواز چالو کریں';
+
+  @override
+  String get downloadInvoice => 'انوائس ڈاؤن لوڈ کریں';
+
+  @override
+  String get downloadingInvoice => 'انوائس ڈاؤن لوڈ ہو رہی ہے…';
+
+  @override
+  String get invoiceDownloadedSuccess => 'انوائس کامیابی سے ڈاؤن لوڈ ہو گئی';
+
+  @override
+  String get invoiceDownloadFailed => 'انوائس ڈاؤن لوڈ نہیں ہو سکی';
+
+  @override
+  String get invoiceOriginalAmount => 'اصل رقم';
+
+  @override
+  String get invoiceDiscountLabel => 'رعایت';
+
+  @override
+  String get invoiceCouponLabel => 'کوپن';
+
+  @override
+  String get invoicePurchaseDate => 'خریداری کی تاریخ';
+
+  @override
+  String get invoiceContentLabel => 'مواد';
+
+  @override
+  String get invoiceContentType => 'مواد کی قسم';
+
+  @override
+  String purchaseGiftedToYouBy(String name) {
+    return 'یہ مواد آپ کو $name نے تحفے میں دیا ہے۔ اس لیے، انوائس دستیاب نہیں ہے۔';
+  }
+
+  @override
+  String get purchaseGiftInvoiceUnavailable =>
+      'یہ مواد آپ کو تحفے میں دیا گیا ہے۔ اس لیے، انوائس دستیاب نہیں ہے۔';
+
+  @override
+  String get purchaseNoExpiry => 'کوئی میعاد نہیں';
 }

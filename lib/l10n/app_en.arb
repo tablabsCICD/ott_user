@@ -1591,5 +1591,26 @@
     "placeholders": {
       "date": {"type": "String"}
     }
-  }
+  },
+  "shortsEpisodesLabel": "Episodes",
+  "playerMuteSound": "Mute",
+  "playerUnmuteSound": "Unmute",
+  "downloadInvoice": "Download Invoice",
+  "downloadingInvoice": "Downloading invoice…",
+  "invoiceDownloadedSuccess": "Invoice downloaded successfully",
+  "invoiceDownloadFailed": "Failed to download invoice",
+  "invoiceOriginalAmount": "Original amount",
+  "invoiceDiscountLabel": "Discount",
+  "invoiceCouponLabel": "Coupon",
+  "invoicePurchaseDate": "Purchase date",
+  "invoiceContentLabel": "Content",
+  "invoiceContentType": "Content type",
+  "purchaseGiftedToYouBy": "This content was gifted to you by {name}. Therefore, an invoice is not available.",
+  "@purchaseGiftedToYouBy": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "purchaseGiftInvoiceUnavailable": "This content was gifted to you. Therefore, an invoice is not available.",
+  "purchaseNoExpiry": "No expiry"
 }

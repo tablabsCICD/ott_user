@@ -3141,4 +3141,55 @@ class AppLocalizationsMr extends AppLocalizations {
   String miniSeriesGiftAccessValidUntil(String date) {
     return 'ॲक्सेस वैध: $date पर्यंत';
   }
+
+  @override
+  String get shortsEpisodesLabel => 'भाग';
+
+  @override
+  String get playerMuteSound => 'आवाज बंद करा';
+
+  @override
+  String get playerUnmuteSound => 'आवाज सुरू करा';
+
+  @override
+  String get downloadInvoice => 'इनव्हॉइस डाउनलोड करा';
+
+  @override
+  String get downloadingInvoice => 'इनव्हॉइस डाउनलोड होत आहे…';
+
+  @override
+  String get invoiceDownloadedSuccess => 'इनव्हॉइस यशस्वीरित्या डाउनलोड झाले';
+
+  @override
+  String get invoiceDownloadFailed => 'इनव्हॉइस डाउनलोड करता आले नाही';
+
+  @override
+  String get invoiceOriginalAmount => 'मूळ रक्कम';
+
+  @override
+  String get invoiceDiscountLabel => 'सवलत';
+
+  @override
+  String get invoiceCouponLabel => 'कूपन';
+
+  @override
+  String get invoicePurchaseDate => 'खरेदीची तारीख';
+
+  @override
+  String get invoiceContentLabel => 'कंटेंट';
+
+  @override
+  String get invoiceContentType => 'कंटेंट प्रकार';
+
+  @override
+  String purchaseGiftedToYouBy(String name) {
+    return 'हा कंटेंट तुम्हाला $name यांनी भेट दिला आहे. त्यामुळे, इनव्हॉइस उपलब्ध नाही.';
+  }
+
+  @override
+  String get purchaseGiftInvoiceUnavailable =>
+      'हा कंटेंट तुम्हाला भेट म्हणून मिळाला आहे. त्यामुळे, इनव्हॉइस उपलब्ध नाही.';
+
+  @override
+  String get purchaseNoExpiry => 'कालबाह्यता नाही';
 }

@@ -882,5 +882,21 @@
   "miniSeriesGiftedBy": "బహుమతి ఇచ్చినవారు: {name}",
   "miniSeriesGiftSenderFallback": "ఒక స్నేహితుడు",
   "miniSeriesGiftCodeExpiryDate": "గిఫ్ట్ కోడ్ గడువు తేదీ: {date}",
-  "miniSeriesGiftAccessValidUntil": "యాక్సెస్ చెల్లుబాటు: {date} వరకు"
+  "miniSeriesGiftAccessValidUntil": "యాక్సెస్ చెల్లుబాటు: {date} వరకు",
+  "shortsEpisodesLabel": "ఎపిసోడ్‌లు",
+  "playerMuteSound": "సౌండ్ ఆఫ్ చేయండి",
+  "playerUnmuteSound": "సౌండ్ ఆన్ చేయండి",
+  "downloadInvoice": "ఇన్‌వాయిస్ డౌన్‌లోడ్ చేయండి",
+  "downloadingInvoice": "ఇన్‌వాయిస్ డౌన్‌లోడ్ అవుతోంది…",
+  "invoiceDownloadedSuccess": "ఇన్‌వాయిస్ విజయవంతంగా డౌన్‌లోడ్ అయింది",
+  "invoiceDownloadFailed": "ఇన్‌వాయిస్ డౌన్‌లోడ్ చేయడం విఫలమైంది",
+  "invoiceOriginalAmount": "అసలు మొత్తం",
+  "invoiceDiscountLabel": "తగ్గింపు",
+  "invoiceCouponLabel": "కూపన్",
+  "invoicePurchaseDate": "కొనుగోలు తేదీ",
+  "invoiceContentLabel": "కంటెంట్",
+  "invoiceContentType": "కంటెంట్ రకం",
+  "purchaseGiftedToYouBy": "ఈ కంటెంట్‌ను మీకు {name} బహుమతిగా ఇచ్చారు. కాబట్టి, ఇన్‌వాయిస్ అందుబాటులో లేదు.",
+  "purchaseGiftInvoiceUnavailable": "ఈ కంటెంట్ మీకు బహుమతిగా ఇవ్వబడింది. కాబట్టి, ఇన్‌వాయిస్ అందుబాటులో లేదు.",
+  "purchaseNoExpiry": "గడువు లేదు"
 }

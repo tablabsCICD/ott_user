@@ -3174,4 +3174,56 @@ class AppLocalizationsTe extends AppLocalizations {
   String miniSeriesGiftAccessValidUntil(String date) {
     return 'యాక్సెస్ చెల్లుబాటు: $date వరకు';
   }
+
+  @override
+  String get shortsEpisodesLabel => 'ఎపిసోడ్‌లు';
+
+  @override
+  String get playerMuteSound => 'సౌండ్ ఆఫ్ చేయండి';
+
+  @override
+  String get playerUnmuteSound => 'సౌండ్ ఆన్ చేయండి';
+
+  @override
+  String get downloadInvoice => 'ఇన్‌వాయిస్ డౌన్‌లోడ్ చేయండి';
+
+  @override
+  String get downloadingInvoice => 'ఇన్‌వాయిస్ డౌన్‌లోడ్ అవుతోంది…';
+
+  @override
+  String get invoiceDownloadedSuccess =>
+      'ఇన్‌వాయిస్ విజయవంతంగా డౌన్‌లోడ్ అయింది';
+
+  @override
+  String get invoiceDownloadFailed => 'ఇన్‌వాయిస్ డౌన్‌లోడ్ చేయడం విఫలమైంది';
+
+  @override
+  String get invoiceOriginalAmount => 'అసలు మొత్తం';
+
+  @override
+  String get invoiceDiscountLabel => 'తగ్గింపు';
+
+  @override
+  String get invoiceCouponLabel => 'కూపన్';
+
+  @override
+  String get invoicePurchaseDate => 'కొనుగోలు తేదీ';
+
+  @override
+  String get invoiceContentLabel => 'కంటెంట్';
+
+  @override
+  String get invoiceContentType => 'కంటెంట్ రకం';
+
+  @override
+  String purchaseGiftedToYouBy(String name) {
+    return 'ఈ కంటెంట్‌ను మీకు $name బహుమతిగా ఇచ్చారు. కాబట్టి, ఇన్‌వాయిస్ అందుబాటులో లేదు.';
+  }
+
+  @override
+  String get purchaseGiftInvoiceUnavailable =>
+      'ఈ కంటెంట్ మీకు బహుమతిగా ఇవ్వబడింది. కాబట్టి, ఇన్‌వాయిస్ అందుబాటులో లేదు.';
+
+  @override
+  String get purchaseNoExpiry => 'గడువు లేదు';
 }

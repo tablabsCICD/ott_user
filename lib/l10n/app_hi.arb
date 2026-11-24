@@ -882,5 +882,21 @@
   "miniSeriesGiftedBy": "गिफ्ट देने वाले: {name}",
   "miniSeriesGiftSenderFallback": "एक दोस्त",
   "miniSeriesGiftCodeExpiryDate": "गिफ्ट कोड की समाप्ति तिथि: {date}",
-  "miniSeriesGiftAccessValidUntil": "एक्सेस मान्य: {date} तक"
+  "miniSeriesGiftAccessValidUntil": "एक्सेस मान्य: {date} तक",
+  "shortsEpisodesLabel": "एपिसोड",
+  "playerMuteSound": "आवाज़ बंद करें",
+  "playerUnmuteSound": "आवाज़ चालू करें",
+  "downloadInvoice": "इनवॉइस डाउनलोड करें",
+  "downloadingInvoice": "इनवॉइस डाउनलोड हो रहा है…",
+  "invoiceDownloadedSuccess": "इनवॉइस सफलतापूर्वक डाउनलोड हो गया",
+  "invoiceDownloadFailed": "इनवॉइस डाउनलोड नहीं हो सका",
+  "invoiceOriginalAmount": "मूल राशि",
+  "invoiceDiscountLabel": "छूट",
+  "invoiceCouponLabel": "कूपन",
+  "invoicePurchaseDate": "खरीद की तारीख",
+  "invoiceContentLabel": "कंटेंट",
+  "invoiceContentType": "कंटेंट प्रकार",
+  "purchaseGiftedToYouBy": "यह कंटेंट आपको {name} द्वारा उपहार में दिया गया है। इसलिए, इनवॉइस उपलब्ध नहीं है।",
+  "purchaseGiftInvoiceUnavailable": "यह कंटेंट आपको उपहार में दिया गया है। इसलिए, इनवॉइस उपलब्ध नहीं है।",
+  "purchaseNoExpiry": "कोई समाप्ति नहीं"
 }

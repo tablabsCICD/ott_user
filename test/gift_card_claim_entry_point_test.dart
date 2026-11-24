@@ -94,7 +94,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify Claim Gift Card dialog opens
-      expect(find.text('Enter Gift Card Number'), findsOneWidget);
+      expect(find.text('Enter gift card number'), findsWidgets); // label + identical hint
 
       // Verify coupon code is prefilled
       final textField = tester.widget<TextField>(find.byType(TextField));
@@ -128,7 +128,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify Claim Gift Card dialog opens
-      expect(find.text('Enter Gift Card Number'), findsOneWidget);
+      expect(find.text('Enter gift card number'), findsWidgets); // label + identical hint
 
       // Verify input field is NOT read-only (editable)
       final textField = tester.widget<TextField>(find.byType(TextField));
@@ -176,7 +176,7 @@ void main() {
       // 2. Close dialog without claiming
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
-      expect(find.text('Enter Gift Card Number'), findsNothing);
+      expect(find.text('Enter gift card number'), findsNothing);
 
       // 3. Open through Profile flow
       await tester.tap(find.text('Open From Profile'));

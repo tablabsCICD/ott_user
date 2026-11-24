@@ -882,5 +882,21 @@
   "miniSeriesGiftedBy": "উপহার দিয়েছেন: {name}",
   "miniSeriesGiftSenderFallback": "একজন বন্ধু",
   "miniSeriesGiftCodeExpiryDate": "গিফট কোডের মেয়াদ শেষের তারিখ: {date}",
-  "miniSeriesGiftAccessValidUntil": "অ্যাক্সেস বৈধ: {date} পর্যন্ত"
+  "miniSeriesGiftAccessValidUntil": "অ্যাক্সেস বৈধ: {date} পর্যন্ত",
+  "shortsEpisodesLabel": "পর্বসমূহ",
+  "playerMuteSound": "শব্দ বন্ধ করুন",
+  "playerUnmuteSound": "শব্দ চালু করুন",
+  "downloadInvoice": "ইনভয়েস ডাউনলোড করুন",
+  "downloadingInvoice": "ইনভয়েস ডাউনলোড হচ্ছে…",
+  "invoiceDownloadedSuccess": "ইনভয়েস সফলভাবে ডাউনলোড হয়েছে",
+  "invoiceDownloadFailed": "ইনভয়েস ডাউনলোড করা যায়নি",
+  "invoiceOriginalAmount": "মূল পরিমাণ",
+  "invoiceDiscountLabel": "ছাড়",
+  "invoiceCouponLabel": "কুপন",
+  "invoicePurchaseDate": "কেনার তারিখ",
+  "invoiceContentLabel": "কনটেন্ট",
+  "invoiceContentType": "কনটেন্টের ধরন",
+  "purchaseGiftedToYouBy": "এই কনটেন্টটি আপনাকে {name} উপহার দিয়েছেন। তাই, ইনভয়েস উপলব্ধ নেই।",
+  "purchaseGiftInvoiceUnavailable": "এই কনটেন্টটি আপনাকে উপহার হিসেবে দেওয়া হয়েছে। তাই, ইনভয়েস উপলব্ধ নেই।",
+  "purchaseNoExpiry": "কোনো মেয়াদ নেই"
 }

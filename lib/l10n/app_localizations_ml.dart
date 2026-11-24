@@ -3166,4 +3166,55 @@ class AppLocalizationsMl extends AppLocalizations {
   String miniSeriesGiftAccessValidUntil(String date) {
     return 'ആക്സസ് സാധുത: $date വരെ';
   }
+
+  @override
+  String get shortsEpisodesLabel => 'എപ്പിസോഡുകൾ';
+
+  @override
+  String get playerMuteSound => 'ശബ്ദം ഓഫ് ചെയ്യുക';
+
+  @override
+  String get playerUnmuteSound => 'ശബ്ദം ഓൺ ചെയ്യുക';
+
+  @override
+  String get downloadInvoice => 'ഇൻവോയ്സ് ഡൗൺലോഡ് ചെയ്യുക';
+
+  @override
+  String get downloadingInvoice => 'ഇൻവോയ്സ് ഡൗൺലോഡ് ചെയ്യുന്നു…';
+
+  @override
+  String get invoiceDownloadedSuccess => 'ഇൻവോയ്സ് വിജയകരമായി ഡൗൺലോഡ് ചെയ്തു';
+
+  @override
+  String get invoiceDownloadFailed => 'ഇൻവോയ്സ് ഡൗൺലോഡ് ചെയ്യാനായില്ല';
+
+  @override
+  String get invoiceOriginalAmount => 'യഥാർത്ഥ തുക';
+
+  @override
+  String get invoiceDiscountLabel => 'കിഴിവ്';
+
+  @override
+  String get invoiceCouponLabel => 'കൂപ്പൺ';
+
+  @override
+  String get invoicePurchaseDate => 'വാങ്ങിയ തീയതി';
+
+  @override
+  String get invoiceContentLabel => 'ഉള്ളടക്കം';
+
+  @override
+  String get invoiceContentType => 'ഉള്ളടക്ക തരം';
+
+  @override
+  String purchaseGiftedToYouBy(String name) {
+    return 'ഈ ഉള്ളടക്കം $name നിങ്ങൾക്ക് സമ്മാനമായി നൽകിയതാണ്. അതിനാൽ, ഇൻവോയ്സ് ലഭ്യമല്ല.';
+  }
+
+  @override
+  String get purchaseGiftInvoiceUnavailable =>
+      'ഈ ഉള്ളടക്കം നിങ്ങൾക്ക് സമ്മാനമായി ലഭിച്ചതാണ്. അതിനാൽ, ഇൻവോയ്സ് ലഭ്യമല്ല.';
+
+  @override
+  String get purchaseNoExpiry => 'കാലാവധിയില്ല';
 }

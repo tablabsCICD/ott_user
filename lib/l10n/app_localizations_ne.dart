@@ -3139,4 +3139,55 @@ class AppLocalizationsNe extends AppLocalizations {
   String miniSeriesGiftAccessValidUntil(String date) {
     return 'पहुँच मान्य: $date सम्म';
   }
+
+  @override
+  String get shortsEpisodesLabel => 'एपिसोडहरू';
+
+  @override
+  String get playerMuteSound => 'आवाज बन्द गर्नुहोस्';
+
+  @override
+  String get playerUnmuteSound => 'आवाज खोल्नुहोस्';
+
+  @override
+  String get downloadInvoice => 'इनभ्वाइस डाउनलोड गर्नुहोस्';
+
+  @override
+  String get downloadingInvoice => 'इनभ्वाइस डाउनलोड हुँदैछ…';
+
+  @override
+  String get invoiceDownloadedSuccess => 'इनभ्वाइस सफलतापूर्वक डाउनलोड भयो';
+
+  @override
+  String get invoiceDownloadFailed => 'इनभ्वाइस डाउनलोड गर्न सकिएन';
+
+  @override
+  String get invoiceOriginalAmount => 'मूल रकम';
+
+  @override
+  String get invoiceDiscountLabel => 'छुट';
+
+  @override
+  String get invoiceCouponLabel => 'कुपन';
+
+  @override
+  String get invoicePurchaseDate => 'खरिद मिति';
+
+  @override
+  String get invoiceContentLabel => 'सामग्री';
+
+  @override
+  String get invoiceContentType => 'सामग्रीको प्रकार';
+
+  @override
+  String purchaseGiftedToYouBy(String name) {
+    return 'यो सामग्री तपाईंलाई $nameले उपहारमा दिनुभएको हो। त्यसैले, इनभ्वाइस उपलब्ध छैन।';
+  }
+
+  @override
+  String get purchaseGiftInvoiceUnavailable =>
+      'यो सामग्री तपाईंलाई उपहारमा दिइएको हो। त्यसैले, इनभ्वाइस उपलब्ध छैन।';
+
+  @override
+  String get purchaseNoExpiry => 'कुनै म्याद छैन';
 }

@@ -882,5 +882,21 @@
   "miniSeriesGiftedBy": "സമ്മാനിച്ചത്: {name}",
   "miniSeriesGiftSenderFallback": "ഒരു സുഹൃത്ത്",
   "miniSeriesGiftCodeExpiryDate": "ഗിഫ്റ്റ് കോഡ് കാലാവധി തീയതി: {date}",
-  "miniSeriesGiftAccessValidUntil": "ആക്സസ് സാധുത: {date} വരെ"
+  "miniSeriesGiftAccessValidUntil": "ആക്സസ് സാധുത: {date} വരെ",
+  "shortsEpisodesLabel": "എപ്പിസോഡുകൾ",
+  "playerMuteSound": "ശബ്ദം ഓഫ് ചെയ്യുക",
+  "playerUnmuteSound": "ശബ്ദം ഓൺ ചെയ്യുക",
+  "downloadInvoice": "ഇൻവോയ്സ് ഡൗൺലോഡ് ചെയ്യുക",
+  "downloadingInvoice": "ഇൻവോയ്സ് ഡൗൺലോഡ് ചെയ്യുന്നു…",
+  "invoiceDownloadedSuccess": "ഇൻവോയ്സ് വിജയകരമായി ഡൗൺലോഡ് ചെയ്തു",
+  "invoiceDownloadFailed": "ഇൻവോയ്സ് ഡൗൺലോഡ് ചെയ്യാനായില്ല",
+  "invoiceOriginalAmount": "യഥാർത്ഥ തുക",
+  "invoiceDiscountLabel": "കിഴിവ്",
+  "invoiceCouponLabel": "കൂപ്പൺ",
+  "invoicePurchaseDate": "വാങ്ങിയ തീയതി",
+  "invoiceContentLabel": "ഉള്ളടക്കം",
+  "invoiceContentType": "ഉള്ളടക്ക തരം",
+  "purchaseGiftedToYouBy": "ഈ ഉള്ളടക്കം {name} നിങ്ങൾക്ക് സമ്മാനമായി നൽകിയതാണ്. അതിനാൽ, ഇൻവോയ്സ് ലഭ്യമല്ല.",
+  "purchaseGiftInvoiceUnavailable": "ഈ ഉള്ളടക്കം നിങ്ങൾക്ക് സമ്മാനമായി ലഭിച്ചതാണ്. അതിനാൽ, ഇൻവോയ്സ് ലഭ്യമല്ല.",
+  "purchaseNoExpiry": "കാലാവധിയില്ല"
 }

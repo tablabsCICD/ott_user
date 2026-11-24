@@ -85,6 +85,11 @@ class PurchaseHistoryItem {
 
   PurchaseStatus get status => PurchaseStatus.fromRaw(rawStatus);
 
+  /// Received as a gift. The purchase-history API marks gifts only through
+  /// `paymentMethod: "GIFT"` (verified for Movies and Mini Series); it has no
+  /// separate gift flag and no sender-name field.
+  bool get isGift => (paymentMethod ?? '').trim().toUpperCase() == 'GIFT';
+
   factory PurchaseHistoryItem.fromJson(Map<String, dynamic> json) {
     final contentJson = json['content'] ?? json['movie'] ?? json['item'];
     final invoiceJson = json['invoice'];

@@ -3141,4 +3141,55 @@ class AppLocalizationsBn extends AppLocalizations {
   String miniSeriesGiftAccessValidUntil(String date) {
     return 'অ্যাক্সেস বৈধ: $date পর্যন্ত';
   }
+
+  @override
+  String get shortsEpisodesLabel => 'পর্বসমূহ';
+
+  @override
+  String get playerMuteSound => 'শব্দ বন্ধ করুন';
+
+  @override
+  String get playerUnmuteSound => 'শব্দ চালু করুন';
+
+  @override
+  String get downloadInvoice => 'ইনভয়েস ডাউনলোড করুন';
+
+  @override
+  String get downloadingInvoice => 'ইনভয়েস ডাউনলোড হচ্ছে…';
+
+  @override
+  String get invoiceDownloadedSuccess => 'ইনভয়েস সফলভাবে ডাউনলোড হয়েছে';
+
+  @override
+  String get invoiceDownloadFailed => 'ইনভয়েস ডাউনলোড করা যায়নি';
+
+  @override
+  String get invoiceOriginalAmount => 'মূল পরিমাণ';
+
+  @override
+  String get invoiceDiscountLabel => 'ছাড়';
+
+  @override
+  String get invoiceCouponLabel => 'কুপন';
+
+  @override
+  String get invoicePurchaseDate => 'কেনার তারিখ';
+
+  @override
+  String get invoiceContentLabel => 'কনটেন্ট';
+
+  @override
+  String get invoiceContentType => 'কনটেন্টের ধরন';
+
+  @override
+  String purchaseGiftedToYouBy(String name) {
+    return 'এই কনটেন্টটি আপনাকে $name উপহার দিয়েছেন। তাই, ইনভয়েস উপলব্ধ নেই।';
+  }
+
+  @override
+  String get purchaseGiftInvoiceUnavailable =>
+      'এই কনটেন্টটি আপনাকে উপহার হিসেবে দেওয়া হয়েছে। তাই, ইনভয়েস উপলব্ধ নেই।';
+
+  @override
+  String get purchaseNoExpiry => 'কোনো মেয়াদ নেই';
 }

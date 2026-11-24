@@ -882,5 +882,21 @@
   "miniSeriesGiftedBy": "ಉಡುಗೊರೆ ನೀಡಿದವರು: {name}",
   "miniSeriesGiftSenderFallback": "ಒಬ್ಬ ಸ್ನೇಹಿತ",
   "miniSeriesGiftCodeExpiryDate": "ಗಿಫ್ಟ್ ಕೋಡ್ ಅವಧಿ ಮುಕ್ತಾಯ ದಿನಾಂಕ: {date}",
-  "miniSeriesGiftAccessValidUntil": "ಪ್ರವೇಶ ಮಾನ್ಯತೆ: {date} ವರೆಗೆ"
+  "miniSeriesGiftAccessValidUntil": "ಪ್ರವೇಶ ಮಾನ್ಯತೆ: {date} ವರೆಗೆ",
+  "shortsEpisodesLabel": "ಸಂಚಿಕೆಗಳು",
+  "playerMuteSound": "ಧ್ವನಿ ಆಫ್ ಮಾಡಿ",
+  "playerUnmuteSound": "ಧ್ವನಿ ಆನ್ ಮಾಡಿ",
+  "downloadInvoice": "ಇನ್‌ವಾಯ್ಸ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ",
+  "downloadingInvoice": "ಇನ್‌ವಾಯ್ಸ್ ಡೌನ್‌ಲೋಡ್ ಆಗುತ್ತಿದೆ…",
+  "invoiceDownloadedSuccess": "ಇನ್‌ವಾಯ್ಸ್ ಯಶಸ್ವಿಯಾಗಿ ಡೌನ್‌ಲೋಡ್ ಆಗಿದೆ",
+  "invoiceDownloadFailed": "ಇನ್‌ವಾಯ್ಸ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ",
+  "invoiceOriginalAmount": "ಮೂಲ ಮೊತ್ತ",
+  "invoiceDiscountLabel": "ರಿಯಾಯಿತಿ",
+  "invoiceCouponLabel": "ಕೂಪನ್",
+  "invoicePurchaseDate": "ಖರೀದಿ ದಿನಾಂಕ",
+  "invoiceContentLabel": "ವಿಷಯ",
+  "invoiceContentType": "ವಿಷಯದ ಪ್ರಕಾರ",
+  "purchaseGiftedToYouBy": "ಈ ವಿಷಯವನ್ನು ನಿಮಗೆ {name} ಅವರು ಉಡುಗೊರೆಯಾಗಿ ನೀಡಿದ್ದಾರೆ. ಆದ್ದರಿಂದ, ಇನ್‌ವಾಯ್ಸ್ ಲಭ್ಯವಿಲ್ಲ.",
+  "purchaseGiftInvoiceUnavailable": "ಈ ವಿಷಯವನ್ನು ನಿಮಗೆ ಉಡುಗೊರೆಯಾಗಿ ನೀಡಲಾಗಿದೆ. ಆದ್ದರಿಂದ, ಇನ್‌ವಾಯ್ಸ್ ಲಭ್ಯವಿಲ್ಲ.",
+  "purchaseNoExpiry": "ಅವಧಿ ಮುಕ್ತಾಯವಿಲ್ಲ"
 }

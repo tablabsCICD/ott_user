@@ -3132,4 +3132,55 @@ class AppLocalizationsGu extends AppLocalizations {
   String miniSeriesGiftAccessValidUntil(String date) {
     return 'ઍક્સેસ માન્ય: $date સુધી';
   }
+
+  @override
+  String get shortsEpisodesLabel => 'એપિસોડ';
+
+  @override
+  String get playerMuteSound => 'અવાજ બંધ કરો';
+
+  @override
+  String get playerUnmuteSound => 'અવાજ ચાલુ કરો';
+
+  @override
+  String get downloadInvoice => 'ઇન્વૉઇસ ડાઉનલોડ કરો';
+
+  @override
+  String get downloadingInvoice => 'ઇન્વૉઇસ ડાઉનલોડ થઈ રહ્યું છે…';
+
+  @override
+  String get invoiceDownloadedSuccess => 'ઇન્વૉઇસ સફળતાપૂર્વક ડાઉનલોડ થયું';
+
+  @override
+  String get invoiceDownloadFailed => 'ઇન્વૉઇસ ડાઉનલોડ કરી શકાયું નહીં';
+
+  @override
+  String get invoiceOriginalAmount => 'મૂળ રકમ';
+
+  @override
+  String get invoiceDiscountLabel => 'ડિસ્કાઉન્ટ';
+
+  @override
+  String get invoiceCouponLabel => 'કૂપન';
+
+  @override
+  String get invoicePurchaseDate => 'ખરીદીની તારીખ';
+
+  @override
+  String get invoiceContentLabel => 'કન્ટેન્ટ';
+
+  @override
+  String get invoiceContentType => 'કન્ટેન્ટ પ્રકાર';
+
+  @override
+  String purchaseGiftedToYouBy(String name) {
+    return 'આ કન્ટેન્ટ તમને $name દ્વારા ભેટમાં આપવામાં આવ્યું છે. તેથી, ઇન્વૉઇસ ઉપલબ્ધ નથી.';
+  }
+
+  @override
+  String get purchaseGiftInvoiceUnavailable =>
+      'આ કન્ટેન્ટ તમને ભેટમાં આપવામાં આવ્યું છે. તેથી, ઇન્વૉઇસ ઉપલબ્ધ નથી.';
+
+  @override
+  String get purchaseNoExpiry => 'કોઈ સમાપ્તિ નથી';
 }

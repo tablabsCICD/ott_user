@@ -78,6 +78,15 @@ class ShortProvider extends BaseProvider {
 
       _shortSections = sections;
       shorts = sections.expand((row) => row.shorts).toList();
+      if (kDebugMode) {
+        for (final short in shorts) {
+          _engagementLog('MINI_SERIES_HOME_VIEWS',
+              'seriesId=${short.id} viewCount=${short.viewCount}');
+          _engagementLog('MINI_SERIES_HOME_LIKES',
+              'seriesId=${short.id} likeCount=${short.likeCount} '
+              '(not shown on the card)');
+        }
+      }
     } catch (e, stackTrace) {
       if (kDebugMode) {
         debugPrint('[MINI_SERIES_LIBRARY] Load failed: ${e.runtimeType}: $e');
@@ -199,10 +208,30 @@ class ShortProvider extends BaseProvider {
           'Mini Series detail response is missing data',
         );
       }
-      shortDetail = ShortDetailModel.fromJson(
-        decoded['data'] as Map<String, dynamic>,
-      );
-    } catch (e) {}
+      final data = decoded['data'] as Map<String, dynamic>;
+      shortDetail = ShortDetailModel.fromJson(data);
+      if (kDebugMode) {
+        final detail = shortDetail!;
+        _engagementLog('MINI_SERIES_ENGAGEMENT_MAPPING',
+            'GET api/shortsMaster/$id status=200 seriesId=${detail.id} '
+            'series likeCount=${detail.likeCount} viewCount=${detail.viewCount} '
+            'parts=${detail.parts.length}');
+        final rawParts = data['parts'];
+        if (rawParts is List && rawParts.isNotEmpty && rawParts.first is Map) {
+          _engagementLog('MINI_SERIES_ENGAGEMENT_MAPPING',
+              'part fields from backend: ${(rawParts.first as Map).keys.toList()}');
+        }
+        for (final part in detail.parts) {
+          _engagementLog('MINI_SERIES_EPISODE_LIKES',
+              'seriesId=${detail.id} partId=${part.partId} '
+              'part#${part.partNumber} likes=${part.likes} '
+              'isLiked=${part.isLiked} views=${part.views}');
+        }
+      }
+    } catch (e) {
+      _engagementLog('MINI_SERIES_ENGAGEMENT_MAPPING',
+          'detail $id failed: ${e.runtimeType}');
+    }
 
     isLoading = false;
     notifyListeners();
@@ -231,6 +260,13 @@ class ShortProvider extends BaseProvider {
     required int partId,
     required bool isLike,
   }) async {
+    final action = isLike ? 'LIKE' : 'UNLIKE';
+    // One like/unlike request at a time (repeated taps / double-tap).
+    if (_isLiking) {
+      _engagementLog('MINI_SERIES_LIKE_ACTION',
+          '$action ignored (request in progress) partId=$partId');
+      return false;
+    }
     final User? user =
         await LocalSharePreferences.localSharePreferences.getUser();
 
@@ -240,22 +276,31 @@ class ShortProvider extends BaseProvider {
       _isLiking = true;
       notifyListeners();
 
-      final url = Uri.parse(
-        isLike
-            ? ApiConstant.likeshort(partId, user.id)
-            : ApiConstant.unlikeshort(partId, user.id),
-      );
-      //log('liked/unliked URL======== $url');
+      final url = isLike
+          ? ApiConstant.likeshort(partId, user.id)
+          : ApiConstant.unlikeshort(partId, user.id);
+      _engagementLog('MINI_SERIES_LIKE_ACTION',
+          '$action POST api/shortsMaster/part/$partId/${isLike ? "like" : "unlike"}');
 
-      final response = await http.post(url);
+      // The backend protects these endpoints (401 "Unauthorized access"
+      // without a token): ApiHelper attaches the stored bearer token, the
+      // same way every other Mini Series call is made. URL/method unchanged.
+      final response = await ApiHelper().postApi(url);
 
       if (response.statusCode == 200) {
         final body = json.decode(response.body);
-        return body["success"] == true;
+        final ok = body is Map && body["success"] == true;
+        _engagementLog('MINI_SERIES_LIKE_ACTION',
+            '$action partId=$partId status=200 success=$ok');
+        return ok;
       }
 
+      _engagementLog('MINI_SERIES_LIKE_ACTION',
+          '$action partId=$partId status=${response.statusCode} (not applied)');
       return false;
     } catch (e) {
+      _engagementLog('MINI_SERIES_LIKE_ACTION',
+          '$action partId=$partId failed: ${e.runtimeType}');
       return false;
     } finally {
       _isLiking = false;
@@ -266,18 +311,27 @@ class ShortProvider extends BaseProvider {
   // views count for shorts
   Future<bool> addShortView({required int partId}) async {
     try {
-      final url = Uri.parse(ApiConstant.viewsShort(partId));
-
-      final response = await http.post(url);
+      // Protected endpoint (401 without a token): sent through ApiHelper.
+      final response =
+          await ApiHelper().postApi(ApiConstant.viewsShort(partId));
+      _engagementLog('MINI_SERIES_EPISODE_VIEWS',
+          'POST api/shortsMaster/part/$partId/view status=${response.statusCode}');
 
       if (response.statusCode == 200) {
         final body = json.decode(response.body);
-        return body["success"] == true;
+        return body is Map && body["success"] == true;
       }
       return false;
     } catch (e) {
+      _engagementLog('MINI_SERIES_EPISODE_VIEWS',
+          'partId=$partId failed: ${e.runtimeType}');
       return false;
     }
+  }
+
+  /// Debug-only engagement trace (no tokens, URLs with user ids, or bodies).
+  void _engagementLog(String tag, String message) {
+    if (kDebugMode) debugPrint('[$tag] $message');
   }
 
   //purchase short

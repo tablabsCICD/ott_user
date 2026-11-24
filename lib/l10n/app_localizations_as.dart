@@ -3149,4 +3149,55 @@ class AppLocalizationsAs extends AppLocalizations {
   String miniSeriesGiftAccessValidUntil(String date) {
     return 'এক্সেছ বৈধ: $date লৈকে';
   }
+
+  @override
+  String get shortsEpisodesLabel => 'পৰ্বসমূহ';
+
+  @override
+  String get playerMuteSound => 'শব্দ বন্ধ কৰক';
+
+  @override
+  String get playerUnmuteSound => 'শব্দ অন কৰক';
+
+  @override
+  String get downloadInvoice => 'ইনভইচ ডাউনলোড কৰক';
+
+  @override
+  String get downloadingInvoice => 'ইনভইচ ডাউনলোড হৈ আছে…';
+
+  @override
+  String get invoiceDownloadedSuccess => 'ইনভইচ সফলতাৰে ডাউনলোড হ\'ল';
+
+  @override
+  String get invoiceDownloadFailed => 'ইনভইচ ডাউনলোড কৰিব পৰা নগ\'ল';
+
+  @override
+  String get invoiceOriginalAmount => 'মূল ধন';
+
+  @override
+  String get invoiceDiscountLabel => 'ৰেহাই';
+
+  @override
+  String get invoiceCouponLabel => 'কুপন';
+
+  @override
+  String get invoicePurchaseDate => 'ক্ৰয়ৰ তাৰিখ';
+
+  @override
+  String get invoiceContentLabel => 'সমল';
+
+  @override
+  String get invoiceContentType => 'সমলৰ প্ৰকাৰ';
+
+  @override
+  String purchaseGiftedToYouBy(String name) {
+    return 'এই সমলখিনি $nameৰ দ্বাৰা আপোনাক উপহাৰ হিচাপে দিয়া হৈছে। সেয়েহে, ইনভইচ উপলব্ধ নহয়।';
+  }
+
+  @override
+  String get purchaseGiftInvoiceUnavailable =>
+      'এই সমলখিনি আপোনাক উপহাৰ হিচাপে দিয়া হৈছে। সেয়েহে, ইনভইচ উপলব্ধ নহয়।';
+
+  @override
+  String get purchaseNoExpiry => 'কোনো ম্যাদ নাই';
 }

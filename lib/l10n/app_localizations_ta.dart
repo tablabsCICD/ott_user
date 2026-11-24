@@ -3190,4 +3190,56 @@ class AppLocalizationsTa extends AppLocalizations {
   String miniSeriesGiftAccessValidUntil(String date) {
     return 'அணுகல் செல்லுபடியாகும் நாள்: $date வரை';
   }
+
+  @override
+  String get shortsEpisodesLabel => 'எபிசோடுகள்';
+
+  @override
+  String get playerMuteSound => 'ஒலியை அணை';
+
+  @override
+  String get playerUnmuteSound => 'ஒலியை இயக்கு';
+
+  @override
+  String get downloadInvoice => 'இன்வாய்ஸைப் பதிவிறக்கு';
+
+  @override
+  String get downloadingInvoice => 'இன்வாய்ஸ் பதிவிறக்கப்படுகிறது…';
+
+  @override
+  String get invoiceDownloadedSuccess =>
+      'இன்வாய்ஸ் வெற்றிகரமாகப் பதிவிறக்கப்பட்டது';
+
+  @override
+  String get invoiceDownloadFailed => 'இன்வாய்ஸைப் பதிவிறக்க முடியவில்லை';
+
+  @override
+  String get invoiceOriginalAmount => 'அசல் தொகை';
+
+  @override
+  String get invoiceDiscountLabel => 'தள்ளுபடி';
+
+  @override
+  String get invoiceCouponLabel => 'கூப்பன்';
+
+  @override
+  String get invoicePurchaseDate => 'வாங்கிய தேதி';
+
+  @override
+  String get invoiceContentLabel => 'உள்ளடக்கம்';
+
+  @override
+  String get invoiceContentType => 'உள்ளடக்க வகை';
+
+  @override
+  String purchaseGiftedToYouBy(String name) {
+    return 'இந்த உள்ளடக்கம் உங்களுக்கு $name அவர்களால் பரிசாக வழங்கப்பட்டது. எனவே, விலைப்பட்டியல் கிடைக்கவில்லை.';
+  }
+
+  @override
+  String get purchaseGiftInvoiceUnavailable =>
+      'இந்த உள்ளடக்கம் உங்களுக்குப் பரிசாக வழங்கப்பட்டது. எனவே, விலைப்பட்டியல் கிடைக்கவில்லை.';
+
+  @override
+  String get purchaseNoExpiry => 'காலாவதி இல்லை';
 }

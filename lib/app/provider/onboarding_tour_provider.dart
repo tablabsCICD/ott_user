@@ -29,8 +29,15 @@ class FeatureTourStep {
 }
 
 class OnboardingTourProvider extends BaseProvider {
+  /// Completion/skip of the automatic first-launch tour only. The manual
+  /// replay (Profile / Help -> App Tour) never writes these keys.
   static const String _completedKey = 'feature_tour_completed';
   static const String _skippedKey = 'feature_tour_skipped';
+
+  /// Automatic first-launch tour: only the Select Language step.
+  static const List<FeatureTourStepId> firstLaunchStepIds = [
+    FeatureTourStepId.language,
+  ];
 
   /// Tour steps in display order. Built on every access so the text follows
   /// the currently selected app language.
@@ -111,6 +118,10 @@ class OnboardingTourProvider extends BaseProvider {
   int _currentIndex = 0;
   int _targetRefreshRevision = 0;
 
+  /// True while the automatic first-launch tour runs: only then do
+  /// complete()/skip() persist. A manual replay stays independent.
+  bool _persistCompletion = false;
+
   bool get initialized => _initialized;
   bool get isActive => _isActive;
   bool get completed => _completed;
@@ -144,7 +155,9 @@ class OnboardingTourProvider extends BaseProvider {
       return;
     }
     if (_completed || _skipped || _isActive) return;
-    _activeStepIds = _stepsForContext(context);
+    // First launch: the Select Language step only.
+    _activeStepIds = firstLaunchStepIds;
+    _persistCompletion = true;
     _start();
   }
 
@@ -154,7 +167,9 @@ class OnboardingTourProvider extends BaseProvider {
       _track('Tour replay aborted: context unmounted');
       return;
     }
+    // Manual replay: every existing step, any number of times.
     _activeStepIds = _stepsForContext(context);
+    _persistCompletion = false;
     _start();
   }
 
@@ -194,6 +209,13 @@ class OnboardingTourProvider extends BaseProvider {
 
   Future<void> complete() async {
     if (isDisposed) return;
+    if (!_persistCompletion) {
+      // Replay finished: close it without touching first-launch state.
+      _isActive = false;
+      _track('Tour Replay Completed');
+      notifyListeners();
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     if (isDisposed) return;
     await prefs.setBool(_completedKey, true);
@@ -209,6 +231,12 @@ class OnboardingTourProvider extends BaseProvider {
 
   Future<void> skip() async {
     if (isDisposed) return;
+    if (!_persistCompletion) {
+      _isActive = false;
+      _track('Tour Replay Skipped');
+      notifyListeners();
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     if (isDisposed) return;
     await prefs.setBool(_skippedKey, true);

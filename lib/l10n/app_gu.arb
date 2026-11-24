@@ -882,5 +882,21 @@
   "miniSeriesGiftedBy": "ભેટ આપનાર: {name}",
   "miniSeriesGiftSenderFallback": "એક મિત્ર",
   "miniSeriesGiftCodeExpiryDate": "ગિફ્ટ કોડની સમાપ્તિ તારીખ: {date}",
-  "miniSeriesGiftAccessValidUntil": "ઍક્સેસ માન્ય: {date} સુધી"
+  "miniSeriesGiftAccessValidUntil": "ઍક્સેસ માન્ય: {date} સુધી",
+  "shortsEpisodesLabel": "એપિસોડ",
+  "playerMuteSound": "અવાજ બંધ કરો",
+  "playerUnmuteSound": "અવાજ ચાલુ કરો",
+  "downloadInvoice": "ઇન્વૉઇસ ડાઉનલોડ કરો",
+  "downloadingInvoice": "ઇન્વૉઇસ ડાઉનલોડ થઈ રહ્યું છે…",
+  "invoiceDownloadedSuccess": "ઇન્વૉઇસ સફળતાપૂર્વક ડાઉનલોડ થયું",
+  "invoiceDownloadFailed": "ઇન્વૉઇસ ડાઉનલોડ કરી શકાયું નહીં",
+  "invoiceOriginalAmount": "મૂળ રકમ",
+  "invoiceDiscountLabel": "ડિસ્કાઉન્ટ",
+  "invoiceCouponLabel": "કૂપન",
+  "invoicePurchaseDate": "ખરીદીની તારીખ",
+  "invoiceContentLabel": "કન્ટેન્ટ",
+  "invoiceContentType": "કન્ટેન્ટ પ્રકાર",
+  "purchaseGiftedToYouBy": "આ કન્ટેન્ટ તમને {name} દ્વારા ભેટમાં આપવામાં આવ્યું છે. તેથી, ઇન્વૉઇસ ઉપલબ્ધ નથી.",
+  "purchaseGiftInvoiceUnavailable": "આ કન્ટેન્ટ તમને ભેટમાં આપવામાં આવ્યું છે. તેથી, ઇન્વૉઇસ ઉપલબ્ધ નથી.",
+  "purchaseNoExpiry": "કોઈ સમાપ્તિ નથી"
 }

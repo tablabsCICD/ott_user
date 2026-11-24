@@ -882,5 +882,21 @@
   "miniSeriesGiftedBy": "ଉପହାର ଦେଇଛନ୍ତି: {name}",
   "miniSeriesGiftSenderFallback": "ଜଣେ ବନ୍ଧୁ",
   "miniSeriesGiftCodeExpiryDate": "ଗିଫ୍ଟ କୋଡ୍ ମିଆଦ ଶେଷ ତାରିଖ: {date}",
-  "miniSeriesGiftAccessValidUntil": "ଆକ୍ସେସ୍ ବୈଧ: {date} ପର୍ଯ୍ୟନ୍ତ"
+  "miniSeriesGiftAccessValidUntil": "ଆକ୍ସେସ୍ ବୈଧ: {date} ପର୍ଯ୍ୟନ୍ତ",
+  "shortsEpisodesLabel": "ଏପିସୋଡ୍",
+  "playerMuteSound": "ଶବ୍ଦ ବନ୍ଦ କରନ୍ତୁ",
+  "playerUnmuteSound": "ଶବ୍ଦ ଚାଲୁ କରନ୍ତୁ",
+  "downloadInvoice": "ଇନଭଏସ୍ ଡାଉନଲୋଡ୍ କରନ୍ତୁ",
+  "downloadingInvoice": "ଇନଭଏସ୍ ଡାଉନଲୋଡ୍ ହେଉଛି…",
+  "invoiceDownloadedSuccess": "ଇନଭଏସ୍ ସଫଳତାର ସହ ଡାଉନଲୋଡ୍ ହେଲା",
+  "invoiceDownloadFailed": "ଇନଭଏସ୍ ଡାଉନଲୋଡ୍ କରିହେଲା ନାହିଁ",
+  "invoiceOriginalAmount": "ମୂଳ ରାଶି",
+  "invoiceDiscountLabel": "ରିହାତି",
+  "invoiceCouponLabel": "କୁପନ୍",
+  "invoicePurchaseDate": "କ୍ରୟ ତାରିଖ",
+  "invoiceContentLabel": "ବିଷୟବସ୍ତୁ",
+  "invoiceContentType": "ବିଷୟବସ୍ତୁ ପ୍ରକାର",
+  "purchaseGiftedToYouBy": "ଏହି ବିଷୟବସ୍ତୁ ଆପଣଙ୍କୁ {name} ଦ୍ୱାରା ଉପହାର ଦିଆଯାଇଛି। ତେଣୁ, ଇନଭଏସ୍ ଉପଲବ୍ଧ ନାହିଁ।",
+  "purchaseGiftInvoiceUnavailable": "ଏହି ବିଷୟବସ୍ତୁ ଆପଣଙ୍କୁ ଉପହାର ଭାବେ ଦିଆଯାଇଛି। ତେଣୁ, ଇନଭଏସ୍ ଉପଲବ୍ଧ ନାହିଁ।",
+  "purchaseNoExpiry": "କୌଣସି ମିଆଦ ନାହିଁ"
 }

@@ -3170,4 +3170,57 @@ class AppLocalizationsKn extends AppLocalizations {
   String miniSeriesGiftAccessValidUntil(String date) {
     return 'ಪ್ರವೇಶ ಮಾನ್ಯತೆ: $date ವರೆಗೆ';
   }
+
+  @override
+  String get shortsEpisodesLabel => 'ಸಂಚಿಕೆಗಳು';
+
+  @override
+  String get playerMuteSound => 'ಧ್ವನಿ ಆಫ್ ಮಾಡಿ';
+
+  @override
+  String get playerUnmuteSound => 'ಧ್ವನಿ ಆನ್ ಮಾಡಿ';
+
+  @override
+  String get downloadInvoice => 'ಇನ್‌ವಾಯ್ಸ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ';
+
+  @override
+  String get downloadingInvoice => 'ಇನ್‌ವಾಯ್ಸ್ ಡೌನ್‌ಲೋಡ್ ಆಗುತ್ತಿದೆ…';
+
+  @override
+  String get invoiceDownloadedSuccess =>
+      'ಇನ್‌ವಾಯ್ಸ್ ಯಶಸ್ವಿಯಾಗಿ ಡೌನ್‌ಲೋಡ್ ಆಗಿದೆ';
+
+  @override
+  String get invoiceDownloadFailed =>
+      'ಇನ್‌ವಾಯ್ಸ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ';
+
+  @override
+  String get invoiceOriginalAmount => 'ಮೂಲ ಮೊತ್ತ';
+
+  @override
+  String get invoiceDiscountLabel => 'ರಿಯಾಯಿತಿ';
+
+  @override
+  String get invoiceCouponLabel => 'ಕೂಪನ್';
+
+  @override
+  String get invoicePurchaseDate => 'ಖರೀದಿ ದಿನಾಂಕ';
+
+  @override
+  String get invoiceContentLabel => 'ವಿಷಯ';
+
+  @override
+  String get invoiceContentType => 'ವಿಷಯದ ಪ್ರಕಾರ';
+
+  @override
+  String purchaseGiftedToYouBy(String name) {
+    return 'ಈ ವಿಷಯವನ್ನು ನಿಮಗೆ $name ಅವರು ಉಡುಗೊರೆಯಾಗಿ ನೀಡಿದ್ದಾರೆ. ಆದ್ದರಿಂದ, ಇನ್‌ವಾಯ್ಸ್ ಲಭ್ಯವಿಲ್ಲ.';
+  }
+
+  @override
+  String get purchaseGiftInvoiceUnavailable =>
+      'ಈ ವಿಷಯವನ್ನು ನಿಮಗೆ ಉಡುಗೊರೆಯಾಗಿ ನೀಡಲಾಗಿದೆ. ಆದ್ದರಿಂದ, ಇನ್‌ವಾಯ್ಸ್ ಲಭ್ಯವಿಲ್ಲ.';
+
+  @override
+  String get purchaseNoExpiry => 'ಅವಧಿ ಮುಕ್ತಾಯವಿಲ್ಲ';
 }

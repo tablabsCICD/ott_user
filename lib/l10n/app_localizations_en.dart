@@ -3128,4 +3128,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String miniSeriesGiftAccessValidUntil(String date) {
     return 'Access valid until: $date';
   }
+
+  @override
+  String get shortsEpisodesLabel => 'Episodes';
+
+  @override
+  String get playerMuteSound => 'Mute';
+
+  @override
+  String get playerUnmuteSound => 'Unmute';
+
+  @override
+  String get downloadInvoice => 'Download Invoice';
+
+  @override
+  String get downloadingInvoice => 'Downloading invoice…';
+
+  @override
+  String get invoiceDownloadedSuccess => 'Invoice downloaded successfully';
+
+  @override
+  String get invoiceDownloadFailed => 'Failed to download invoice';
+
+  @override
+  String get invoiceOriginalAmount => 'Original amount';
+
+  @override
+  String get invoiceDiscountLabel => 'Discount';
+
+  @override
+  String get invoiceCouponLabel => 'Coupon';
+
+  @override
+  String get invoicePurchaseDate => 'Purchase date';
+
+  @override
+  String get invoiceContentLabel => 'Content';
+
+  @override
+  String get invoiceContentType => 'Content type';
+
+  @override
+  String purchaseGiftedToYouBy(String name) {
+    return 'This content was gifted to you by $name. Therefore, an invoice is not available.';
+  }
+
+  @override
+  String get purchaseGiftInvoiceUnavailable =>
+      'This content was gifted to you. Therefore, an invoice is not available.';
+
+  @override
+  String get purchaseNoExpiry => 'No expiry';
 }

@@ -5601,6 +5601,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Access valid until: {date}'**
   String miniSeriesGiftAccessValidUntil(String date);
+
+  /// No description provided for @shortsEpisodesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Episodes'**
+  String get shortsEpisodesLabel;
+
+  /// No description provided for @playerMuteSound.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute'**
+  String get playerMuteSound;
+
+  /// No description provided for @playerUnmuteSound.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute'**
+  String get playerUnmuteSound;
+
+  /// No description provided for @downloadInvoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Download Invoice'**
+  String get downloadInvoice;
+
+  /// No description provided for @downloadingInvoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading invoice…'**
+  String get downloadingInvoice;
+
+  /// No description provided for @invoiceDownloadedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice downloaded successfully'**
+  String get invoiceDownloadedSuccess;
+
+  /// No description provided for @invoiceDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to download invoice'**
+  String get invoiceDownloadFailed;
+
+  /// No description provided for @invoiceOriginalAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Original amount'**
+  String get invoiceOriginalAmount;
+
+  /// No description provided for @invoiceDiscountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Discount'**
+  String get invoiceDiscountLabel;
+
+  /// No description provided for @invoiceCouponLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon'**
+  String get invoiceCouponLabel;
+
+  /// No description provided for @invoicePurchaseDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase date'**
+  String get invoicePurchaseDate;
+
+  /// No description provided for @invoiceContentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get invoiceContentLabel;
+
+  /// No description provided for @invoiceContentType.
+  ///
+  /// In en, this message translates to:
+  /// **'Content type'**
+  String get invoiceContentType;
+
+  /// No description provided for @purchaseGiftedToYouBy.
+  ///
+  /// In en, this message translates to:
+  /// **'This content was gifted to you by {name}. Therefore, an invoice is not available.'**
+  String purchaseGiftedToYouBy(String name);
+
+  /// No description provided for @purchaseGiftInvoiceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This content was gifted to you. Therefore, an invoice is not available.'**
+  String get purchaseGiftInvoiceUnavailable;
+
+  /// No description provided for @purchaseNoExpiry.
+  ///
+  /// In en, this message translates to:
+  /// **'No expiry'**
+  String get purchaseNoExpiry;
 }
 
 class _AppLocalizationsDelegate

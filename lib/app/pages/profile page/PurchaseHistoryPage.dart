@@ -1,3 +1,4 @@
+import 'package:ott/app/pages/profile%20page/purchase_invoice_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -11,7 +12,6 @@ import 'package:ott/data/models/response/purchase_history_response.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:ott/app/widgets/filmytell_app_bar.dart';
 
 /// Filter values sent to the purchase history API (unchanged).
@@ -22,6 +22,17 @@ const List<String> _purchaseTypeFilters = <String>[
   'Shorts',
   'Short Films',
 ];
+
+/// Message shown instead of invoice actions on a gifted purchase. Names the
+/// sender only when a real, non-blank name is available; otherwise uses the
+/// generic sentence (never "null" or an empty name).
+String giftedInvoiceMessage(AppLocalizations l10n, String? senderName) {
+  final name = senderName?.trim() ?? '';
+  if (name.isEmpty || name.toLowerCase() == 'null') {
+    return l10n.purchaseGiftInvoiceUnavailable;
+  }
+  return l10n.purchaseGiftedToYouBy(name);
+}
 
 class PurchaseHistoryPage extends StatefulWidget {
   const PurchaseHistoryPage({super.key});
@@ -522,70 +533,69 @@ class _PurchaseHistoryCard extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 4, 14, 12),
-            child: invoiceUrl.isNotEmpty
-                ? Wrap(
-                    alignment: WrapAlignment.end,
-                    spacing: 8,
-                    runSpacing: 8,
+            // Gifted content never offers invoice actions; the message names
+            // the sender when the API provides one (it currently does not).
+            child: item.isGift
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      OutlinedButton.icon(
-                        onPressed: () => _viewInvoice(context, invoiceUrl),
-                        icon:
-                            const Icon(Icons.picture_as_pdf_outlined, size: 18),
-                        label: Text(l10n.viewInvoice),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 1),
+                        child: Icon(Icons.card_giftcard_rounded,
+                            size: 14, color: mutedText),
                       ),
-                      FilledButton.tonalIcon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: theme.primaryColor,
-                          foregroundColor: Colors.white,
-                        ),
-                        onPressed: () => _shareInvoice(context, invoiceUrl),
-                        icon: const Icon(
-                          Icons.share_outlined,
-                          size: 18,
-                          color: Colors.white,
-                        ),
-                        label: Text(
-                          l10n.shareInvoice,
-                          style: const TextStyle(color: Colors.white),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          giftedInvoiceMessage(l10n, null),
+                          style: TextStyle(fontSize: 12, color: mutedText),
                         ),
                       ),
                     ],
                   )
-                : Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      l10n.invoiceNotAvailable,
-                      style: TextStyle(fontSize: 12, color: mutedText),
-                    ),
-                  ),
+                : invoiceUrl.isNotEmpty
+                    ? Wrap(
+                        alignment: WrapAlignment.end,
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            // Opens over this screen; no route or tab change.
+                            onPressed: () =>
+                                showPurchaseInvoiceDialog(context, item),
+                            icon: const Icon(Icons.picture_as_pdf_outlined,
+                                size: 18),
+                            label: Text(l10n.viewInvoice),
+                          ),
+                          FilledButton.tonalIcon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: theme.primaryColor,
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: () => _shareInvoice(context, invoiceUrl),
+                            icon: const Icon(
+                              Icons.share_outlined,
+                              size: 18,
+                              color: Colors.white,
+                            ),
+                            label: Text(
+                              l10n.shareInvoice,
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          l10n.invoiceNotAvailable,
+                          style: TextStyle(fontSize: 12, color: mutedText),
+                        ),
+                      ),
           ),
         ],
       ),
     );
-  }
-
-  Future<void> _viewInvoice(BuildContext context, String invoiceUrl) async {
-    final l10n = AppLocalizations.of(context)!;
-    try {
-      final uri = Uri.tryParse(invoiceUrl);
-      if (uri == null) {
-        CustomToast.show(context, l10n.invalidInvoiceUrl, isSuccess: false);
-        return;
-      }
-
-      final launched = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
-
-      if (!launched && context.mounted) {
-        CustomToast.show(context, l10n.unableOpenInvoice, isSuccess: false);
-      }
-    } catch (error) {
-      if (!context.mounted) return;
-      CustomToast.show(context, l10n.unableOpenInvoice, isSuccess: false);
-    }
   }
 
   Future<void> _shareInvoice(BuildContext context, String invoiceUrl) async {

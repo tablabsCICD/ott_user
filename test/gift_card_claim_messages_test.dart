@@ -184,7 +184,7 @@ void main() {
       await tester.tap(find.text('Open Claim Dialog'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Enter Gift Card Number'), findsOneWidget);
+      expect(find.text('Enter gift card number'), findsWidgets); // label + identical hint
       expect(find.text('Redeem'), findsOneWidget);
 
       // Tap Redeem button
@@ -193,7 +193,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       // Dialog closed
-      expect(find.text('Enter Gift Card Number'), findsNothing);
+      expect(find.text('Enter gift card number'), findsNothing);
 
       // Verify success toast displayed
       expect(find.text('Gift card claimed successfully!'), findsOneWidget);
@@ -228,7 +228,7 @@ void main() {
 
       expect(mockProvider.callCount, 0);
       expect(find.text('Gift card claimed successfully!'), findsNothing);
-      expect(find.text('Enter Gift Card Number'), findsOneWidget);
+      expect(find.text('Enter gift card number'), findsWidgets); // label + identical hint
 
       await tester.pump(const Duration(seconds: 4));
     });
@@ -257,7 +257,7 @@ void main() {
       expect(mockProvider.callCount, 1);
       expect(find.text('Invalid coupon code'), findsOneWidget);
       expect(find.text('Gift card claimed successfully!'), findsNothing);
-      expect(find.text('Enter Gift Card Number'), findsOneWidget);
+      expect(find.text('Enter gift card number'), findsWidgets); // label + identical hint
 
       await tester.pump(const Duration(seconds: 4));
     });
@@ -286,7 +286,7 @@ void main() {
       expect(mockProvider.callCount, 1);
       expect(find.text('Gift card has already been claimed'), findsOneWidget);
       expect(find.text('Gift card claimed successfully!'), findsNothing);
-      expect(find.text('Enter Gift Card Number'), findsOneWidget);
+      expect(find.text('Enter gift card number'), findsWidgets); // label + identical hint
 
       // Verify marked claimed locally
       final prefs = await SharedPreferences.getInstance();
@@ -320,7 +320,7 @@ void main() {
       expect(mockProvider.callCount, 1);
       expect(find.text('Gift card has expired'), findsOneWidget);
       expect(find.text('Gift card claimed successfully!'), findsNothing);
-      expect(find.text('Enter Gift Card Number'), findsOneWidget);
+      expect(find.text('Enter gift card number'), findsWidgets); // label + identical hint
 
       await tester.pump(const Duration(seconds: 4));
     });
@@ -349,7 +349,7 @@ void main() {
       expect(mockProvider.callCount, 1);
       expect(find.text('Unable to claim the gift card. Please check your internet connection and try again.'), findsOneWidget);
       expect(find.text('Gift card claimed successfully!'), findsNothing);
-      expect(find.text('Enter Gift Card Number'), findsOneWidget);
+      expect(find.text('Enter gift card number'), findsWidgets); // label + identical hint
 
       await tester.pump(const Duration(seconds: 4));
     });
@@ -378,7 +378,7 @@ void main() {
       expect(mockProvider.callCount, 1);
       expect(find.text('Something went wrong while claiming the gift card. Please try again later.'), findsOneWidget);
       expect(find.text('Gift card claimed successfully!'), findsNothing);
-      expect(find.text('Enter Gift Card Number'), findsOneWidget);
+      expect(find.text('Enter gift card number'), findsWidgets); // label + identical hint
 
       await tester.pump(const Duration(seconds: 4));
     });
@@ -424,7 +424,7 @@ void main() {
 
       // Success message shown once, dialog dismissed
       expect(find.text('Gift card claimed successfully!'), findsOneWidget);
-      expect(find.text('Enter Gift Card Number'), findsNothing);
+      expect(find.text('Enter gift card number'), findsNothing);
 
       await tester.pump(const Duration(seconds: 4));
     });

@@ -327,7 +327,10 @@ void main() {
       expect(item.originalAmount, 100.0);
       expect(item.discountAmount, 20.0);
       expect(item.couponCode, 'FILMY20');
-      expect(item.status, 'Paid');
+      // The raw backend status is rawStatus; status is the normalized
+      // PurchaseStatus used by Purchase History.
+      expect(item.rawStatus, 'Paid');
+      expect(item.status, PurchaseStatus.success);
       expect(item.orderId, 'order_12345');
     });
   });

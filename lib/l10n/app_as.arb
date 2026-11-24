@@ -882,5 +882,21 @@
   "miniSeriesGiftedBy": "উপহাৰ দিওঁতা: {name}",
   "miniSeriesGiftSenderFallback": "এজন বন্ধু",
   "miniSeriesGiftCodeExpiryDate": "গিফ্ট ক'ডৰ ম্যাদ উকলাৰ তাৰিখ: {date}",
-  "miniSeriesGiftAccessValidUntil": "এক্সেছ বৈধ: {date} লৈকে"
+  "miniSeriesGiftAccessValidUntil": "এক্সেছ বৈধ: {date} লৈকে",
+  "shortsEpisodesLabel": "পৰ্বসমূহ",
+  "playerMuteSound": "শব্দ বন্ধ কৰক",
+  "playerUnmuteSound": "শব্দ অন কৰক",
+  "downloadInvoice": "ইনভইচ ডাউনলোড কৰক",
+  "downloadingInvoice": "ইনভইচ ডাউনলোড হৈ আছে…",
+  "invoiceDownloadedSuccess": "ইনভইচ সফলতাৰে ডাউনলোড হ'ল",
+  "invoiceDownloadFailed": "ইনভইচ ডাউনলোড কৰিব পৰা নগ'ল",
+  "invoiceOriginalAmount": "মূল ধন",
+  "invoiceDiscountLabel": "ৰেহাই",
+  "invoiceCouponLabel": "কুপন",
+  "invoicePurchaseDate": "ক্ৰয়ৰ তাৰিখ",
+  "invoiceContentLabel": "সমল",
+  "invoiceContentType": "সমলৰ প্ৰকাৰ",
+  "purchaseGiftedToYouBy": "এই সমলখিনি {name}ৰ দ্বাৰা আপোনাক উপহাৰ হিচাপে দিয়া হৈছে। সেয়েহে, ইনভইচ উপলব্ধ নহয়।",
+  "purchaseGiftInvoiceUnavailable": "এই সমলখিনি আপোনাক উপহাৰ হিচাপে দিয়া হৈছে। সেয়েহে, ইনভইচ উপলব্ধ নহয়।",
+  "purchaseNoExpiry": "কোনো ম্যাদ নাই"
 }
