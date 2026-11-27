@@ -235,8 +235,8 @@ class ApiConstant {
   }
 
   // Mini series gifting / full purchase — real backend endpoints, taken from
-  // the server's /v2/api-docs (present on the EC2 server, not yet on
-  // production). The user is identified by the JWT; no userId parameter.
+  // the server's /v2/api-docs. The user is identified by the JWT; no userId
+  // parameter.
   // Request/response field names are not published in the spec yet.
   // Only used when FeatureFlags.miniSeriesCommerce is on.
   static String miniSeriesFullPurchaseDetails(dynamic id) =>

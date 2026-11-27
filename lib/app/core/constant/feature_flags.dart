@@ -1,16 +1,16 @@
-import 'package:flutter/foundation.dart';
-
 /// Compile-time feature flags.
 ///
 /// Override with `--dart-define=<NAME>=true|false`.
 abstract final class FeatureFlags {
-  /// Mini Series gifting and one-time full purchase. The backend endpoints
-  /// are not confirmed yet; see docs/mini_series_gift_and_full_purchase_backend.md.
+  /// Mini Series gifting, one-time full purchase and the Profile
+  /// "Mini Series Gifts" entry.
   ///
-  /// On by default in debug builds (for UI review), off in profile/release
-  /// builds unless passed explicitly.
+  /// On in every build mode. It previously defaulted to `kDebugMode`, so a
+  /// plain `flutter build appbundle --release` compiled these features out and
+  /// Play Store builds shipped without them. Pass
+  /// `--dart-define=ENABLE_MINI_SERIES_COMMERCE=false` to switch them off.
   static const bool miniSeriesCommerce = bool.fromEnvironment(
     'ENABLE_MINI_SERIES_COMMERCE',
-    defaultValue: kDebugMode,
+    defaultValue: true,
   );
 }

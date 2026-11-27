@@ -37,14 +37,13 @@ The app already reads that field name and shows it when present.
 **Status: PROPOSED — superseded by the real endpoints above.**
 
 The Flutter app has a frontend integration built against this contract. It is
-hidden behind a compile-time flag that is **off by default**:
+controlled by a compile-time flag that is **on by default** in every build
+mode (it used to be debug-only, which left these features out of Play Store
+builds). To switch the features off:
 
 ```
-flutter run --dart-define=ENABLE_MINI_SERIES_COMMERCE=true
-```
-
-Until the backend confirms (or changes) these endpoints, release builds do not
-show the new buttons and never call these URLs. If the final contract differs,
+flutter build appbundle --release --dart-define=ENABLE_MINI_SERIES_COMMERCE=false
+``` If the final contract differs,
 update `ApiConstant` (mini series section), `MiniSeriesCommerceService`, and
 `mini_series_commerce_models.dart` only.
 
