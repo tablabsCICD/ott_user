@@ -433,7 +433,7 @@
   "@shortsPricePerPartWithLanguages": {
     "placeholders": {
       "coins": {
-        "type": "int"
+        "type": "String"
       },
       "languages": {
         "type": "String"
@@ -1006,8 +1006,8 @@
   "billingInvoice": "Invoice",
   "billingAvailable": "Available",
   "billingNotAvailable": "Not available",
-  "giftEnterGiftCardNumber": "Enter Gift Card Number",
-  "giftEnter16DigitNumber": "Enter 16 Digit Number",
+  "giftEnterGiftCardNumber": "Enter gift card number",
+  "giftEnter16DigitNumber": "Enter gift card number",
   "giftRedeem": "Redeem",
   "giftCopiedText": "Copied: {text}",
   "@giftCopiedText": {
@@ -1361,5 +1361,205 @@
   "routeInvalidMovieLink": "The shared movie link is invalid or incomplete.",
   "giftedToYou": "Gifted To You",
   "giftedToYouEmptyTitle": "No Gifts Yet",
-  "giftedToYouEmptyMessage": "Movies and content gifted to you will appear here."
+  "giftedToYouEmptyMessage": "Movies and content gifted to you will appear here.",
+  "miniSeriesAlreadyOwned": "You already own every part of this Mini Series.",
+  "miniSeriesBuyAllAction": "Buy all",
+  "miniSeriesBuyFull": "Buy Full Mini Series",
+  "miniSeriesFreeParts": "Free parts: {count}",
+  "@miniSeriesFreeParts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "miniSeriesFullNotAvailable": "Full purchase isn't available for this Mini Series.",
+  "miniSeriesFullPrice": "Full Mini Series price: ₹ {amount}",
+  "@miniSeriesFullPrice": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftCodeExpiry": "Expires: {date}",
+  "@miniSeriesGiftCodeExpiry": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftCodeStatus": "Status: {status}",
+  "@miniSeriesGiftCodeStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftCodesHint": "Each code can be claimed once, by one person. Share a different code with each recipient.",
+  "miniSeriesGiftCodesTitle": "Your gift codes",
+  "miniSeriesGiftConflict": "This payment attempt changed. Please review the details and tap Confirm & Pay again.",
+  "miniSeriesGiftCountMin": "Enter a number of at least {min}.",
+  "@miniSeriesGiftCountMin": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "miniSeriesGiftCountRange": "Enter a number between {min} and {max}.",
+  "@miniSeriesGiftCountRange": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "miniSeriesGiftHowMany": "How many people do you want to gift this Mini Series to?",
+  "miniSeriesGiftInsufficientBalance": "Insufficient wallet balance. Required: ₹ {required}, available: ₹ {available}.",
+  "@miniSeriesGiftInsufficientBalance": {
+    "placeholders": {
+      "required": {
+        "type": "String"
+      },
+      "available": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftNotAvailable": "Gifting isn't available for this Mini Series.",
+  "miniSeriesGiftPricePerGift": "Price per gift: ₹ {amount}",
+  "@miniSeriesGiftPricePerGift": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftReplayNote": "This purchase was already completed. Showing your original gift codes; you were not charged again.",
+  "miniSeriesGiftShareText": "I've gifted you \"{title}\" on Filmytell! Claim it with gift code: {code}",
+  "@miniSeriesGiftShareText": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftSuccess": "Gift purchased successfully.",
+  "miniSeriesGiftTitle": "Gift Mini Series",
+  "miniSeriesGiftTotalPaid": "Total paid: ₹ {amount}",
+  "@miniSeriesGiftTotalPaid": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftTransaction": "Transaction ID: {id}",
+  "@miniSeriesGiftTransaction": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesGiftUnavailable": "This Mini Series is not available for gifting.",
+  "miniSeriesOwnedParts": "Already owned: {count}",
+  "@miniSeriesOwnedParts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "miniSeriesPartFree": "Free",
+  "miniSeriesPartLabel": "Part {number}",
+  "@miniSeriesPartLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "miniSeriesPartOwned": "Owned",
+  "miniSeriesPriceChanged": "The price has changed. Please review the new price and try again.",
+  "miniSeriesPurchasableParts": "Parts to buy: {count}",
+  "@miniSeriesPurchasableParts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "miniSeriesPurchaseSuccess": "Mini Series purchased. All parts are unlocked.",
+  "miniSeriesTotalParts": "Total parts: {count}",
+  "@miniSeriesTotalParts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "giftCardExpiresOn": "Expires on {date}",
+  "@giftCardExpiresOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "giftCardExpiringSoon": "Expiring soon · {date}",
+  "@giftCardExpiringSoon": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "giftCardGiftedOn": "Gifted on {date}",
+  "@giftCardGiftedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "miniSeriesPricePerPart": "₹ {coins}/part",
+  "@miniSeriesPricePerPart": {
+    "placeholders": {
+      "coins": {
+        "type": "String"
+      }
+    }
+  },
+  "shortsEpisodesLabel": "Episodes",
+  "playerMuteSound": "Mute",
+  "playerUnmuteSound": "Unmute",
+  "downloadInvoice": "Download Invoice",
+  "downloadingInvoice": "Downloading invoice…",
+  "invoiceDownloadedSuccess": "Invoice downloaded successfully",
+  "invoiceDownloadFailed": "Failed to download invoice",
+  "invoiceOriginalAmount": "Original amount",
+  "invoiceDiscountLabel": "Discount",
+  "invoiceCouponLabel": "Coupon",
+  "invoicePurchaseDate": "Purchase date",
+  "invoiceContentLabel": "Content",
+  "invoiceContentType": "Content type",
+  "purchaseGiftedToYouBy": "This content was gifted to you by {name}. Therefore, an invoice is not available.",
+  "@purchaseGiftedToYouBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "purchaseGiftInvoiceUnavailable": "This content was gifted to you. Therefore, an invoice is not available."
 }

@@ -11,6 +11,7 @@ import '../core/constant/prefrense_constant.dart';
 import '../core/utils/sharepreferences.dart';
 import 'baseProvider.dart';
 import 'package:ott/app/core/utils/app_l10n.dart';
+import 'package:ott/app/core/utils/movie_wallet_purchase_log.dart';
 
 class PurchaseContentProvider extends BaseProvider {
   static const String _purchaseCacheKey = 'cached_purchase_content';
@@ -20,7 +21,11 @@ class PurchaseContentProvider extends BaseProvider {
   List<UserContent> get userContentList => _userContentList;
   bool get isSavingContent => _isSavingContent;
 
-  Future<Map<String, Object>> saveUserContent(Content content) async {
+  Future<Map<String, Object>> saveUserContent(
+    Content content, {
+    String? couponCode,
+    String? orderId,
+  }) async {
     if (_isSavingContent) {
       return {'success': false, 'message': appL10n().msgPurchaseInProgress};
     }
@@ -44,13 +49,31 @@ class PurchaseContentProvider extends BaseProvider {
       "status": "Paid",
       "userId": user!.id!,
       "userIdGiftFrom": 0,
-      "userIdGiftTo": 0
+      "userIdGiftTo": 0,
+      if (couponCode != null && couponCode.trim().isNotEmpty)
+        "couponCode": couponCode.trim().toUpperCase(),
+      if (orderId != null && orderId.trim().isNotEmpty)
+        "orderId": orderId.trim(),
     };
 
     ApiHelper apiHelper = ApiHelper();
+    final stopwatch = Stopwatch()..start();
 
     try {
+      MovieWalletPurchaseLog.request(
+        step: 'SAVE_USER_CONTENT',
+        method: 'POST',
+        url: apiUrl,
+        headers: await apiHelper.headersForDiagnostics(),
+        body: mapData,
+      );
       var response = await apiHelper.postApiWithBody(apiUrl, mapData);
+      MovieWalletPurchaseLog.response(
+        step: 'SAVE_USER_CONTENT',
+        statusCode: response.statusCode,
+        body: response.body.toString(),
+        elapsed: stopwatch.elapsed,
+      );
 
       final responseBody = _decodeResponseBody(response.body);
       if (response.statusCode == 200) {
@@ -86,7 +109,13 @@ class PurchaseContentProvider extends BaseProvider {
           ),
         };
       }
-    } catch (error) {
+    } catch (error, stackTrace) {
+      MovieWalletPurchaseLog.exception(
+        step: 'SAVE_USER_CONTENT',
+        error: error,
+        stackTrace: stackTrace,
+        elapsed: stopwatch.elapsed,
+      );
       return {'success': false, 'message': _cleanPurchaseError(error)};
     } finally {
       _isSavingContent = false;
@@ -106,15 +135,52 @@ class PurchaseContentProvider extends BaseProvider {
   }
 
   String _cleanPurchaseError(Object error) {
-    final message = error.toString();
+    var message = error.toString().trim();
+    // Only the generic `Exception: ` wrapper (thrown by callers around the
+    // backend message) — not e.g. `SocketException: `.
+    if (message.startsWith('Exception: ')) {
+      message = message.substring('Exception: '.length).trim();
+    }
     if (message.contains('Unknown duration:')) {
-      return message.replaceFirst('Exception: ', '');
+      return message;
     }
     if (_isServerTransactionError(message)) {
       return appL10n().billingPurchaseNotCompletedTryLater;
     }
+    // Show the backend's own reason (e.g. coupon expired / already used,
+    // insufficient balance, already purchased) so the user knows what to do.
+    // Technical text (exceptions, stack traces, network errors) still gets
+    // the generic message.
+    if (_isUserFacingServerMessage(message)) {
+      return message;
+    }
 
     return appL10n().billingPurchaseFailedTryAgain;
+  }
+
+  static const List<String> _technicalErrorMarkers = [
+    'exception',
+    'error in response',
+    'stacktrace',
+    'java.',
+    'javax.',
+    'org.',
+    'sql',
+    'nullpointer',
+    'failed host lookup',
+    'connection',
+    'timeout',
+    'timed out',
+    'handshake',
+    '<html',
+    '{',
+  ];
+
+  bool _isUserFacingServerMessage(String message) {
+    if (message.isEmpty || message.length > 200) return false;
+    final normalized = message.toLowerCase();
+    if (normalized == 'null' || normalized == 'error') return false;
+    return !_technicalErrorMarkers.any(normalized.contains);
   }
 
   bool _isServerTransactionError(String message) {

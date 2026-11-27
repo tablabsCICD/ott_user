@@ -203,16 +203,92 @@ class ApiConstant {
       "${baseUrl}api/shortsMaster/part/$partId/unlike?userId=$userId";
   static String viewsShort(partId) =>
       "${baseUrl}api/shortsMaster/part/$partId/view";
-  static String purchaseShort(partId, userId) =>
-      "${baseUrl}api/shortsMaster/purchaseShort?partId=$partId&userId=$userId";
+  static String validateCoupon = "${baseUrl}api/coupons/validate";
+
+  static String purchaseShort(
+    dynamic partId,
+    dynamic userId, {
+    String? couponCode,
+    String? idempotencyKey,
+  }) {
+    final query = <String, String>{
+      'partId': partId.toString(),
+      'userId': userId.toString(),
+      if (couponCode != null && couponCode.trim().isNotEmpty)
+        'couponCode': couponCode.trim().toUpperCase(),
+      if (idempotencyKey != null && idempotencyKey.trim().isNotEmpty)
+        'idempotencyKey': idempotencyKey.trim(),
+    };
+    return "${baseUrl}api/shortsMaster/purchaseShort?${Uri(queryParameters: query).query}";
+  }
+
+  // Mini series gifting / full purchase — real backend endpoints, taken from
+  // the server's /v2/api-docs. The user is identified by the JWT; no userId
+  // parameter.
+  // Request/response field names are not published in the spec yet.
+  // Only used when FeatureFlags.miniSeriesCommerce is on.
+  static String miniSeriesFullPurchaseDetails(dynamic id) =>
+      "${baseUrl}api/mini-series/$id/full-purchase-details";
+
+  /// GET; data: giftUnitPrice, minQuantity, maxQuantity.
+  static String miniSeriesGiftDetails(dynamic id) =>
+      "${baseUrl}api/mini-series/$id/gift-details";
+  static String miniSeriesPurchaseStatus(dynamic id) =>
+      "${baseUrl}api/mini-series/$id/purchase-status";
+
+  /// POST; optional `Idempotency-Key` header; body fields unconfirmed.
+  static String miniSeriesPurchaseFull(dynamic id) =>
+      "${baseUrl}api/mini-series/$id/purchase-full";
+
+  /// POST; body fields unconfirmed.
+  static String miniSeriesGiftPurchase =
+      "${baseUrl}api/mini-series/gift/purchase";
+
+  /// POST; body fields unconfirmed.
+  static String miniSeriesGiftClaim = "${baseUrl}api/mini-series/gift/claim";
+  static String miniSeriesGiftHistory =
+      "${baseUrl}api/mini-series/gift/history";
+  static String miniSeriesGiftReceived =
+      "${baseUrl}api/mini-series/gift/received";
 
   //series
   static String seriesDetails(seriesId, userId) =>
       "${baseUrl}api/userSeries/$seriesId/user-details?userId=$userId";
-  static String purchaseEpisode(episodeId, userId) =>
-      '${baseUrl}series/purchase/episode?episodeId=$episodeId&userId=$userId';
-  static String purchaseSeason(seasonId, userId) =>
-      '${baseUrl}series/purchase/season?seasonId=$seasonId&userId=$userId';
+
+  static String purchaseEpisode(
+    dynamic episodeId,
+    dynamic userId, {
+    String? couponCode,
+    String? idempotencyKey,
+  }) {
+    final query = <String, String>{
+      'episodeId': episodeId.toString(),
+      'userId': userId.toString(),
+      if (couponCode != null && couponCode.trim().isNotEmpty)
+        'couponCode': couponCode.trim().toUpperCase(),
+      if (idempotencyKey != null && idempotencyKey.trim().isNotEmpty)
+        'idempotencyKey': idempotencyKey.trim(),
+    };
+    return "${baseUrl}series/purchase/episode?${Uri(queryParameters: query).query}";
+  }
+
+  static String purchaseSeason(
+    dynamic seasonId,
+    dynamic userId, {
+    String? couponCode,
+    String? idempotencyKey,
+  }) {
+    final query = <String, String>{
+      'seasonId': seasonId.toString(),
+      'userId': userId.toString(),
+      if (couponCode != null && couponCode.trim().isNotEmpty)
+        'couponCode': couponCode.trim().toUpperCase(),
+      if (idempotencyKey != null && idempotencyKey.trim().isNotEmpty)
+        'idempotencyKey': idempotencyKey.trim(),
+    };
+    return "${baseUrl}series/purchase/season?${Uri(queryParameters: query).query}";
+  }
+
   static String continueWatchedMoviesByUser(userId, type) =>
       "${baseUrl}continue-watching/user/$userId?contentType=$type";
 

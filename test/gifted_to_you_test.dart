@@ -213,8 +213,17 @@ void main() {
       expect(find.text('Watch Now'), findsNWidgets(4));
       expect(find.textContaining('₹'), findsNothing);
       final card = tester.getSize(find.byType(MovieCard).first);
-      expect(card.width, MovieCard.mobileCardWidth);
-      expect(card.height, MovieCard.standardHeight);
+      // Cards widen to fill the grid row (final_ott layout): at least the
+      // standard width, 16:9 poster grows with it, details area unchanged.
+      expect(card.width, greaterThanOrEqualTo(MovieCard.mobileCardWidth));
+      final detailsHeight = MovieCard.standardHeight -
+          MovieCard.mobileCardWidth / MovieCard.standardPosterAspectRatio;
+      expect(
+        card.height,
+        closeTo(
+            card.width / MovieCard.standardPosterAspectRatio + detailsHeight,
+            0.01),
+      );
       await _flush(tester);
       // No Watchlist filter chips on this screen.
       expect(find.text('Available'), findsNothing);

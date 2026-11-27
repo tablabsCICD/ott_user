@@ -1119,7 +1119,7 @@ class AppLocalizationsMr extends AppLocalizations {
   String get shortsTrending => 'ट्रेंडिंग';
 
   @override
-  String shortsPricePerPartWithLanguages(int coins, String languages) {
+  String shortsPricePerPartWithLanguages(String coins, String languages) {
     return '₹ $coins /भाग | $languages';
   }
 
@@ -2129,7 +2129,7 @@ class AppLocalizationsMr extends AppLocalizations {
   String get giftEnterGiftCardNumber => 'गिफ्ट कार्ड नंबर प्रविष्ट करा';
 
   @override
-  String get giftEnter16DigitNumber => '16 अंकी नंबर प्रविष्ट करा';
+  String get giftEnter16DigitNumber => 'गिफ्ट कार्ड नंबर प्रविष्ट करा';
 
   @override
   String get giftRedeem => 'रिडीम करा';
@@ -2912,4 +2912,208 @@ class AppLocalizationsMr extends AppLocalizations {
   @override
   String get giftedToYouEmptyMessage =>
       'तुम्हाला भेट दिलेले चित्रपट आणि कंटेंट येथे दिसतील.';
+
+  @override
+  String get miniSeriesAlreadyOwned =>
+      'You already own every part of this Mini Series.';
+
+  @override
+  String get miniSeriesBuyAllAction => 'Buy all';
+
+  @override
+  String get miniSeriesBuyFull => 'Buy Full Mini Series';
+
+  @override
+  String miniSeriesFreeParts(int count) {
+    return 'Free parts: $count';
+  }
+
+  @override
+  String get miniSeriesFullNotAvailable =>
+      'Full purchase isn\'t available for this Mini Series.';
+
+  @override
+  String miniSeriesFullPrice(String amount) {
+    return 'Full Mini Series price: ₹ $amount';
+  }
+
+  @override
+  String miniSeriesGiftCodeExpiry(String date) {
+    return 'कालबाह्यता: $date';
+  }
+
+  @override
+  String miniSeriesGiftCodeStatus(String status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String get miniSeriesGiftCodesHint =>
+      'Each code can be claimed once, by one person. Share a different code with each recipient.';
+
+  @override
+  String get miniSeriesGiftCodesTitle => 'Your gift codes';
+
+  @override
+  String get miniSeriesGiftConflict =>
+      'This payment attempt changed. Please review the details and tap Confirm & Pay again.';
+
+  @override
+  String miniSeriesGiftCountMin(int min) {
+    return 'Enter a number of at least $min.';
+  }
+
+  @override
+  String miniSeriesGiftCountRange(int min, int max) {
+    return 'Enter a number between $min and $max.';
+  }
+
+  @override
+  String get miniSeriesGiftHowMany =>
+      'How many people do you want to gift this Mini Series to?';
+
+  @override
+  String miniSeriesGiftInsufficientBalance(String required, String available) {
+    return 'Insufficient wallet balance. Required: ₹ $required, available: ₹ $available.';
+  }
+
+  @override
+  String get miniSeriesGiftNotAvailable =>
+      'Gifting isn\'t available for this Mini Series.';
+
+  @override
+  String miniSeriesGiftPricePerGift(String amount) {
+    return 'Price per gift: ₹ $amount';
+  }
+
+  @override
+  String get miniSeriesGiftReplayNote =>
+      'This purchase was already completed. Showing your original gift codes; you were not charged again.';
+
+  @override
+  String miniSeriesGiftShareText(String title, String code) {
+    return 'मी तुम्हाला Filmytell वर \"$title\" भेट दिली आहे! हा गिफ्ट कोड वापरून क्लेम करा: $code';
+  }
+
+  @override
+  String get miniSeriesGiftSuccess => 'Gift purchased successfully.';
+
+  @override
+  String get miniSeriesGiftTitle => 'Gift Mini Series';
+
+  @override
+  String miniSeriesGiftTotalPaid(String amount) {
+    return 'Total paid: ₹ $amount';
+  }
+
+  @override
+  String miniSeriesGiftTransaction(String id) {
+    return 'Transaction ID: $id';
+  }
+
+  @override
+  String get miniSeriesGiftUnavailable =>
+      'This Mini Series is not available for gifting.';
+
+  @override
+  String miniSeriesOwnedParts(int count) {
+    return 'Already owned: $count';
+  }
+
+  @override
+  String get miniSeriesPartFree => 'Free';
+
+  @override
+  String miniSeriesPartLabel(int number) {
+    return 'Part $number';
+  }
+
+  @override
+  String get miniSeriesPartOwned => 'Owned';
+
+  @override
+  String get miniSeriesPriceChanged =>
+      'The price has changed. Please review the new price and try again.';
+
+  @override
+  String miniSeriesPurchasableParts(int count) {
+    return 'Parts to buy: $count';
+  }
+
+  @override
+  String get miniSeriesPurchaseSuccess =>
+      'Mini Series purchased. All parts are unlocked.';
+
+  @override
+  String miniSeriesTotalParts(int count) {
+    return 'Total parts: $count';
+  }
+
+  @override
+  String giftCardExpiresOn(String date) {
+    return '$date रोजी संपेल';
+  }
+
+  @override
+  String giftCardExpiringSoon(String date) {
+    return 'लवकरच संपेल · $date';
+  }
+
+  @override
+  String giftCardGiftedOn(String date) {
+    return '$date रोजी गिफ्ट केले';
+  }
+
+  @override
+  String miniSeriesPricePerPart(String coins) {
+    return '₹ $coins/भाग';
+  }
+
+  @override
+  String get shortsEpisodesLabel => 'भाग';
+
+  @override
+  String get playerMuteSound => 'आवाज बंद करा';
+
+  @override
+  String get playerUnmuteSound => 'आवाज सुरू करा';
+
+  @override
+  String get downloadInvoice => 'इनव्हॉइस डाउनलोड करा';
+
+  @override
+  String get downloadingInvoice => 'इनव्हॉइस डाउनलोड होत आहे…';
+
+  @override
+  String get invoiceDownloadedSuccess => 'इनव्हॉइस यशस्वीरित्या डाउनलोड झाले';
+
+  @override
+  String get invoiceDownloadFailed => 'इनव्हॉइस डाउनलोड करता आले नाही';
+
+  @override
+  String get invoiceOriginalAmount => 'मूळ रक्कम';
+
+  @override
+  String get invoiceDiscountLabel => 'सवलत';
+
+  @override
+  String get invoiceCouponLabel => 'कूपन';
+
+  @override
+  String get invoicePurchaseDate => 'खरेदीची तारीख';
+
+  @override
+  String get invoiceContentLabel => 'कंटेंट';
+
+  @override
+  String get invoiceContentType => 'कंटेंट प्रकार';
+
+  @override
+  String purchaseGiftedToYouBy(String name) {
+    return 'हा कंटेंट तुम्हाला $name यांनी भेट दिला आहे. त्यामुळे, इनव्हॉइस उपलब्ध नाही.';
+  }
+
+  @override
+  String get purchaseGiftInvoiceUnavailable =>
+      'हा कंटेंट तुम्हाला भेट म्हणून मिळाला आहे. त्यामुळे, इनव्हॉइस उपलब्ध नाही.';
 }

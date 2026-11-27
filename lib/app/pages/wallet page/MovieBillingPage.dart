@@ -4,6 +4,7 @@ import 'package:ott/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:ott/app/core/services/coupon_service.dart';
 import 'package:ott/app/core/services/invoice_service.dart';
 import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
@@ -13,14 +14,18 @@ import 'package:ott/app/pages/wallet%20page/PaymentPage.dart';
 import 'package:ott/app/provider/giftProvider.dart';
 import 'package:ott/app/provider/purchaseContentProvider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
+import 'package:ott/app/widgets/coupon_section_widget.dart';
 import 'package:ott/app/widgets/gift_claim_dialog.dart';
+import 'package:ott/app/widgets/purchase_confirmation_dialog.dart';
 import 'package:ott/data/models/content.dart';
+import 'package:ott/data/models/coupon/coupon_models.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 import '../../provider/themeProvider.dart';
 import '../../provider/dashboardProvider.dart';
 import '../../widgets/show_toast.dart';
 import 'package:ott/app/widgets/filmytell_app_bar.dart';
+import 'package:ott/app/core/utils/movie_wallet_purchase_log.dart';
 
 class MovieBillingPage extends StatefulWidget {
   final Content movie;
@@ -42,6 +47,9 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
   DateTime? _endDate;
   bool _purchaseLoaderVisible = false;
 
+  CouponValidationData? _appliedCoupon;
+  String? _idempotencyKey;
+
   static const double _minimumRechargeAmount = 100;
   static const double _maximumRechargeAmount = 100000;
 
@@ -53,6 +61,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
   @override
   void initState() {
     super.initState();
+    _idempotencyKey = CouponService.generateIdempotencyKey();
     Future.microtask(() async {
       final walletProvider =
           Provider.of<WalletProvider>(context, listen: false);
@@ -72,8 +81,13 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
             : 16.0;
 
     moviePrice = double.tryParse(widget.movie.price.toString()) ?? 0.0;
+    // Coupons apply only to individual purchases (giftCount == 0); gifts are
+    // charged at full price per gift.
+    final effectivePrice = _appliedCoupon != null && widget.giftCount == 0
+        ? _appliedCoupon!.finalPayableAmount
+        : moviePrice;
     final totalCoins =
-        moviePrice * (widget.giftCount == 0 ? 1 : widget.giftCount);
+        effectivePrice * (widget.giftCount == 0 ? 1 : widget.giftCount);
     // Split the localized sentence around the title so it can be highlighted.
     const titleMarker = '\u0001';
     final giftCardPromptParts =
@@ -177,10 +191,22 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                   style: const TextStyle(
                                       fontSize: 14, color: Colors.grey),
                                 ),
+                          if (_appliedCoupon != null &&
+                              widget.giftCount == 0) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              "Discount (${_appliedCoupon!.couponCode}): -₹ ${_appliedCoupon!.discountAmount.toStringAsFixed(2)}",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.green.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 6),
                           Text(
                             lang.billingTotalAmount(
-                                totalCoins.toStringAsFixed(0)),
+                                totalCoins.toStringAsFixed(2)),
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -188,6 +214,29 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                             ),
                           ),
                           const SizedBox(height: 16),
+
+                          /// Coupon Section (for individual movie / short film purchase)
+                          if (widget.giftCount == 0) ...[
+                            CouponSectionWidget(
+                              purchaseKind: 'CONTENT',
+                              targetId: widget.movie.id ?? 0,
+                              originalPrice: moviePrice,
+                              appliedCoupon: _appliedCoupon,
+                              onCouponApplied: (coupon) {
+                                setState(() {
+                                  _appliedCoupon = coupon;
+                                });
+                              },
+                              onCouponRemoved: () {
+                                setState(() {
+                                  _appliedCoupon = null;
+                                  _idempotencyKey =
+                                      CouponService.generateIdempotencyKey();
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                          ],
 
                           /// Wallet Status
                           Card(
@@ -361,8 +410,7 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                               return ListTile(
                                 // leading:
                                 //     Image.asset(ImageConstant.coin, width: 22),
-                                title: Text(
-                                    tx.status ?? lang.cardNotApplicable,
+                                title: Text(tx.status ?? lang.cardNotApplicable,
                                     style: const TextStyle(
                                         fontWeight: FontWeight.w600)),
                                 subtitle: Text(
@@ -462,6 +510,20 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
 
                               try {
                                 await provider.getBalance();
+                                MovieWalletPurchaseLog.context(
+                                  movieId: widget.movie.id,
+                                  originalAmount: moviePrice *
+                                      (giftCount == 0 ? 1 : giftCount),
+                                  couponCode: giftCount == 0
+                                      ? _appliedCoupon?.couponCode
+                                      : null,
+                                  discountAmount: giftCount == 0
+                                      ? _appliedCoupon?.discountAmount
+                                      : null,
+                                  finalAmount: coins,
+                                  walletBalance: provider.walletBalance,
+                                  giftCount: giftCount,
+                                );
                                 if (provider.walletBalance < coins) {
                                   throw Exception(
                                     lang.walletInsufficientBalanceRecharge,
@@ -485,7 +547,10 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                       PurchaseContentProvider>(
                                     pageContext,
                                     listen: false,
-                                  ).saveUserContent(widget.movie);
+                                  ).saveUserContent(
+                                    widget.movie,
+                                    couponCode: _appliedCoupon?.couponCode,
+                                  );
                                   if (purchaseResult['success'] != true) {
                                     throw Exception(
                                       purchaseResult['message']?.toString() ??
@@ -539,7 +604,22 @@ class _MovieBillingPageState extends State<MovieBillingPage> {
                                             GiftedMoviesPage()),
                                   );
                                 } else {
-                                  Navigator.pop(pageContext, true);
+                                  await PurchaseConfirmationDialog.show(
+                                    pageContext,
+                                    contentTitle:
+                                        widget.movie.title ?? 'Movie Purchase',
+                                    originalPrice: moviePrice,
+                                    finalAmountPaid: coins,
+                                    discountAmount:
+                                        _appliedCoupon?.discountAmount,
+                                    couponCode: _appliedCoupon?.couponCode,
+                                    currency: _appliedCoupon?.currency ?? 'INR',
+                                    paymentMethod: 'Wallet',
+                                    orderReference: _idempotencyKey,
+                                    onDone: () {
+                                      Navigator.pop(pageContext, true);
+                                    },
+                                  );
                                 }
                               } catch (error) {
                                 if (!mounted) return;

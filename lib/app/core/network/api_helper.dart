@@ -45,6 +45,22 @@ class ApiHelper {
     return _handleResponse(response);
   }
 
+  /// POST with extra headers (e.g. `Idempotency-Key`) and an optional JSON
+  /// body. When [data] is null no body is sent.
+  Future<dynamic> postApiWithHeaders(
+    String url, {
+    Map<String, String> extraHeaders = const {},
+    Map<String, dynamic>? data,
+  }) async {
+    _logRequest("POST", url);
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {...await _headers(), ...extraHeaders},
+      body: data == null ? null : json.encode(data),
+    );
+    return _handleResponse(response);
+  }
+
   Future<dynamic> putApi(String url) async {
     _logRequest("PUT", url);
     final request = await http.put(Uri.parse(url), headers: await _headers());
@@ -91,6 +107,10 @@ class ApiHelper {
       return ApiResponse(request.statusCode, null);
     }
   }
+
+  /// The exact headers sent by this helper, for debug diagnostics only.
+  /// Callers must mask the Authorization value before logging.
+  Future<Map<String, String>> headersForDiagnostics() => _headers();
 
   Future<Map<String, String>> _headers() async {
     final token =

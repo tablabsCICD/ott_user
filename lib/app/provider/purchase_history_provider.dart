@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -65,15 +66,20 @@ class PurchaseHistoryProvider extends BaseProvider {
       final formattedFromDate =
           DateFormat('yyyy-MM-dd').format(_selectedFromDate);
       final formattedToDate = DateFormat('yyyy-MM-dd').format(_selectedToDate);
-      final response = await _apiHelper.getApi(
-        ApiConstant.purchaseHistory(
-            user!.id!, formattedFromDate, formattedToDate, selectedType),
-      );
+      final url = ApiConstant.purchaseHistory(
+          user!.id!, formattedFromDate, formattedToDate, selectedType);
+      final stopwatch = Stopwatch()..start();
+      _log('[PURCHASE_HISTORY]', 'REQUEST GET $url');
+      final response = await _apiHelper.getApi(url);
+      _log('[PURCHASE_HISTORY]',
+          'RESPONSE status=${response.statusCode} duration=${stopwatch.elapsedMilliseconds}ms');
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body) as Map<String, dynamic>;
+        _logResponseShape(body);
         final parsed = PurchaseHistoryResponse.fromJson(body);
         _items = parsed.data;
+        _log('[PURCHASE_HISTORY]', 'PARSED ITEMS: ${_items.length}');
         return {
           'success': true,
           'message': parsed.message ?? appL10n().msgPurchaseHistoryLoaded,
@@ -83,13 +89,54 @@ class PurchaseHistoryProvider extends BaseProvider {
       _items = <PurchaseHistoryItem>[];
       _error = appL10n().msgFailedToLoadPurchaseHistory;
       return {'success': false, 'message': _error!};
-    } catch (error) {
+    } catch (error, stackTrace) {
+      _log('[PURCHASE_HISTORY]',
+          'EXCEPTION ${error.runtimeType}: $error\n${stackTrace.toString().split('\n').take(5).join('\n')}');
       _items = <PurchaseHistoryItem>[];
       _error = appL10n().msgFailedToLoadPurchaseHistory;
       return {'success': false, 'message': _error!};
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  void _log(String tag, String message) {
+    if (!kDebugMode) return;
+    for (final line in message.split('\n')) {
+      debugPrint('$tag $line', wrapWidth: 1024);
+    }
+  }
+
+  /// Debug-only: the field NAMES (and value types) of each history item, so
+  /// the real gift / sender / access-expiry fields can be identified without
+  /// logging any values (no personal or payment data).
+  void _logResponseShape(Map<String, dynamic> body) {
+    if (!kDebugMode) return;
+    final data = body['data'];
+    final list = data is List
+        ? data
+        : (data is Map && data['items'] is List ? data['items'] as List : const []);
+    _log('[PURCHASE_HISTORY]',
+        'ENVELOPE KEYS: ${body.keys.toList()} | data type: ${data.runtimeType} | items: ${list.length}');
+    String shape(Map m) => (m.keys.map((k) => '$k:${m[k].runtimeType}').toList()
+          ..sort())
+        .join(', ');
+    final candidate =
+        RegExp(r'gift|sender|from|expir|valid|access|dateto|enddate|remaining', caseSensitive: false);
+    for (var i = 0; i < list.length && i < 30; i++) {
+      final item = list[i];
+      if (item is! Map) continue;
+      _log('[PURCHASE_HISTORY]', 'ITEM[$i] FIELDS: ${shape(item)}');
+      for (final nested in item.entries.where((e) => e.value is Map)) {
+        _log('[PURCHASE_HISTORY]',
+            'ITEM[$i].${nested.key} FIELDS: ${shape(nested.value as Map)}');
+      }
+      final giftKeys = item.keys.where((k) => candidate.hasMatch('$k')).toList();
+      _log('[PURCHASE_HISTORY_GIFT_DETAILS]',
+          'ITEM[$i] gift/sender-like fields: ${giftKeys.where((k) => RegExp(r'gift|sender|from', caseSensitive: false).hasMatch('$k')).toList()}');
+      _log('[PURCHASE_HISTORY_EXPIRY]',
+          'ITEM[$i] expiry/validity-like fields: ${giftKeys.where((k) => RegExp(r'expir|valid|access|dateto|enddate|remaining', caseSensitive: false).hasMatch('$k')).toList()}');
     }
   }
 

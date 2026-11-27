@@ -5,6 +5,7 @@ import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:ott/app/core/utils/content_type.dart';
+import 'package:ott/app/pages/movie%20details%20page/MovieDetailsPage.dart';
 import 'package:ott/app/pages/series%20details%20page/seriesdetailspage.dart';
 import 'package:ott/app/pages/watchlist%20page/component/playMoviePage.dart';
 import 'package:ott/app/provider/dashboardProvider.dart';
@@ -20,6 +21,7 @@ import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:ott/app/widgets/filmytell_app_bar.dart';
 import 'package:ott/app/widgets/movieCard.dart';
+import 'package:ott/app/core/services/gifted_content_info_service.dart';
 
 enum WatchlistFilter { available, gifted, expired, downloaded }
 
@@ -244,6 +246,26 @@ class _WatchlistPageState extends State<WatchlistPage> {
       } else {
         await _playContent(item);
       }
+    } finally {
+      _openingContent = false;
+    }
+  }
+
+  /// Gifted To You card tap: the content's details page (Movie / Short Film
+  /// -> MovieDetailsPage, Series / Mini Series -> SeriesDetailsPage), same as
+  /// the Home card, on the root Navigator so it survives the player's
+  /// landscape switch and Back returns here. Once per tap.
+  Future<void> _openGiftedDetails(Content item) async {
+    if (_openingContent || item.id == null) return;
+    _openingContent = true;
+    try {
+      await _contentNavigator.push(
+        MaterialPageRoute(
+          builder: (_) => ContentType.isMovieLike(item.type)
+              ? MovieDetailsPage(movieId: item.id!, contentType: item.type)
+              : SeriesDetailsPage(seriesId: item.id!, content: item),
+        ),
+      );
     } finally {
       _openingContent = false;
     }
@@ -491,27 +513,30 @@ class _WatchlistPageState extends State<WatchlistPage> {
   /// as the Home category pages (fixed card width / height, centered).
   /// Tapping opens the content directly (player / series details).
   Widget _giftedGrid(List<_WatchlistEntry> items) {
-    const double gap = 16;
-    const double horizontalPadding = 16;
-    const double cardHeight = MovieCard.standardHeight;
+    const double gap = 12;
+    const double horizontalPadding = 12;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final availableWidth = constraints.maxWidth - horizontalPadding * 2;
-        final cardWidth = math.min(
-          MovieCard.cardWidthFor(context),
-          availableWidth,
-        );
+        // Columns from the standard card width, then cards widen to fill the
+        // row exactly (no empty space beside them).
+        final baseWidth = MovieCard.cardWidthFor(context);
         final crossAxisCount =
-            math.max(1, ((availableWidth + gap) / (cardWidth + gap)).floor());
-        final gridWidth =
-            crossAxisCount * cardWidth + (crossAxisCount - 1) * gap;
-        final sidePadding =
-            horizontalPadding + math.max(0.0, (availableWidth - gridWidth) / 2);
+            math.max(1, ((availableWidth + gap) / (baseWidth + gap)).floor());
+        final cardWidth =
+            (availableWidth - (crossAxisCount - 1) * gap) / crossAxisCount;
+        // Same title/details area as the standard card; the 16:9 poster grows
+        // with the width.
+        final detailsHeight = MovieCard.standardHeight -
+            baseWidth / MovieCard.standardPosterAspectRatio;
+        final cardHeight =
+            cardWidth / MovieCard.standardPosterAspectRatio + detailsHeight;
 
         return GridView.builder(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(sidePadding, 12, sidePadding, 24),
+          padding: const EdgeInsets.fromLTRB(
+              horizontalPadding, 12, horizontalPadding, 24),
           itemCount: items.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
@@ -526,8 +551,13 @@ class _WatchlistPageState extends State<WatchlistPage> {
                 key: ValueKey('giftedCard-${entry.movie.id}'),
                 movie: entry.movie,
                 cardWidth: cardWidth,
+                cardHeight: cardHeight,
                 cardMargin: 0,
-                onOpen: () => _onGiftedCardTap(entry),
+                isGifted: true,
+                giftInfo: entry.giftInfo,
+                // Card tap -> details page; Watch Now -> player.
+                onOpen: () => unawaited(_openGiftedDetails(entry.movie)),
+                onWatchNow: () => _onGiftedWatchNow(entry),
               ),
             );
           },
@@ -536,7 +566,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
     );
   }
 
-  void _onGiftedCardTap(_WatchlistEntry entry) {
+  void _onGiftedWatchNow(_WatchlistEntry entry) {
     if (!entry.active) {
       CustomToast.show(
         context,
@@ -712,6 +742,9 @@ class _WatchlistPageState extends State<WatchlistPage> {
         isActive: userContent.active ?? false,
         isGifted: userContent.isGifted ?? false,
         isDownloaded: offlineProvider.isDownloaded(movieId),
+        giftInfo: userContent.isGifted == true
+            ? GiftedContentInfo.fromUserContent(userContent)
+            : null,
       );
     }
 
@@ -735,6 +768,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
           isActive: true,
           isGifted: entriesById[movieId]?.isGifted ?? false,
           isDownloaded: true,
+          giftInfo: entriesById[movieId]?.giftInfo,
         );
       }
     }
@@ -1035,12 +1069,16 @@ class _WatchlistEntry {
     required this.isActive,
     required this.isGifted,
     required this.isDownloaded,
+    this.giftInfo,
   });
 
   final Content movie;
   final bool isActive;
   final bool isGifted;
   final bool isDownloaded;
+
+  /// Gift dates / status (gifted items only), shown on Gifted To You cards.
+  final GiftedContentInfo? giftInfo;
 
   bool get active => isActive;
 }

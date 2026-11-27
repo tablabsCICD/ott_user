@@ -2220,7 +2220,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'₹ {coins} /part | {languages}'**
-  String shortsPricePerPartWithLanguages(int coins, String languages);
+  String shortsPricePerPartWithLanguages(String coins, String languages);
 
   /// No description provided for @shortsPartsCount.
   ///
@@ -3935,13 +3935,13 @@ abstract class AppLocalizations {
   /// No description provided for @giftEnterGiftCardNumber.
   ///
   /// In en, this message translates to:
-  /// **'Enter Gift Card Number'**
+  /// **'Enter gift card number'**
   String get giftEnterGiftCardNumber;
 
   /// No description provided for @giftEnter16DigitNumber.
   ///
   /// In en, this message translates to:
-  /// **'Enter 16 Digit Number'**
+  /// **'Enter gift card number'**
   String get giftEnter16DigitNumber;
 
   /// No description provided for @giftRedeem.
@@ -5271,6 +5271,312 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Movies and content gifted to you will appear here.'**
   String get giftedToYouEmptyMessage;
+
+  /// No description provided for @miniSeriesAlreadyOwned.
+  ///
+  /// In en, this message translates to:
+  /// **'You already own every part of this Mini Series.'**
+  String get miniSeriesAlreadyOwned;
+
+  /// No description provided for @miniSeriesBuyAllAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy all'**
+  String get miniSeriesBuyAllAction;
+
+  /// No description provided for @miniSeriesBuyFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy Full Mini Series'**
+  String get miniSeriesBuyFull;
+
+  /// No description provided for @miniSeriesFreeParts.
+  ///
+  /// In en, this message translates to:
+  /// **'Free parts: {count}'**
+  String miniSeriesFreeParts(int count);
+
+  /// No description provided for @miniSeriesFullNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Full purchase isn\'t available for this Mini Series.'**
+  String get miniSeriesFullNotAvailable;
+
+  /// No description provided for @miniSeriesFullPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Full Mini Series price: ₹ {amount}'**
+  String miniSeriesFullPrice(String amount);
+
+  /// No description provided for @miniSeriesGiftCodeExpiry.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires: {date}'**
+  String miniSeriesGiftCodeExpiry(String date);
+
+  /// No description provided for @miniSeriesGiftCodeStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status: {status}'**
+  String miniSeriesGiftCodeStatus(String status);
+
+  /// No description provided for @miniSeriesGiftCodesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Each code can be claimed once, by one person. Share a different code with each recipient.'**
+  String get miniSeriesGiftCodesHint;
+
+  /// No description provided for @miniSeriesGiftCodesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your gift codes'**
+  String get miniSeriesGiftCodesTitle;
+
+  /// No description provided for @miniSeriesGiftConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'This payment attempt changed. Please review the details and tap Confirm & Pay again.'**
+  String get miniSeriesGiftConflict;
+
+  /// No description provided for @miniSeriesGiftCountMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a number of at least {min}.'**
+  String miniSeriesGiftCountMin(int min);
+
+  /// No description provided for @miniSeriesGiftCountRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a number between {min} and {max}.'**
+  String miniSeriesGiftCountRange(int min, int max);
+
+  /// No description provided for @miniSeriesGiftHowMany.
+  ///
+  /// In en, this message translates to:
+  /// **'How many people do you want to gift this Mini Series to?'**
+  String get miniSeriesGiftHowMany;
+
+  /// No description provided for @miniSeriesGiftInsufficientBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Insufficient wallet balance. Required: ₹ {required}, available: ₹ {available}.'**
+  String miniSeriesGiftInsufficientBalance(String required, String available);
+
+  /// No description provided for @miniSeriesGiftNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Gifting isn\'t available for this Mini Series.'**
+  String get miniSeriesGiftNotAvailable;
+
+  /// No description provided for @miniSeriesGiftPricePerGift.
+  ///
+  /// In en, this message translates to:
+  /// **'Price per gift: ₹ {amount}'**
+  String miniSeriesGiftPricePerGift(String amount);
+
+  /// No description provided for @miniSeriesGiftReplayNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This purchase was already completed. Showing your original gift codes; you were not charged again.'**
+  String get miniSeriesGiftReplayNote;
+
+  /// No description provided for @miniSeriesGiftShareText.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'ve gifted you \"{title}\" on Filmytell! Claim it with gift code: {code}'**
+  String miniSeriesGiftShareText(String title, String code);
+
+  /// No description provided for @miniSeriesGiftSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Gift purchased successfully.'**
+  String get miniSeriesGiftSuccess;
+
+  /// No description provided for @miniSeriesGiftTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Gift Mini Series'**
+  String get miniSeriesGiftTitle;
+
+  /// No description provided for @miniSeriesGiftTotalPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Total paid: ₹ {amount}'**
+  String miniSeriesGiftTotalPaid(String amount);
+
+  /// No description provided for @miniSeriesGiftTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction ID: {id}'**
+  String miniSeriesGiftTransaction(String id);
+
+  /// No description provided for @miniSeriesGiftUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This Mini Series is not available for gifting.'**
+  String get miniSeriesGiftUnavailable;
+
+  /// No description provided for @miniSeriesOwnedParts.
+  ///
+  /// In en, this message translates to:
+  /// **'Already owned: {count}'**
+  String miniSeriesOwnedParts(int count);
+
+  /// No description provided for @miniSeriesPartFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Free'**
+  String get miniSeriesPartFree;
+
+  /// No description provided for @miniSeriesPartLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Part {number}'**
+  String miniSeriesPartLabel(int number);
+
+  /// No description provided for @miniSeriesPartOwned.
+  ///
+  /// In en, this message translates to:
+  /// **'Owned'**
+  String get miniSeriesPartOwned;
+
+  /// No description provided for @miniSeriesPriceChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'The price has changed. Please review the new price and try again.'**
+  String get miniSeriesPriceChanged;
+
+  /// No description provided for @miniSeriesPurchasableParts.
+  ///
+  /// In en, this message translates to:
+  /// **'Parts to buy: {count}'**
+  String miniSeriesPurchasableParts(int count);
+
+  /// No description provided for @miniSeriesPurchaseSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Mini Series purchased. All parts are unlocked.'**
+  String get miniSeriesPurchaseSuccess;
+
+  /// No description provided for @miniSeriesTotalParts.
+  ///
+  /// In en, this message translates to:
+  /// **'Total parts: {count}'**
+  String miniSeriesTotalParts(int count);
+
+  /// No description provided for @giftCardExpiresOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires on {date}'**
+  String giftCardExpiresOn(String date);
+
+  /// No description provided for @giftCardExpiringSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Expiring soon · {date}'**
+  String giftCardExpiringSoon(String date);
+
+  /// No description provided for @giftCardGiftedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Gifted on {date}'**
+  String giftCardGiftedOn(String date);
+
+  /// No description provided for @miniSeriesPricePerPart.
+  ///
+  /// In en, this message translates to:
+  /// **'₹ {coins}/part'**
+  String miniSeriesPricePerPart(String coins);
+
+  /// No description provided for @shortsEpisodesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Episodes'**
+  String get shortsEpisodesLabel;
+
+  /// No description provided for @playerMuteSound.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute'**
+  String get playerMuteSound;
+
+  /// No description provided for @playerUnmuteSound.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute'**
+  String get playerUnmuteSound;
+
+  /// No description provided for @downloadInvoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Download Invoice'**
+  String get downloadInvoice;
+
+  /// No description provided for @downloadingInvoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading invoice…'**
+  String get downloadingInvoice;
+
+  /// No description provided for @invoiceDownloadedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice downloaded successfully'**
+  String get invoiceDownloadedSuccess;
+
+  /// No description provided for @invoiceDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to download invoice'**
+  String get invoiceDownloadFailed;
+
+  /// No description provided for @invoiceOriginalAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Original amount'**
+  String get invoiceOriginalAmount;
+
+  /// No description provided for @invoiceDiscountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Discount'**
+  String get invoiceDiscountLabel;
+
+  /// No description provided for @invoiceCouponLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon'**
+  String get invoiceCouponLabel;
+
+  /// No description provided for @invoicePurchaseDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase date'**
+  String get invoicePurchaseDate;
+
+  /// No description provided for @invoiceContentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get invoiceContentLabel;
+
+  /// No description provided for @invoiceContentType.
+  ///
+  /// In en, this message translates to:
+  /// **'Content type'**
+  String get invoiceContentType;
+
+  /// No description provided for @purchaseGiftedToYouBy.
+  ///
+  /// In en, this message translates to:
+  /// **'This content was gifted to you by {name}. Therefore, an invoice is not available.'**
+  String purchaseGiftedToYouBy(String name);
+
+  /// No description provided for @purchaseGiftInvoiceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This content was gifted to you. Therefore, an invoice is not available.'**
+  String get purchaseGiftInvoiceUnavailable;
 }
 
 class _AppLocalizationsDelegate

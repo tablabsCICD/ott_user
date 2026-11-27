@@ -10,7 +10,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:video_player/video_player.dart' as native_video;
+import 'package:intl/intl.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
+import 'package:ott/app/core/services/gifted_content_info_service.dart';
 import 'package:ott/app/core/utils/direct_trailer_source.dart';
 import 'package:ott/app/core/utils/content_type.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
@@ -50,9 +52,19 @@ class MovieCard extends StatefulWidget {
   final int? index;
   final double? cardWidth;
   final double? cardMargin;
+
+  /// Overrides [standardHeight] (e.g. a grid that widens cards to fill the
+  /// row and grows the 16:9 poster to match). Null keeps the standard height.
+  final double? cardHeight;
   final ValueChanged<Content>? onContentUpdated;
   final bool isShortFilmTab;
   final BoxFit? posterFit;
+
+  /// Card is shown in the Home "Gifted To You" row: adds the GIFTED badge.
+  final bool isGifted;
+
+  /// Gift dates for that card, when the gifted-content API provides them.
+  final GiftedContentInfo? giftInfo;
 
   const MovieCard({
     super.key,
@@ -61,17 +73,26 @@ class MovieCard extends StatefulWidget {
     this.index,
     this.cardWidth,
     this.cardMargin,
+    this.cardHeight,
     this.onContentUpdated,
     this.isShortFilmTab = false,
     this.posterFit,
+    this.isGifted = false,
+    this.giftInfo,
     this.onOpen,
+    this.onWatchNow,
   });
 
-  /// Replaces the default open action (card tap, TV select key and the
-  /// price / Watch Now button). Used where the user already has access to
-  /// the content (e.g. Profile -> Gifted To You), so the button shows
-  /// "Watch Now" instead of the price. Null keeps the default behavior.
+  /// Replaces the default open action (card tap, TV select key and — unless
+  /// [onWatchNow] is set — the price / Watch Now button). Null keeps the
+  /// default behavior (open the details page).
   final VoidCallback? onOpen;
+
+  /// Watch Now button action, separate from the card tap. Used where the user
+  /// already has access to the content (e.g. Profile -> Gifted To You): the
+  /// button shows "Watch Now" instead of the price and calls this. The button
+  /// has its own tap handler, so it never triggers the card tap.
+  final VoidCallback? onWatchNow;
 
   /// Resolves the standardized card width for the given context based on
   /// platform and responsive viewport breakpoints.
@@ -589,7 +610,7 @@ class _MovieCardState extends State<MovieCard> {
 
     return SizedBox(
       width: cardWidth,
-      height: MovieCard.standardHeight,
+      height: widget.cardHeight ?? MovieCard.standardHeight,
       child: Stack(
         children: [
           Focus(
@@ -670,6 +691,14 @@ class _MovieCardState extends State<MovieCard> {
               ),
             ),
           ),
+
+          /// 🎁 GIFTED BADGE (Gifted To You row only; top-left of the poster)
+          if (widget.isGifted)
+            Positioned(
+              left: cardMargin + 8,
+              top: (showPreview ? 1 : 3) + 8,
+              child: IgnorePointer(child: _giftedBadge(theme, lang)),
+            ),
 
           /// ⋮ OPTIONS BUTTON
           _optionButton(context, widget.movie),
@@ -815,10 +844,77 @@ class _MovieCardState extends State<MovieCard> {
             errorIconColor: theme.canvasColor.withValues(alpha: 0.3),
           ),
 
+          /// Discount Offer Badge (only shown when backend provides discount info)
+          if (_hasDiscountOffer(content)) _buildDiscountBadge(content),
+
           /// 🔥 CONTINUE WATCHING BAR
           if ((widget.movie.watchedPercentage ?? 0) > 0)
             _watchProgressBar(theme),
         ],
+      ),
+    );
+  }
+
+  bool _hasDiscountOffer(Content c) {
+    if (c.isRental == true) {
+      return false;
+    }
+    if (c.discountPercentage != null && c.discountPercentage! > 0) {
+      return true;
+    }
+    if (c.discountedPrice != null &&
+        c.price != null &&
+        c.discountedPrice! < c.price!) {
+      return true;
+    }
+    if (c.offerBadge != null && c.offerBadge!.trim().isNotEmpty) {
+      return true;
+    }
+    return false;
+  }
+
+  Widget _buildDiscountBadge(Content c) {
+    String badgeText = '';
+    if (c.discountPercentage != null && c.discountPercentage! > 0) {
+      badgeText = '${c.discountPercentage!.toInt()}% OFF';
+    } else if (c.discountedPrice != null && c.price != null && c.price! > 0) {
+      final pct = (((c.price! - c.discountedPrice!) / c.price!) * 100).round();
+      if (pct > 0) {
+        badgeText = '$pct% OFF';
+      } else {
+        badgeText = 'Special Offer';
+      }
+    } else if (c.offerBadge != null && c.offerBadge!.trim().isNotEmpty) {
+      badgeText = c.offerBadge!.trim();
+    } else {
+      badgeText = 'Special Offer';
+    }
+
+    return Positioned(
+      top: 6,
+      left: 6,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE50914),
+          borderRadius: BorderRadius.circular(4),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black45,
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Text(
+          badgeText,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 9.5,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.3,
+          ),
+        ),
       ),
     );
   }
@@ -830,6 +926,7 @@ class _MovieCardState extends State<MovieCard> {
         ? movie.genreList!.join(', ')
         : lang.cardDefaultGenre;
     final metadataText = genreStr;
+    final giftLine = widget.isGifted ? _giftInfoLine(theme, lang) : null;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       child: Row(
@@ -856,16 +953,19 @@ class _MovieCardState extends State<MovieCard> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    metadataText,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      color: theme.canvasColor.withValues(alpha: 0.7),
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  // Gifted cards show their gift status in place of the
+                  // genre line (same height); otherwise the genre line.
+                  giftLine ??
+                      Text(
+                        metadataText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: theme.canvasColor.withValues(alpha: 0.7),
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                 ],
               ),
             ),
@@ -897,15 +997,97 @@ class _MovieCardState extends State<MovieCard> {
     );
   }
 
+  Widget _giftedBadge(ThemeData theme, AppLocalizations lang) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: theme.primaryColor,
+        borderRadius: BorderRadius.circular(6),
+        boxShadow: const [
+          BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 1)),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(LucideIcons.gift, size: 11, color: Colors.white),
+          const SizedBox(width: 4),
+          Text(
+            lang.watchlistGifted.toUpperCase(),
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontSize: 9.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Expiry (with Expiring soon / Expired) or, without an expiry, the gift
+  /// date. Null when the API gave neither, so the genre line stays.
+  Widget? _giftInfoLine(ThemeData theme, AppLocalizations lang) {
+    final info = widget.giftInfo;
+    if (info == null || !info.hasDetails) return null;
+    final locale = Localizations.localeOf(context).toString();
+    String format(DateTime date) {
+      try {
+        return DateFormat('dd MMM yyyy', locale).format(date);
+      } catch (_) {
+        return DateFormat('dd MMM yyyy').format(date);
+      }
+    }
+
+    final muted = theme.canvasColor.withValues(alpha: 0.7);
+    final String text;
+    Color color = muted;
+    final expiry = info.expiresOn;
+    final status = info.statusAt(DateTime.now());
+    if (status == GiftStatus.expired) {
+      text = lang.watchlistExpired;
+      color = theme.colorScheme.error;
+    } else if (expiry != null) {
+      switch (status) {
+        case GiftStatus.expiringSoon:
+          text = lang.giftCardExpiringSoon(format(expiry));
+          color = Colors.orange.shade700;
+        case GiftStatus.active:
+        case GiftStatus.expired:
+        case null:
+          text = lang.giftCardExpiresOn(format(expiry));
+      }
+    } else {
+      text = lang.giftCardGiftedOn(format(info.giftedOn!));
+    }
+
+    return Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: GoogleFonts.inter(
+        color: color,
+        fontSize: 10.5,
+        fontWeight:
+            color == muted ? FontWeight.w500 : FontWeight.w700,
+      ),
+    );
+  }
+
   Widget _buildPriceButton(
       ThemeData theme, AppLocalizations lang, double price) {
     final movie = widget.movie;
     final contentType = ContentType.normalize(movie.type);
     final isSeries = contentType == ContentType.series;
     final isPurchased = movie.isRental == true;
-    final onOpen = widget.onOpen;
+    final onOpen = widget.onWatchNow ?? widget.onOpen;
 
     final shouldShowWatchNow = isSeries || isPurchased || onOpen != null;
+    // Struck-through original price only where a price is shown.
+    final hasDiscount = !shouldShowWatchNow &&
+        movie.discountedPrice != null &&
+        movie.discountedPrice! < price;
 
     return GestureDetector(
       onTap: () => onOpen != null
@@ -921,14 +1103,37 @@ class _MovieCardState extends State<MovieCard> {
           borderRadius: BorderRadius.circular(6),
           color: const Color(0xFFE50914),
         ),
-        child: Text(
-          shouldShowWatchNow ? lang.watchNow : '₹ $price',
-          style: const TextStyle(
-            fontSize: 11.5,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        child: hasDiscount
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '₹ $price',
+                    style: const TextStyle(
+                      fontSize: 9.5,
+                      decoration: TextDecoration.lineThrough,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '₹ ${movie.discountedPrice!.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              )
+            : Text(
+                shouldShowWatchNow ? lang.watchNow : '₹ $price',
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
       ),
     );
   }

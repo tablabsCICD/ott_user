@@ -56,6 +56,9 @@ class Content {
   int? episodeNumber;
   String? episodeTitle;
   String? episodePosterUrl;
+  double? discountPercentage;
+  double? discountedPrice;
+  String? offerBadge;
 
   Content({
     this.id,
@@ -101,6 +104,9 @@ class Content {
     this.episodeNumber,
     this.episodeTitle,
     this.episodePosterUrl,
+    this.discountPercentage,
+    this.discountedPrice,
+    this.offerBadge,
   });
 
   /// Formatted display title for UI (e.g. Continue Watching card/banner).
@@ -121,9 +127,10 @@ class Content {
           episodeTitle != null && episodeTitle!.trim().isNotEmpty;
       final epName = hasExplicitTitle ? episodeTitle!.trim() : '';
 
-      final parentTitle = (seriesTitle != null && seriesTitle!.trim().isNotEmpty)
-          ? seriesTitle!.trim()
-          : ((title != null && title != episodeTitle) ? title!.trim() : '');
+      final parentTitle =
+          (seriesTitle != null && seriesTitle!.trim().isNotEmpty)
+              ? seriesTitle!.trim()
+              : ((title != null && title != episodeTitle) ? title!.trim() : '');
 
       if (parentTitle.isNotEmpty && epPrefix.isNotEmpty && epName.isNotEmpty) {
         return '$parentTitle • $epPrefix - $epName';
@@ -178,6 +185,9 @@ class Content {
     int? watchedPercentage,
     int? seasonId,
     int? episodeId,
+    double? discountPercentage,
+    double? discountedPrice,
+    String? offerBadge,
     int? seriesId,
     String? seriesTitle,
     int? seasonNumber,
@@ -223,6 +233,9 @@ class Content {
         watchedPercentage: watchedPercentage ?? this.watchedPercentage,
         seasonId: seasonId ?? this.seasonId,
         episodeId: episodeId ?? this.episodeId,
+        discountPercentage: discountPercentage ?? this.discountPercentage,
+        discountedPrice: discountedPrice ?? this.discountedPrice,
+        offerBadge: offerBadge ?? this.offerBadge,
         seriesId: seriesId ?? this.seriesId,
         seriesTitle: seriesTitle ?? this.seriesTitle,
         seasonNumber: seasonNumber ?? this.seasonNumber,
@@ -416,6 +429,17 @@ class Content {
               json['episode']?['poster_url'] ??
               json['episode']?['thumbnail'],
         ),
+
+        discountPercentage: _asDouble(json['discountPercentage'] ??
+            json['discountPercent'] ??
+            json['discount_percentage']),
+        discountedPrice: _asDouble(json['discountedPrice'] ??
+            json['discountPrice'] ??
+            json['discounted_price'] ??
+            json['offerPrice']),
+        offerBadge:
+            (json['offerBadge'] ?? json['discountBadge'] ?? json['offer_badge'])
+                ?.toString(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -462,6 +486,10 @@ class Content {
         "episodeNumber": episodeNumber,
         "episodeTitle": episodeTitle,
         "episodePosterUrl": episodePosterUrl,
+        if (discountPercentage != null)
+          "discountPercentage": discountPercentage,
+        if (discountedPrice != null) "discountedPrice": discountedPrice,
+        if (offerBadge != null) "offerBadge": offerBadge,
       };
 }
 

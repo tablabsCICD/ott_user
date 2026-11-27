@@ -2,11 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:ott/app/core/payment/payment_result_message.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:ott/app/core/services/coupon_service.dart';
 import 'package:ott/app/pages/wallet%20page/PaymentPage.dart';
 import 'package:ott/app/pages/wallet%20page/AppleWalletRechargeScreen.dart';
 import 'package:ott/app/core/services/wallet_platform.dart';
 import 'package:ott/app/provider/series_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
+import 'package:ott/app/widgets/coupon_section_widget.dart';
+import 'package:ott/app/widgets/purchase_confirmation_dialog.dart';
+import 'package:ott/data/models/coupon/coupon_models.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -42,12 +46,16 @@ class SeriesBillingPage extends StatefulWidget {
 }
 
 class _SeriesBillingPageState extends State<SeriesBillingPage> {
+  CouponValidationData? _appliedCoupon;
+  String? _idempotencyKey;
+
   static const double _minimumRechargeAmount = 100;
   static const double _maximumRechargeAmount = 100000;
 
   @override
   void initState() {
     super.initState();
+    _idempotencyKey = CouponService.generateIdempotencyKey();
     Future.microtask(() async {
       final wallet = Provider.of<WalletProvider>(context, listen: false);
       await wallet.getBalance();
@@ -64,7 +72,11 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
         : ResponsiveWidget.isTablet(context)
             ? 80.0
             : 16.0;
-    final totalCoins = widget.amount;
+    final originalAmount = widget.amount;
+    final effectiveAmount = _appliedCoupon != null
+        ? _appliedCoupon!.finalPayableAmount
+        : originalAmount;
+    final totalCoins = effectiveAmount;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -161,6 +173,31 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                               fontWeight: FontWeight.bold,
                               color: theme.primaryColor,
                             ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          /// Coupon Section
+                          CouponSectionWidget(
+                            purchaseKind:
+                                widget.isSeason ? 'SEASON' : 'EPISODE',
+                            targetId: (widget.isSeason
+                                    ? widget.seasonId
+                                    : widget.episodeId) ??
+                                0,
+                            originalPrice: originalAmount,
+                            appliedCoupon: _appliedCoupon,
+                            onCouponApplied: (coupon) {
+                              setState(() {
+                                _appliedCoupon = coupon;
+                              });
+                            },
+                            onCouponRemoved: () {
+                              setState(() {
+                                _appliedCoupon = null;
+                                _idempotencyKey =
+                                    CouponService.generateIdempotencyKey();
+                              });
+                            },
                           ),
                           const SizedBox(height: 16),
 
@@ -296,11 +333,15 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                                 result = await provider.purchaseSeason(
                                   widget.seasonId!,
                                   widget.seriesId,
+                                  couponCode: _appliedCoupon?.couponCode,
+                                  idempotencyKey: _idempotencyKey,
                                 );
                               } else {
                                 result = await provider.purchaseEpisode(
                                   widget.episodeId!,
                                   widget.seriesId,
+                                  couponCode: _appliedCoupon?.couponCode,
+                                  idempotencyKey: _idempotencyKey,
                                 );
                               }
 
@@ -308,12 +349,32 @@ class _SeriesBillingPageState extends State<SeriesBillingPage> {
                               Navigator.pop(dialogContext);
 
                               if (result.success) {
-                                /*  await _handlePostPurchaseInvoice(
+                                final finalPaid = result.coinsDeducted ??
+                                    (_appliedCoupon != null
+                                        ? _appliedCoupon!.finalPayableAmount
+                                        : widget.amount);
+                                final discount = result.discountAmount ??
+                                    _appliedCoupon?.discountAmount;
+                                final code = result.couponCode ??
+                                    _appliedCoupon?.couponCode;
+
+                                await PurchaseConfirmationDialog.show(
                                   pageContext,
-                                  result,
-                                ); */
-                                if (!mounted) return;
-                                Navigator.pop(pageContext, true);
+                                  contentTitle: widget.itemTitle ??
+                                      (widget.isSeason
+                                          ? "Season Purchase"
+                                          : "Episode Purchase"),
+                                  originalPrice: widget.amount,
+                                  finalAmountPaid: finalPaid,
+                                  discountAmount: discount,
+                                  couponCode: code,
+                                  paymentMethod: 'Wallet',
+                                  orderReference: _idempotencyKey,
+                                  invoiceUrl: result.invoiceUrl,
+                                  onDone: () {
+                                    Navigator.pop(pageContext, true);
+                                  },
+                                );
                               } else {
                                 final msg = result.message.isNotEmpty
                                     ? result.message

@@ -1128,7 +1128,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get shortsTrending => 'ట్రెండింగ్';
 
   @override
-  String shortsPricePerPartWithLanguages(int coins, String languages) {
+  String shortsPricePerPartWithLanguages(String coins, String languages) {
     return '₹ $coins /భాగం | $languages';
   }
 
@@ -2152,7 +2152,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get giftEnterGiftCardNumber => 'గిఫ్ట్ కార్డ్ నంబర్ నమోదు చేయండి';
 
   @override
-  String get giftEnter16DigitNumber => '16 అంకెల నంబర్ నమోదు చేయండి';
+  String get giftEnter16DigitNumber => 'గిఫ్ట్ కార్డ్ నంబర్ నమోదు చేయండి';
 
   @override
   String get giftRedeem => 'రిడీమ్ చేయండి';
@@ -2945,4 +2945,209 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get giftedToYouEmptyMessage =>
       'మీకు బహుమతిగా ఇచ్చిన సినిమాలు మరియు కంటెంట్ ఇక్కడ కనిపిస్తాయి.';
+
+  @override
+  String get miniSeriesAlreadyOwned =>
+      'You already own every part of this Mini Series.';
+
+  @override
+  String get miniSeriesBuyAllAction => 'Buy all';
+
+  @override
+  String get miniSeriesBuyFull => 'Buy Full Mini Series';
+
+  @override
+  String miniSeriesFreeParts(int count) {
+    return 'Free parts: $count';
+  }
+
+  @override
+  String get miniSeriesFullNotAvailable =>
+      'Full purchase isn\'t available for this Mini Series.';
+
+  @override
+  String miniSeriesFullPrice(String amount) {
+    return 'Full Mini Series price: ₹ $amount';
+  }
+
+  @override
+  String miniSeriesGiftCodeExpiry(String date) {
+    return 'గడువు: $date';
+  }
+
+  @override
+  String miniSeriesGiftCodeStatus(String status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String get miniSeriesGiftCodesHint =>
+      'Each code can be claimed once, by one person. Share a different code with each recipient.';
+
+  @override
+  String get miniSeriesGiftCodesTitle => 'Your gift codes';
+
+  @override
+  String get miniSeriesGiftConflict =>
+      'This payment attempt changed. Please review the details and tap Confirm & Pay again.';
+
+  @override
+  String miniSeriesGiftCountMin(int min) {
+    return 'Enter a number of at least $min.';
+  }
+
+  @override
+  String miniSeriesGiftCountRange(int min, int max) {
+    return 'Enter a number between $min and $max.';
+  }
+
+  @override
+  String get miniSeriesGiftHowMany =>
+      'How many people do you want to gift this Mini Series to?';
+
+  @override
+  String miniSeriesGiftInsufficientBalance(String required, String available) {
+    return 'Insufficient wallet balance. Required: ₹ $required, available: ₹ $available.';
+  }
+
+  @override
+  String get miniSeriesGiftNotAvailable =>
+      'Gifting isn\'t available for this Mini Series.';
+
+  @override
+  String miniSeriesGiftPricePerGift(String amount) {
+    return 'Price per gift: ₹ $amount';
+  }
+
+  @override
+  String get miniSeriesGiftReplayNote =>
+      'This purchase was already completed. Showing your original gift codes; you were not charged again.';
+
+  @override
+  String miniSeriesGiftShareText(String title, String code) {
+    return 'నేను మీకు Filmytell లో \"$title\" బహుమతిగా ఇచ్చాను! ఈ గిఫ్ట్ కోడ్‌తో క్లెయిమ్ చేయండి: $code';
+  }
+
+  @override
+  String get miniSeriesGiftSuccess => 'Gift purchased successfully.';
+
+  @override
+  String get miniSeriesGiftTitle => 'Gift Mini Series';
+
+  @override
+  String miniSeriesGiftTotalPaid(String amount) {
+    return 'Total paid: ₹ $amount';
+  }
+
+  @override
+  String miniSeriesGiftTransaction(String id) {
+    return 'Transaction ID: $id';
+  }
+
+  @override
+  String get miniSeriesGiftUnavailable =>
+      'This Mini Series is not available for gifting.';
+
+  @override
+  String miniSeriesOwnedParts(int count) {
+    return 'Already owned: $count';
+  }
+
+  @override
+  String get miniSeriesPartFree => 'Free';
+
+  @override
+  String miniSeriesPartLabel(int number) {
+    return 'Part $number';
+  }
+
+  @override
+  String get miniSeriesPartOwned => 'Owned';
+
+  @override
+  String get miniSeriesPriceChanged =>
+      'The price has changed. Please review the new price and try again.';
+
+  @override
+  String miniSeriesPurchasableParts(int count) {
+    return 'Parts to buy: $count';
+  }
+
+  @override
+  String get miniSeriesPurchaseSuccess =>
+      'Mini Series purchased. All parts are unlocked.';
+
+  @override
+  String miniSeriesTotalParts(int count) {
+    return 'Total parts: $count';
+  }
+
+  @override
+  String giftCardExpiresOn(String date) {
+    return '$dateన గడువు ముగుస్తుంది';
+  }
+
+  @override
+  String giftCardExpiringSoon(String date) {
+    return 'త్వరలో గడువు ముగుస్తుంది · $date';
+  }
+
+  @override
+  String giftCardGiftedOn(String date) {
+    return '$dateన బహుమతిగా ఇచ్చారు';
+  }
+
+  @override
+  String miniSeriesPricePerPart(String coins) {
+    return '₹ $coins/భాగం';
+  }
+
+  @override
+  String get shortsEpisodesLabel => 'ఎపిసోడ్‌లు';
+
+  @override
+  String get playerMuteSound => 'సౌండ్ ఆఫ్ చేయండి';
+
+  @override
+  String get playerUnmuteSound => 'సౌండ్ ఆన్ చేయండి';
+
+  @override
+  String get downloadInvoice => 'ఇన్‌వాయిస్ డౌన్‌లోడ్ చేయండి';
+
+  @override
+  String get downloadingInvoice => 'ఇన్‌వాయిస్ డౌన్‌లోడ్ అవుతోంది…';
+
+  @override
+  String get invoiceDownloadedSuccess =>
+      'ఇన్‌వాయిస్ విజయవంతంగా డౌన్‌లోడ్ అయింది';
+
+  @override
+  String get invoiceDownloadFailed => 'ఇన్‌వాయిస్ డౌన్‌లోడ్ చేయడం విఫలమైంది';
+
+  @override
+  String get invoiceOriginalAmount => 'అసలు మొత్తం';
+
+  @override
+  String get invoiceDiscountLabel => 'తగ్గింపు';
+
+  @override
+  String get invoiceCouponLabel => 'కూపన్';
+
+  @override
+  String get invoicePurchaseDate => 'కొనుగోలు తేదీ';
+
+  @override
+  String get invoiceContentLabel => 'కంటెంట్';
+
+  @override
+  String get invoiceContentType => 'కంటెంట్ రకం';
+
+  @override
+  String purchaseGiftedToYouBy(String name) {
+    return 'ఈ కంటెంట్‌ను మీకు $name బహుమతిగా ఇచ్చారు. కాబట్టి, ఇన్‌వాయిస్ అందుబాటులో లేదు.';
+  }
+
+  @override
+  String get purchaseGiftInvoiceUnavailable =>
+      'ఈ కంటెంట్ మీకు బహుమతిగా ఇవ్వబడింది. కాబట్టి, ఇన్‌వాయిస్ అందుబాటులో లేదు.';
 }

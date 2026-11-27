@@ -12,19 +12,21 @@ import 'package:ott/app/core/services/session_manager.dart';
 import 'package:ott/app/core/utils/security_debug_log.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/wallet%20page/WalletPage.dart';
+import 'package:ott/app/core/constant/feature_flags.dart';
+import 'package:ott/app/pages/shorts%20page/component/mini_series_commerce_sheets.dart';
 import 'package:ott/app/provider/secure_playback_controller.dart';
 import 'package:ott/app/provider/shorts_provider.dart';
 import 'package:ott/app/provider/wallet_provider.dart';
 import 'package:ott/app/widgets/content_share_sheet.dart';
 import 'package:ott/app/widgets/playback_watermark_overlay.dart';
 import 'package:ott/app/widgets/shimmer%20loader/shimmer_loader.dart';
-import 'package:ott/app/widgets/video_skip_controls.dart';
 import 'package:ott/data/models/anti_piracy_models.dart';
 import 'package:ott/data/models/shorts.dart';
 import 'package:ott/device/utils/ResponsiveWidget.dart';
 import 'package:ott/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:video_player/video_player.dart' as native_video;
 
 String _resolveShortPlaybackCountryCode() {
   final countryCode =
@@ -46,14 +48,60 @@ class ShortsPlayerPage extends StatefulWidget {
 
 class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     with WidgetsBindingObserver {
+  // media_kit player: used on web/desktop, and as a fallback on mobile.
   Player? _controller;
   VideoController? _videoController;
+  // Native (ExoPlayer / AVPlayer) player: preferred on Android and iOS, the
+  // same as the movie player. media_kit on mobile falls back to software
+  // rendering on emulators and does not reliably forward CloudFront cookies
+  // to HLS child playlists/segments.
+  native_video.VideoPlayerController? _nativeController;
   SecurePlaybackController? _securePlaybackController;
   final List<StreamSubscription<dynamic>> _playerSubscriptions = [];
   final PageController _pageController = PageController();
 
   List<ShortPart> _parts = [];
   int _currentIndex = 0;
+
+  /// Parts already counted as viewed in this player session.
+  final Set<int> _viewedPartIds = <int>{};
+
+  /// Page the user is on (updates immediately on swipe; [_currentIndex] only
+  /// changes once that part has loaded). Used for the header episode number.
+  int _displayIndex = 0;
+
+  /// Latest part requested while another part was still loading.
+  int? _pendingIndex;
+
+  /// Bumped for every episode load and whenever a newer swipe supersedes the
+  /// one in flight; a load whose generation is no longer current is dropped
+  /// before it can attach a player (no audio overlap, no wrong episode).
+  int _loadGeneration = 0;
+
+  /// Completes once the current episode's player is attached and playing, so
+  /// navigation unlocks without waiting for watermark/view/detail requests.
+  Completer<void>? _mediaReady;
+
+  /// Debug-only timings of the episode currently loading.
+  _EpisodeLoadTrace? _trace;
+
+  /// Playback position, updated without rebuilding the page: only the
+  /// progress bar listens to it.
+  final ValueNotifier<Duration> _positionNotifier =
+      ValueNotifier(Duration.zero);
+
+  bool _controlsVisible = true;
+  Timer? _hideControlsTimer;
+  static const Duration _controlsAutoHide = Duration(seconds: 3);
+
+  /// True while the episode sheet is open: controls stay visible and the
+  /// auto-hide timer is held until it closes.
+  bool _episodesSheetOpen = false;
+
+  /// Audio mute (not microphone). Kept across episodes.
+  bool _isMuted = false;
+  bool _isBuffering = false;
+  bool _resumeOnForeground = false;
 
   bool _isLoadingPart = false;
   bool _isMetaExpanded = false;
@@ -62,12 +110,193 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
   bool _handlingSecureAuthenticationFailure = false;
 
   int get totalParts => _parts.length;
+
+  /// Backend flag: the user owns the whole mini series through a claimed gift.
+  bool _hasFullSeriesGiftAccess = false;
+
+  /// A part plays without payment when it is a free preview, purchased, or
+  /// covered by full-series gift access. All three come from the backend.
+  bool _isPartAccessible(ShortPart part) =>
+      part.isFreePreview || part.isPurchased || _hasFullSeriesGiftAccess;
+
+  bool get _useNativePlayer =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
+  bool get _hasPlayer => _nativeController != null || _controller != null;
+
+  bool get _isPlaying =>
+      _nativeController?.value.isPlaying ?? _controller?.state.playing ?? false;
+
+  Duration get _position =>
+      _nativeController?.value.position ??
+      _controller?.state.position ??
+      Duration.zero;
+
+  Duration get _duration =>
+      _nativeController?.value.duration ??
+      _controller?.state.duration ??
+      Duration.zero;
+
+  Future<void> _play() async {
+    final native = _nativeController;
+    if (native != null) return native.play();
+    await _controller?.play();
+  }
+
+  Future<void> _pause() async {
+    final native = _nativeController;
+    if (native != null) return native.pause();
+    await _controller?.pause();
+  }
+
+  Future<void> _seekTo(Duration position) async {
+    final native = _nativeController;
+    if (native != null) return native.seekTo(position);
+    await _controller?.seek(position);
+  }
+
+  /// Stops and releases whichever player is currently active.
+  Future<void> _disposeActivePlayer() async {
+    final oldMediaKit = _controller;
+    final oldNative = _nativeController;
+    if (oldMediaKit == null && oldNative == null) return;
+    final watch = Stopwatch()..start();
+    _controller = null;
+    _videoController = null;
+    _nativeController = null;
+    for (final subscription in _playerSubscriptions) {
+      await subscription.cancel();
+    }
+    _playerSubscriptions.clear();
+    oldNative?.removeListener(_onNativePlayerChanged);
+    _positionNotifier.value = Duration.zero;
+    _isBuffering = false;
+    await oldNative?.pause();
+    await oldNative?.dispose();
+    await oldMediaKit?.pause();
+    await oldMediaKit?.dispose();
+    _EpisodeLoadTrace.log(
+        'MINI_SERIES_EPISODE_DISPOSE',
+        'player=${oldNative != null ? 'native' : 'media_kit'} '
+            'released=${watch.elapsedMilliseconds}ms');
+  }
+
+  bool _lastNativePlaying = false;
+  String _lastNativeError = '';
+
+  void _onNativePlayerChanged() {
+    final controller = _nativeController;
+    if (controller == null) return;
+    final value = controller.value;
+    // Position ticks only move the progress bar (no full-page rebuild).
+    _positionNotifier.value = value.position;
+    final trace = _trace;
+    if (trace != null && !trace.firstFrameLogged) {
+      if (value.isBuffering != _isBuffering) {
+        trace.bufferingChanged(value.isBuffering);
+      }
+      trace.maybeFirstFrame(playing: value.isPlaying, position: value.position);
+    } else if (trace != null && value.isBuffering != _isBuffering) {
+      trace.bufferingChanged(value.isBuffering);
+    }
+    var changed = false;
+    if (value.isPlaying != _lastNativePlaying) {
+      _lastNativePlaying = value.isPlaying;
+      _securePlaybackController?.onPlayingChanged(value.isPlaying);
+      _onPlayingStateChanged(value.isPlaying);
+      changed = true;
+    }
+    if (value.isBuffering != _isBuffering) {
+      _isBuffering = value.isBuffering;
+      changed = true;
+    }
+    final error = value.errorDescription ?? '';
+    if (value.hasError && error != _lastNativeError) {
+      _lastNativeError = error;
+      SecurityDebugLog.event('PLAYER', 'Mini Series native player error.');
+      if (error.contains('403') && _securePlaybackController != null) {
+        unawaited(_securePlaybackController!.handlePlayerHttp403());
+      } else if (mounted) {
+        _hasVideoError = true;
+        _videoErrorMessage =
+            AppLocalizations.of(context)!.playerFailedToLoadVideo;
+      }
+      changed = true;
+    }
+    if (changed && mounted) setState(() {});
+  }
+
+  /// Keeps controls in step with real playback: visible while paused,
+  /// auto-hidden a few seconds after playback (re)starts.
+  void _onPlayingStateChanged(bool isPlaying) {
+    if (isPlaying) {
+      _scheduleControlsHide();
+    } else {
+      _hideControlsTimer?.cancel();
+      _controlsVisible = true;
+    }
+  }
+
+  /// Single visibility rule for every player control (back, episodes,
+  /// mute, play/pause): shown after a tap, always shown while paused or while
+  /// the episode sheet is open.
+  bool get _controlsShown =>
+      _controlsVisible || !_isPlaying || _episodesSheetOpen;
+
+  /// The one auto-hide timer. Each call replaces the previous timer, so
+  /// rapid taps never stack timers.
+  void _scheduleControlsHide() {
+    _hideControlsTimer?.cancel();
+    if (_episodesSheetOpen) return;
+    _hideControlsTimer = Timer(_controlsAutoHide, () {
+      if (mounted && _isPlaying && !_episodesSheetOpen && _controlsVisible) {
+        setState(() => _controlsVisible = false);
+      }
+    });
+  }
+
+  /// Shows the controls and restarts the inactivity timeout. Rebuilds only
+  /// when visibility actually changes.
+  void _showControls() {
+    if (!_controlsVisible) setState(() => _controlsVisible = true);
+    if (_isPlaying) {
+      _scheduleControlsHide();
+    } else {
+      _hideControlsTimer?.cancel();
+    }
+  }
+
+  /// Screen tap: shows all controls and resets the timeout (no toggling, so
+  /// rapid taps cannot make the controls flicker).
+  void _onScreenTap() => _showControls();
+
+  Future<void> _applyVolume() async {
+    final native = _nativeController;
+    if (native != null) {
+      await native.setVolume(_isMuted ? 0 : 1);
+      return;
+    }
+    await _controller?.setVolume(_isMuted ? 0 : 100);
+  }
+
+  void _toggleMute() {
+    setState(() => _isMuted = !_isMuted);
+    unawaited(_applyVolume());
+    _showControls();
+  }
+
   int? _parsePartId(ShortPart part) => int.tryParse(part.partId);
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Wallet balance once per page (was requested on every rebuild).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(context.read<WalletProvider>().getBalance());
+    });
     _bootstrap();
   }
 
@@ -75,18 +304,25 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     final user = await LocalSharePreferences.localSharePreferences.getUser();
     if (!mounted) return;
 
+    final watch = Stopwatch()..start();
     await context
         .read<ShortProvider>()
         .fetchShortDetail(widget.short.id, user?.id ?? 1);
+    if (!mounted) return;
 
     final detail = context.read<ShortProvider>().shortDetail;
+    _EpisodeLoadTrace.log(
+        'MINI_SERIES_EPISODE_DETAILS_API',
+        'seriesId=${widget.short.id} source=network reason=open '
+            'parts=${detail?.parts.length ?? 0} duration=${watch.elapsedMilliseconds}ms');
     if (detail == null || detail.parts.isEmpty) return;
 
     setState(() {
       _parts = List.from(detail.parts);
+      _hasFullSeriesGiftAccess = detail.hasFullSeriesGiftAccess;
     });
 
-    await _loadPart(0);
+    await _loadPart(0, reason: 'open');
   }
 
   @override
@@ -98,12 +334,10 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       unawaited(secureController.stop());
       secureController.dispose();
     }
-    for (final subscription in _playerSubscriptions) {
-      unawaited(subscription.cancel());
-    }
-    _playerSubscriptions.clear();
-    _controller?.dispose();
+    _hideControlsTimer?.cancel();
+    unawaited(_disposeActivePlayer());
     _pageController.dispose();
+    _positionNotifier.dispose();
     super.dispose();
   }
 
@@ -112,12 +346,19 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      unawaited(_controller?.pause());
+      // Remember whether to resume (inactive arrives before paused).
+      _resumeOnForeground = _resumeOnForeground || _isPlaying;
+      unawaited(_pause());
+    } else if (state == AppLifecycleState.resumed) {
+      final resume = _resumeOnForeground;
+      _resumeOnForeground = false;
+      if (resume && _hasPlayer && !_hasVideoError) unawaited(_play());
     }
   }
 
   Future<void> _refreshFromBackend() async {
     final user = await LocalSharePreferences.localSharePreferences.getUser();
+    if (!mounted) return;
 
     await context
         .read<ShortProvider>()
@@ -130,6 +371,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
     setState(() {
       _parts = List.from(detail.parts);
+      _hasFullSeriesGiftAccess = detail.hasFullSeriesGiftAccess;
     });
   }
 
@@ -158,9 +400,40 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     }
   }
 
-  Future<void> _loadPart(int index) async {
-    if (_isLoadingPart || index < 0 || index >= _parts.length) return;
+  /// Releases the secure session of the previous/abandoned episode. dispose()
+  /// already sends the analytics STOP (best-effort), so it is not awaited:
+  /// the next episode no longer waits for that round trip.
+  void _releaseSecureController() {
+    final old = _securePlaybackController;
+    _securePlaybackController = null;
+    if (old == null) return;
+    old.removeListener(_onSecurePlaybackChanged);
+    old.dispose();
+  }
+
+  Future<void> _loadPart(int index, {String reason = 'swipe'}) async {
+    if (index < 0 || index >= _parts.length) return;
+    if (_isLoadingPart) {
+      // A part is loading: remember only the newest request and load it
+      // right after, instead of ignoring the swipe. The in-flight load is
+      // superseded: its secure session stops after its current network step
+      // and its player (if one is initializing) is discarded, never shown.
+      _pendingIndex = index;
+      final inFlight = _trace;
+      if (inFlight != null && !inFlight.finished) {
+        _loadGeneration++;
+        _releaseSecureController();
+        _EpisodeLoadTrace.log('MINI_SERIES_EPISODE_LOAD_START',
+            '${inFlight.ids} cancelled: superseded by index=$index');
+        inFlight.finish('superseded');
+      }
+      return;
+    }
     _isLoadingPart = true;
+    final generation = ++_loadGeneration;
+    bool stale() => !mounted || generation != _loadGeneration;
+    final ready = Completer<void>();
+    _mediaReady = ready;
 
     try {
       if (mounted) {
@@ -171,25 +444,26 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       }
 
       final part = _parts[index];
+      final trace = _EpisodeLoadTrace(
+        seriesId: widget.short.id,
+        partId: part.partId,
+        index: index,
+        generation: generation,
+        reason: reason,
+      );
+      _trace?.finish('replaced');
+      _trace = trace;
+      _EpisodeLoadTrace.log('MINI_SERIES_EPISODE_LOAD_START',
+          '${trace.ids} reason=$reason accessible=${_isPartAccessible(part)}');
+      // Episode metadata comes from the series detail already in memory.
+      _EpisodeLoadTrace.log('MINI_SERIES_EPISODE_DETAILS_API',
+          '${trace.ids} source=cache (no request)');
 
-      final oldSecureController = _securePlaybackController;
-      _securePlaybackController = null;
-      if (oldSecureController != null) {
-        oldSecureController.removeListener(_onSecurePlaybackChanged);
-        await oldSecureController.stop();
-        oldSecureController.dispose();
-      }
-      final old = _controller;
-      _controller = null;
-      _videoController = null;
-      for (final subscription in _playerSubscriptions) {
-        await subscription.cancel();
-      }
-      _playerSubscriptions.clear();
-      await old?.pause();
-      await old?.dispose();
+      _releaseSecureController();
+      await _disposeActivePlayer();
+      if (mounted) setState(() {});
 
-      if (!part.isFreePreview && !part.isPurchased) {
+      if (!_isPartAccessible(part)) {
         final partId = _parsePartId(part);
         if (partId == null) {
           if (mounted) {
@@ -204,6 +478,12 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
         final wallet = context.read<WalletProvider>();
         await wallet.getBalance();
+        // The user already scrolled past this locked part: never show the
+        // dialog or buy it.
+        if (stale()) {
+          trace.finish('superseded');
+          return;
+        }
 
         if (wallet.walletBalance < part.coins) {
           await _showInsufficientBalanceDialog();
@@ -221,9 +501,16 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
         await _refreshFromBackend();
       }
+      if (stale()) {
+        trace.finish('superseded');
+        return;
+      }
 
       final updated = _parts[index];
-      if (!updated.isFreePreview && !updated.isPurchased) return;
+      if (!_isPartAccessible(updated)) {
+        trace.finish('locked');
+        return;
+      }
 
       if (updated.videoUrl.trim().isEmpty) {
         if (mounted) {
@@ -233,41 +520,86 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                 AppLocalizations.of(context)!.playerVideoUnavailable;
           });
         }
+        trace.finish('no_video_url');
         return;
       }
 
+      // A signed playback session is requested per episode, every time
+      // (never reused or prefetched): entitlement, device and expiry checks
+      // stay exactly as before.
       final secureController = SecurePlaybackController(
           contentId: updated.partId,
           originalPlaybackUrl: updated.videoUrl,
           country: _resolveShortPlaybackCountryCode(),
-          mediaLoader: _loadSecureMedia,
-          pausePlayer: () async => _controller?.pause(),
+          mediaLoader: (authorization, {required isRefresh}) =>
+              _loadSecureMedia(authorization,
+                  isRefresh: isRefresh, generation: generation),
+          pausePlayer: _pause,
           type: "SHORT_PART");
       _securePlaybackController = secureController;
       secureController.addListener(_onSecurePlaybackChanged);
-      await secureController.start();
+      trace.playbackUrlRequestedAt = trace.watch.elapsed;
+      final started = secureController.start();
+      // Unlock navigation as soon as the player is attached; the watermark
+      // request inside start() keeps running in the background.
+      await Future.any([started, ready.future]);
 
-      if (!mounted ||
-          secureController.state == SecurePlaybackState.accessDenied ||
+      if (stale()) {
+        trace.finish('superseded');
+        return;
+      }
+      if (secureController.state == SecurePlaybackState.accessDenied ||
           secureController.state == SecurePlaybackState.playbackError) {
+        trace.finish('error:${secureController.state.name}');
         return;
       }
 
-      final updatedPartId = _parsePartId(updated);
-      if (updatedPartId != null) {
-        await context.read<ShortProvider>().addShortView(partId: updatedPartId);
-      }
-
-      await _refreshFromBackend();
-
+      _EpisodeLoadTrace.log('MINI_SERIES_EPISODE_READY',
+          '${trace.ids} playerAttached=${trace.ms}ms');
       setState(() {
         _currentIndex = index;
         _hasVideoError = false;
         _videoErrorMessage = null;
       });
+
+      // View count + detail refresh no longer block the next swipe.
+      unawaited(_recordViewAndRefresh(updated));
     } finally {
       _isLoadingPart = false;
+      final trace = _trace;
+      if (trace != null &&
+          trace.generation == generation &&
+          !ready.isCompleted) {
+        trace.finish('stopped'); // early return (locked, dialog, error)
+      }
+      final superseded = generation != _loadGeneration;
+      final next = _pendingIndex;
+      _pendingIndex = null;
+      // A superseded load must be redone even for the same index (swipe away
+      // and straight back while it was loading).
+      if (mounted && next != null && (next != index || superseded)) {
+        unawaited(_loadPart(next, reason: 'queued'));
+      }
     }
+  }
+
+  /// Counts a view once per part per player session (like a Movie: once per
+  /// open), then refreshes the series detail so counts stay current. Runs in
+  /// the background; revisiting an already counted part makes no requests.
+  Future<void> _recordViewAndRefresh(ShortPart part) async {
+    final partId = _parsePartId(part);
+    if (partId == null || !_viewedPartIds.add(partId)) return;
+    final ok = await context
+        .read<ShortProvider>()
+        .addShortView(partId: partId)
+        .timeout(const Duration(seconds: 8), onTimeout: () => false);
+    if (!mounted) return;
+    final watch = Stopwatch()..start();
+    await _refreshFromBackend();
+    _EpisodeLoadTrace.log(
+        'MINI_SERIES_EPISODE_DETAILS_API',
+        'seriesId=${widget.short.id} partId=${part.partId} source=network '
+            'reason=view_refresh viewOk=$ok duration=${watch.elapsedMilliseconds}ms');
   }
 
   void _onSecurePlaybackChanged() {
@@ -288,15 +620,42 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     });
   }
 
+  /// Marks the episode's player as attached (unlocks navigation).
+  void _markMediaReady(int generation) {
+    final ready = _mediaReady;
+    if (generation == _loadGeneration && ready != null && !ready.isCompleted) {
+      ready.complete();
+    }
+  }
+
   Future<SecureMediaRestoreResult> _loadSecureMedia(
     SignedPlaybackResponse authorization, {
     required bool isRefresh,
+    required int generation,
   }) async {
-    final previousState = _controller?.state;
-    final position = previousState?.position ?? Duration.zero;
-    final wasPlaying = previousState?.playing ?? true;
-    final volume = previousState?.volume ?? 100;
-    final rate = previousState?.rate ?? 1;
+    // A newer swipe superseded this episode: attach nothing.
+    if (generation != _loadGeneration || !mounted) {
+      return SecureMediaRestoreResult(isPlaying: false);
+    }
+    final trace = _trace;
+    if (!isRefresh && trace != null && trace.generation == generation) {
+      final requestedAt = trace.playbackUrlRequestedAt?.inMilliseconds ?? 0;
+      // Includes device registration (cached), integrity check and the
+      // POST /anti-piracy/playback/signed-url round trip.
+      _EpisodeLoadTrace.log(
+          'MINI_SERIES_PLAYBACK_URL',
+          '${trace.ids} source=network duration=${trace.ms - requestedAt}ms '
+              'headers=${authorization.httpHeaders.length}');
+    } else if (isRefresh) {
+      _EpisodeLoadTrace.log('MINI_SERIES_PLAYBACK_URL',
+          'partId=${trace?.partId} refresh (expiry or HTTP 403)');
+    }
+    final hadPlayer = _hasPlayer;
+    final position = _position;
+    final wasPlaying = hadPlayer ? _isPlaying : true;
+    final volume = _controller?.state.volume ?? 100;
+    final rate =
+        _controller?.state.rate ?? _nativeController?.value.playbackSpeed ?? 1;
 
     if (authorization.audioTracks.length > 1 ||
         authorization.subtitleTracks.length > 1) {
@@ -306,27 +665,85 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       );
     }
 
-    final old = _controller;
-    _controller = null;
-    _videoController = null;
-    for (final subscription in _playerSubscriptions) {
-      await subscription.cancel();
-    }
-    _playerSubscriptions.clear();
-    await old?.pause();
-    await old?.dispose();
+    await _disposeActivePlayer();
 
-    final player = Player();
+    if (_useNativePlayer) {
+      final nativeResult = await _loadNativeMedia(
+        authorization,
+        isRefresh: isRefresh,
+        position: position,
+        wasPlaying: wasPlaying,
+        rate: rate,
+        generation: generation,
+      );
+      if (nativeResult != null) return nativeResult;
+      // Native initialization failed: fall through to media_kit.
+      if (generation != _loadGeneration || !mounted) {
+        return SecureMediaRestoreResult(isPlaying: false);
+      }
+    }
+    final mediaKitWatch = Stopwatch()..start();
+
+    final player = Player(
+      configuration: const PlayerConfiguration(
+        protocolWhitelist: [
+          'udp',
+          'rtp',
+          'tcp',
+          'tls',
+          'data',
+          'file',
+          'http',
+          'https',
+          'crypto',
+        ],
+      ),
+    );
     final videoController = VideoController(player);
+    // Media.httpHeaders alone is not always applied to HLS child playlists
+    // and segments, so also set libmpv's header option (same as the movie
+    // player). Without it, CloudFront signed-cookie segments return 403.
+    if (!kIsWeb && authorization.httpHeaders.isNotEmpty) {
+      try {
+        await (player.platform as dynamic).setProperty(
+          'http-header-fields',
+          authorization.httpHeaders.entries
+              .map((entry) => '${entry.key}: ${entry.value}')
+              .join('\n'),
+        );
+      } catch (_) {
+        SecurityDebugLog.event(
+          'PLAYER',
+          'Native header configuration skipped for platform compatibility.',
+        );
+      }
+    }
     _playerSubscriptions
-      ..add(player.stream.position.listen((_) {
-        if (mounted) setState(() {});
+      ..add(player.stream.position.listen((position) {
+        _positionNotifier.value = position;
+        final trace = _trace;
+        if (trace != null && trace.generation == generation) {
+          trace.maybeFirstFrame(
+              playing: player.state.playing, position: position);
+        }
       }))
       ..add(player.stream.duration.listen((_) {
         if (mounted) setState(() {});
       }))
+      ..add(player.stream.buffering.listen((buffering) {
+        final trace = _trace;
+        if (trace != null &&
+            trace.generation == generation &&
+            buffering != _isBuffering) {
+          trace.bufferingChanged(buffering);
+        }
+        if (mounted && buffering != _isBuffering) {
+          setState(() => _isBuffering = buffering);
+        }
+      }))
       ..add(player.stream.playing.listen((isPlaying) {
         _securePlaybackController?.onPlayingChanged(isPlaying);
+        _onPlayingStateChanged(isPlaying);
         if (mounted) setState(() {});
       }))
       ..add(player.stream.error.listen((error) {
@@ -382,7 +799,8 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
           );
         }
       }
-      await player.setVolume(volume);
+      // Keep the user's mute choice across episodes and signed-URL refreshes.
+      await player.setVolume(_isMuted ? 0 : volume.clamp(1, 100).toDouble());
       if (isRefresh) {
         if (position > Duration.zero) await player.seek(position);
         await player.setRate(rate);
@@ -397,21 +815,115 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
       await player.dispose();
       throw StateError('Mini Series player was disposed');
     }
+    if (generation != _loadGeneration) {
+      // Superseded while opening: never attach (no audio overlap).
+      for (final subscription in _playerSubscriptions) {
+        await subscription.cancel();
+      }
+      _playerSubscriptions.clear();
+      await player.dispose();
+      return SecureMediaRestoreResult(isPlaying: false);
+    }
+    final initTrace = _trace;
+    if (!isRefresh && initTrace != null && initTrace.generation == generation) {
+      initTrace.playRequestedAt ??= initTrace.watch.elapsed;
+      _EpisodeLoadTrace.log('MINI_SERIES_CONTROLLER_INIT',
+          '${initTrace.ids} player=media_kit open=${mediaKitWatch.elapsedMilliseconds}ms');
+    }
     setState(() {
       _controller = player;
       _videoController = videoController;
       _hasVideoError = false;
       _videoErrorMessage = null;
     });
+    if (!isRefresh) _markMediaReady(generation);
     return SecureMediaRestoreResult(isPlaying: player.state.playing);
   }
 
-  Future<void> _changePage(int index) async {
-    if (_isMetaExpanded) {
-      setState(() {
-        _isMetaExpanded = false;
-      });
+  /// Opens the signed part with the platform's native player. Returns null if
+  /// initialization fails so the caller can fall back to media_kit.
+  Future<SecureMediaRestoreResult?> _loadNativeMedia(
+    SignedPlaybackResponse authorization, {
+    required bool isRefresh,
+    required Duration position,
+    required bool wasPlaying,
+    required double rate,
+    required int generation,
+  }) async {
+    final initWatch = Stopwatch()..start();
+    final controller = native_video.VideoPlayerController.networkUrl(
+      Uri.parse(authorization.urlToPlay),
+      httpHeaders: Map<String, String>.unmodifiable(authorization.httpHeaders),
+      videoPlayerOptions: native_video.VideoPlayerOptions(mixWithOthers: false),
+    );
+    try {
+      await controller.initialize();
+    } catch (_) {
+      SecurityDebugLog.event(
+        'PLAYER',
+        'Mini Series native player failed to initialize; falling back to media_kit.',
+      );
+      await controller.dispose();
+      if (!mounted) throw StateError('Mini Series player was disposed');
+      _EpisodeLoadTrace.log(
+          'MINI_SERIES_CONTROLLER_INIT',
+          'partId=${_trace?.partId} player=native failed after '
+              '${initWatch.elapsedMilliseconds}ms; falling back to media_kit');
+      return null;
     }
+
+    if (!mounted) {
+      await controller.dispose();
+      throw StateError('Mini Series player was disposed');
+    }
+    if (generation != _loadGeneration) {
+      // Superseded while initializing: discard, never attach or play.
+      await controller.dispose();
+      _EpisodeLoadTrace.log('MINI_SERIES_EPISODE_DISPOSE',
+          'gen=$generation stale native player discarded after init');
+      return SecureMediaRestoreResult(isPlaying: false);
+    }
+    final initTrace = _trace;
+    if (!isRefresh && initTrace != null && initTrace.generation == generation) {
+      // initialize() covers the HLS master/media playlists and the first
+      // segment needed to report duration and size.
+      _EpisodeLoadTrace.log('MINI_SERIES_CONTROLLER_INIT',
+          '${initTrace.ids} player=native initialize=${initWatch.elapsedMilliseconds}ms');
+    }
+
+    await controller.setLooping(false);
+    // Keep the user's mute choice across episodes and signed-URL refreshes.
+    await controller.setVolume(_isMuted ? 0 : 1);
+    if (isRefresh) {
+      if (position > Duration.zero) await controller.seekTo(position);
+      await controller.setPlaybackSpeed(rate);
+    }
+
+    _lastNativePlaying = false;
+    _lastNativeError = '';
+    controller.addListener(_onNativePlayerChanged);
+    setState(() {
+      _nativeController = controller;
+      _hasVideoError = false;
+      _videoErrorMessage = null;
+    });
+
+    if (!isRefresh && initTrace != null && initTrace.generation == generation) {
+      initTrace.playRequestedAt = initTrace.watch.elapsed;
+    }
+    if (!isRefresh || wasPlaying) await controller.play();
+    if (!isRefresh) _markMediaReady(generation);
+    return SecureMediaRestoreResult(isPlaying: controller.value.isPlaying);
+  }
+
+  Future<void> _changePage(int index) async {
+    setState(() {
+      _isMetaExpanded = false;
+      _displayIndex = index;
+      _controlsVisible = true;
+    });
+    // Restart the shared timeout; it only hides once the episode plays.
+    _scheduleControlsHide();
     await _loadPart(index);
   }
 
@@ -451,10 +963,21 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
     );
   }
 
+  /// Height reserved above the system inset for the progress bar
+  /// (see [_bottomEpisodeBar]). The episode selector is in the top bar.
+  static const double _bottomBarHeight = 28;
+  static const double _bottomBarGap = 12;
+
+  /// Real bottom system inset: Android 3-button/gesture bar or iOS home
+  /// indicator. viewPadding is used (not padding) so it is never zeroed by
+  /// an ancestor SafeArea.
+  double get _bottomInset => MediaQuery.viewPaddingOf(context).bottom;
+
+  /// Distance from the screen bottom to the top of the bottom bar.
+  double get _bottomBarTop => _bottomInset + _bottomBarGap + _bottomBarHeight;
+
   @override
   Widget build(BuildContext context) {
-    final balanceProvider = Provider.of<WalletProvider>(context);
-    balanceProvider.getBalance();
     final orientation = MediaQuery.of(context).orientation;
     final shortsScrollDirection =
         orientation == Orientation.landscape ? Axis.horizontal : Axis.vertical;
@@ -470,10 +993,21 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
           width: useFullWidthPlayer ? double.infinity : 450,
           child: Stack(
             children: [
-              _videoBackground(),
+              // Every Stack slot below keeps the same widget type and key
+              // across episode loads. Previously the video slot switched
+              // Positioned -> ShimmerLoader and the watermark slot vanished
+              // in the same frame, so Flutter recreated the PageView and it
+              // silently jumped back to episode 1 (wrong title/likes shown,
+              // and the next swipe reloaded episode 2).
+              KeyedSubtree(
+                key: const ValueKey('mini-series-video'),
+                child: _videoBackground(),
+              ),
               GestureDetector(
+                key: const ValueKey('mini-series-pages'),
                 behavior: HitTestBehavior.translucent,
-                onTap: _togglePlayPause,
+                // Tap shows/hides the controls; play/pause has its own button.
+                onTap: _onScreenTap,
                 onDoubleTap: _handleDoubleTapLike,
                 child: PageView.builder(
                   controller: _pageController,
@@ -483,9 +1017,14 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
                   itemBuilder: (_, i) => _overlay(i),
                 ),
               ),
-              if (watermark != null)
-                PlaybackWatermarkOverlay(watermark: watermark),
-              _backButton(),
+              _playbackControls(),
+              KeyedSubtree(
+                key: const ValueKey('mini-series-watermark'),
+                child: watermark != null
+                    ? PlaybackWatermarkOverlay(watermark: watermark)
+                    : const SizedBox.shrink(),
+              ),
+              _topBar(),
             ],
           ),
         ),
@@ -516,16 +1055,37 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         ),
       );
     }
-    if (controller == null || videoController == null) {
-      return const ShimmerLoader(
-        height: double.infinity,
-        width: double.infinity,
-      );
-    }
-
     final videoFit = MediaQuery.of(context).orientation == Orientation.landscape
         ? BoxFit.contain
         : BoxFit.cover;
+
+    final native = _nativeController;
+    if (native != null && native.value.isInitialized) {
+      final size = native.value.size;
+      return Positioned.fill(
+        child: ColoredBox(
+          color: Colors.black,
+          child: FittedBox(
+            fit: videoFit,
+            clipBehavior: Clip.hardEdge,
+            child: SizedBox(
+              width: size.width > 0 ? size.width : 1,
+              height: size.height > 0 ? size.height : 1,
+              child: native_video.VideoPlayer(native),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (controller == null || videoController == null) {
+      return const Positioned.fill(
+        child: ShimmerLoader(
+          height: double.infinity,
+          width: double.infinity,
+        ),
+      );
+    }
 
     return Positioned.fill(
       child: Video(
@@ -548,19 +1108,10 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         !_isMetaExpanded && (titleText.length > 36 || hasDescription);
     return Stack(
       children: [
-        Positioned.fill(
-          child: Center(
-            child: VideoSkipControls(
-              onBackward: () => _seekBy(const Duration(seconds: -10)),
-              onForward: () => _seekBy(const Duration(seconds: 10)),
-              gap: 78,
-              compact: true,
-            ),
-          ),
-        ),
         Positioned(
           left: 16,
-          bottom: 80,
+          // Sits just above the bottom bar, which follows the system inset.
+          bottom: _bottomBarTop + 4,
           right: 130,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -737,24 +1288,65 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
         ),
         _rightButtons(index),
         _bottomEpisodeBar(),
-        if (_controller != null)
-          _controller!.state.playing
-              ? SizedBox()
-              : Center(
-                  child: Icon(
-                    Icons.play_arrow_sharp,
-                    color: Colors.white60,
-                    size: 50,
-                    shadows: [
-                      Shadow(
-                        offset: Offset(2, 2), // x, y
-                        blurRadius: 4,
-                        color: Colors.black.withOpacity(0.3),
-                      ),
-                    ],
+      ],
+    );
+  }
+
+  /// Centre play/pause (and a buffering spinner). Shown with the controls;
+  /// always shown while paused. Tapping it updates playback immediately.
+  Widget _playbackControls() {
+    if (!_hasPlayer || _hasVideoError) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final playing = _isPlaying;
+    final visible = _controlsShown;
+    return Positioned.fill(
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (_isBuffering && playing)
+            const IgnorePointer(
+              child: SizedBox(
+                width: 64,
+                height: 64,
+                child: CircularProgressIndicator(
+                    color: Colors.white70, strokeWidth: 3),
+              ),
+            ),
+          IgnorePointer(
+            ignoring: !visible,
+            child: AnimatedOpacity(
+              opacity: visible ? 1 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: Material(
+                color: Colors.black.withValues(alpha: 0.45),
+                shape: CircleBorder(
+                  side: BorderSide(
+                      color: theme.primaryColor.withValues(alpha: 0.9),
+                      width: 2),
+                ),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () {
+                    _togglePlayPause();
+                    _showControls();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Icon(
+                      playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 44,
+                      semanticLabel: playing
+                          ? AppLocalizations.of(context)!.playerPause
+                          : AppLocalizations.of(context)!.playerPlay,
+                    ),
                   ),
                 ),
-      ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -764,7 +1356,7 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
 
     return Positioned(
       right: 12,
-      bottom: 120,
+      bottom: _bottomBarTop + 24,
       child: Column(
         children: [
           _actionBtn(
@@ -792,11 +1384,44 @@ class _ShortsPlayerPageState extends State<ShortsPlayerPage>
               AppLocalizations.of(context)!.shortsShareAction, () {
             _shareShortContent(context);
           }),
+          if (FeatureFlags.miniSeriesCommerce) ...[
+            const SizedBox(height: 18),
+            _actionBtn(
+              Icons.lock_open_rounded,
+              AppLocalizations.of(context)!.miniSeriesBuyAllAction,
+              _openFullPurchaseSheet,
+            ),
+            // Mini Series gifting is not part of the iOS app (final_iOS):
+            // only the one-time full purchase is offered here.
+          ],
           //const SizedBox(height: 18),
           // _actionBtn(Icons.visibility_outlined, "${part.views}", null),
         ],
       ),
     );
+  }
+
+  Future<void> _openFullPurchaseSheet() async {
+    final wasPlaying = _isPlaying;
+    await _pause();
+    if (!mounted) return;
+    final purchased = await showMiniSeriesFullPurchaseSheet(
+      context,
+      shortId: widget.short.id,
+      title: widget.short.title,
+    );
+    if (!mounted) return;
+    if (purchased) {
+      // Ownership comes from the backend: reload parts so purchased parts
+      // play without asking for payment.
+      await _refreshFromBackend();
+      if (!mounted) return;
+      if (!_hasPlayer && !_isLoadingPart) {
+        await _loadPart(_currentIndex, reason: 'full_purchase');
+        return;
+      }
+    }
+    if (wasPlaying) await _play();
   }
 
   Widget _actionBtn(
@@ -878,123 +1503,118 @@ ${short.durationSec ?? ''}
     }
   }
 
+  /// Progress bar, placed above the real bottom system inset (navigation
+  /// buttons, gesture bar or iOS home indicator).
   Widget _bottomEpisodeBar() {
     return Positioned(
-      left: 20,
-      right: 20,
-      bottom: 24,
-      child: Column(
-        children: [
-          InkWell(
-            onTap: _openEpisodes,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
-              decoration: BoxDecoration(
-                  color: Colors.white12,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white24),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black12),
-                  ]),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    AppLocalizations.of(context)!
-                        .shortsEpisodeOfTotal(_currentIndex + 1, totalParts),
-                    style: TextStyle(
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          offset: Offset(2, 2), // x, y
-                          blurRadius: 4,
-                          color: Colors.black.withOpacity(0.3),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.expand_less,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        offset: Offset(2, 2), // x, y
-                        blurRadius: 4,
-                        color: Colors.black.withOpacity(0.3),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          _videoProgressBar(),
-        ],
+      left: 16,
+      right: 16,
+      bottom: _bottomInset + _bottomBarGap,
+      child: SizedBox(
+        height: _bottomBarHeight,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            _videoProgressBar(),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _videoProgressBar() {
-    final controller = _controller;
-    if (controller == null) return const SizedBox.shrink();
-
-    final duration = controller.state.duration.inMilliseconds;
-    if (duration <= 0) {
-      return const SizedBox.shrink();
-    }
-
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            trackHeight: 4,
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-            overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
-          ),
-          child: Slider(
-            min: 0,
-            max: duration.toDouble(),
-            value: controller.state.position.inMilliseconds
-                .clamp(0, duration)
-                .toDouble(),
-            activeColor: theme.primaryColor,
-            inactiveColor: Colors.white24,
-            onChanged: (value) {
-              controller.seek(Duration(milliseconds: value.round()));
-            },
-          ),
+  /// Episodes selector merged with the episode count: `Episodes ▼  1/11`.
+  /// Same box as before; opens the existing episode sheet.
+  Widget _episodesSelector() {
+    final lang = AppLocalizations.of(context)!;
+    final current = _displayIndex.clamp(0, totalParts - 1) + 1;
+    return InkWell(
+      onTap: () => unawaited(_openEpisodes()),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white24),
         ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.video_library_outlined,
+                color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                lang.shortsEpisodesLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w600),
+              ),
+            ),
+            const Icon(Icons.expand_more, color: Colors.white),
+            const SizedBox(width: 10),
+            Text(
+              '$current/$totalParts',
+              maxLines: 1,
+              softWrap: false,
+              semanticsLabel: lang.shortsEpisodeOfTotal(current, totalParts),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Rebuilds on its own from [_positionNotifier]; the page does not rebuild
+  /// on every position tick.
+  Widget _videoProgressBar() {
+    if (!_hasPlayer) return const SizedBox(height: 20);
+    final theme = Theme.of(context);
+    return SizedBox(
+      height: 20,
+      child: ValueListenableBuilder<Duration>(
+        valueListenable: _positionNotifier,
+        builder: (context, position, _) {
+          final duration = _duration.inMilliseconds;
+          if (duration <= 0) return const SizedBox.shrink();
+          return SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 3,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+            ),
+            child: Slider(
+              min: 0,
+              max: duration.toDouble(),
+              value: position.inMilliseconds.clamp(0, duration).toDouble(),
+              activeColor: theme.primaryColor,
+              inactiveColor: Colors.white24,
+              onChanged: (value) {
+                final target = Duration(milliseconds: value.round());
+                _positionNotifier.value = target;
+                unawaited(_seekTo(target));
+                if (_controlsVisible) _showControls();
+              },
+            ),
+          );
+        },
       ),
     );
   }
 
   void _togglePlayPause() {
-    final controller = _controller;
-    if (controller == null) return;
-    controller.state.playing ? controller.pause() : controller.play();
-  }
-
-  void _seekBy(Duration offset) {
-    final controller = _controller;
-    if (controller == null) return;
-    unawaited(
-      controller.seek(
-        boundedSeekPosition(
-          position: controller.state.position,
-          duration: controller.state.duration,
-          offset: offset,
-        ),
-      ),
-    );
+    if (!_hasPlayer) return;
+    unawaited(_isPlaying ? _pause() : _play());
   }
 
   Future<void> _handleDoubleTapLike() async {
-    final controller = _controller;
-    if (controller == null || _parts.isEmpty) {
+    if (!_hasPlayer || _parts.isEmpty) {
       return;
     }
 
@@ -1011,9 +1631,15 @@ ${short.durationSec ?? ''}
     if (ok) await _refreshFromBackend();
   }
 
-  void _openEpisodes() {
+  Future<void> _openEpisodes() async {
     final theme = Theme.of(context);
-    showModalBottomSheet(
+    // Hold the controls while the sheet is open.
+    _hideControlsTimer?.cancel();
+    setState(() {
+      _episodesSheetOpen = true;
+      _controlsVisible = true;
+    });
+    await showModalBottomSheet(
       context: context,
       backgroundColor: theme.scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
@@ -1037,7 +1663,7 @@ ${short.durationSec ?? ''}
                 onTap: () async {
                   Navigator.pop(context);
                   _pageController.jumpToPage(i);
-                  await _loadPart(i);
+                  await _loadPart(i, reason: 'episode_list');
                 },
                 child: Stack(
                   children: [
@@ -1066,7 +1692,7 @@ ${short.durationSec ?? ''}
                         ),
                       ),
                     ),
-                    if (!part.isPurchased && !part.isFreePreview)
+                    if (!_isPartAccessible(part))
                       const Positioned(
                           right: 4, top: 4, child: Icon(Icons.lock, size: 14)),
                   ],
@@ -1077,23 +1703,162 @@ ${short.durationSec ?? ''}
         );
       },
     );
+    if (!mounted) return;
+    // Sheet closed (dismissed or episode chosen): resume normal auto-hide.
+    setState(() => _episodesSheetOpen = false);
+    _showControls();
   }
 
-  Widget _backButton() {
+  /// One row: [Back] [Episodes ▼ N/total] [Mute]. Back and mute keep their
+  /// fixed size (full touch targets). Shown and hidden together with the
+  /// play/pause button ([_controlsShown], same fade). Placed below the real
+  /// top inset (status bar / notch).
+  Widget _topBar() {
+    final lang = AppLocalizations.of(context)!;
+    final narrow = MediaQuery.sizeOf(context).width < 360;
+    final gap = narrow ? 6.0 : 8.0;
+    final visible = _controlsShown;
     return Positioned(
-      top: MediaQuery.of(context).padding.top + 12,
-      left: 12,
-      child: InkWell(
-        onTap: () {
-          _controller?.pause();
-          Navigator.pop(context);
-        },
-        child: const CircleAvatar(
-          radius: 18,
-          backgroundColor: Colors.black45,
-          child: Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18),
+      top: MediaQuery.viewPaddingOf(context).top + 8,
+      left: narrow ? 8 : 12,
+      right: narrow ? 8 : 12,
+      child: IgnorePointer(
+        ignoring: !visible,
+        child: AnimatedOpacity(
+          opacity: visible ? 1 : 0,
+          duration: const Duration(milliseconds: 200),
+          child: Row(
+            children: [
+              _circleButton(
+                icon: Icons.arrow_back_ios_new,
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                onTap: () {
+                  unawaited(_pause());
+                  Navigator.pop(context);
+                },
+              ),
+              SizedBox(width: gap),
+              Expanded(
+                child: totalParts > 0
+                    ? Align(
+                        alignment: Alignment.centerLeft,
+                        child: _episodesSelector(),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              if (_hasPlayer) ...[
+                SizedBox(width: gap),
+                _circleButton(
+                  icon: _isMuted
+                      ? Icons.volume_off_rounded
+                      : Icons.volume_up_rounded,
+                  tooltip:
+                      _isMuted ? lang.playerUnmuteSound : lang.playerMuteSound,
+                  onTap: _toggleMute,
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Widget _circleButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.black45,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(9),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Debug-only timing of one Mini Series episode load. Logs IDs and elapsed
+/// milliseconds only: never URLs, tokens, cookies or user data.
+class _EpisodeLoadTrace {
+  _EpisodeLoadTrace({
+    required this.seriesId,
+    required this.partId,
+    required this.index,
+    required this.generation,
+    required this.reason,
+  });
+
+  final int seriesId;
+  final String partId;
+  final int index;
+  final int generation;
+  final String reason;
+  final Stopwatch watch = Stopwatch()..start();
+
+  Duration? playbackUrlRequestedAt;
+  Duration? playRequestedAt;
+  Duration? _bufferingSince;
+  Duration _bufferingBeforeFirstFrame = Duration.zero;
+  bool firstFrameLogged = false;
+  bool finished = false;
+
+  int get ms => watch.elapsedMilliseconds;
+  String get ids =>
+      'seriesId=$seriesId partId=$partId index=$index gen=$generation';
+
+  static void log(String tag, String message) {
+    if (kDebugMode) debugPrint('[$tag] $message');
+  }
+
+  void bufferingChanged(bool buffering) {
+    final now = watch.elapsed;
+    if (buffering) {
+      _bufferingSince ??= now;
+      return;
+    }
+    final since = _bufferingSince;
+    if (since == null) return;
+    _bufferingSince = null;
+    final spent = now - since;
+    if (!firstFrameLogged) {
+      _bufferingBeforeFirstFrame += spent;
+    } else {
+      log('MINI_SERIES_HLS_BUFFERING',
+          '$ids rebuffer=${spent.inMilliseconds}ms at=${now.inMilliseconds}ms');
+    }
+  }
+
+  /// Called with the latest playing position; the first advancing position
+  /// while playing is the first rendered frame (video_player exposes no
+  /// first-frame callback, so this is the closest observable signal).
+  void maybeFirstFrame({required bool playing, required Duration position}) {
+    if (firstFrameLogged || !playing || position <= Duration.zero) return;
+    firstFrameLogged = true;
+    if (_bufferingSince != null) bufferingChanged(false);
+    final sincePlay = playRequestedAt == null
+        ? 'n/a'
+        : '${ms - playRequestedAt!.inMilliseconds}ms';
+    log('MINI_SERIES_HLS_BUFFERING',
+        '$ids startupBuffering=${_bufferingBeforeFirstFrame.inMilliseconds}ms');
+    log('MINI_SERIES_FIRST_FRAME',
+        '$ids sincePlay=$sincePlay sinceLoadStart=${ms}ms');
+    finish('playing');
+  }
+
+  void finish(String result) {
+    if (finished) return;
+    finished = true;
+    log('MINI_SERIES_EPISODE_LOAD_TOTAL',
+        '$ids result=$result reason=$reason total=${ms}ms');
   }
 }

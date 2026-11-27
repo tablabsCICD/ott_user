@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:ott/app/core/services/DeepLinkService.dart';
 import 'package:ott/app/core/utils/sharepreferences.dart';
 import 'package:ott/app/pages/shorts%20page/component/ShortsPlayerPage.dart';
@@ -26,11 +27,24 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
   @override
   void initState() {
     super.initState();
-    _loadShortRows();
+    // Start loading after the first frame: getUserBookmarkShort() notifies
+    // BookmarkProvider listeners synchronously, which is not allowed while
+    // the parent Consumer<DashboardProvider> is still building.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadShortRows();
+    });
   }
 
   Future<void> _loadShortRows() async {
-    await context.read<BookmarkProvider>().getUserBookmarkShort();
+    // Bookmarks are secondary: a failure here must not stop the mini series
+    // rows from loading.
+    try {
+      await context.read<BookmarkProvider>().getUserBookmarkShort();
+    } catch (error, stackTrace) {
+      debugPrint('[MINI_SERIES_LIBRARY] Bookmark load failed: $error');
+      debugPrintStack(stackTrace: stackTrace, maxFrames: 5);
+    }
+    if (!mounted) return;
 
     // The persisted user is updated immediately after the language API succeeds.
     // Prefer it over a potentially stale in-memory UserProvider after navigation.
@@ -179,129 +193,161 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
     );
   }
 
+  /// Mini Series card in the shared Filmytell card style (see MovieCard):
+  /// bordered card, poster on top, details below, red price pill. Mini Series
+  /// posters are portrait, so the poster keeps a portrait crop.
   Widget _shortCard(BuildContext context, ShortModel short) {
     final theme = Theme.of(context);
     final lang = AppLocalizations.of(context)!;
+    final price = short.coinsPerPart == short.coinsPerPart.roundToDouble()
+        ? short.coinsPerPart.toStringAsFixed(0)
+        : short.coinsPerPart.toStringAsFixed(2);
+    final languages = short.languageList.map((e) => e.language).join(', ');
+    final meta = [
+      if (short.creatorName.isNotEmpty) '@${short.creatorName}',
+      if (short.category.isNotEmpty) short.category,
+    ].join(' · ');
+
+    Future<void> open() async {
+      final user = await LocalSharePreferences.localSharePreferences.getUser();
+      if (!mounted) return;
+      await context
+          .read<ShortProvider>()
+          .fetchShortDetail(short.id, user?.id ?? 1);
+      if (!mounted) return;
+      final detail = context.read<ShortProvider>().shortDetail;
+      if (detail != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ShortsPlayerPage(short: detail)),
+        );
+      }
+    }
 
     return GestureDetector(
-      onTap: () async {
-        final user =
-            await LocalSharePreferences.localSharePreferences.getUser();
-        await context
-            .read<ShortProvider>()
-            .fetchShortDetail(short.id, user?.id ?? 1);
-
-        if (mounted && context.read<ShortProvider>().shortDetail != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ShortsPlayerPage(
-                short: context.read<ShortProvider>().shortDetail!,
-              ),
-            ),
-          );
-        }
-      },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Stack(
-          fit: StackFit.expand,
+      onTap: open,
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: theme.brightness == Brightness.dark
+                ? const Color(0xFF26262C)
+                : Colors.grey.shade300,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Image.network(
-              short.posterUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const Center(
-                child: Icon(Icons.broken_image, color: Colors.grey),
-              ),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.black.withOpacity(0.55),
-                    Colors.transparent,
-                  ],
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.center,
-                ),
-              ),
-            ),
-            if (short.isTrending)
-              Positioned(
-                top: 4,
-                left: 4,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: theme.primaryColor,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    lang.shortsTrending,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
+            Expanded(
+              child: ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(15)),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Container(
+                      color: Colors.black,
+                      child: Image.network(
+                        short.posterUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Center(
+                          child: Icon(Icons.broken_image, color: Colors.grey),
+                        ),
+                      ),
                     ),
-                  ),
+                    if (short.isTrending)
+                      Positioned(
+                        top: 6,
+                        left: 6,
+                        child: _posterBadge(
+                          text: lang.shortsTrending,
+                          color: const Color(0xFFE50914),
+                        ),
+                      ),
+                    Positioned(
+                      left: 6,
+                      bottom: 6,
+                      child: _posterBadge(
+                        icon: Icons.play_arrow_rounded,
+                        text: lang.shortsPartsCount(short.totalParts),
+                      ),
+                    ),
+                    Positioned(
+                      right: 6,
+                      bottom: 6,
+                      child: _posterBadge(
+                        icon: Icons.remove_red_eye,
+                        text: '${short.viewCount}',
+                      ),
+                    ),
+                    // Existing bookmark/share options menu (unchanged).
+                    _optionButton(context, short),
+                  ],
                 ),
               ),
-            Positioned(
-              left: 8,
-              right: 8,
-              bottom: 14,
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     short.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
+                    style: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.bold,
+                      color: theme.canvasColor,
+                      height: 1.15,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    "@${short.creatorName} · ${short.category}",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
+                  if (meta.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      meta,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        color: theme.canvasColor.withValues(alpha: 0.7),
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  Text(
-                    lang.shortsPricePerPartWithLanguages(
-                      short.coinsPerPart,
-                      (short.languageList.map((e) => e.language)).join(', '),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  ],
+                  const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(
-                        Icons.play_arrow_outlined,
-                        color: Colors.white70,
-                        size: 14,
+                      Expanded(
+                        child: Text(
+                          languages,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            color: theme.canvasColor.withValues(alpha: 0.7),
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 2),
-                      Text(
-                        lang.shortsPartsCount(short.totalParts),
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
+                      const SizedBox(width: 6),
+                      // Same red price pill as MovieCard.
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 4, horizontal: 8),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(6),
+                          color: const Color(0xFFE50914),
+                        ),
+                        child: Text(
+                          lang.miniSeriesPricePerPart(price),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ],
@@ -309,35 +355,36 @@ class _ShortsLibraryPageState extends State<ShortsLibraryPage> {
                 ],
               ),
             ),
-            Positioned(
-              right: 8,
-              bottom: 5,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Icon(
-                    Icons.remove_red_eye,
-                    color: Colors.white70,
-                    size: 13,
-                  ),
-                  SizedBox(
-                    width: 4,
-                  ),
-                  Text(
-                    "${short.viewCount}",
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  )
-                ],
-              ),
-            ),
-            _optionButton(context, short),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _posterBadge({required String text, IconData? icon, Color? color}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: color ?? Colors.black.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: Colors.white),
+            const SizedBox(width: 3),
+          ],
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 9.5,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
       ),
     );
   }

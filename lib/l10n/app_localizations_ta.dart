@@ -1130,7 +1130,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get shortsTrending => 'பிரபலமானவை';
 
   @override
-  String shortsPricePerPartWithLanguages(int coins, String languages) {
+  String shortsPricePerPartWithLanguages(String coins, String languages) {
     return '₹ $coins /பகுதி | $languages';
   }
 
@@ -2165,7 +2165,7 @@ class AppLocalizationsTa extends AppLocalizations {
   String get giftEnterGiftCardNumber => 'கிஃப்ட் கார்டு எண்ணை உள்ளிடவும்';
 
   @override
-  String get giftEnter16DigitNumber => '16 இலக்க எண்ணை உள்ளிடவும்';
+  String get giftEnter16DigitNumber => 'கிஃப்ட் கார்டு எண்ணை உள்ளிடவும்';
 
   @override
   String get giftRedeem => 'பெறுக';
@@ -2961,4 +2961,209 @@ class AppLocalizationsTa extends AppLocalizations {
   @override
   String get giftedToYouEmptyMessage =>
       'உங்களுக்குப் பரிசளிக்கப்பட்ட திரைப்படங்களும் உள்ளடக்கமும் இங்கே தோன்றும்.';
+
+  @override
+  String get miniSeriesAlreadyOwned =>
+      'You already own every part of this Mini Series.';
+
+  @override
+  String get miniSeriesBuyAllAction => 'Buy all';
+
+  @override
+  String get miniSeriesBuyFull => 'Buy Full Mini Series';
+
+  @override
+  String miniSeriesFreeParts(int count) {
+    return 'Free parts: $count';
+  }
+
+  @override
+  String get miniSeriesFullNotAvailable =>
+      'Full purchase isn\'t available for this Mini Series.';
+
+  @override
+  String miniSeriesFullPrice(String amount) {
+    return 'Full Mini Series price: ₹ $amount';
+  }
+
+  @override
+  String miniSeriesGiftCodeExpiry(String date) {
+    return 'காலாவதி: $date';
+  }
+
+  @override
+  String miniSeriesGiftCodeStatus(String status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String get miniSeriesGiftCodesHint =>
+      'Each code can be claimed once, by one person. Share a different code with each recipient.';
+
+  @override
+  String get miniSeriesGiftCodesTitle => 'Your gift codes';
+
+  @override
+  String get miniSeriesGiftConflict =>
+      'This payment attempt changed. Please review the details and tap Confirm & Pay again.';
+
+  @override
+  String miniSeriesGiftCountMin(int min) {
+    return 'Enter a number of at least $min.';
+  }
+
+  @override
+  String miniSeriesGiftCountRange(int min, int max) {
+    return 'Enter a number between $min and $max.';
+  }
+
+  @override
+  String get miniSeriesGiftHowMany =>
+      'How many people do you want to gift this Mini Series to?';
+
+  @override
+  String miniSeriesGiftInsufficientBalance(String required, String available) {
+    return 'Insufficient wallet balance. Required: ₹ $required, available: ₹ $available.';
+  }
+
+  @override
+  String get miniSeriesGiftNotAvailable =>
+      'Gifting isn\'t available for this Mini Series.';
+
+  @override
+  String miniSeriesGiftPricePerGift(String amount) {
+    return 'Price per gift: ₹ $amount';
+  }
+
+  @override
+  String get miniSeriesGiftReplayNote =>
+      'This purchase was already completed. Showing your original gift codes; you were not charged again.';
+
+  @override
+  String miniSeriesGiftShareText(String title, String code) {
+    return 'Filmytell-இல் \"$title\"-ஐ உங்களுக்குப் பரிசளித்துள்ளேன்! இந்த கிஃப்ட் குறியீட்டைக் கொண்டு கோருங்கள்: $code';
+  }
+
+  @override
+  String get miniSeriesGiftSuccess => 'Gift purchased successfully.';
+
+  @override
+  String get miniSeriesGiftTitle => 'Gift Mini Series';
+
+  @override
+  String miniSeriesGiftTotalPaid(String amount) {
+    return 'Total paid: ₹ $amount';
+  }
+
+  @override
+  String miniSeriesGiftTransaction(String id) {
+    return 'Transaction ID: $id';
+  }
+
+  @override
+  String get miniSeriesGiftUnavailable =>
+      'This Mini Series is not available for gifting.';
+
+  @override
+  String miniSeriesOwnedParts(int count) {
+    return 'Already owned: $count';
+  }
+
+  @override
+  String get miniSeriesPartFree => 'Free';
+
+  @override
+  String miniSeriesPartLabel(int number) {
+    return 'Part $number';
+  }
+
+  @override
+  String get miniSeriesPartOwned => 'Owned';
+
+  @override
+  String get miniSeriesPriceChanged =>
+      'The price has changed. Please review the new price and try again.';
+
+  @override
+  String miniSeriesPurchasableParts(int count) {
+    return 'Parts to buy: $count';
+  }
+
+  @override
+  String get miniSeriesPurchaseSuccess =>
+      'Mini Series purchased. All parts are unlocked.';
+
+  @override
+  String miniSeriesTotalParts(int count) {
+    return 'Total parts: $count';
+  }
+
+  @override
+  String giftCardExpiresOn(String date) {
+    return '$date அன்று காலாவதியாகும்';
+  }
+
+  @override
+  String giftCardExpiringSoon(String date) {
+    return 'விரைவில் காலாவதி · $date';
+  }
+
+  @override
+  String giftCardGiftedOn(String date) {
+    return '$date அன்று பரிசளிக்கப்பட்டது';
+  }
+
+  @override
+  String miniSeriesPricePerPart(String coins) {
+    return '₹ $coins/பகுதி';
+  }
+
+  @override
+  String get shortsEpisodesLabel => 'எபிசோடுகள்';
+
+  @override
+  String get playerMuteSound => 'ஒலியை அணை';
+
+  @override
+  String get playerUnmuteSound => 'ஒலியை இயக்கு';
+
+  @override
+  String get downloadInvoice => 'இன்வாய்ஸைப் பதிவிறக்கு';
+
+  @override
+  String get downloadingInvoice => 'இன்வாய்ஸ் பதிவிறக்கப்படுகிறது…';
+
+  @override
+  String get invoiceDownloadedSuccess =>
+      'இன்வாய்ஸ் வெற்றிகரமாகப் பதிவிறக்கப்பட்டது';
+
+  @override
+  String get invoiceDownloadFailed => 'இன்வாய்ஸைப் பதிவிறக்க முடியவில்லை';
+
+  @override
+  String get invoiceOriginalAmount => 'அசல் தொகை';
+
+  @override
+  String get invoiceDiscountLabel => 'தள்ளுபடி';
+
+  @override
+  String get invoiceCouponLabel => 'கூப்பன்';
+
+  @override
+  String get invoicePurchaseDate => 'வாங்கிய தேதி';
+
+  @override
+  String get invoiceContentLabel => 'உள்ளடக்கம்';
+
+  @override
+  String get invoiceContentType => 'உள்ளடக்க வகை';
+
+  @override
+  String purchaseGiftedToYouBy(String name) {
+    return 'இந்த உள்ளடக்கம் உங்களுக்கு $name அவர்களால் பரிசாக வழங்கப்பட்டது. எனவே, விலைப்பட்டியல் கிடைக்கவில்லை.';
+  }
+
+  @override
+  String get purchaseGiftInvoiceUnavailable =>
+      'இந்த உள்ளடக்கம் உங்களுக்குப் பரிசாக வழங்கப்பட்டது. எனவே, விலைப்பட்டியல் கிடைக்கவில்லை.';
 }

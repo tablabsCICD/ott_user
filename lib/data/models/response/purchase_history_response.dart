@@ -51,6 +51,10 @@ class PurchaseHistoryItem {
     this.rentalDuration,
     this.contentType,
     this.itemTitle,
+    this.couponCode,
+    this.discountAmount,
+    this.originalAmount,
+    this.orderId,
     this.transactionId,
     this.rawStatus,
   });
@@ -67,6 +71,10 @@ class PurchaseHistoryItem {
   final String? rentalDuration;
   final String? contentType;
   final String? itemTitle;
+  final String? couponCode;
+  final double? discountAmount;
+  final double? originalAmount;
+  final String? orderId;
 
   /// Gateway/backend transaction reference, read from whichever existing
   /// response key carries it.
@@ -76,6 +84,11 @@ class PurchaseHistoryItem {
   final String? rawStatus;
 
   PurchaseStatus get status => PurchaseStatus.fromRaw(rawStatus);
+
+  /// Received as a gift. The purchase-history API marks gifts only through
+  /// `paymentMethod: "GIFT"` (verified for Movies and Mini Series); it has no
+  /// separate gift flag and no sender-name field.
+  bool get isGift => (paymentMethod ?? '').trim().toUpperCase() == 'GIFT';
 
   factory PurchaseHistoryItem.fromJson(Map<String, dynamic> json) {
     final contentJson = json['content'] ?? json['movie'] ?? json['item'];
@@ -118,6 +131,12 @@ class PurchaseHistoryItem {
       contentType: json['contentType']?.toString() ??
           (contentJson is Map ? contentJson['type']?.toString() : null),
       itemTitle: json['itemTitle']?.toString(),
+      couponCode: json['couponCode']?.toString() ?? json['coupon']?.toString(),
+      discountAmount: _asDouble(json['discountAmount'] ?? json['discount']),
+      originalAmount:
+          _asDouble(json['originalAmount'] ?? json['originalPrice']),
+      orderId:
+          json['orderId']?.toString() ?? json['razorPayOrderId']?.toString(),
       transactionId: _firstText(json, const [
         'transactionId',
         'paymentId',

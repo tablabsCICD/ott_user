@@ -1125,7 +1125,7 @@ class AppLocalizationsKn extends AppLocalizations {
   String get shortsTrending => 'ಟ್ರೆಂಡಿಂಗ್';
 
   @override
-  String shortsPricePerPartWithLanguages(int coins, String languages) {
+  String shortsPricePerPartWithLanguages(String coins, String languages) {
     return '₹ $coins /ಭಾಗ | $languages';
   }
 
@@ -2151,7 +2151,7 @@ class AppLocalizationsKn extends AppLocalizations {
   String get giftEnterGiftCardNumber => 'ಗಿಫ್ಟ್ ಕಾರ್ಡ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ';
 
   @override
-  String get giftEnter16DigitNumber => '16 ಅಂಕಿಯ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ';
+  String get giftEnter16DigitNumber => 'ಗಿಫ್ಟ್ ಕಾರ್ಡ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ';
 
   @override
   String get giftRedeem => 'ರಿಡೀಮ್ ಮಾಡಿ';
@@ -2941,4 +2941,210 @@ class AppLocalizationsKn extends AppLocalizations {
   @override
   String get giftedToYouEmptyMessage =>
       'ನಿಮಗೆ ಉಡುಗೊರೆಯಾಗಿ ನೀಡಿದ ಚಲನಚಿತ್ರಗಳು ಮತ್ತು ವಿಷಯ ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ.';
+
+  @override
+  String get miniSeriesAlreadyOwned =>
+      'You already own every part of this Mini Series.';
+
+  @override
+  String get miniSeriesBuyAllAction => 'Buy all';
+
+  @override
+  String get miniSeriesBuyFull => 'Buy Full Mini Series';
+
+  @override
+  String miniSeriesFreeParts(int count) {
+    return 'Free parts: $count';
+  }
+
+  @override
+  String get miniSeriesFullNotAvailable =>
+      'Full purchase isn\'t available for this Mini Series.';
+
+  @override
+  String miniSeriesFullPrice(String amount) {
+    return 'Full Mini Series price: ₹ $amount';
+  }
+
+  @override
+  String miniSeriesGiftCodeExpiry(String date) {
+    return 'ಅವಧಿ ಮುಕ್ತಾಯ: $date';
+  }
+
+  @override
+  String miniSeriesGiftCodeStatus(String status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String get miniSeriesGiftCodesHint =>
+      'Each code can be claimed once, by one person. Share a different code with each recipient.';
+
+  @override
+  String get miniSeriesGiftCodesTitle => 'Your gift codes';
+
+  @override
+  String get miniSeriesGiftConflict =>
+      'This payment attempt changed. Please review the details and tap Confirm & Pay again.';
+
+  @override
+  String miniSeriesGiftCountMin(int min) {
+    return 'Enter a number of at least $min.';
+  }
+
+  @override
+  String miniSeriesGiftCountRange(int min, int max) {
+    return 'Enter a number between $min and $max.';
+  }
+
+  @override
+  String get miniSeriesGiftHowMany =>
+      'How many people do you want to gift this Mini Series to?';
+
+  @override
+  String miniSeriesGiftInsufficientBalance(String required, String available) {
+    return 'Insufficient wallet balance. Required: ₹ $required, available: ₹ $available.';
+  }
+
+  @override
+  String get miniSeriesGiftNotAvailable =>
+      'Gifting isn\'t available for this Mini Series.';
+
+  @override
+  String miniSeriesGiftPricePerGift(String amount) {
+    return 'Price per gift: ₹ $amount';
+  }
+
+  @override
+  String get miniSeriesGiftReplayNote =>
+      'This purchase was already completed. Showing your original gift codes; you were not charged again.';
+
+  @override
+  String miniSeriesGiftShareText(String title, String code) {
+    return 'ನಾನು ನಿಮಗೆ Filmytell ನಲ್ಲಿ \"$title\" ಉಡುಗೊರೆಯಾಗಿ ನೀಡಿದ್ದೇನೆ! ಈ ಗಿಫ್ಟ್ ಕೋಡ್ ಬಳಸಿ ಕ್ಲೇಮ್ ಮಾಡಿ: $code';
+  }
+
+  @override
+  String get miniSeriesGiftSuccess => 'Gift purchased successfully.';
+
+  @override
+  String get miniSeriesGiftTitle => 'Gift Mini Series';
+
+  @override
+  String miniSeriesGiftTotalPaid(String amount) {
+    return 'Total paid: ₹ $amount';
+  }
+
+  @override
+  String miniSeriesGiftTransaction(String id) {
+    return 'Transaction ID: $id';
+  }
+
+  @override
+  String get miniSeriesGiftUnavailable =>
+      'This Mini Series is not available for gifting.';
+
+  @override
+  String miniSeriesOwnedParts(int count) {
+    return 'Already owned: $count';
+  }
+
+  @override
+  String get miniSeriesPartFree => 'Free';
+
+  @override
+  String miniSeriesPartLabel(int number) {
+    return 'Part $number';
+  }
+
+  @override
+  String get miniSeriesPartOwned => 'Owned';
+
+  @override
+  String get miniSeriesPriceChanged =>
+      'The price has changed. Please review the new price and try again.';
+
+  @override
+  String miniSeriesPurchasableParts(int count) {
+    return 'Parts to buy: $count';
+  }
+
+  @override
+  String get miniSeriesPurchaseSuccess =>
+      'Mini Series purchased. All parts are unlocked.';
+
+  @override
+  String miniSeriesTotalParts(int count) {
+    return 'Total parts: $count';
+  }
+
+  @override
+  String giftCardExpiresOn(String date) {
+    return '$date ರಂದು ಅವಧಿ ಮುಗಿಯುತ್ತದೆ';
+  }
+
+  @override
+  String giftCardExpiringSoon(String date) {
+    return 'ಶೀಘ್ರದಲ್ಲೇ ಅವಧಿ ಮುಗಿಯುತ್ತದೆ · $date';
+  }
+
+  @override
+  String giftCardGiftedOn(String date) {
+    return '$date ರಂದು ಉಡುಗೊರೆ ನೀಡಲಾಗಿದೆ';
+  }
+
+  @override
+  String miniSeriesPricePerPart(String coins) {
+    return '₹ $coins/ಭಾಗ';
+  }
+
+  @override
+  String get shortsEpisodesLabel => 'ಸಂಚಿಕೆಗಳು';
+
+  @override
+  String get playerMuteSound => 'ಧ್ವನಿ ಆಫ್ ಮಾಡಿ';
+
+  @override
+  String get playerUnmuteSound => 'ಧ್ವನಿ ಆನ್ ಮಾಡಿ';
+
+  @override
+  String get downloadInvoice => 'ಇನ್‌ವಾಯ್ಸ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ';
+
+  @override
+  String get downloadingInvoice => 'ಇನ್‌ವಾಯ್ಸ್ ಡೌನ್‌ಲೋಡ್ ಆಗುತ್ತಿದೆ…';
+
+  @override
+  String get invoiceDownloadedSuccess =>
+      'ಇನ್‌ವಾಯ್ಸ್ ಯಶಸ್ವಿಯಾಗಿ ಡೌನ್‌ಲೋಡ್ ಆಗಿದೆ';
+
+  @override
+  String get invoiceDownloadFailed =>
+      'ಇನ್‌ವಾಯ್ಸ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ';
+
+  @override
+  String get invoiceOriginalAmount => 'ಮೂಲ ಮೊತ್ತ';
+
+  @override
+  String get invoiceDiscountLabel => 'ರಿಯಾಯಿತಿ';
+
+  @override
+  String get invoiceCouponLabel => 'ಕೂಪನ್';
+
+  @override
+  String get invoicePurchaseDate => 'ಖರೀದಿ ದಿನಾಂಕ';
+
+  @override
+  String get invoiceContentLabel => 'ವಿಷಯ';
+
+  @override
+  String get invoiceContentType => 'ವಿಷಯದ ಪ್ರಕಾರ';
+
+  @override
+  String purchaseGiftedToYouBy(String name) {
+    return 'ಈ ವಿಷಯವನ್ನು ನಿಮಗೆ $name ಅವರು ಉಡುಗೊರೆಯಾಗಿ ನೀಡಿದ್ದಾರೆ. ಆದ್ದರಿಂದ, ಇನ್‌ವಾಯ್ಸ್ ಲಭ್ಯವಿಲ್ಲ.';
+  }
+
+  @override
+  String get purchaseGiftInvoiceUnavailable =>
+      'ಈ ವಿಷಯವನ್ನು ನಿಮಗೆ ಉಡುಗೊರೆಯಾಗಿ ನೀಡಲಾಗಿದೆ. ಆದ್ದರಿಂದ, ಇನ್‌ವಾಯ್ಸ್ ಲಭ್ಯವಿಲ್ಲ.';
 }
